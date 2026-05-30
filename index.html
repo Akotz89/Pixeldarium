@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pixel Sim Engine</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="game-wrap">
+    <h1>PIXEL SIM ENGINE</h1>
+
+    <canvas id="game" width="1600" height="850"></canvas>
+
+    <section id="controls" aria-label="Simulation controls">
+      <button id="pause-button" class="sim-button" type="button">Pause</button>
+      <button id="step-button" class="sim-button" type="button">Step</button>
+      <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
+      <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
+      <button id="restart-button" class="sim-button" type="button">Restart</button>
+      <span id="speed-label" class="speed-label">Speed: 1x</span>
+    </section>
+
+    <section id="hud" aria-label="Simulation status">
+      <span id="era">ERA: Organisms</span>
+      <span id="population">POPULATION: 0</span>
+      <span id="food">TICK: 0 FOOD: 0 FERTILE: 0%</span>
+    </section>
+
+    <p class="help">
+      Watch simple organisms compete for food across fertile and barren terrain.
+      Plain HTML, CSS, and JavaScript.
+    </p>
+  </main>
+
+  <pre id="debug-output" style="position: fixed; left: 10px; bottom: 10px; max-width: 700px; max-height: 220px; overflow: auto; z-index: 9999; padding: 10px; background: rgba(120, 0, 0, 0.92); color: white; font: 13px monospace; border: 1px solid #ff9999; border-radius: 8px; display: none; text-align: left;"></pre>
+
+  <script>
+    var DEBUG_NEWLINE = String.fromCharCode(10);
+
+    function showDebugMessage(message) {
+      var box = document.getElementById("debug-output");
+
+      if (!box) {
+        return;
+      }
+
+      box.style.display = "block";
+      box.textContent += message + DEBUG_NEWLINE + DEBUG_NEWLINE;
+    }
+
+    window.addEventListener("error", function (event) {
+      if (event.target && event.target !== window && event.target.src) {
+        showDebugMessage("LOAD ERROR: " + event.target.src);
+        return;
+      }
+
+      showDebugMessage(
+        "ERROR: " + event.message + DEBUG_NEWLINE +
+        "FILE: " + event.filename + DEBUG_NEWLINE +
+        "LINE: " + event.lineno
+      );
+    }, true);
+
+    window.addEventListener("unhandledrejection", function (event) {
+      showDebugMessage("PROMISE ERROR: " + event.reason);
+    });
+  </script>
+
+  <script src="config.js"></script>
+  <script src="state.js"></script>
+  <script src="utils.js"></script>
+  <script src="terrain.js"></script>
+  <script src="food.js"></script>
+  <script src="organisms.js"></script>
+  <script src="render.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
