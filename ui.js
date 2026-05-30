@@ -5,7 +5,13 @@ function updateHud() {
 
   eraText.textContent = "ERA: " + world.era;
   populationText.textContent = "POPULATION: " + world.organisms.length;
-  foodText.textContent = "TICK: " + world.tick + "   FOOD: " + world.food.length + "   FERTILE: " + fertilePercent + "%";
+  foodText.textContent =
+    "TICK: " + world.tick +
+    "   FOOD: " + world.food.length +
+    "   FERTILE: " + fertilePercent + "%" +
+    "   FPS: " + world.fps.toFixed(1) +
+    "   TPS: " + world.tps.toFixed(1);
+
   speedLabel.textContent = "Speed: " + world.speed + "x";
 }
 
@@ -18,6 +24,7 @@ window.setupControls = function() {
   stepButton.addEventListener("click", function() {
     if (world.isPaused) {
       updateWorld();
+      world.interpolation = 1;
       drawWorld();
       updateHud();
     }
