@@ -8,12 +8,22 @@ function New-AuditResult {
         [string]$Notes = ""
     )
 
-    [pscustomobject]@{
+    return [pscustomobject]@{
         name = $Name
         status = $Status
         value = $Value
         notes = $Notes
     }
+}
+
+function Add-ReportProperty {
+    param(
+        [psobject]$Report,
+        [string]$Name,
+        $Value
+    )
+
+    $Report | Add-Member -MemberType NoteProperty -Name $Name -Value $Value -Force
 }
 
 function Test-CommandAvailable {
@@ -22,7 +32,7 @@ function Test-CommandAvailable {
     $command = Get-Command $Name -ErrorAction SilentlyContinue
 
     if ($command) {
-        return New-AuditResult -Name $Name -Status "available" -Value $command.Source -Notes $command.CommandType
+        return New-AuditResult -Name $Name -Status "available" -Value $command.Source -Notes ([string]$command.CommandType)
     }
 
     return New-AuditResult -Name $Name -Status "not_found"
@@ -38,6 +48,30 @@ function Get-RegistryValueSafe {
         return (Get-ItemProperty -Path $Path -Name $Name -ErrorAction Stop).$Name
     } catch {
         return $null
+    }
+}
+
+function Get-OsInfoSafe {
+    try {
+        $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+        return [pscustomobject]@{
+            caption = $os.Caption
+            version = $os.Version
+            architecture = $os.OSArchitecture
+        }
+    } catch {
+        try {
+            $os = Get-WmiObject Win32_OperatingSystem -ErrorAction Stop
+            return [pscustomobject]@{
+                caption = $os.Caption
+                version = $os.Version
+                architecture = $os.OSArchitecture
+            }
+        } catch {
+            return [pscustomobject]@{
+                error = $_.Exception.Message
+            }
+        }
     }
 }
 
@@ -125,21 +159,28 @@ function Test-FileWriteAccess {
 
 function Get-BrowserInfo {
     $browsers = @()
-    $candidates = @(
-        @{ name = "Chrome"; paths = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe", "$env:LocalAppData\Google\Chrome\Application\chrome.exe") },
-        @{ name = "Edge"; paths = @("$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe", "$env:LocalAppData\Microsoft\Edge\Application\msedge.exe") },
-        @{ name = "Firefox"; paths = @("$env:ProgramFiles\Mozilla Firefox\firefox.exe", "$env:ProgramFiles(x86)\Mozilla Firefox\firefox.exe") }
+    $programFiles = $env:ProgramFiles
+    $programFilesX86 = ${env:ProgramFiles(x86)}
+    $localAppData = $env:LocalAppData
+
+    $candidatePaths = @(
+        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $programFiles "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $programFilesX86 "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $localAppData "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-Path $programFiles "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-Path $programFilesX86 "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-Path $localAppData "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Firefox"; path = (Join-Path $programFiles "Mozilla Firefox\firefox.exe") },
+        [pscustomobject]@{ name = "Firefox"; path = (Join-Path $programFilesX86 "Mozilla Firefox\firefox.exe") }
     )
 
-    foreach ($candidate in $candidates) {
-        foreach ($path in $candidate.paths) {
-            if (Test-Path $path) {
-                $item = Get-Item $path -ErrorAction SilentlyContinue
-                $browsers += [pscustomobject]@{
-                    name = $candidate.name
-                    path = $path
-                    version = $item.VersionInfo.ProductVersion
-                }
+    foreach ($candidate in $candidatePaths) {
+        if ($candidate.path -and (Test-Path $candidate.path)) {
+            $item = Get-Item $candidate.path -ErrorAction SilentlyContinue
+            $browsers += [pscustomobject]@{
+                name = $candidate.name
+                path = $candidate.path
+                version = $item.VersionInfo.ProductVersion
             }
         }
     }
@@ -160,7 +201,7 @@ function New-BrowserAuditHtml {
   <style>
     body { margin: 0; padding: 24px; background: #0b0d14; color: #f4f7ff; font-family: Arial, sans-serif; }
     h1 { margin-top: 0; }
-    button { padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    button { padding: 10px 14px; font-weight: 700; cursor: pointer; margin-right: 8px; }
     pre { white-space: pre-wrap; background: #151925; border: 1px solid #30384f; padding: 16px; border-radius: 8px; }
   </style>
 </head>
@@ -172,6 +213,11 @@ function New-BrowserAuditHtml {
 
   <script>
     var latestReport = null;
+
+    function padHex(value) {
+      while (value.length < 6) value = '0' + value;
+      return value.slice(0, 6);
+    }
 
     function testCanvas2D() {
       var c = document.createElement('canvas');
@@ -223,7 +269,7 @@ function New-BrowserAuditHtml {
       var draws = 0;
 
       while (performance.now() - start < 500) {
-        ctx.fillStyle = '#' + ((draws * 2654435761) >>> 0).toString(16).slice(0, 6).padStart(6, '0');
+        ctx.fillStyle = '#' + padHex(((draws * 2654435761) >>> 0).toString(16));
         ctx.fillRect((draws * 7) % c.width, (draws * 13) % c.height, 4, 4);
         draws++;
       }
@@ -231,40 +277,44 @@ function New-BrowserAuditHtml {
       return Math.round(draws * 2);
     }
 
-    async function getStorageEstimate() {
+    function getStorageEstimate(callback) {
       if (navigator.storage && navigator.storage.estimate) {
-        return await navigator.storage.estimate();
+        navigator.storage.estimate().then(function(estimate) {
+          callback(estimate);
+        }).catch(function(error) {
+          callback({ error: String(error) });
+        });
+      } else {
+        callback(null);
       }
-      return null;
     }
 
-    async function runAudit() {
-      var report = {
-        generatedAt: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        locationProtocol: location.protocol,
-        capabilities: {
-          canvas2D: testCanvas2D(),
-          webgl: testWebGL(),
-          webWorkers: testWorker(),
-          localStorage: testLocalStorage(),
-          indexedDB: testIndexedDB(),
-          fullscreen: testFullscreen(),
-          fileAPIs: testFileAPIs(),
-          storageEstimate: await getStorageEstimate(),
-          canvasDrawsPerSecond: canvasBenchmark()
-        }
-      };
+    function runAudit() {
+      getStorageEstimate(function(storageEstimate) {
+        var report = {
+          generatedAt: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          locationProtocol: location.protocol,
+          capabilities: {
+            canvas2D: testCanvas2D(),
+            webgl: testWebGL(),
+            webWorkers: testWorker(),
+            localStorage: testLocalStorage(),
+            indexedDB: testIndexedDB(),
+            fullscreen: testFullscreen(),
+            fileAPIs: testFileAPIs(),
+            storageEstimate: storageEstimate,
+            canvasDrawsPerSecond: canvasBenchmark()
+          }
+        };
 
-      latestReport = report;
-      document.getElementById('out').textContent = JSON.stringify(report, null, 2);
+        latestReport = report;
+        document.getElementById('out').textContent = JSON.stringify(report, null, 2);
+      });
     }
 
     function downloadReport() {
-      if (!latestReport) {
-        return;
-      }
-
+      if (!latestReport) return;
       var blob = new Blob([JSON.stringify(latestReport, null, 2)], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -288,29 +338,25 @@ $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $outDir = Join-Path $root "audit-output"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
-$results = [ordered]@{}
-$results.generatedAt = (Get-Date).ToString("o")
-$results.auditScope = "Local-only PixelSim capability audit. No network tests and no bypass attempts."
-$results.workingDirectory = $root.Path
+$report = New-Object PSObject
+Add-ReportProperty -Report $report -Name "generatedAt" -Value ((Get-Date).ToString("o"))
+Add-ReportProperty -Report $report -Name "auditScope" -Value "Local-only PixelSim capability audit. No network tests and no bypass attempts."
+Add-ReportProperty -Report $report -Name "workingDirectory" -Value $root.Path
 
-$results.powershell = [pscustomobject]@{
+$psInfo = [pscustomobject]@{
     version = $PSVersionTable.PSVersion.ToString()
     edition = $PSVersionTable.PSEdition
     host = $Host.Name
     hostVersion = $Host.Version.ToString()
-    executionPolicyProcess = Get-ExecutionPolicy -Scope Process
-    executionPolicyCurrentUser = Get-ExecutionPolicy -Scope CurrentUser
-    executionPolicyLocalMachine = Get-ExecutionPolicy -Scope LocalMachine
+    executionPolicyProcess = (Get-ExecutionPolicy -Scope Process)
+    executionPolicyCurrentUser = (Get-ExecutionPolicy -Scope CurrentUser)
+    executionPolicyLocalMachine = (Get-ExecutionPolicy -Scope LocalMachine)
 }
+Add-ReportProperty -Report $report -Name "powershell" -Value $psInfo
+Add-ReportProperty -Report $report -Name "windows" -Value (Get-OsInfoSafe)
+Add-ReportProperty -Report $report -Name "dotNetFramework" -Value (Get-DotNetFrameworkInfo)
 
-$results.windows = [pscustomobject]@{
-    osCaption = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Caption
-    osVersion = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).Version
-    architecture = (Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue).OSArchitecture
-}
-
-$results.dotNetFramework = Get-DotNetFrameworkInfo
-$results.commands = @(
+$commands = @(
     Test-CommandAvailable "powershell.exe"
     Test-CommandAvailable "cscript.exe"
     Test-CommandAvailable "wscript.exe"
@@ -319,31 +365,39 @@ $results.commands = @(
     Test-CommandAvailable "dotnet.exe"
     Test-CommandAvailable "git.exe"
 )
+Add-ReportProperty -Report $report -Name "commands" -Value $commands
 
 $wshLm = Get-RegistryValueSafe -Path "HKLM:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled"
 $wshCu = Get-RegistryValueSafe -Path "HKCU:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled"
-
-$results.windowsScriptHost = [pscustomobject]@{
+$wshInfo = [pscustomobject]@{
     hklmEnabled = $wshLm
     hkcuEnabled = $wshCu
     note = "Null usually means no explicit registry block was found."
 }
-
-$results.officeMatches = Get-InstalledProgramMatches -Patterns @("Microsoft 365", "Microsoft Office", "Access", "Excel", "Visual Studio", "SQL Server", "SQLite", "ODBC")
-$results.browsers = Get-BrowserInfo
-$results.fileSystem = @(
-    Test-FileWriteAccess -Directory $root.Path
-)
+Add-ReportProperty -Report $report -Name "windowsScriptHost" -Value $wshInfo
+Add-ReportProperty -Report $report -Name "officeMatches" -Value (Get-InstalledProgramMatches -Patterns @("Microsoft 365", "Microsoft Office", "Access", "Excel", "Visual Studio", "SQL Server", "SQLite", "ODBC"))
+Add-ReportProperty -Report $report -Name "browsers" -Value (Get-BrowserInfo)
+Add-ReportProperty -Report $report -Name "fileSystem" -Value @((Test-FileWriteAccess -Directory $root.Path))
 
 $browserAuditPath = Join-Path $outDir "pixelsim-browser-audit.html"
 New-BrowserAuditHtml -Path $browserAuditPath
-$results.browserAuditHtml = $browserAuditPath
+Add-ReportProperty -Report $report -Name "browserAuditHtml" -Value $browserAuditPath
 
 $jsonPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".json")
 $txtPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".txt")
 
-$results | ConvertTo-Json -Depth 8 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
-$results | Format-List | Out-File -FilePath $txtPath -Encoding UTF8 -Force
+try {
+    $report | ConvertTo-Json -Depth 8 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
+} catch {
+    $fallback = [pscustomobject]@{
+        generatedAt = (Get-Date).ToString("o")
+        jsonError = $_.Exception.Message
+        note = "JSON export failed, but text report and browser audit were still created."
+    }
+    $fallback | ConvertTo-Json -Depth 3 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
+}
+
+$report | Format-List | Out-File -FilePath $txtPath -Encoding UTF8 -Force
 
 Write-Host "PixelSim local capability audit complete."
 Write-Host "JSON report: $jsonPath"
