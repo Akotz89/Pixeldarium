@@ -54,14 +54,12 @@ function drawTerrain() {
 }
 
 function drawFood() {
-  var foodSize = Math.max(2, Math.floor(CONFIG.TILE_SIZE * 0.75));
-
   for (var i = 0; i < world.food.length; i++) {
     var food = world.food[i];
     drawEntityAtCanvasPosition(
       food.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
       food.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      foodSize,
+      CONFIG.FOOD_DRAW_SIZE,
       "#58f06c"
     );
   }
@@ -81,7 +79,6 @@ function getOrganismColor(organism) {
 
 function drawOrganisms() {
   var interpolation = world.interpolation;
-  var organismSize = CONFIG.TILE_SIZE * CONFIG.VISUAL_SCALE;
 
   if (interpolation < 0) {
     interpolation = 0;
@@ -101,7 +98,7 @@ function drawOrganisms() {
     drawEntityAtCanvasPosition(
       renderX * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
       renderY * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      organismSize,
+      CONFIG.ORGANISM_DRAW_SIZE,
       getOrganismColor(organism)
     );
   }
