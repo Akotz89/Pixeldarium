@@ -32,10 +32,33 @@ function Test-CommandAvailable {
     $command = Get-Command $Name -ErrorAction SilentlyContinue
 
     if ($command) {
-        return New-AuditResult -Name $Name -Status "available" -Value $command.Source -Notes ([string]$command.CommandType)
+        $version = $null
+        try {
+            if ($command.Source -and (Test-Path $command.Source)) {
+                $item = Get-Item $command.Source -ErrorAction SilentlyContinue
+                if ($item -and $item.VersionInfo) {
+                    $version = $item.VersionInfo.ProductVersion
+                }
+            }
+        } catch {
+        }
+
+        return [pscustomobject]@{
+            name = $Name
+            status = "available"
+            source = $command.Source
+            commandType = [string]$command.CommandType
+            version = $version
+        }
     }
 
-    return New-AuditResult -Name $Name -Status "not_found"
+    return [pscustomobject]@{
+        name = $Name
+        status = "not_found"
+        source = $null
+        commandType = $null
+        version = $null
+    }
 }
 
 function Get-RegistryValueSafe {
@@ -157,6 +180,19 @@ function Test-FileWriteAccess {
     }
 }
 
+function Join-PathIfBaseExists {
+    param(
+        [string]$Base,
+        [string]$Child
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Base)) {
+        return $null
+    }
+
+    return Join-Path $Base $Child
+}
+
 function Get-BrowserInfo {
     $browsers = @()
     $programFiles = $env:ProgramFiles
@@ -164,14 +200,14 @@ function Get-BrowserInfo {
     $localAppData = $env:LocalAppData
 
     $candidatePaths = @(
-        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $programFiles "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $programFilesX86 "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Chrome"; path = (Join-Path $localAppData "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-Path $programFiles "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-Path $programFilesX86 "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-Path $localAppData "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Firefox"; path = (Join-Path $programFiles "Mozilla Firefox\firefox.exe") },
-        [pscustomobject]@{ name = "Firefox"; path = (Join-Path $programFilesX86 "Mozilla Firefox\firefox.exe") }
+        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $programFiles "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $programFilesX86 "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $localAppData "Google\Chrome\Application\chrome.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $programFiles "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $programFilesX86 "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $localAppData "Microsoft\Edge\Application\msedge.exe") },
+        [pscustomobject]@{ name = "Firefox"; path = (Join-PathIfBaseExists $programFiles "Mozilla Firefox\firefox.exe") },
+        [pscustomobject]@{ name = "Firefox"; path = (Join-PathIfBaseExists $programFilesX86 "Mozilla Firefox\firefox.exe") }
     )
 
     foreach ($candidate in $candidatePaths) {
@@ -186,6 +222,114 @@ function Get-BrowserInfo {
     }
 
     return $browsers
+}
+
+function Get-ComRegistrationInfo {
+    $progIds = @(
+        "Excel.Application",
+        "Access.Application",
+        "Word.Application",
+        "PowerPoint.Application",
+        "Scripting.FileSystemObject",
+        "WScript.Shell",
+        "ADODB.Connection"
+    )
+
+    $items = @()
+
+    foreach ($progId in $progIds) {
+        $items += [pscustomobject]@{
+            progId = $progId
+            registered = (Test-Path ("Registry::HKEY_CLASSES_ROOT\" + $progId))
+        }
+    }
+
+    return $items
+}
+
+function Get-OdbcDriverInfo {
+    $items = @()
+    $paths = @(
+        "HKLM:\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers",
+        "HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\ODBC Drivers",
+        "HKCU:\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers"
+    )
+
+    foreach ($path in $paths) {
+        try {
+            $props = Get-ItemProperty -Path $path -ErrorAction Stop
+            foreach ($property in $props.PSObject.Properties) {
+                if ($property.Name -like "PS*") {
+                    continue
+                }
+
+                $items += [pscustomobject]@{
+                    driver = $property.Name
+                    value = $property.Value
+                    registryPath = $path
+                }
+            }
+        } catch {
+        }
+    }
+
+    return $items | Sort-Object driver -Unique
+}
+
+function Get-RuntimeInventory {
+    $runtimeCommands = @(
+        "powershell.exe",
+        "pwsh.exe",
+        "cscript.exe",
+        "wscript.exe",
+        "csc.exe",
+        "MSBuild.exe",
+        "dotnet.exe",
+        "git.exe",
+        "node.exe",
+        "npm.cmd",
+        "python.exe",
+        "py.exe",
+        "java.exe",
+        "javac.exe"
+    )
+
+    $commandResults = @()
+
+    foreach ($commandName in $runtimeCommands) {
+        $commandResults += Test-CommandAvailable $commandName
+    }
+
+    $programMatches = Get-InstalledProgramMatches -Patterns @(
+        "Microsoft 365",
+        "Microsoft Office",
+        "Access",
+        "Excel",
+        "Word",
+        "Visual Studio",
+        "Build Tools",
+        "SQL Server",
+        "SQLite",
+        "ODBC",
+        "\.NET",
+        "ASP\.NET",
+        "Visual C\+\+",
+        "Redistributable",
+        "Java",
+        "JDK",
+        "JRE",
+        "Python",
+        "Node\.js",
+        "Git",
+        "PowerShell"
+    )
+
+    return [pscustomobject]@{
+        commands = $commandResults
+        installedProgramMatches = $programMatches
+        comRegistrations = Get-ComRegistrationInfo
+        odbcDrivers = Get-OdbcDriverInfo
+    }
 }
 
 function New-BrowserAuditHtml {
@@ -358,6 +502,7 @@ Add-ReportProperty -Report $report -Name "dotNetFramework" -Value (Get-DotNetFra
 
 $commands = @(
     Test-CommandAvailable "powershell.exe"
+    Test-CommandAvailable "pwsh.exe"
     Test-CommandAvailable "cscript.exe"
     Test-CommandAvailable "wscript.exe"
     Test-CommandAvailable "csc.exe"
@@ -376,6 +521,7 @@ $wshInfo = [pscustomobject]@{
 }
 Add-ReportProperty -Report $report -Name "windowsScriptHost" -Value $wshInfo
 Add-ReportProperty -Report $report -Name "officeMatches" -Value (Get-InstalledProgramMatches -Patterns @("Microsoft 365", "Microsoft Office", "Access", "Excel", "Visual Studio", "SQL Server", "SQLite", "ODBC"))
+Add-ReportProperty -Report $report -Name "installedRuntimesAndTools" -Value (Get-RuntimeInventory)
 Add-ReportProperty -Report $report -Name "browsers" -Value (Get-BrowserInfo)
 Add-ReportProperty -Report $report -Name "fileSystem" -Value @((Test-FileWriteAccess -Directory $root.Path))
 
@@ -387,7 +533,7 @@ $jsonPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".json")
 $txtPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".txt")
 
 try {
-    $report | ConvertTo-Json -Depth 8 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
+    $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
 } catch {
     $fallback = [pscustomobject]@{
         generatedAt = (Get-Date).ToString("o")
