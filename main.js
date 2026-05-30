@@ -54,10 +54,21 @@ function updateWorld() {
 }
 
 var frameCounter = 0;
+var lastTime = performance.now();
+var fps = 0;
+var simTicksPerSecond = 0;
+var tickCounter = 0;
 
 function gameLoop() {
   try {
+    var now = performance.now();
+    var delta = now - lastTime;
+    lastTime = now;
+
+    fps = 1000 / delta;
+
     frameCounter++;
+    tickCounter += world.speed * CONFIG.SIM_SPEED_MULTIPLIER;
 
     if (!world.isPaused && frameCounter >= CONFIG.TICKS_PER_SIM_UPDATE) {
       frameCounter = 0;
@@ -65,10 +76,15 @@ function gameLoop() {
       for (var i = 0; i < world.speed * CONFIG.SIM_SPEED_MULTIPLIER; i++) {
         updateWorld();
       }
+
+      simTicksPerSecond = tickCounter / (delta / 1000);
+      tickCounter = 0;
     }
 
     drawWorld();
     updateHud();
+    document.getElementById('food').textContent += '  FPS: ' + fps.toFixed(1) + '  TPS: ' + simTicksPerSecond.toFixed(1);
+
     requestAnimationFrame(gameLoop);
   } catch (error) {
     reportRuntimeError(error);
