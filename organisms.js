@@ -2,6 +2,8 @@ function makeOrganism(x, y) {
   return {
     x: x,
     y: y,
+    prevX: x,
+    prevY: y,
     energy: CONFIG.STARTING_ORGANISM_ENERGY,
     age: 0,
     directionX: randomInt(3) - 1,
@@ -10,14 +12,14 @@ function makeOrganism(x, y) {
 }
 
 function findNearestFood(organism, searchRadius) {
-  let nearest = null;
-  let nearestDistance = Infinity;
+  var nearest = null;
+  var nearestDistance = Infinity;
 
-  for (let i = 0; i < world.food.length; i++) {
-    const food = world.food[i];
-    const dx = food.x - organism.x;
-    const dy = food.y - organism.y;
-    const distance = Math.abs(dx) + Math.abs(dy);
+  for (var i = 0; i < world.food.length; i++) {
+    var food = world.food[i];
+    var dx = food.x - organism.x;
+    var dy = food.y - organism.y;
+    var distance = Math.abs(dx) + Math.abs(dy);
 
     if (distance < nearestDistance && distance <= searchRadius) {
       nearest = food;
@@ -47,8 +49,8 @@ function moveTowardFood(organism, food) {
 }
 
 function eatFoodOnCurrentTile(organism) {
-  for (let i = world.food.length - 1; i >= 0; i--) {
-    const food = world.food[i];
+  for (var i = world.food.length - 1; i >= 0; i--) {
+    var food = world.food[i];
 
     if (food.x === organism.x && food.y === organism.y) {
       world.food.splice(i, 1);
@@ -67,24 +69,28 @@ function reproduceIfReady(organism) {
 
   organism.energy = CONFIG.PARENT_ENERGY_AFTER_REPRODUCTION;
 
-  const child = makeOrganism(
+  var child = makeOrganism(
     organism.x + randomInt(3) - 1,
     organism.y + randomInt(3) - 1
   );
 
   child.energy = CONFIG.CHILD_ORGANISM_ENERGY;
   clampToWorld(child);
+  child.prevX = child.x;
+  child.prevY = child.y;
   world.organisms.push(child);
 }
 
 function updateOrganism(organism) {
+  organism.prevX = organism.x;
+  organism.prevY = organism.y;
   organism.age++;
 
   if (world.tick % 3 === 0) {
     organism.energy--;
   }
 
-  const nearestFood = findNearestFood(organism, CONFIG.ORGANISM_FOOD_SEARCH_RADIUS);
+  var nearestFood = findNearestFood(organism, CONFIG.ORGANISM_FOOD_SEARCH_RADIUS);
 
   if (nearestFood) {
     moveTowardFood(organism, nearestFood);
