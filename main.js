@@ -17,11 +17,18 @@ function clearWorld() {
   world.food = [];
   world.terrain = [];
   world.fertileTiles = 0;
+  world.interpolation = 0;
+  world.fps = 0;
+  world.tps = 0;
 }
 
 function seedWorld() {
   clearWorld();
   seedTerrain();
+
+  if (typeof buildTerrainCache === "function") {
+    buildTerrainCache();
+  }
 
   var centerX = Math.floor(WORLD_WIDTH / 2);
   var centerY = Math.floor(WORLD_HEIGHT / 2);
@@ -33,7 +40,7 @@ function seedWorld() {
     ));
   }
 
-  for (var i = 0; i < CONFIG.STARTING_FOOD; i++) {
+  for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
     var position = randomFoodPosition();
     world.food.push(makeFood(position.x, position.y));
   }
@@ -54,38 +61,48 @@ function updateWorld() {
 }
 
 var frameCounter = 0;
-var lastTime = performance.now();
-var fps = 0;
-var simTicksPerSecond = 0;
-var tickCounter = 0;
+var lastFrameTime = performance.now();
+var statsTimer = performance.now();
+var framesSinceStatsUpdate = 0;
+var simTicksSinceStatsUpdate = 0;
 
 function gameLoop() {
   try {
     var now = performance.now();
-    var delta = now - lastTime;
-    lastTime = now;
-
-    fps = 1000 / delta;
-
+    lastFrameTime = now;
+    framesSinceStatsUpdate++;
     frameCounter++;
-    tickCounter += world.speed * CONFIG.SIM_SPEED_MULTIPLIER;
 
     if (!world.isPaused && frameCounter >= CONFIG.TICKS_PER_SIM_UPDATE) {
       frameCounter = 0;
 
-      for (var i = 0; i < world.speed * CONFIG.SIM_SPEED_MULTIPLIER; i++) {
+      var updatesThisFrame = world.speed * CONFIG.SIM_SPEED_MULTIPLIER;
+
+      for (var i = 0; i < updatesThisFrame; i++) {
         updateWorld();
       }
 
-      simTicksPerSecond = tickCounter / (delta / 1000);
-      tickCounter = 0;
+      simTicksSinceStatsUpdate += updatesThisFrame;
     }
 
-    world.interpolation = Math.min(frameCounter / CONFIG.TICKS_PER_SIM_UPDATE, 1);
+    if (world.isPaused) {
+      world.interpolation = 0;
+    } else {
+      world.interpolation = Math.min(frameCounter / CONFIG.TICKS_PER_SIM_UPDATE, 1);
+    }
+
+    var statsElapsed = now - statsTimer;
+
+    if (statsElapsed >= 500) {
+      world.fps = framesSinceStatsUpdate / (statsElapsed / 1000);
+      world.tps = simTicksSinceStatsUpdate / (statsElapsed / 1000);
+      framesSinceStatsUpdate = 0;
+      simTicksSinceStatsUpdate = 0;
+      statsTimer = now;
+    }
 
     drawWorld();
     updateHud();
-    document.getElementById('food').textContent += '  FPS: ' + fps.toFixed(1) + '  TPS: ' + simTicksPerSecond.toFixed(1);
 
     requestAnimationFrame(gameLoop);
   } catch (error) {
