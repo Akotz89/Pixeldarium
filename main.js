@@ -81,6 +81,8 @@ function gameLoop() {
       tickCounter = 0;
     }
 
+    world.interpolation = Math.min(frameCounter / CONFIG.TICKS_PER_SIM_UPDATE, 1);
+
     drawWorld();
     updateHud();
     document.getElementById('food').textContent += '  FPS: ' + fps.toFixed(1) + '  TPS: ' + simTicksPerSecond.toFixed(1);
