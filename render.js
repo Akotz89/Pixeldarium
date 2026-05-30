@@ -1,3 +1,5 @@
+var terrainCache;
+
 function drawPixel(x, y, color) {
   ctx.fillStyle = color;
   ctx.fillRect(
@@ -8,16 +10,37 @@ function drawPixel(x, y, color) {
   );
 }
 
-function drawTerrain() {
+function buildTerrainCache() {
+  terrainCache = document.createElement("canvas");
+  terrainCache.width = canvas.width;
+  terrainCache.height = canvas.height;
+
+  var tctx = terrainCache.getContext("2d");
+
   for (var y = 0; y < WORLD_HEIGHT; y++) {
     for (var x = 0; x < WORLD_WIDTH; x++) {
       if (isFertile(x, y)) {
-        drawPixel(x, y, "#12351d");
+        tctx.fillStyle = "#12351d";
       } else {
-        drawPixel(x, y, "#07080f");
+        tctx.fillStyle = "#07080f";
       }
+
+      tctx.fillRect(
+        x * CONFIG.TILE_SIZE,
+        y * CONFIG.TILE_SIZE,
+        CONFIG.TILE_SIZE,
+        CONFIG.TILE_SIZE
+      );
     }
   }
+}
+
+function drawTerrain() {
+  if (!terrainCache) {
+    buildTerrainCache();
+  }
+
+  ctx.drawImage(terrainCache, 0, 0);
 }
 
 function drawFood() {
@@ -53,6 +76,8 @@ function drawScanlines() {
     ctx.fillRect(0, y, canvas.width, 1);
   }
 }
+
+window.buildTerrainCache = buildTerrainCache;
 
 window.drawWorld = function() {
   drawTerrain();
