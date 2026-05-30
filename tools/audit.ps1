@@ -1,20 +1,6 @@
 $ErrorActionPreference = "Continue"
 
-function New-AuditResult {
-    param(
-        [string]$Name,
-        [string]$Status,
-        $Value = $null,
-        [string]$Notes = ""
-    )
-
-    return [pscustomobject]@{
-        name = $Name
-        status = $Status
-        value = $Value
-        notes = $Notes
-    }
-}
+$AuditVersion = "2026-05-30.2"
 
 function Add-ReportProperty {
     param(
@@ -24,6 +10,67 @@ function Add-ReportProperty {
     )
 
     $Report | Add-Member -MemberType NoteProperty -Name $Name -Value $Value -Force
+}
+
+function New-AuditResult {
+    param(
+        [string]$Name,
+        [string]$Status,
+        $Value = $null,
+        [string]$Notes = ""
+    )
+
+    $item = New-Object PSObject
+    Add-ReportProperty $item "name" $Name
+    Add-ReportProperty $item "status" $Status
+    Add-ReportProperty $item "value" $Value
+    Add-ReportProperty $item "notes" $Notes
+    return $item
+}
+
+function ConvertTo-JsonSafeObject {
+    param($InputObject)
+
+    if ($null -eq $InputObject) {
+        return $null
+    }
+
+    if ($InputObject -is [string] -or $InputObject -is [int] -or $InputObject -is [long] -or $InputObject -is [double] -or $InputObject -is [decimal] -or $InputObject -is [bool]) {
+        return $InputObject
+    }
+
+    if ($InputObject -is [datetime]) {
+        return $InputObject.ToString("o")
+    }
+
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        $obj = New-Object PSObject
+        foreach ($key in $InputObject.Keys) {
+            Add-ReportProperty $obj ([string]$key) (ConvertTo-JsonSafeObject $InputObject[$key])
+        }
+        return $obj
+    }
+
+    if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
+        $array = @()
+        foreach ($item in $InputObject) {
+            $array += ConvertTo-JsonSafeObject $item
+        }
+        return $array
+    }
+
+    if ($InputObject -is [psobject]) {
+        $obj = New-Object PSObject
+        foreach ($property in $InputObject.PSObject.Properties) {
+            if ($property.Name -like "PS*") {
+                continue
+            }
+            Add-ReportProperty $obj ([string]$property.Name) (ConvertTo-JsonSafeObject $property.Value)
+        }
+        return $obj
+    }
+
+    return [string]$InputObject
 }
 
 function Test-CommandAvailable {
@@ -43,22 +90,22 @@ function Test-CommandAvailable {
         } catch {
         }
 
-        return [pscustomobject]@{
-            name = $Name
-            status = "available"
-            source = $command.Source
-            commandType = [string]$command.CommandType
-            version = $version
-        }
+        $result = New-Object PSObject
+        Add-ReportProperty $result "name" $Name
+        Add-ReportProperty $result "status" "available"
+        Add-ReportProperty $result "source" $command.Source
+        Add-ReportProperty $result "commandType" ([string]$command.CommandType)
+        Add-ReportProperty $result "version" $version
+        return $result
     }
 
-    return [pscustomobject]@{
-        name = $Name
-        status = "not_found"
-        source = $null
-        commandType = $null
-        version = $null
-    }
+    $missing = New-Object PSObject
+    Add-ReportProperty $missing "name" $Name
+    Add-ReportProperty $missing "status" "not_found"
+    Add-ReportProperty $missing "source" $null
+    Add-ReportProperty $missing "commandType" $null
+    Add-ReportProperty $missing "version" $null
+    return $missing
 }
 
 function Get-RegistryValueSafe {
@@ -77,25 +124,21 @@ function Get-RegistryValueSafe {
 function Get-OsInfoSafe {
     try {
         $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
-        return [pscustomobject]@{
-            caption = $os.Caption
-            version = $os.Version
-            architecture = $os.OSArchitecture
-        }
     } catch {
         try {
             $os = Get-WmiObject Win32_OperatingSystem -ErrorAction Stop
-            return [pscustomobject]@{
-                caption = $os.Caption
-                version = $os.Version
-                architecture = $os.OSArchitecture
-            }
         } catch {
-            return [pscustomobject]@{
-                error = $_.Exception.Message
-            }
+            $obj = New-Object PSObject
+            Add-ReportProperty $obj "error" $_.Exception.Message
+            return $obj
         }
     }
+
+    $obj = New-Object PSObject
+    Add-ReportProperty $obj "caption" $os.Caption
+    Add-ReportProperty $obj "version" $os.Version
+    Add-ReportProperty $obj "architecture" $os.OSArchitecture
+    return $obj
 }
 
 function Get-DotNetFrameworkInfo {
@@ -109,19 +152,19 @@ function Get-DotNetFrameworkInfo {
             $props = Get-ItemProperty -Path $key.PSPath -ErrorAction SilentlyContinue
 
             if ($props.Version -or $props.Release) {
-                $items += [pscustomobject]@{
-                    key = $key.PSChildName
-                    version = $props.Version
-                    release = $props.Release
-                    install = $props.Install
-                    servicePack = $props.SP
-                }
+                $item = New-Object PSObject
+                Add-ReportProperty $item "key" $key.PSChildName
+                Add-ReportProperty $item "version" $props.Version
+                Add-ReportProperty $item "release" $props.Release
+                Add-ReportProperty $item "install" $props.Install
+                Add-ReportProperty $item "servicePack" $props.SP
+                $items += $item
             }
         }
     } catch {
-        $items += [pscustomobject]@{
-            error = $_.Exception.Message
-        }
+        $item = New-Object PSObject
+        Add-ReportProperty $item "error" $_.Exception.Message
+        $items += $item
     }
 
     return $items
@@ -148,13 +191,13 @@ function Get-InstalledProgramMatches {
 
                 foreach ($pattern in $Patterns) {
                     if ($program.DisplayName -match $pattern) {
-                        $matches += [pscustomobject]@{
-                            displayName = $program.DisplayName
-                            displayVersion = $program.DisplayVersion
-                            publisher = $program.Publisher
-                            installDate = $program.InstallDate
-                            registryPath = $path
-                        }
+                        $item = New-Object PSObject
+                        Add-ReportProperty $item "displayName" $program.DisplayName
+                        Add-ReportProperty $item "displayVersion" $program.DisplayVersion
+                        Add-ReportProperty $item "publisher" $program.Publisher
+                        Add-ReportProperty $item "installDate" $program.InstallDate
+                        Add-ReportProperty $item "registryPath" $path
+                        $matches += $item
                         break
                     }
                 }
@@ -200,24 +243,24 @@ function Get-BrowserInfo {
     $localAppData = $env:LocalAppData
 
     $candidatePaths = @(
-        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $programFiles "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $programFilesX86 "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Chrome"; path = (Join-PathIfBaseExists $localAppData "Google\Chrome\Application\chrome.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $programFiles "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $programFilesX86 "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Edge"; path = (Join-PathIfBaseExists $localAppData "Microsoft\Edge\Application\msedge.exe") },
-        [pscustomobject]@{ name = "Firefox"; path = (Join-PathIfBaseExists $programFiles "Mozilla Firefox\firefox.exe") },
-        [pscustomobject]@{ name = "Firefox"; path = (Join-PathIfBaseExists $programFilesX86 "Mozilla Firefox\firefox.exe") }
+        @{ name = "Chrome"; path = (Join-PathIfBaseExists $programFiles "Google\Chrome\Application\chrome.exe") },
+        @{ name = "Chrome"; path = (Join-PathIfBaseExists $programFilesX86 "Google\Chrome\Application\chrome.exe") },
+        @{ name = "Chrome"; path = (Join-PathIfBaseExists $localAppData "Google\Chrome\Application\chrome.exe") },
+        @{ name = "Edge"; path = (Join-PathIfBaseExists $programFiles "Microsoft\Edge\Application\msedge.exe") },
+        @{ name = "Edge"; path = (Join-PathIfBaseExists $programFilesX86 "Microsoft\Edge\Application\msedge.exe") },
+        @{ name = "Edge"; path = (Join-PathIfBaseExists $localAppData "Microsoft\Edge\Application\msedge.exe") },
+        @{ name = "Firefox"; path = (Join-PathIfBaseExists $programFiles "Mozilla Firefox\firefox.exe") },
+        @{ name = "Firefox"; path = (Join-PathIfBaseExists $programFilesX86 "Mozilla Firefox\firefox.exe") }
     )
 
     foreach ($candidate in $candidatePaths) {
         if ($candidate.path -and (Test-Path $candidate.path)) {
             $item = Get-Item $candidate.path -ErrorAction SilentlyContinue
-            $browsers += [pscustomobject]@{
-                name = $candidate.name
-                path = $candidate.path
-                version = $item.VersionInfo.ProductVersion
-            }
+            $browser = New-Object PSObject
+            Add-ReportProperty $browser "name" $candidate.name
+            Add-ReportProperty $browser "path" $candidate.path
+            Add-ReportProperty $browser "version" $item.VersionInfo.ProductVersion
+            $browsers += $browser
         }
     }
 
@@ -238,10 +281,10 @@ function Get-ComRegistrationInfo {
     $items = @()
 
     foreach ($progId in $progIds) {
-        $items += [pscustomobject]@{
-            progId = $progId
-            registered = (Test-Path ("Registry::HKEY_CLASSES_ROOT\" + $progId))
-        }
+        $item = New-Object PSObject
+        Add-ReportProperty $item "progId" $progId
+        Add-ReportProperty $item "registered" (Test-Path ("Registry::HKEY_CLASSES_ROOT\" + $progId))
+        $items += $item
     }
 
     return $items
@@ -263,11 +306,11 @@ function Get-OdbcDriverInfo {
                     continue
                 }
 
-                $items += [pscustomobject]@{
-                    driver = $property.Name
-                    value = $property.Value
-                    registryPath = $path
-                }
+                $item = New-Object PSObject
+                Add-ReportProperty $item "driver" $property.Name
+                Add-ReportProperty $item "value" $property.Value
+                Add-ReportProperty $item "registryPath" $path
+                $items += $item
             }
         } catch {
         }
@@ -324,12 +367,12 @@ function Get-RuntimeInventory {
         "PowerShell"
     )
 
-    return [pscustomobject]@{
-        commands = $commandResults
-        installedProgramMatches = $programMatches
-        comRegistrations = Get-ComRegistrationInfo
-        odbcDrivers = Get-OdbcDriverInfo
-    }
+    $inventory = New-Object PSObject
+    Add-ReportProperty $inventory "commands" $commandResults
+    Add-ReportProperty $inventory "installedProgramMatches" $programMatches
+    Add-ReportProperty $inventory "comRegistrations" (Get-ComRegistrationInfo)
+    Add-ReportProperty $inventory "odbcDrivers" (Get-OdbcDriverInfo)
+    return $inventory
 }
 
 function New-BrowserAuditHtml {
@@ -483,22 +526,23 @@ $outDir = Join-Path $root "audit-output"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
 $report = New-Object PSObject
-Add-ReportProperty -Report $report -Name "generatedAt" -Value ((Get-Date).ToString("o"))
-Add-ReportProperty -Report $report -Name "auditScope" -Value "Local-only PixelSim capability audit. No network tests and no bypass attempts."
-Add-ReportProperty -Report $report -Name "workingDirectory" -Value $root.Path
+Add-ReportProperty $report "auditVersion" $AuditVersion
+Add-ReportProperty $report "generatedAt" ((Get-Date).ToString("o"))
+Add-ReportProperty $report "auditScope" "Local-only PixelSim capability audit. No network tests and no bypass attempts."
+Add-ReportProperty $report "workingDirectory" $root.Path
 
-$psInfo = [pscustomobject]@{
-    version = $PSVersionTable.PSVersion.ToString()
-    edition = $PSVersionTable.PSEdition
-    host = $Host.Name
-    hostVersion = $Host.Version.ToString()
-    executionPolicyProcess = (Get-ExecutionPolicy -Scope Process)
-    executionPolicyCurrentUser = (Get-ExecutionPolicy -Scope CurrentUser)
-    executionPolicyLocalMachine = (Get-ExecutionPolicy -Scope LocalMachine)
-}
-Add-ReportProperty -Report $report -Name "powershell" -Value $psInfo
-Add-ReportProperty -Report $report -Name "windows" -Value (Get-OsInfoSafe)
-Add-ReportProperty -Report $report -Name "dotNetFramework" -Value (Get-DotNetFrameworkInfo)
+$psInfo = New-Object PSObject
+Add-ReportProperty $psInfo "version" $PSVersionTable.PSVersion.ToString()
+Add-ReportProperty $psInfo "edition" $PSVersionTable.PSEdition
+Add-ReportProperty $psInfo "host" $Host.Name
+Add-ReportProperty $psInfo "hostVersion" $Host.Version.ToString()
+Add-ReportProperty $psInfo "executionPolicyProcess" (Get-ExecutionPolicy -Scope Process)
+Add-ReportProperty $psInfo "executionPolicyCurrentUser" (Get-ExecutionPolicy -Scope CurrentUser)
+Add-ReportProperty $psInfo "executionPolicyLocalMachine" (Get-ExecutionPolicy -Scope LocalMachine)
+Add-ReportProperty $report "powershell" $psInfo
+
+Add-ReportProperty $report "windows" (Get-OsInfoSafe)
+Add-ReportProperty $report "dotNetFramework" (Get-DotNetFrameworkInfo)
 
 $commands = @(
     Test-CommandAvailable "powershell.exe"
@@ -510,42 +554,32 @@ $commands = @(
     Test-CommandAvailable "dotnet.exe"
     Test-CommandAvailable "git.exe"
 )
-Add-ReportProperty -Report $report -Name "commands" -Value $commands
+Add-ReportProperty $report "commands" $commands
 
-$wshLm = Get-RegistryValueSafe -Path "HKLM:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled"
-$wshCu = Get-RegistryValueSafe -Path "HKCU:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled"
-$wshInfo = [pscustomobject]@{
-    hklmEnabled = $wshLm
-    hkcuEnabled = $wshCu
-    note = "Null usually means no explicit registry block was found."
-}
-Add-ReportProperty -Report $report -Name "windowsScriptHost" -Value $wshInfo
-Add-ReportProperty -Report $report -Name "officeMatches" -Value (Get-InstalledProgramMatches -Patterns @("Microsoft 365", "Microsoft Office", "Access", "Excel", "Visual Studio", "SQL Server", "SQLite", "ODBC"))
-Add-ReportProperty -Report $report -Name "installedRuntimesAndTools" -Value (Get-RuntimeInventory)
-Add-ReportProperty -Report $report -Name "browsers" -Value (Get-BrowserInfo)
-Add-ReportProperty -Report $report -Name "fileSystem" -Value @((Test-FileWriteAccess -Directory $root.Path))
+$wshInfo = New-Object PSObject
+Add-ReportProperty $wshInfo "hklmEnabled" (Get-RegistryValueSafe -Path "HKLM:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled")
+Add-ReportProperty $wshInfo "hkcuEnabled" (Get-RegistryValueSafe -Path "HKCU:\Software\Microsoft\Windows Script Host\Settings" -Name "Enabled")
+Add-ReportProperty $wshInfo "note" "Null usually means no explicit registry block was found."
+Add-ReportProperty $report "windowsScriptHost" $wshInfo
+
+Add-ReportProperty $report "officeMatches" (Get-InstalledProgramMatches -Patterns @("Microsoft 365", "Microsoft Office", "Access", "Excel", "Visual Studio", "SQL Server", "SQLite", "ODBC"))
+Add-ReportProperty $report "installedRuntimesAndTools" (Get-RuntimeInventory)
+Add-ReportProperty $report "browsers" (Get-BrowserInfo)
+Add-ReportProperty $report "fileSystem" @((Test-FileWriteAccess -Directory $root.Path))
 
 $browserAuditPath = Join-Path $outDir "pixelsim-browser-audit.html"
 New-BrowserAuditHtml -Path $browserAuditPath
-Add-ReportProperty -Report $report -Name "browserAuditHtml" -Value $browserAuditPath
+Add-ReportProperty $report "browserAuditHtml" $browserAuditPath
 
 $jsonPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".json")
 $txtPath = Join-Path $outDir ("pixelsim-windows-audit-" + $timestamp + ".txt")
 
-try {
-    $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
-} catch {
-    $fallback = [pscustomobject]@{
-        generatedAt = (Get-Date).ToString("o")
-        jsonError = $_.Exception.Message
-        note = "JSON export failed, but text report and browser audit were still created."
-    }
-    $fallback | ConvertTo-Json -Depth 3 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
-}
-
-$report | Format-List | Out-File -FilePath $txtPath -Encoding UTF8 -Force
+$safeReport = ConvertTo-JsonSafeObject $report
+$safeReport | ConvertTo-Json -Depth 12 | Out-File -FilePath $jsonPath -Encoding UTF8 -Force
+$safeReport | Format-List | Out-File -FilePath $txtPath -Encoding UTF8 -Force
 
 Write-Host "PixelSim local capability audit complete."
+Write-Host "Audit version: $AuditVersion"
 Write-Host "JSON report: $jsonPath"
 Write-Host "Text report: $txtPath"
 Write-Host "Browser audit page: $browserAuditPath"
