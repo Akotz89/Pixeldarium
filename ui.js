@@ -237,8 +237,13 @@ function updateEcosystemSummary() {
     return;
   }
 
+  var trend = summary.trend || {};
   var chips = [
     makeSummaryChip("Pressure", summary.pressure),
+    makeSummaryChip("Stability", summary.stabilityScore + "/100"),
+    makeSummaryChip("Pop Trend", formatSignedNumber(trend.populationDelta || 0, 0)),
+    makeSummaryChip("Energy Trend", formatSignedNumber(trend.energyDelta || 0, 1)),
+    makeSummaryChip("Food Trend", formatSignedNumber(trend.foodDelta || 0, 0)),
     makeSummaryChip("Energy", summary.averageEnergy.toFixed(1)),
     makeSummaryChip("Food/Org", summary.foodPerOrganism.toFixed(2)),
     makeSummaryChip("Mature", summary.matureOrganisms + "/" + summary.population),
@@ -249,6 +254,21 @@ function updateEcosystemSummary() {
 
   setElementClass(ecosystemSummaryText, "ecosystem-grid ecosystem-" + summary.pressure);
   setElementHtml(ecosystemSummaryText, chips.join(""));
+}
+
+function formatSignedNumber(value, decimals) {
+  var numberValue = Number(value) || 0;
+  var fixedValue = Math.abs(numberValue).toFixed(decimals);
+
+  if (numberValue > 0) {
+    return "+" + fixedValue;
+  }
+
+  if (numberValue < 0) {
+    return "-" + fixedValue;
+  }
+
+  return decimals > 0 ? "0." + "0".repeat(decimals) : "0";
 }
 
 function makeEventChip(event) {

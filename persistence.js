@@ -90,6 +90,18 @@ function copySimulationEventForSave(event) {
   };
 }
 
+function copyEcosystemHistorySampleForSave(sample) {
+  return {
+    tick: Math.max(0, Math.round(Number(sample.tick) || 0)),
+    population: Math.max(0, Math.round(Number(sample.population) || 0)),
+    food: Math.max(0, Math.round(Number(sample.food) || 0)),
+    averageEnergy: Math.max(0, Number(sample.averageEnergy) || 0),
+    foodPerOrganism: Math.max(0, Number(sample.foodPerOrganism) || 0),
+    pressure: String(sample.pressure || "balanced"),
+    stabilityScore: clamp(Math.round(Number(sample.stabilityScore) || 0), 0, 100)
+  };
+}
+
 function copyLineageForSave(lineage) {
   return {
     id: lineage.id,
@@ -455,6 +467,8 @@ function createWorldSaveData() {
       terrainMismatchMaxEnergyCost: CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST,
       traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
       traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
+      ecosystemHistorySampleInterval: CONFIG.ECOSYSTEM_HISTORY_SAMPLE_INTERVAL,
+      ecosystemHistoryMaxSamples: CONFIG.ECOSYSTEM_HISTORY_MAX_SAMPLES,
       eventLogMaxEntries: CONFIG.EVENT_LOG_MAX_ENTRIES,
       eventLogVisibleEntries: CONFIG.EVENT_LOG_VISIBLE_ENTRIES,
       lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
@@ -558,6 +572,7 @@ function createWorldSaveData() {
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave),
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
+    ecosystemHistory: (Array.isArray(world.ecosystemHistory) ? world.ecosystemHistory : []).map(copyEcosystemHistorySampleForSave),
     eventLog: (Array.isArray(world.eventLog) ? world.eventLog : []).map(copySimulationEventForSave),
     lineages: getLineagesForSave(),
     settlements: getSettlementsForSave(),
@@ -1071,6 +1086,30 @@ function restoreSimulationEvents(eventLog) {
     .map(restoreSimulationEvent);
 }
 
+function restoreEcosystemHistorySample(sample) {
+  sample = sample || {};
+
+  return {
+    tick: Math.max(0, Math.round(restoreNumber(sample.tick, 0))),
+    population: Math.max(0, Math.round(restoreNumber(sample.population, 0))),
+    food: Math.max(0, Math.round(restoreNumber(sample.food, 0))),
+    averageEnergy: Math.max(0, restoreNumber(sample.averageEnergy, 0)),
+    foodPerOrganism: Math.max(0, restoreNumber(sample.foodPerOrganism, 0)),
+    pressure: String(sample.pressure || "balanced"),
+    stabilityScore: clamp(Math.round(restoreNumber(sample.stabilityScore, 0)), 0, 100)
+  };
+}
+
+function restoreEcosystemHistory(ecosystemHistory) {
+  if (!Array.isArray(ecosystemHistory)) {
+    return [];
+  }
+
+  return ecosystemHistory
+    .slice(-CONFIG.ECOSYSTEM_HISTORY_MAX_SAMPLES)
+    .map(restoreEcosystemHistorySample);
+}
+
 function countFertileTiles() {
   var fertileTiles = 0;
 
@@ -1226,6 +1265,14 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.traitHistoryMaxSamples === "number") {
     CONFIG.TRAIT_HISTORY_MAX_SAMPLES = saveConfig.traitHistoryMaxSamples;
+  }
+
+  if (typeof saveConfig.ecosystemHistorySampleInterval === "number") {
+    CONFIG.ECOSYSTEM_HISTORY_SAMPLE_INTERVAL = Math.max(1, Math.round(saveConfig.ecosystemHistorySampleInterval));
+  }
+
+  if (typeof saveConfig.ecosystemHistoryMaxSamples === "number") {
+    CONFIG.ECOSYSTEM_HISTORY_MAX_SAMPLES = Math.max(1, Math.round(saveConfig.ecosystemHistoryMaxSamples));
   }
 
   if (typeof saveConfig.eventLogMaxEntries === "number") {
@@ -1737,6 +1784,7 @@ function applyWorldSaveData(saveData) {
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
+  world.ecosystemHistory = restoreEcosystemHistory(saveData.ecosystemHistory);
   world.eventLog = restoreSimulationEvents(saveData.eventLog);
   world.ecosystemSummary = null;
 
