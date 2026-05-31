@@ -3,9 +3,9 @@ function updateHud() {
     (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100
   );
 
-  eraText.textContent = "ERA: " + world.era;
-  populationText.textContent = "POPULATION: " + world.organisms.length;
-  foodText.textContent =
+  setElementText(eraText, "ERA: " + world.era);
+  setElementText(populationText, "POPULATION: " + world.organisms.length);
+  setElementText(foodText,
     "TICK: " + world.tick +
     "   FOOD: " + world.food.length +
     "   FERTILE: " + fertilePercent + "%" +
@@ -13,14 +13,41 @@ function updateHud() {
     "   TPS: " + world.tps.toFixed(1) +
     "   UPDATE: " + world.updateMs.toFixed(2) + "ms" +
     "   DRAW: " + world.drawMs.toFixed(2) + "ms" +
-    "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
+    "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms"
+  );
 
-  speedLabel.textContent = "Speed: " + world.speed + "x";
+  setElementText(speedLabel, "Speed: " + world.speed + "x");
   syncTuningControls();
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
   updateInspectPanel();
+}
+
+function setElementText(element, text) {
+  if (element.textContent !== text) {
+    element.textContent = text;
+  }
+}
+
+function setElementHtml(element, html) {
+  if (element.innerHTML !== html) {
+    element.innerHTML = html;
+  }
+}
+
+function setElementClass(element, className) {
+  if (element.className !== className) {
+    element.className = className;
+  }
+}
+
+function setInputValue(input, value) {
+  var stringValue = String(value);
+
+  if (input.value !== stringValue) {
+    input.value = stringValue;
+  }
 }
 
 function getTuningInputNumber(input, fallbackValue) {
@@ -35,16 +62,16 @@ function getTuningInputNumber(input, fallbackValue) {
 function syncTuningControls() {
   var growthPercent = Math.round(CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100);
 
-  speedSlider.value = String(world.speed);
-  speedValue.textContent = world.speed + "x";
-  organismSizeSlider.value = String(CONFIG.ORGANISM_DRAW_SIZE);
-  organismSizeValue.textContent = CONFIG.ORGANISM_DRAW_SIZE + "px";
-  foodSizeSlider.value = String(CONFIG.FOOD_DRAW_SIZE);
-  foodSizeValue.textContent = CONFIG.FOOD_DRAW_SIZE + "px";
-  startingFoodSlider.value = String(CONFIG.STARTING_FOOD);
-  startingFoodValue.textContent = String(CONFIG.STARTING_FOOD);
-  foodGrowthSlider.value = String(growthPercent);
-  foodGrowthValue.textContent = growthPercent + "%";
+  setInputValue(speedSlider, world.speed);
+  setElementText(speedValue, world.speed + "x");
+  setInputValue(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE);
+  setElementText(organismSizeValue, CONFIG.ORGANISM_DRAW_SIZE + "px");
+  setInputValue(foodSizeSlider, CONFIG.FOOD_DRAW_SIZE);
+  setElementText(foodSizeValue, CONFIG.FOOD_DRAW_SIZE + "px");
+  setInputValue(startingFoodSlider, CONFIG.STARTING_FOOD);
+  setElementText(startingFoodValue, String(CONFIG.STARTING_FOOD));
+  setInputValue(foodGrowthSlider, growthPercent);
+  setElementText(foodGrowthValue, growthPercent + "%");
 }
 
 function applyTuningFromControls(redraw) {
@@ -181,16 +208,17 @@ function updateTraitSummary() {
   var summary = getPopulationTraitSummary();
 
   if (!summary) {
-    traitSummaryText.textContent = "TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -";
+    setElementText(traitSummaryText, "TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -");
     return;
   }
 
-  traitSummaryText.textContent =
+  setElementText(traitSummaryText,
     "TRAITS AVG: vision " + summary.vision.toFixed(1) +
     "   metabolism " + summary.metabolism.toFixed(2) +
     "   reproduce " + summary.reproductionEnergy.toFixed(1) +
     "   roam " + summary.movementTendency.toFixed(2) +
-    "   habitat " + summary.terrainAffinity.toFixed(2);
+    "   habitat " + summary.terrainAffinity.toFixed(2)
+  );
 }
 
 function getLineageSummary() {
@@ -256,7 +284,7 @@ function updateLineageSummary() {
   var lineages = getLineageSummary();
 
   if (lineages.length === 0) {
-    lineageSummaryText.textContent = "LINEAGES: -";
+    setElementText(lineageSummaryText, "LINEAGES: -");
     return;
   }
 
@@ -272,11 +300,12 @@ function updateLineageSummary() {
     newestText = "newest L" + newestLineage.id + " parent L" + newestLineage.parentId;
   }
 
-  lineageSummaryText.textContent =
+  setElementText(lineageSummaryText,
     "LINEAGES: " + activeLineages.length +
     " active / " + extinctLineages.length + " extinct   " +
     newestText +
-    "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
+    "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-")
+  );
 }
 
 function getSettlementSummary() {
@@ -396,8 +425,8 @@ function updateSettlementSummary() {
   var summary = getSettlementSummary();
 
   if (!summary) {
-    settlementSummaryText.className = "";
-    settlementSummaryText.textContent = "SETTLEMENTS: -";
+    setElementClass(settlementSummaryText, "");
+    setElementText(settlementSummaryText, "SETTLEMENTS: -");
     return;
   }
 
@@ -437,10 +466,10 @@ function updateSettlementSummary() {
     ["Top Dev", summary.topSettlement.development.toFixed(1)]
   ];
 
-  settlementSummaryText.className = "summary-grid";
-  settlementSummaryText.innerHTML = chips.map(function(chip) {
+  setElementClass(settlementSummaryText, "summary-grid");
+  setElementHtml(settlementSummaryText, chips.map(function(chip) {
     return "<span class=\"summary-chip\"><b>" + chip[0] + "</b><span>" + chip[1] + "</span></span>";
-  }).join("");
+  }).join(""));
 }
 
 function makeTraitHistorySample(summary) {
@@ -578,8 +607,8 @@ function drawTraitHistory() {
 
 function updateInspectPanel() {
   if (!world.inspectedTile) {
-    inspectSummaryText.textContent = "INSPECT: None";
-    inspectDetailsText.textContent = "TERRAIN: -   FOOD: -   ORGANISM: -";
+    setElementText(inspectSummaryText, "INSPECT: None");
+    setElementText(inspectDetailsText, "TERRAIN: -   FOOD: -   ORGANISM: -");
     return;
   }
 
@@ -641,12 +670,13 @@ function updateInspectPanel() {
       " " + (settlement.isActive ? "active" : "stale");
   }
 
-  inspectSummaryText.textContent = "INSPECT: Tile " + tileX + "," + tileY;
-  inspectDetailsText.textContent =
+  setElementText(inspectSummaryText, "INSPECT: Tile " + tileX + "," + tileY);
+  setElementText(inspectDetailsText,
     "TERRAIN: " + terrainName +
     "   FOOD: " + (hasFood ? "yes" : "no") +
     "   ORGANISM: " + organismText +
-    "   SETTLEMENT: " + settlementText;
+    "   SETTLEMENT: " + settlementText
+  );
 }
 
 function getTileFromCanvasEvent(event) {
@@ -671,7 +701,7 @@ function inspectTile(tileX, tileY) {
 }
 
 function setPersistenceStatus(message, isError) {
-  persistenceStatus.textContent = message;
+  setElementText(persistenceStatus, message);
   persistenceStatus.classList.toggle("error", Boolean(isError));
 }
 
@@ -683,7 +713,7 @@ window.setupControls = function() {
 
   pauseButton.addEventListener("click", function() {
     world.isPaused = !world.isPaused;
-    pauseButton.textContent = world.isPaused ? "Resume" : "Pause";
+    setElementText(pauseButton, world.isPaused ? "Resume" : "Pause");
   });
 
   stepButton.addEventListener("click", function() {
