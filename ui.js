@@ -234,6 +234,7 @@ function updateEcosystemSummary() {
   if (!summary) {
     setElementClass(ecosystemSummaryText, "");
     setElementText(ecosystemSummaryText, "ECOSYSTEM: -");
+    drawEcosystemHistory();
     return;
   }
 
@@ -254,6 +255,7 @@ function updateEcosystemSummary() {
 
   setElementClass(ecosystemSummaryText, "ecosystem-grid ecosystem-" + summary.pressure);
   setElementHtml(ecosystemSummaryText, chips.join(""));
+  drawEcosystemHistory();
 }
 
 function formatSignedNumber(value, decimals) {
@@ -278,6 +280,125 @@ function makeEventChip(event) {
     "<span>T" + escapeSummaryText(event.tick) + " " + escapeSummaryText(event.detail || "") + "</span>" +
     "</span>"
   );
+}
+
+function scaleHistoryValue(value, minValue, maxValue, height) {
+  if (maxValue <= minValue) {
+    return height / 2;
+  }
+
+  return height - clamp((value - minValue) / (maxValue - minValue), 0, 1) * height;
+}
+
+function getHistoryRange(samples, getValue, fallbackMax) {
+  var minValue = Infinity;
+  var maxValue = -Infinity;
+
+  for (var i = 0; i < samples.length; i++) {
+    var value = Number(getValue(samples[i])) || 0;
+    minValue = Math.min(minValue, value);
+    maxValue = Math.max(maxValue, value);
+  }
+
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+    return {
+      min: 0,
+      max: fallbackMax
+    };
+  }
+
+  if (minValue === maxValue) {
+    maxValue = Math.max(fallbackMax, maxValue + 1);
+    minValue = 0;
+  }
+
+  return {
+    min: minValue,
+    max: maxValue
+  };
+}
+
+function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
+  if (samples.length === 0) {
+    return;
+  }
+
+  ecosystemHistoryCtx.strokeStyle = color;
+  ecosystemHistoryCtx.fillStyle = color;
+  ecosystemHistoryCtx.lineWidth = 2;
+  ecosystemHistoryCtx.beginPath();
+
+  for (var i = 0; i < samples.length; i++) {
+    var x = chart.x;
+
+    if (samples.length > 1) {
+      x += (i / (samples.length - 1)) * chart.width;
+    }
+
+    var y = chart.y + scaleHistoryValue(getValue(samples[i]), range.min, range.max, chart.height);
+
+    if (i === 0) {
+      ecosystemHistoryCtx.moveTo(x, y);
+    } else {
+      ecosystemHistoryCtx.lineTo(x, y);
+    }
+  }
+
+  ecosystemHistoryCtx.stroke();
+
+  if (samples.length === 1) {
+    ecosystemHistoryCtx.beginPath();
+    ecosystemHistoryCtx.arc(
+      chart.x,
+      chart.y + scaleHistoryValue(getValue(samples[0]), range.min, range.max, chart.height),
+      3,
+      0,
+      Math.PI * 2
+    );
+    ecosystemHistoryCtx.fill();
+  }
+}
+
+function drawEcosystemHistory() {
+  var width = ecosystemHistoryCanvas.width;
+  var height = ecosystemHistoryCanvas.height;
+  var chart = {
+    x: 10,
+    y: 8,
+    width: width - 20,
+    height: height - 16
+  };
+  var samples = Array.isArray(world.ecosystemHistory) ? world.ecosystemHistory : [];
+
+  ecosystemHistoryCtx.clearRect(0, 0, width, height);
+  ecosystemHistoryCtx.fillStyle = "rgba(5, 6, 10, 0.86)";
+  ecosystemHistoryCtx.fillRect(0, 0, width, height);
+  ecosystemHistoryCtx.strokeStyle = "rgba(255, 255, 255, 0.10)";
+  ecosystemHistoryCtx.lineWidth = 1;
+
+  for (var i = 0; i <= 3; i++) {
+    var y = chart.y + (i / 3) * chart.height;
+    ecosystemHistoryCtx.beginPath();
+    ecosystemHistoryCtx.moveTo(chart.x, y);
+    ecosystemHistoryCtx.lineTo(chart.x + chart.width, y);
+    ecosystemHistoryCtx.stroke();
+  }
+
+  drawEcosystemHistoryLine(samples, function(sample) {
+    return sample.stabilityScore;
+  }, "#70f0d0", chart, { min: 0, max: 100 });
+
+  drawEcosystemHistoryLine(samples, function(sample) {
+    return sample.population;
+  }, "#72d7ff", chart, getHistoryRange(samples, function(sample) {
+    return sample.population;
+  }, CONFIG.STARTING_ORGANISMS));
+
+  drawEcosystemHistoryLine(samples, function(sample) {
+    return sample.food;
+  }, "#fff26b", chart, getHistoryRange(samples, function(sample) {
+    return sample.food;
+  }, CONFIG.STARTING_FOOD));
 }
 
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {

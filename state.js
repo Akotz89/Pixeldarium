@@ -11,6 +11,8 @@ const traitSummaryText = document.getElementById("trait-summary");
 const lineageSummaryText = document.getElementById("lineage-summary");
 const settlementSummaryText = document.getElementById("settlement-summary");
 const eventLogText = document.getElementById("event-log");
+const ecosystemHistoryCanvas = document.getElementById("ecosystem-history");
+const ecosystemHistoryCtx = ecosystemHistoryCanvas.getContext("2d", { willReadFrequently: true });
 const traitHistoryCanvas = document.getElementById("trait-history");
 const traitHistoryCtx = traitHistoryCanvas.getContext("2d", { willReadFrequently: true });
 
