@@ -91,6 +91,8 @@ function copySimulationEventForSave(event) {
 }
 
 function copyEcosystemHistorySampleForSave(sample) {
+  var foodRunwayTicks = Number(sample.foodRunwayTicks);
+
   return {
     tick: Math.max(0, Math.round(Number(sample.tick) || 0)),
     population: Math.max(0, Math.round(Number(sample.population) || 0)),
@@ -100,6 +102,7 @@ function copyEcosystemHistorySampleForSave(sample) {
     populationBalance: String(sample.populationBalance || "steady"),
     resourceBalance: String(sample.resourceBalance || "steady"),
     foodNetThisTick: Math.round(Number(sample.foodNetThisTick) || 0),
+    foodRunwayTicks: Number.isFinite(foodRunwayTicks) ? Math.round(foodRunwayTicks) : -1,
     pressure: String(sample.pressure || "balanced"),
     stabilityScore: clamp(Math.round(Number(sample.stabilityScore) || 0), 0, 100)
   };
@@ -1108,6 +1111,7 @@ function restoreEcosystemHistorySample(sample) {
     populationBalance: String(sample.populationBalance || "steady"),
     resourceBalance: String(sample.resourceBalance || "steady"),
     foodNetThisTick: Math.round(restoreNumber(sample.foodNetThisTick, 0)),
+    foodRunwayTicks: Math.round(restoreNumber(sample.foodRunwayTicks, -1)),
     pressure: String(sample.pressure || "balanced"),
     stabilityScore: clamp(Math.round(restoreNumber(sample.stabilityScore, 0)), 0, 100)
   };

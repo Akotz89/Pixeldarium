@@ -420,6 +420,7 @@ function updateEcosystemSummary() {
     makeSummaryChip("Energy Trend", formatSignedNumber(trend.energyDelta || 0, 1)),
     makeSummaryChip("Food Trend", formatSignedNumber(trend.foodDelta || 0, 0)),
     makeSummaryChip("Flow Trend", formatSignedNumber(trend.foodNetDelta || 0, 0)),
+    makeSummaryChip("Runway Trend", formatSignedNumber(trend.foodRunwayDelta || 0, 0)),
     makeSummaryChip("Energy", summary.averageEnergy.toFixed(1)),
     makeSummaryChip("Food/Org", summary.foodPerOrganism.toFixed(2)),
     makeSummaryChip("Mature", summary.matureOrganisms + "/" + summary.population),
