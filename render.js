@@ -20,20 +20,60 @@ function drawEntityAtCanvasPosition(canvasX, canvasY, size, color) {
   );
 }
 
-function buildTerrainCache() {
-  terrainCache = document.createElement("canvas");
-  terrainCache.width = canvas.width;
-  terrainCache.height = canvas.height;
+function getPlanetBiomeColor(biome) {
+  switch (biome) {
+    case "forest":
+      return "#123f23";
+    case "grassland":
+      return "#23552d";
+    case "desert":
+      return "#56451f";
+    case "tundra":
+      return "#29383a";
+    case "ice":
+      return "#a8d4e8";
+    case "ocean":
+      return "#06172b";
+    default:
+      return "#07080f";
+  }
+}
 
-  var tctx = terrainCache.getContext("2d");
+function drawPlanetShell(targetCtx) {
+  var projection = getPlanetProjection();
+  var gradient = targetCtx.createRadialGradient(
+    projection.centerX - projection.radius * 0.32,
+    projection.centerY - projection.radius * 0.34,
+    projection.radius * 0.1,
+    projection.centerX,
+    projection.centerY,
+    projection.radius * 1.08
+  );
 
+  gradient.addColorStop(0, "#123f34");
+  gradient.addColorStop(0.36, "#071a2c");
+  gradient.addColorStop(1, "#01040b");
+
+  targetCtx.fillStyle = "#01030a";
+  targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+  targetCtx.beginPath();
+  targetCtx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
+  targetCtx.fillStyle = gradient;
+  targetCtx.fill();
+  targetCtx.strokeStyle = "rgba(142, 160, 255, 0.76)";
+  targetCtx.lineWidth = 2;
+  targetCtx.stroke();
+  targetCtx.beginPath();
+  targetCtx.arc(projection.centerX, projection.centerY, projection.radius + 6, 0, Math.PI * 2);
+  targetCtx.strokeStyle = "rgba(112, 240, 208, 0.10)";
+  targetCtx.lineWidth = 8;
+  targetCtx.stroke();
+}
+
+function buildFlatTerrainCache(tctx) {
   for (var y = 0; y < WORLD_HEIGHT; y++) {
     for (var x = 0; x < WORLD_WIDTH; x++) {
-      if (isFertile(x, y)) {
-        tctx.fillStyle = "#12351d";
-      } else {
-        tctx.fillStyle = "#07080f";
-      }
+      tctx.fillStyle = getPlanetBiomeColor(getPlanetTileBiome(x, y));
 
       tctx.fillRect(
         x * CONFIG.TILE_SIZE,
@@ -45,6 +85,48 @@ function buildTerrainCache() {
   }
 }
 
+function buildGlobeTerrainCache(tctx) {
+  var projection = getPlanetProjection();
+  var sampleSize = Math.max(2, Math.ceil((projection.radius * 2.35) / Math.max(WORLD_WIDTH, WORLD_HEIGHT)));
+
+  drawPlanetShell(tctx);
+
+  for (var y = 0; y < WORLD_HEIGHT; y++) {
+    for (var x = 0; x < WORLD_WIDTH; x++) {
+      var point = getPlanetTileProjection(x, y);
+
+      if (!point) {
+        continue;
+      }
+
+      tctx.globalAlpha = clamp(0.48 + point.visibility * 0.62, 0.48, 1);
+      tctx.fillStyle = getPlanetBiomeColor(getPlanetTileBiome(x, y));
+      tctx.fillRect(
+        point.x - sampleSize / 2,
+        point.y - sampleSize / 2,
+        sampleSize,
+        sampleSize
+      );
+    }
+  }
+
+  tctx.globalAlpha = 1;
+}
+
+function buildTerrainCache() {
+  terrainCache = document.createElement("canvas");
+  terrainCache.width = canvas.width;
+  terrainCache.height = canvas.height;
+
+  var tctx = terrainCache.getContext("2d");
+
+  if (isGlobeRenderMode()) {
+    buildGlobeTerrainCache(tctx);
+  } else {
+    buildFlatTerrainCache(tctx);
+  }
+}
+
 function drawTerrain() {
   if (!terrainCache) {
     buildTerrainCache();
@@ -53,15 +135,137 @@ function drawTerrain() {
   ctx.drawImage(terrainCache, 0, 0);
 }
 
+function drawPlanetReferenceGrid() {
+  var lonStep = Math.max(10, Math.round(Number(CONFIG.PLANET_GRID_DEGREES) || 30));
+  var latStep = lonStep;
+
+  ctx.save();
+  ctx.lineWidth = 1;
+
+  if (isGlobeRenderMode()) {
+    var projection = getPlanetProjection();
+
+    function drawProjectedLine(points, color) {
+      var drawing = false;
+
+      ctx.beginPath();
+
+      for (var pointIndex = 0; pointIndex < points.length; pointIndex++) {
+        var point = points[pointIndex];
+        var projected = projectPlanetPoint(point.longitude, point.latitude);
+
+        if (!projected) {
+          drawing = false;
+          continue;
+        }
+
+        if (!drawing) {
+          ctx.moveTo(projected.x, projected.y);
+          drawing = true;
+        } else {
+          ctx.lineTo(projected.x, projected.y);
+        }
+      }
+
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    for (var lon = -180; lon <= 180; lon += lonStep) {
+      var longitudePoints = [];
+
+      for (var lat = -90; lat <= 90; lat += 2) {
+        longitudePoints.push({ longitude: lon, latitude: lat });
+      }
+
+      drawProjectedLine(longitudePoints, lon === 0 ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.055)");
+    }
+
+    for (var gridLat = -60; gridLat <= 60; gridLat += latStep) {
+      var latitudePoints = [];
+
+      for (var gridLon = -180; gridLon <= 180; gridLon += 2) {
+        latitudePoints.push({ longitude: gridLon, latitude: gridLat });
+      }
+
+      drawProjectedLine(latitudePoints, gridLat === 0 ? "rgba(112, 240, 208, 0.28)" : "rgba(255, 255, 255, 0.055)");
+    }
+
+    ctx.beginPath();
+    ctx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  } else {
+    for (var lon = -150; lon <= 180; lon += lonStep) {
+      var x = ((lon + 180) / 360) * canvas.width;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.strokeStyle = lon === 0 ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.055)";
+      ctx.stroke();
+    }
+
+    for (var lat = -60; lat <= 60; lat += latStep) {
+      var y = ((90 - lat) / 180) * canvas.height;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.strokeStyle = lat === 0 ? "rgba(112, 240, 208, 0.24)" : "rgba(255, 255, 255, 0.055)";
+      ctx.stroke();
+    }
+  }
+
+  if (world.planetSummary) {
+    ctx.fillStyle = "rgba(3, 4, 9, 0.50)";
+    ctx.fillRect(18, canvas.height - 42, 430, 24);
+    ctx.fillStyle = "rgba(220, 229, 255, 0.86)";
+    ctx.font = "14px Arial, Helvetica, sans-serif";
+    ctx.fillText(
+      world.planetSummary.name + " scale | " +
+        Math.round(world.planetSummary.circumferenceKm).toLocaleString() + " km circumference | " +
+        world.planetSummary.equatorKmPerTile.toFixed(1) + " km/tile @ equator",
+      28,
+      canvas.height - 25
+    );
+  }
+
+  ctx.restore();
+}
+
+function getTileRenderPosition(tileX, tileY) {
+  if (isGlobeRenderMode()) {
+    return getPlanetInterpolatedProjection(tileX, tileY);
+  }
+
+  return {
+    x: tileX * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
+    y: tileY * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
+    scale: 1,
+    visibility: 1,
+    visible: true
+  };
+}
+
+function drawTileEntity(tileX, tileY, size, color) {
+  var point = getTileRenderPosition(tileX, tileY);
+
+  if (!point) {
+    return;
+  }
+
+  drawEntityAtCanvasPosition(
+    point.x,
+    point.y,
+    Math.max(1, size * (point.scale || 1)),
+    color
+  );
+}
+
 function drawFood() {
   for (var i = 0; i < world.food.length; i++) {
     var food = world.food[i];
-    drawEntityAtCanvasPosition(
-      food.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      food.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      CONFIG.FOOD_DRAW_SIZE,
-      "#58f06c"
-    );
+    drawTileEntity(food.x, food.y, CONFIG.FOOD_DRAW_SIZE, "#58f06c");
   }
 }
 
@@ -118,12 +322,7 @@ function drawOrganisms() {
     var renderX = previousX + (organism.x - previousX) * interpolation;
     var renderY = previousY + (organism.y - previousY) * interpolation;
 
-    drawEntityAtCanvasPosition(
-      renderX * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      renderY * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2,
-      CONFIG.ORGANISM_DRAW_SIZE,
-      getOrganismColor(organism)
-    );
+    drawTileEntity(renderX, renderY, CONFIG.ORGANISM_DRAW_SIZE, getOrganismColor(organism));
   }
 }
 
@@ -165,16 +364,19 @@ function drawSettlementRoutes() {
       continue;
     }
 
-    var parentX = parentSettlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var parentY = parentSettlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var childX = childSettlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var childY = childSettlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var parentPoint = getTileRenderPosition(parentSettlement.x, parentSettlement.y);
+    var childPoint = getTileRenderPosition(childSettlement.x, childSettlement.y);
+
+    if (!parentPoint || !childPoint) {
+      continue;
+    }
+
     var lineageColor = getLineageColorById(route.lineageId || parentSettlement.lineageId);
     var isColonyRoute = parentSettlement.isColony || childSettlement.isColony;
 
     ctx.beginPath();
-    ctx.moveTo(parentX, parentY);
-    ctx.lineTo(childX, childY);
+    ctx.moveTo(parentPoint.x, parentPoint.y);
+    ctx.lineTo(childPoint.x, childPoint.y);
     ctx.strokeStyle = isColonyRoute ? "rgba(112, 240, 208, 0.68)" : getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
     ctx.lineWidth = isColonyRoute ? 3 : (route.isActive ? 2 : 1);
     ctx.setLineDash(isColonyRoute ? [10, 3] : (route.isActive ? [6, 4] : [2, 5]));
@@ -191,16 +393,20 @@ function drawSettlementInfluence() {
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
     var radius = Math.max(1, Math.round(Number(settlement.influenceRadius) || CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS));
-    var canvasX = settlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var canvasY = settlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var canvasRadius = radius * CONFIG.TILE_SIZE;
+    var point = getTileRenderPosition(settlement.x, settlement.y);
+
+    if (!point) {
+      continue;
+    }
+
+    var canvasRadius = radius * CONFIG.TILE_SIZE * (point.scale || 1);
     var lineageColor = getLineageColorById(settlement.lineageId);
 
     ctx.beginPath();
-    ctx.moveTo(canvasX, canvasY - canvasRadius);
-    ctx.lineTo(canvasX + canvasRadius, canvasY);
-    ctx.lineTo(canvasX, canvasY + canvasRadius);
-    ctx.lineTo(canvasX - canvasRadius, canvasY);
+    ctx.moveTo(point.x, point.y - canvasRadius);
+    ctx.lineTo(point.x + canvasRadius, point.y);
+    ctx.lineTo(point.x, point.y + canvasRadius);
+    ctx.lineTo(point.x - canvasRadius, point.y);
     ctx.closePath();
     ctx.fillStyle = getRgbaFromHex(lineageColor, settlement.isActive ? 0.07 : 0.035);
     ctx.fill();
@@ -217,26 +423,30 @@ function drawSettlements() {
 
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
-    var canvasX = settlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var canvasY = settlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var size = getSettlementDrawSize(settlement);
-    var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1));
+    var point = getTileRenderPosition(settlement.x, settlement.y);
+
+    if (!point) {
+      continue;
+    }
+
+    var size = getSettlementDrawSize(settlement) * (point.scale || 1);
+    var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1)) * (point.scale || 1);
 
     ctx.fillStyle = settlement.isColony ? "rgba(8, 24, 26, 0.66)" : (settlement.isOutpost ? "rgba(8, 10, 18, 0.58)" : "rgba(5, 6, 10, 0.72)");
-    ctx.fillRect(canvasX - size / 2, canvasY - size / 2, size, size);
+    ctx.fillRect(point.x - size / 2, point.y - size / 2, size, size);
     ctx.strokeStyle = settlement.isActive ? getLineageColorById(settlement.lineageId) : "rgba(255, 255, 255, 0.42)";
     ctx.lineWidth = Math.min(4, 1 + Math.max(1, Math.round(Number(settlement.level) || 1)));
     ctx.setLineDash(settlement.isOutpost && !settlement.isColony ? [3, 2] : []);
-    ctx.strokeRect(canvasX - size / 2, canvasY - size / 2, size, size);
+    ctx.strokeRect(point.x - size / 2, point.y - size / 2, size, size);
     ctx.setLineDash([]);
     ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
-    ctx.fillRect(canvasX - markerSize / 2, canvasY - markerSize / 2, markerSize, markerSize);
+    ctx.fillRect(point.x - markerSize / 2, point.y - markerSize / 2, markerSize, markerSize);
 
     if (settlement.isColony && world.spaceProgramReady) {
       ctx.beginPath();
-      ctx.moveTo(canvasX, canvasY - size / 2 - 10);
-      ctx.lineTo(canvasX + 5, canvasY - size / 2 - 2);
-      ctx.lineTo(canvasX - 5, canvasY - size / 2 - 2);
+      ctx.moveTo(point.x, point.y - size / 2 - 10);
+      ctx.lineTo(point.x + 5, point.y - size / 2 - 2);
+      ctx.lineTo(point.x - 5, point.y - size / 2 - 2);
       ctx.closePath();
       ctx.fillStyle = world.orbitalLaunches > 0 ? "#ffffff" : "#72d7ff";
       ctx.fill();
@@ -524,20 +734,28 @@ function drawInspectSelection() {
     return;
   }
 
-  var canvasX = world.inspectedTile.x * CONFIG.TILE_SIZE;
-  var canvasY = world.inspectedTile.y * CONFIG.TILE_SIZE;
+  var point = getTileRenderPosition(world.inspectedTile.x, world.inspectedTile.y);
+
+  if (!point) {
+    return;
+  }
+
+  var size = Math.max(5, CONFIG.TILE_SIZE * 2.4 * (point.scale || 1));
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
-  ctx.fillRect(canvasX, canvasY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+  ctx.fill();
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2;
-  ctx.strokeRect(canvasX - 1, canvasY - 1, CONFIG.TILE_SIZE + 2, CONFIG.TILE_SIZE + 2);
+  ctx.stroke();
 }
 
 window.buildTerrainCache = buildTerrainCache;
 
 window.drawWorld = function() {
   drawTerrain();
+  drawPlanetReferenceGrid();
   drawSettlementInfluence();
   drawSettlementRoutes();
   drawFood();
