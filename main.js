@@ -149,11 +149,18 @@ function countItems(array, predicate) {
 
 function getSimulationMilestoneSnapshot() {
   var ecosystemSummary = world.ecosystemSummary || null;
+  var foodNetThisTick = ecosystemSummary
+    ? ecosystemSummary.foodNetThisTick
+    : (Number(world.foodSpawnedThisTick) || 0) - (Number(world.foodConsumedThisTick) || 0);
 
   return {
     era: world.era,
     population: Array.isArray(world.organisms) ? world.organisms.length : 0,
     isExtinct: Boolean(world.isExtinct),
+    populationDelta: Math.round(Number(world.populationDeltaThisTick) || 0),
+    populationBalance: ecosystemSummary ? ecosystemSummary.populationBalance : "unknown",
+    foodNetThisTick: Math.round(Number(foodNetThisTick) || 0),
+    resourceBalance: ecosystemSummary ? ecosystemSummary.resourceBalance : "unknown",
     ecosystemPressure: ecosystemSummary ? ecosystemSummary.pressure : "unknown",
     ecosystemStabilityBand: ecosystemSummary ? getEcosystemStabilityBand(ecosystemSummary.stabilityScore) : -1,
     settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
@@ -210,6 +217,16 @@ function recordCountMilestone(previous, current, key, type, label, detailPrefix)
   if (current[key] > previous[key]) {
     recordSimulationEvent(type, label, detailPrefix + " " + current[key]);
   }
+}
+
+function formatMilestoneSignedNumber(value) {
+  var numberValue = Math.round(Number(value) || 0);
+
+  if (numberValue > 0) {
+    return "+" + numberValue;
+  }
+
+  return String(numberValue);
 }
 
 function getEcosystemStabilityBand(stabilityScore) {
@@ -270,6 +287,55 @@ function recordEcosystemMilestones(previousSnapshot, currentSnapshot) {
   }
 }
 
+function recordBalanceTransition(previousSnapshot, currentSnapshot, key, target, label, valueKey) {
+  if (
+    previousSnapshot[key] !== "unknown" &&
+    previousSnapshot[key] !== target &&
+    currentSnapshot[key] === target
+  ) {
+    recordSimulationEvent(
+      "ecosystem",
+      label,
+      "net " + formatMilestoneSignedNumber(currentSnapshot[valueKey])
+    );
+  }
+}
+
+function recordBalanceMilestones(previousSnapshot, currentSnapshot) {
+  recordBalanceTransition(
+    previousSnapshot,
+    currentSnapshot,
+    "populationBalance",
+    "surging",
+    "Population surge",
+    "populationDelta"
+  );
+  recordBalanceTransition(
+    previousSnapshot,
+    currentSnapshot,
+    "populationBalance",
+    "crashing",
+    "Population crash",
+    "populationDelta"
+  );
+  recordBalanceTransition(
+    previousSnapshot,
+    currentSnapshot,
+    "resourceBalance",
+    "replenishing",
+    "Food replenishing",
+    "foodNetThisTick"
+  );
+  recordBalanceTransition(
+    previousSnapshot,
+    currentSnapshot,
+    "resourceBalance",
+    "draining",
+    "Food draining",
+    "foodNetThisTick"
+  );
+}
+
 function recordLifecycleMilestones(previousSnapshot, currentSnapshot) {
   if (!previousSnapshot.isExtinct && currentSnapshot.isExtinct) {
     recordSimulationEvent("lifecycle", "Extinction", "population 0");
@@ -289,6 +355,7 @@ function recordSimulationMilestones(previousSnapshot) {
 
   recordLifecycleMilestones(previousSnapshot, currentSnapshot);
   recordEcosystemMilestones(previousSnapshot, currentSnapshot);
+  recordBalanceMilestones(previousSnapshot, currentSnapshot);
   recordCountMilestone(previousSnapshot, currentSnapshot, "settlements", "settlement", "Settlement founded", "total");
   recordCountMilestone(previousSnapshot, currentSnapshot, "outposts", "settlement", "Outpost founded", "total");
   recordCountMilestone(previousSnapshot, currentSnapshot, "colonies", "settlement", "Colony matured", "total");
