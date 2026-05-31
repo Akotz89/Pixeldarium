@@ -510,6 +510,14 @@ function getEcosystemMomentum(trend) {
   return "steady";
 }
 
+function formatEcosystemTrendDelta(trend, key) {
+  if (!trend) {
+    return "0";
+  }
+
+  return formatMilestoneSignedNumber(trend[key]);
+}
+
 function getLowestStabilityFactor(componentScores) {
   var lowestKey = "population";
   var lowestScore = componentScores.population;
@@ -970,6 +978,16 @@ function refreshSimulationAlerts() {
 
   if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
     addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick), 28);
+  }
+
+  if (!world.isExtinct && ecosystemSummary.momentum === "draining") {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Flow worsening",
+      formatEcosystemTrendDelta(ecosystemSummary.trend, "foodNetDelta") + " food net",
+      27
+    );
   }
 
   if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
