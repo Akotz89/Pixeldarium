@@ -73,6 +73,7 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.5px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
 }
 
 .sim-button:hover {
@@ -143,6 +144,9 @@ h1 {
   font-weight: 800;
   letter-spacing: 1px;
   box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #inspect-panel {
@@ -264,6 +268,10 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.5px;
   box-sizing: border-box;
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  white-space: nowrap;
 }
 
 #settlement-summary.summary-grid {
@@ -328,4 +336,102 @@ h1 {
   color: #aeb7d9;
   font-size: 12px;
   margin: 0;
+}
+
+@media (max-width: 1180px) {
+  #game-wrap {
+    padding: 10px;
+    gap: 8px;
+    grid-template-rows: 36px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto;
+  }
+
+  h1 {
+    line-height: 36px;
+    font-size: 22px;
+    letter-spacing: 3px;
+  }
+
+  .sim-button,
+  .speed-label {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  #tuning-panel {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  #hud {
+    grid-template-columns: minmax(140px, 0.8fr) minmax(150px, 0.8fr) minmax(260px, 1.4fr);
+    gap: 8px;
+  }
+
+  #inspect-panel,
+  #trait-history-panel {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  #settlement-summary.summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    max-height: 96px;
+  }
+}
+
+@media (max-width: 720px) {
+  html,
+  body {
+    min-height: 100%;
+    overflow: auto;
+  }
+
+  #game-wrap {
+    min-height: 100vh;
+    height: auto;
+    grid-template-rows: 34px auto auto auto auto auto auto auto auto auto auto auto;
+  }
+
+  #game {
+    height: auto;
+    aspect-ratio: 32 / 17;
+    min-height: 240px;
+  }
+
+  #controls {
+    justify-content: stretch;
+    gap: 6px;
+  }
+
+  .sim-button,
+  .speed-label {
+    flex: 1 1 92px;
+    min-width: 0;
+  }
+
+  #tuning-panel,
+  #hud,
+  #inspect-panel,
+  #trait-panel,
+  #lineage-panel,
+  #settlement-panel,
+  #trait-history-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .tuning-control {
+    grid-template-columns: minmax(76px, auto) minmax(90px, 1fr) minmax(42px, auto);
+  }
+
+  #trait-history {
+    height: 72px;
+  }
+
+  #settlement-summary.summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 150px;
+  }
+
+  .summary-chip {
+    padding: 6px;
+  }
 }
