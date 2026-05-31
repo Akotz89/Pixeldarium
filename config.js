@@ -7,6 +7,7 @@ const CONFIG = {
   TERRAIN_FERTILE: 1,
 
   STARTING_ORGANISMS: 24,
+  ORGANISM_POPULATION_UNIT: 1000,
   STARTING_FOOD: 420,
   DEFAULT_SEED: "PIXEL-2026",
 
@@ -179,12 +180,23 @@ const CONFIG = {
   PLANET_VIEW_LONGITUDE_DEG: -20,
   PLANET_VIEW_LATITUDE_DEG: 8,
   PLANET_GRID_DEGREES: 30,
+  PLANET_ZOOM_LEVEL: 0,
+  PLANET_ZOOM_LEVELS: [
+    { name: "Globe", metersPerSample: 125000, chunkKm: 4000 },
+    { name: "Continent", metersPerSample: 25000, chunkKm: 1000 },
+    { name: "Region", metersPerSample: 5000, chunkKm: 200 },
+    { name: "Local", metersPerSample: 1000, chunkKm: 40 },
+    { name: "Neighborhood", metersPerSample: 100, chunkKm: 4 },
+    { name: "House", metersPerSample: 1, chunkKm: 0.25 }
+  ],
 
   SIM_UPDATE_INTERVAL_MS: 200,
   MAX_SIM_UPDATES_PER_FRAME: 8,
   HUD_UPDATE_INTERVAL_MS: 250,
+  SIM_DAYS_PER_TICK: 1,
   TICKS_PER_SIM_UPDATE: 12,
   SIM_SPEED_MULTIPLIER: 1,
+  ORGANISM_TRAVEL_KM_PER_DAY: 18,
 
   ORGANISM_DRAW_SIZE: 7,
   FOOD_DRAW_SIZE: 2

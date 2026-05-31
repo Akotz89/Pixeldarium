@@ -23,6 +23,7 @@ function clearWorld() {
   world.terrain = [];
   world.planetTiles = [];
   world.planetSummary = null;
+  world.planetView = null;
   world.fertileTiles = 0;
   world.birthsThisTick = 0;
   world.deathsThisTick = 0;

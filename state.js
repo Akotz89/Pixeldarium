@@ -67,6 +67,7 @@ const world = {
   terrain: [],
   planetTiles: [],
   planetSummary: null,
+  planetView: null,
   fertileTiles: 0,
   birthsThisTick: 0,
   deathsThisTick: 0,

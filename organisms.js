@@ -292,6 +292,7 @@ function makeOrganism(x, y, lineageId) {
     age: 0,
     directionX: randomInt(3) - 1,
     directionY: randomInt(3) - 1,
+    travelKm: 0,
     traits: makeInitialOrganismTraits(),
     lineageId: lineageId || allocateLineageId(),
     lineageParentId: 0,
@@ -300,6 +301,11 @@ function makeOrganism(x, y, lineageId) {
 
   registerLineage(organism.lineageId, 0, 0, organism.traits, world.tick);
   return organism;
+}
+
+function getOrganismTravelKmPerTick() {
+  return Math.max(0, Number(CONFIG.ORGANISM_TRAVEL_KM_PER_DAY) || 0) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
 }
 
 function getOrganismBucketSize() {
@@ -775,6 +781,7 @@ function updateOrganism(organism) {
   organism.prevX = organism.x;
   organism.prevY = organism.y;
   organism.age++;
+  organism.travelKm = Math.max(0, Number(organism.travelKm) || 0) + getOrganismTravelKmPerTick();
 
   if (world.tick % 3 === 0) {
     organism.energy -= traits.metabolism;
@@ -789,12 +796,31 @@ function updateOrganism(organism) {
     chooseRoamingDirection(organism, traits);
   }
 
-  organism.x += organism.directionX;
-  organism.y += organism.directionY;
-  clampToWorld(organism);
+  moveOrganismByTravelBudget(organism);
 
   eatFoodOnCurrentTile(organism);
   reproduceIfReady(organism);
+}
+
+function moveOrganismByTravelBudget(organism) {
+  var nextX = getWrappedWorldX(organism.x + organism.directionX);
+  var nextY = getClampedWorldY(organism.y + organism.directionY);
+
+  if (nextX === organism.x && nextY === organism.y) {
+    return false;
+  }
+
+  var requiredTravelKm = getTileGreatCircleDistanceKm(organism.x, organism.y, nextX, nextY);
+
+  if (organism.travelKm < requiredTravelKm) {
+    return false;
+  }
+
+  organism.travelKm -= requiredTravelKm;
+  organism.x = nextX;
+  organism.y = nextY;
+  clampToWorld(organism);
+  return true;
 }
 
 function removeDeadOrganisms() {

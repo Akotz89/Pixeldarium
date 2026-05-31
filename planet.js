@@ -37,15 +37,109 @@ function isGlobeRenderMode() {
   return CONFIG.PLANET_RENDER_MODE === "globe";
 }
 
+function getPlanetZoomLevels() {
+  return Array.isArray(CONFIG.PLANET_ZOOM_LEVELS) && CONFIG.PLANET_ZOOM_LEVELS.length > 0
+    ? CONFIG.PLANET_ZOOM_LEVELS
+    : [{ name: "Globe", metersPerSample: getPlanetEquatorKmPerTile() * 1000, chunkKm: 4000 }];
+}
+
+function getPlanetZoomLevel(index) {
+  var levels = getPlanetZoomLevels();
+  var normalizedIndex = clamp(Math.round(Number(index) || 0), 0, levels.length - 1);
+  var level = levels[normalizedIndex] || levels[0];
+
+  return {
+    index: normalizedIndex,
+    name: String(level.name || "Scale " + normalizedIndex),
+    metersPerSample: Math.max(0.1, Number(level.metersPerSample) || 1),
+    chunkKm: Math.max(0.001, Number(level.chunkKm) || 1)
+  };
+}
+
+function getPlanetView() {
+  if (!world.planetView) {
+    world.planetView = {
+      zoomLevel: clamp(
+        Math.round(Number(CONFIG.PLANET_ZOOM_LEVEL) || 0),
+        0,
+        getPlanetZoomLevels().length - 1
+      ),
+      latitude: Number(CONFIG.PLANET_VIEW_LATITUDE_DEG) || 0,
+      longitude: Number(CONFIG.PLANET_VIEW_LONGITUDE_DEG) || 0
+    };
+  }
+
+  world.planetView.zoomLevel = clamp(
+    Math.round(Number(world.planetView.zoomLevel) || 0),
+    0,
+    getPlanetZoomLevels().length - 1
+  );
+  world.planetView.latitude = clamp(Number(world.planetView.latitude) || 0, -90, 90);
+  world.planetView.longitude = ((Number(world.planetView.longitude) || 0) + 540) % 360 - 180;
+
+  return world.planetView;
+}
+
+function focusPlanetViewOnTile(x, y) {
+  var tile = getPlanetTile(x, y);
+  var view = getPlanetView();
+
+  if (tile) {
+    view.latitude = tile.latitude;
+    view.longitude = tile.longitude;
+  }
+
+  return view;
+}
+
+function getPlanetViewScale() {
+  return getPlanetZoomLevel(getPlanetView().zoomLevel);
+}
+
+function getPlanetScaleLabel() {
+  var scale = getPlanetViewScale();
+
+  if (scale.metersPerSample >= 1000) {
+    return scale.name + " " + (scale.metersPerSample / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " km/sample";
+  }
+
+  return scale.name + " " + scale.metersPerSample.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " m/sample";
+}
+
+function getPlanetViewFootprintKm() {
+  var scale = getPlanetViewScale();
+  var sampleCount = Math.max(WORLD_WIDTH, WORLD_HEIGHT);
+
+  return (scale.metersPerSample * sampleCount) / 1000;
+}
+
+function getPlanetChunkKeyForTile(x, y, zoomLevelIndex) {
+  var tile = getPlanetTile(x, y);
+  var scale = getPlanetZoomLevel(
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetView().zoomLevel
+  );
+  var latitude = tile ? tile.latitude : getPlanetLatitudeForTile(getClampedWorldY(y));
+  var longitude = tile ? tile.longitude : getPlanetLongitudeForTile(getWrappedWorldX(x));
+  var latitudeKmPerDegree = getPlanetPoleToPoleKm() / 180;
+  var longitudeKmPerDegree = Math.max(0.001, latitudeKmPerDegree * getPlanetLatitudeScale(latitude));
+  var chunkLatitudeDegrees = scale.chunkKm / latitudeKmPerDegree;
+  var chunkLongitudeDegrees = scale.chunkKm / longitudeKmPerDegree;
+  var chunkY = Math.floor((latitude + 90) / Math.max(0.000001, chunkLatitudeDegrees));
+  var chunkX = Math.floor((longitude + 180) / Math.max(0.000001, chunkLongitudeDegrees));
+
+  return scale.index + ":" + chunkX + ":" + chunkY;
+}
+
 function getPlanetProjection() {
   var radius = Math.floor(Math.min(canvas.width, canvas.height) * 0.46);
+  var view = getPlanetView();
 
   return {
     centerX: canvas.width / 2,
     centerY: canvas.height / 2,
     radius: radius,
-    viewLongitudeDeg: Number(CONFIG.PLANET_VIEW_LONGITUDE_DEG) || 0,
-    viewLatitudeDeg: Number(CONFIG.PLANET_VIEW_LATITUDE_DEG) || 0
+    viewLongitudeDeg: view.longitude,
+    viewLatitudeDeg: view.latitude
   };
 }
 

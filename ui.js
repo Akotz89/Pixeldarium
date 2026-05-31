@@ -5,6 +5,7 @@ function updateHud() {
   var waterPercent = world.planetSummary
     ? Math.round(world.planetSummary.waterPercent)
     : 0;
+  var estimatedIndividuals = world.organisms.length * Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1));
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
 
   setElementClass(eraText, "hud-card hud-era");
@@ -12,15 +13,18 @@ function updateHud() {
   setElementClass(populationText, "hud-card hud-population");
   setElementHtml(
     populationText,
-    makeHudPrimary("Population", world.organisms.length, formatSignedNumber(world.populationDeltaThisTick, 0) + " this tick")
+    makeHudPrimary("Population Bands", world.organisms.length, "~" + estimatedIndividuals.toLocaleString() + " individuals")
   );
   setElementClass(foodText, "hud-metrics");
   setElementHtml(foodText, [
     makeHudMetric("Tick", world.tick),
+    makeHudMetric("Day", getSimulationDayLabel()),
     makeHudMetric("Food", world.food.length),
     makeHudMetric("Water", waterPercent + "%"),
     makeHudMetric("Fertile Land", fertilePercent + "%"),
     makeHudMetric("Scale", world.planetSummary ? world.planetSummary.equatorKmPerTile.toFixed(0) + " km/tile" : "-"),
+    makeHudMetric("Zoom", getPlanetScaleLabel()),
+    makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
     makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
@@ -38,6 +42,19 @@ function updateHud() {
   updateSettlementSummary();
   updateEventLog();
   updateInspectPanel();
+}
+
+function getSimulationDay() {
+  return Math.max(0, Math.round(Number(world.tick) || 0)) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
+}
+
+function getSimulationDayLabel() {
+  var day = getSimulationDay();
+  var year = Math.floor(day / 365);
+  var dayOfYear = Math.floor(day % 365);
+
+  return "Y" + year + " D" + dayOfYear;
 }
 
 function setElementText(element, text) {
@@ -1104,6 +1121,8 @@ function updateInspectPanel() {
     makeInspectChip("Food", hasFood ? "yes" : "no"),
     makeInspectChip("Lat/Lon", planetTile ? planetTile.latitude.toFixed(1) + " / " + planetTile.longitude.toFixed(1) : "-"),
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
+    makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
+    makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
@@ -1118,8 +1137,10 @@ function updateInspectPanel() {
     var traits = ensureOrganismTraits(organism);
 
     detailChips.push(makeInspectChip("Organism", "L" + ensureOrganismLineage(organism) + parentText));
+    detailChips.push(makeInspectChip("Org Unit", "~" + Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1)).toLocaleString()));
     detailChips.push(makeInspectChip("Org Energy", organism.energy));
-    detailChips.push(makeInspectChip("Org Age", organism.age));
+    detailChips.push(makeInspectChip("Org Age", Math.round(organism.age * Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0)).toLocaleString() + " days"));
+    detailChips.push(makeInspectChip("Travel Bank", Math.round(Math.max(0, Number(organism.travelKm) || 0)).toLocaleString() + " km"));
     detailChips.push(makeInspectChip("Org Gen", organism.generation));
     detailChips.push(makeInspectChip("Org Pos", organism.x + "," + organism.y));
     detailChips.push(makeInspectChip("Org Dir", organism.directionX + "," + organism.directionY));
@@ -1192,6 +1213,7 @@ function inspectTile(tileX, tileY) {
     x: clamp(tileX, 0, WORLD_WIDTH - 1),
     y: clamp(tileY, 0, WORLD_HEIGHT - 1)
   };
+  focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
 
   drawWorld();
   updateHud();
