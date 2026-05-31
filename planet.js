@@ -29,6 +29,14 @@ function getPlanetLongitudeForTile(x) {
   return ((Math.max(0, Number(x) || 0) + 0.5) / Math.max(1, WORLD_WIDTH)) * 360 - 180;
 }
 
+function getPlanetTileLatitudeStepDeg() {
+  return 180 / Math.max(1, WORLD_HEIGHT);
+}
+
+function getPlanetTileLongitudeStepDeg() {
+  return 360 / Math.max(1, WORLD_WIDTH);
+}
+
 function getPlanetLatitudeScale(latitude) {
   return Math.max(0.08, Math.cos((Number(latitude) || 0) * Math.PI / 180));
 }
@@ -312,6 +320,92 @@ function getTileFromLatLon(latitude, longitude) {
     x: getWrappedWorldX(Math.floor(((normalizedLongitude + 180) / 360) * WORLD_WIDTH)),
     y: getClampedWorldY(Math.floor(((90 - normalizedLatitude) / 180) * WORLD_HEIGHT))
   };
+}
+
+function getPlanetTileCenterLatLon(x, y) {
+  return {
+    latitude: getPlanetLatitudeForTile(getClampedWorldY(y)),
+    longitude: getPlanetLongitudeForTile(getWrappedWorldX(x))
+  };
+}
+
+function getRandomLatLonInTile(x, y) {
+  var center = getPlanetTileCenterLatLon(x, y);
+  var latitudeJitter = (randomUnit() - 0.5) * getPlanetTileLatitudeStepDeg() * 0.86;
+  var longitudeJitter = (randomUnit() - 0.5) * getPlanetTileLongitudeStepDeg() * 0.86;
+
+  return {
+    latitude: clamp(center.latitude + latitudeJitter, -90, 90),
+    longitude: normalizeLongitude(center.longitude + longitudeJitter)
+  };
+}
+
+function getEntitySurfacePosition(entity) {
+  if (!entity) {
+    return null;
+  }
+
+  if (
+    Number.isFinite(Number(entity.latitude)) &&
+    Number.isFinite(Number(entity.longitude))
+  ) {
+    return {
+      latitude: clamp(Number(entity.latitude), -90, 90),
+      longitude: normalizeLongitude(entity.longitude)
+    };
+  }
+
+  return getPlanetTileCenterLatLon(entity.x, entity.y);
+}
+
+function setEntitySurfacePosition(entity, latitude, longitude) {
+  if (!entity) {
+    return entity;
+  }
+
+  entity.latitude = clamp(Number(latitude) || 0, -90, 90);
+  entity.longitude = normalizeLongitude(longitude);
+  return entity;
+}
+
+function assignRandomSurfacePositionInTile(entity) {
+  if (!entity) {
+    return entity;
+  }
+
+  var position = getRandomLatLonInTile(entity.x, entity.y);
+  return setEntitySurfacePosition(entity, position.latitude, position.longitude);
+}
+
+function ensureEntitySurfacePosition(entity) {
+  var position = getEntitySurfacePosition(entity);
+
+  if (!position) {
+    return entity;
+  }
+
+  return setEntitySurfacePosition(entity, position.latitude, position.longitude);
+}
+
+function syncEntityTileFromSurfacePosition(entity) {
+  var position = getEntitySurfacePosition(entity);
+
+  if (!entity || !position) {
+    return entity;
+  }
+
+  var tile = getTileFromLatLon(position.latitude, position.longitude);
+  entity.x = tile.x;
+  entity.y = tile.y;
+  return entity;
+}
+
+function interpolateLongitudeDeg(fromLongitude, toLongitude, amount) {
+  return normalizeLongitude(
+    (Number(fromLongitude) || 0) +
+      wrapPlanetLongitudeDelta((Number(toLongitude) || 0) - (Number(fromLongitude) || 0)) *
+      clamp(Number(amount) || 0, 0, 1)
+  );
 }
 
 function getPlanetLocalSample(gridX, gridY) {

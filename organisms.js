@@ -283,11 +283,16 @@ function normalizeOrganismTraits(traits) {
 function makeOrganism(x, y, lineageId) {
   var tileX = getWrappedWorldX(x);
   var tileY = getClampedWorldY(y);
+  var surfacePosition = getRandomLatLonInTile(tileX, tileY);
   var organism = {
     x: tileX,
     y: tileY,
     prevX: tileX,
     prevY: tileY,
+    latitude: surfacePosition.latitude,
+    longitude: surfacePosition.longitude,
+    prevLatitude: surfacePosition.latitude,
+    prevLongitude: surfacePosition.longitude,
     energy: CONFIG.STARTING_ORGANISM_ENERGY,
     age: 0,
     directionX: randomInt(3) - 1,
@@ -777,9 +782,12 @@ function reproduceIfReady(organism) {
 
 function updateOrganism(organism) {
   var traits = ensureOrganismTraits(organism);
+  var surfacePosition = getEntitySurfacePosition(organism);
 
   organism.prevX = organism.x;
   organism.prevY = organism.y;
+  organism.prevLatitude = surfacePosition ? surfacePosition.latitude : getPlanetLatitudeForTile(organism.y);
+  organism.prevLongitude = surfacePosition ? surfacePosition.longitude : getPlanetLongitudeForTile(organism.x);
   organism.age++;
   organism.travelKm = Math.max(0, Number(organism.travelKm) || 0) + getOrganismTravelKmPerTick();
 
@@ -820,6 +828,7 @@ function moveOrganismByTravelBudget(organism) {
   organism.x = nextX;
   organism.y = nextY;
   clampToWorld(organism);
+  assignRandomSurfacePositionInTile(organism);
   return true;
 }
 

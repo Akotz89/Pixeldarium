@@ -1,7 +1,13 @@
 function makeFood(x, y) {
+  var tileX = getWrappedWorldX(x);
+  var tileY = getClampedWorldY(y);
+  var surfacePosition = getRandomLatLonInTile(tileX, tileY);
+
   return {
-    x: getWrappedWorldX(x),
-    y: getClampedWorldY(y)
+    x: tileX,
+    y: tileY,
+    latitude: surfacePosition.latitude,
+    longitude: surfacePosition.longitude
   };
 }
 

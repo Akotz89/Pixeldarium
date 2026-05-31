@@ -422,10 +422,63 @@ function drawTileEntity(tileX, tileY, size, color) {
   );
 }
 
+function getEntityRenderPosition(entity, interpolation) {
+  if (!entity) {
+    return null;
+  }
+
+  var surfacePosition = getEntitySurfacePosition(entity);
+
+  if (!surfacePosition) {
+    return getTileRenderPosition(entity.x, entity.y);
+  }
+
+  ensureEntitySurfacePosition(entity);
+
+  var renderLatitude = surfacePosition.latitude;
+  var renderLongitude = surfacePosition.longitude;
+  var rawInterpolation = Number(interpolation);
+  var amount = Number.isFinite(rawInterpolation) ? clamp(rawInterpolation, 0, 1) : 1;
+
+  if (
+    amount < 1 &&
+    Number.isFinite(Number(entity.prevLatitude)) &&
+    Number.isFinite(Number(entity.prevLongitude))
+  ) {
+    renderLatitude = Number(entity.prevLatitude) + (surfacePosition.latitude - Number(entity.prevLatitude)) * amount;
+    renderLongitude = interpolateLongitudeDeg(entity.prevLongitude, surfacePosition.longitude, amount);
+  }
+
+  if (isGlobeRenderMode()) {
+    if (isPlanetLocalView()) {
+      return projectPlanetLocalPoint(renderLongitude, renderLatitude);
+    }
+
+    return projectPlanetPoint(renderLongitude, renderLatitude);
+  }
+
+  return getTileRenderPosition(entity.x, entity.y);
+}
+
+function drawSurfaceEntity(entity, interpolation, size, color) {
+  var point = getEntityRenderPosition(entity, interpolation);
+
+  if (!point) {
+    return;
+  }
+
+  drawEntityAtCanvasPosition(
+    point.x,
+    point.y,
+    Math.max(1, size * (point.scale || 1)),
+    color
+  );
+}
+
 function drawFood() {
   for (var i = 0; i < world.food.length; i++) {
     var food = world.food[i];
-    drawTileEntity(food.x, food.y, CONFIG.FOOD_DRAW_SIZE, "#58f06c");
+    drawSurfaceEntity(food, 1, CONFIG.FOOD_DRAW_SIZE, "#58f06c");
   }
 }
 
@@ -477,17 +530,7 @@ function drawOrganisms() {
 
   for (var i = 0; i < world.organisms.length; i++) {
     var organism = world.organisms[i];
-    var previousX = typeof organism.prevX === "number" ? organism.prevX : organism.x;
-    var previousY = typeof organism.prevY === "number" ? organism.prevY : organism.y;
-    var movementDeltaX = typeof getWrappedDeltaX === "function"
-      ? getWrappedDeltaX(previousX, organism.x)
-      : organism.x - previousX;
-    var renderX = typeof getWrappedWorldCoordinateX === "function"
-      ? getWrappedWorldCoordinateX(previousX + movementDeltaX * interpolation)
-      : previousX + movementDeltaX * interpolation;
-    var renderY = previousY + (organism.y - previousY) * interpolation;
-
-    drawTileEntity(renderX, renderY, CONFIG.ORGANISM_DRAW_SIZE, getOrganismColor(organism));
+    drawSurfaceEntity(organism, interpolation, CONFIG.ORGANISM_DRAW_SIZE, getOrganismColor(organism));
   }
 }
 

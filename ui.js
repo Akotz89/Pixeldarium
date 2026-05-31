@@ -1136,6 +1136,7 @@ function updateInspectPanel() {
     var lineageRecord = world.lineages ? world.lineages[String(ensureOrganismLineage(organism))] : null;
     var parentText = lineageRecord && lineageRecord.parentId > 0 ? " parent L" + lineageRecord.parentId : " founder";
     var traits = ensureOrganismTraits(organism);
+    var organismSurfacePosition = getEntitySurfacePosition(organism);
 
     detailChips.push(makeInspectChip("Organism", "L" + ensureOrganismLineage(organism) + parentText));
     detailChips.push(makeInspectChip("Org Unit", "~" + Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1)).toLocaleString()));
@@ -1144,6 +1145,7 @@ function updateInspectPanel() {
     detailChips.push(makeInspectChip("Travel Bank", Math.round(Math.max(0, Number(organism.travelKm) || 0)).toLocaleString() + " km"));
     detailChips.push(makeInspectChip("Org Gen", organism.generation));
     detailChips.push(makeInspectChip("Org Pos", organism.x + "," + organism.y));
+    detailChips.push(makeInspectChip("Org Lat/Lon", organismSurfacePosition ? organismSurfacePosition.latitude.toFixed(4) + " / " + organismSurfacePosition.longitude.toFixed(4) : "-"));
     detailChips.push(makeInspectChip("Org Dir", organism.directionX + "," + organism.directionY));
     detailChips.push(makeInspectChip("Org Traits", "V" + traits.vision + " M" + traits.metabolism + " R" + traits.reproductionEnergy + " roam " + traits.movementTendency.toFixed(2) + " hab " + traits.terrainAffinity.toFixed(2)));
   } else {
