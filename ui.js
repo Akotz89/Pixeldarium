@@ -21,6 +21,7 @@ function updateHud() {
   syncTuningControls();
   syncControlStates();
   updateEcosystemSummary();
+  updateSimulationAlerts();
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
@@ -312,12 +313,48 @@ function makeInspectChip(label, value) {
   );
 }
 
+function makeAlertChip(alert) {
+  return (
+    "<span class=\"alert-chip alert-" + escapeSummaryText(alert.severity || "info") + "\">" +
+    "<b>" + escapeSummaryText(alert.label || "Simulation") + "</b>" +
+    "<span>" + escapeSummaryText(alert.detail || "") + "</span>" +
+    "</span>"
+  );
+}
+
 function getEcosystemSummary() {
   if (!world.ecosystemSummary && typeof refreshEcosystemSummary === "function") {
     return refreshEcosystemSummary();
   }
 
   return world.ecosystemSummary;
+}
+
+function getSimulationAlerts() {
+  if (typeof refreshSimulationAlerts === "function") {
+    return refreshSimulationAlerts();
+  }
+
+  return Array.isArray(world.simulationAlerts) ? world.simulationAlerts : [];
+}
+
+function updateSimulationAlerts() {
+  var alerts = getSimulationAlerts();
+
+  if (alerts.length === 0) {
+    setElementClass(simulationAlertsText, "");
+    setElementText(simulationAlertsText, "ALERTS: -");
+    return;
+  }
+
+  var chips = [];
+
+  for (var i = 0; i < alerts.length; i++) {
+    chips.push(makeAlertChip(alerts[i]));
+  }
+
+  setElementClass(simulationAlertsText, "alert-grid");
+  setElementHtml(simulationAlertsText, chips.join(""));
 }
 
 function updateEcosystemSummary() {

@@ -5,6 +5,7 @@ const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
 const ecosystemSummaryText = document.getElementById("ecosystem-summary");
+const simulationAlertsText = document.getElementById("simulation-alerts");
 const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
 const traitSummaryText = document.getElementById("trait-summary");
@@ -75,6 +76,7 @@ const world = {
   inspectedTile: null,
   ecosystemSummary: null,
   ecosystemHistory: [],
+  simulationAlerts: [],
   populationTraitSummary: null,
   lineageSummaryText: "LINEAGES: -",
   traitHistory: [],
