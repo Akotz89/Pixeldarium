@@ -148,7 +148,8 @@ function syncMenuState() {
     uiMenu.setAttribute("inert", "");
   }
 
-  setElementText(menuToggleButton, world.isMenuOpen ? "Close" : "Menu");
+  setElementText(menuToggleText, world.isMenuOpen ? "Close" : "Menu");
+  menuToggleButton.setAttribute("aria-label", world.isMenuOpen ? "Close simulation menu" : "Open simulation menu");
 }
 
 function setMenuOpen(isOpen) {
