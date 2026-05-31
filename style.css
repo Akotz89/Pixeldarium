@@ -295,7 +295,7 @@ h1 {
 
 #ecosystem-history-legend {
   display: grid;
-  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  grid-template-columns: repeat(5, minmax(66px, 1fr));
   gap: 6px;
   align-content: center;
   padding: 6px 8px;
@@ -340,6 +340,10 @@ h1 {
 
 .ecosystem-key.flow::before {
   background: #ff9c69;
+}
+
+.ecosystem-key.runway::before {
+  background: #c884ff;
 }
 
 #event-panel {
