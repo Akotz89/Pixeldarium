@@ -197,15 +197,7 @@ function updateSettlementLevel(settlement) {
 }
 
 function countSettlementFoodStock(settlement) {
-  var foodStock = 0;
-
-  for (var i = 0; i < world.food.length; i++) {
-    if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= settlement.radius) {
-      foodStock++;
-    }
-  }
-
-  return foodStock;
+  return countFoodInRadius(settlement.x, settlement.y, settlement.radius);
 }
 
 function countSettlementPopulation(settlement) {
@@ -240,14 +232,7 @@ function updateSettlementMetrics(settlement) {
 
 function harvestSettlementFood(settlement) {
   var harvestLimit = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_FOOD_HARVEST_PER_GROWTH) || 0));
-  var harvestedFood = 0;
-
-  for (var i = world.food.length - 1; i >= 0 && harvestedFood < harvestLimit; i--) {
-    if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= settlement.radius) {
-      removeFoodAtIndex(i);
-      harvestedFood++;
-    }
-  }
+  var harvestedFood = removeFoodInRadius(settlement.x, settlement.y, settlement.radius, harvestLimit);
 
   settlement.storedFood += harvestedFood;
   settlement.foodStock = countSettlementFoodStock(settlement);
