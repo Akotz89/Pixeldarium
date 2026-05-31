@@ -334,6 +334,34 @@ function makeSummaryChip(label, value) {
   );
 }
 
+function makeDashboardCard(title, tone, bodyHtml) {
+  return (
+    "<section class=\"dashboard-card dashboard-" + escapeSummaryText(tone || "neutral") + "\">" +
+    "<h2>" + escapeSummaryText(title) + "</h2>" +
+    bodyHtml +
+    "</section>"
+  );
+}
+
+function makePrimaryMetric(label, value, detail) {
+  return (
+    "<div class=\"primary-metric\">" +
+    "<span>" + escapeSummaryText(label) + "</span>" +
+    "<strong>" + escapeSummaryText(value) + "</strong>" +
+    "<small>" + escapeSummaryText(detail || "") + "</small>" +
+    "</div>"
+  );
+}
+
+function makeMetricRow(label, value) {
+  return (
+    "<span class=\"metric-row\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span>" + escapeSummaryText(value) + "</span>" +
+    "</span>"
+  );
+}
+
 function makeInspectChip(label, value) {
   return (
     "<span class=\"inspect-chip\">" +
@@ -427,42 +455,43 @@ function updateEcosystemSummary() {
   var lifecycleLabel = world.isExtinct
     ? "extinct T" + Math.max(0, Math.round(Number(world.extinctionTick) || 0))
     : "active";
-  var chips = [
-    makeSummaryChip("Lifecycle", lifecycleLabel),
-    makeSummaryChip("Pressure", summary.pressure),
-    makeSummaryChip("Stability", summary.stabilityScore + "/100"),
-    makeSummaryChip("Limiter", formatStabilityLimiter(summary.stabilityProfile)),
-    makeSummaryChip("Next Fix", summary.recoveryAction || "-"),
-    makeSummaryChip("Momentum", summary.momentum || "steady"),
-    makeSummaryChip("Health Mix", formatStabilityProfileMix(summary.stabilityProfile)),
-    makeSummaryChip("Pop State", summary.populationBalance),
-    makeSummaryChip("Birth Gate", Math.round((summary.reproductionScarcityPressure || 0) * 100) + "%"),
-    makeSummaryChip("Resource", summary.resourceBalance),
-    makeSummaryChip("Flow", "+" + world.birthsThisTick + " / -" + world.deathsThisTick),
-    makeSummaryChip("Net", formatSignedNumber(world.populationDeltaThisTick, 0)),
-    makeSummaryChip("Lifetime", world.totalBirths + " / " + world.totalDeaths),
-    makeSummaryChip("Food Flow", "+" + world.foodSpawnedThisTick + " / -" + world.foodConsumedThisTick),
-    makeSummaryChip("Food Net", formatSignedNumber(summary.foodNetThisTick || 0, 0)),
-    makeSummaryChip("Food Runway", typeof formatFoodRunway === "function" ? formatFoodRunway(summary.foodRunwayTicks) : "-"),
-    makeSummaryChip("Regrowth", Math.round((summary.foodRecoveryPressure || 0) * 100) + "% / " + (summary.foodRecoveryAttempts || 0)),
-    makeSummaryChip("Harvest", world.foodHarvestedThisTick),
-    makeSummaryChip("Food Life", world.totalFoodSpawned + " / " + world.totalFoodConsumed),
-    makeSummaryChip("Pop Trend", formatSignedNumber(trend.populationDelta || 0, 0)),
-    makeSummaryChip("Stab Trend", formatSignedNumber(trend.stabilityDelta || 0, 0)),
-    makeSummaryChip("Energy Trend", formatSignedNumber(trend.energyDelta || 0, 1)),
-    makeSummaryChip("Food Trend", formatSignedNumber(trend.foodDelta || 0, 0)),
-    makeSummaryChip("Flow Trend", formatSignedNumber(trend.foodNetDelta || 0, 0)),
-    makeSummaryChip("Runway Trend", formatSignedNumber(trend.foodRunwayDelta || 0, 0)),
-    makeSummaryChip("Energy", summary.averageEnergy.toFixed(1)),
-    makeSummaryChip("Food/Org", summary.foodPerOrganism.toFixed(2)),
-    makeSummaryChip("Mature", summary.matureOrganisms + "/" + summary.population),
-    makeSummaryChip("Age", summary.averageAge.toFixed(0)),
-    makeSummaryChip("Lineages", summary.activeLineages),
-    makeSummaryChip("Fertile", Math.round(summary.fertilePercent) + "%")
+  var stabilityDetail = summary.momentum + " / " + formatStabilityLimiter(summary.stabilityProfile);
+  var populationDetail = summary.populationBalance + " " + formatSignedNumber(world.populationDeltaThisTick, 0);
+  var foodRunway = typeof formatFoodRunway === "function" ? formatFoodRunway(summary.foodRunwayTicks) : "-";
+  var cards = [
+    makeDashboardCard("System", "status",
+      makePrimaryMetric("Pressure", summary.pressure, stabilityDetail) +
+      makeMetricRow("Lifecycle", lifecycleLabel) +
+      makeMetricRow("Stability", summary.stabilityScore + "/100") +
+      makeMetricRow("Next Fix", summary.recoveryAction || "-") +
+      makeMetricRow("Health Mix", formatStabilityProfileMix(summary.stabilityProfile))
+    ),
+    makeDashboardCard("Population", "population",
+      makePrimaryMetric("Organisms", summary.population, populationDetail) +
+      makeMetricRow("Flow", "+" + world.birthsThisTick + " / -" + world.deathsThisTick) +
+      makeMetricRow("Lifetime", world.totalBirths + " / " + world.totalDeaths) +
+      makeMetricRow("Mature", summary.matureOrganisms + "/" + summary.population) +
+      makeMetricRow("Lineages", summary.activeLineages)
+    ),
+    makeDashboardCard("Food", "food",
+      makePrimaryMetric("Stock", summary.food, summary.resourceBalance + " " + formatSignedNumber(summary.foodNetThisTick || 0, 0)) +
+      makeMetricRow("Food/Org", summary.foodPerOrganism.toFixed(2)) +
+      makeMetricRow("Runway", foodRunway) +
+      makeMetricRow("Regrowth", Math.round((summary.foodRecoveryPressure || 0) * 100) + "% / " + (summary.foodRecoveryAttempts || 0)) +
+      makeMetricRow("Food Life", world.totalFoodSpawned + " / " + world.totalFoodConsumed)
+    ),
+    makeDashboardCard("Trends", "trend",
+      makePrimaryMetric("Stability", formatSignedNumber(trend.stabilityDelta || 0, 0), "since last sample") +
+      makeMetricRow("Population", formatSignedNumber(trend.populationDelta || 0, 0)) +
+      makeMetricRow("Energy", formatSignedNumber(trend.energyDelta || 0, 1)) +
+      makeMetricRow("Food", formatSignedNumber(trend.foodDelta || 0, 0)) +
+      makeMetricRow("Flow", formatSignedNumber(trend.foodNetDelta || 0, 0)) +
+      makeMetricRow("Runway", formatSignedNumber(trend.foodRunwayDelta || 0, 0))
+    )
   ];
 
-  setElementClass(ecosystemSummaryText, "ecosystem-grid ecosystem-" + summary.pressure);
-  setElementHtml(ecosystemSummaryText, chips.join(""));
+  setElementClass(ecosystemSummaryText, "ecosystem-dashboard ecosystem-" + summary.pressure);
+  setElementHtml(ecosystemSummaryText, cards.join(""));
   drawEcosystemHistory();
 }
 
