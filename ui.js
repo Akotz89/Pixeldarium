@@ -242,7 +242,8 @@ function countFertileTilesInRadius(tileX, tileY, radius) {
   for (var y = Math.max(0, tileY - normalizedRadius); y <= Math.min(WORLD_HEIGHT - 1, tileY + normalizedRadius); y++) {
     var rowRadius = normalizedRadius - Math.abs(tileY - y);
 
-    for (var x = Math.max(0, tileX - rowRadius); x <= Math.min(WORLD_WIDTH - 1, tileX + rowRadius); x++) {
+    for (var dx = -rowRadius; dx <= rowRadius; dx++) {
+      var x = getWrappedWorldX(tileX + dx);
       sampledTiles++;
 
       if (isFertile(x, y)) {
@@ -258,8 +259,16 @@ function countFertileTilesInRadius(tileX, tileY, radius) {
   };
 }
 
-function getDistanceLabel(distance) {
-  return Number.isFinite(distance) ? String(distance) : "-";
+function getDistanceLabel(distance, distanceKm) {
+  if (!Number.isFinite(distance)) {
+    return "-";
+  }
+
+  if (Number.isFinite(distanceKm)) {
+    return String(distance) + " / " + Math.round(distanceKm).toLocaleString() + " km";
+  }
+
+  return String(distance);
 }
 
 function getLocalInspectContext(tileX, tileY) {
@@ -296,7 +305,8 @@ function getLocalInspectContext(tileX, tileY) {
     nearbyOrganisms: nearbyOrganisms.length,
     nearbyFood: nearbyFood,
     fertilePercent: fertileContext.fertilePercent,
-    nearestFoodDistance: nearestFood ? Math.abs(nearestFood.x - tileX) + Math.abs(nearestFood.y - tileY) : Infinity,
+    nearestFoodDistance: nearestFood ? getTileManhattanDistance(tileX, tileY, nearestFood.x, nearestFood.y) : Infinity,
+    nearestFoodDistanceKm: nearestFood ? getTileGreatCircleDistanceKm(tileX, tileY, nearestFood.x, nearestFood.y) : Infinity,
     nearestSettlementDistance: nearestSettlementDistance,
     localPressure: localPressure
   };
@@ -1094,7 +1104,7 @@ function updateInspectPanel() {
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
     makeInspectChip("Local Fertile", Math.round(localContext.fertilePercent) + "%"),
-    makeInspectChip("Near Food", getDistanceLabel(localContext.nearestFoodDistance)),
+    makeInspectChip("Near Food", getDistanceLabel(localContext.nearestFoodDistance, localContext.nearestFoodDistanceKm)),
     makeInspectChip("Near Camp", getDistanceLabel(localContext.nearestSettlementDistance))
   ];
 

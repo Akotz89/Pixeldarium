@@ -319,7 +319,12 @@ function drawOrganisms() {
     var organism = world.organisms[i];
     var previousX = typeof organism.prevX === "number" ? organism.prevX : organism.x;
     var previousY = typeof organism.prevY === "number" ? organism.prevY : organism.y;
-    var renderX = previousX + (organism.x - previousX) * interpolation;
+    var movementDeltaX = typeof getWrappedDeltaX === "function"
+      ? getWrappedDeltaX(previousX, organism.x)
+      : organism.x - previousX;
+    var renderX = typeof getWrappedWorldCoordinateX === "function"
+      ? getWrappedWorldCoordinateX(previousX + movementDeltaX * interpolation)
+      : previousX + movementDeltaX * interpolation;
     var renderY = previousY + (organism.y - previousY) * interpolation;
 
     drawTileEntity(renderX, renderY, CONFIG.ORGANISM_DRAW_SIZE, getOrganismColor(organism));

@@ -63,6 +63,136 @@ function wrapPlanetLongitudeDelta(degrees) {
   return delta;
 }
 
+function getWrappedWorldX(x) {
+  var width = Math.max(1, WORLD_WIDTH);
+  var wrappedX = Math.round(Number(x) || 0) % width;
+
+  return wrappedX < 0 ? wrappedX + width : wrappedX;
+}
+
+function getWrappedWorldCoordinateX(x) {
+  var width = Math.max(1, WORLD_WIDTH);
+  var wrappedX = (Number(x) || 0) % width;
+
+  return wrappedX < 0 ? wrappedX + width : wrappedX;
+}
+
+function getClampedWorldY(y) {
+  return clamp(Math.round(Number(y) || 0), 0, WORLD_HEIGHT - 1);
+}
+
+function normalizeWorldPosition(entity) {
+  entity.x = getWrappedWorldX(entity.x);
+  entity.y = getClampedWorldY(entity.y);
+  return entity;
+}
+
+function getWrappedDeltaX(fromX, toX) {
+  var width = Math.max(1, WORLD_WIDTH);
+  var delta = getWrappedWorldCoordinateX(toX) - getWrappedWorldCoordinateX(fromX);
+
+  if (delta > width / 2) {
+    delta -= width;
+  } else if (delta < -width / 2) {
+    delta += width;
+  }
+
+  return delta;
+}
+
+function getTileManhattanDistance(fromX, fromY, toX, toY) {
+  return Math.abs(getWrappedDeltaX(fromX, toX)) + Math.abs(getClampedWorldY(toY) - getClampedWorldY(fromY));
+}
+
+function getTileGreatCircleDistanceKm(fromX, fromY, toX, toY) {
+  var fromLatitude = getPlanetLatitudeForTile(getClampedWorldY(fromY)) * Math.PI / 180;
+  var toLatitude = getPlanetLatitudeForTile(getClampedWorldY(toY)) * Math.PI / 180;
+  var deltaLatitude = toLatitude - fromLatitude;
+  var deltaLongitude = wrapPlanetLongitudeDelta(
+    getPlanetLongitudeForTile(getWrappedWorldX(toX)) - getPlanetLongitudeForTile(getWrappedWorldX(fromX))
+  ) * Math.PI / 180;
+  var haversine =
+    Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+    Math.cos(fromLatitude) * Math.cos(toLatitude) *
+      Math.sin(deltaLongitude / 2) * Math.sin(deltaLongitude / 2);
+
+  return 2 * getPlanetRadiusKm() * Math.atan2(Math.sqrt(haversine), Math.sqrt(Math.max(0, 1 - haversine)));
+}
+
+function getDirectionXToTile(fromX, toX) {
+  var delta = getWrappedDeltaX(fromX, toX);
+
+  if (delta > 0) {
+    return 1;
+  }
+
+  if (delta < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+function getDirectionYToTile(fromY, toY) {
+  var delta = getClampedWorldY(toY) - getClampedWorldY(fromY);
+
+  if (delta > 0) {
+    return 1;
+  }
+
+  if (delta < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+function getWrappedBucketIndexes(centerX, radius, bucketSize, worldSize) {
+  var normalizedBucketSize = Math.max(1, Math.round(Number(bucketSize) || 1));
+  var normalizedWorldSize = Math.max(1, Math.round(Number(worldSize) || 1));
+  var bucketCount = Math.ceil(normalizedWorldSize / normalizedBucketSize);
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var minBucket = Math.floor((Math.round(Number(centerX) || 0) - normalizedRadius) / normalizedBucketSize);
+  var maxBucket = Math.floor((Math.round(Number(centerX) || 0) + normalizedRadius) / normalizedBucketSize);
+  var indexes = [];
+  var seen = {};
+
+  if (normalizedRadius >= normalizedWorldSize) {
+    minBucket = 0;
+    maxBucket = bucketCount - 1;
+  }
+
+  for (var bucket = minBucket; bucket <= maxBucket; bucket++) {
+    var wrappedBucket = bucket % bucketCount;
+
+    if (wrappedBucket < 0) {
+      wrappedBucket += bucketCount;
+    }
+
+    if (!seen[wrappedBucket]) {
+      seen[wrappedBucket] = true;
+      indexes.push(wrappedBucket);
+    }
+  }
+
+  return indexes;
+}
+
+function getClampedBucketIndexes(centerY, radius, bucketSize, worldSize) {
+  var normalizedBucketSize = Math.max(1, Math.round(Number(bucketSize) || 1));
+  var normalizedWorldSize = Math.max(1, Math.round(Number(worldSize) || 1));
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var minBucket = Math.floor(Math.max(0, Math.round(Number(centerY) || 0) - normalizedRadius) / normalizedBucketSize);
+  var maxBucket = Math.floor(Math.min(normalizedWorldSize - 1, Math.round(Number(centerY) || 0) + normalizedRadius) / normalizedBucketSize);
+  var indexes = [];
+
+  for (var bucket = minBucket; bucket <= maxBucket; bucket++) {
+    indexes.push(bucket);
+  }
+
+  return indexes;
+}
+
 function projectPlanetPoint(longitudeDeg, latitudeDeg) {
   var projection = getPlanetProjection();
   var latitude = (Number(latitudeDeg) || 0) * Math.PI / 180;
@@ -111,7 +241,7 @@ function getPlanetTileProjection(x, y) {
 }
 
 function getPlanetInterpolatedProjection(x, y) {
-  var tileX = clamp(Number(x) || 0, 0, WORLD_WIDTH - 1);
+  var tileX = getWrappedWorldCoordinateX(x);
   var tileY = clamp(Number(y) || 0, 0, WORLD_HEIGHT - 1);
   var longitude = ((tileX + 0.5) / Math.max(1, WORLD_WIDTH)) * 360 - 180;
   var latitude = 90 - ((tileY + 0.5) / Math.max(1, WORLD_HEIGHT)) * 180;

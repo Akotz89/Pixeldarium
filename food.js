@@ -1,9 +1,12 @@
 function makeFood(x, y) {
-  return { x: x, y: y };
+  return {
+    x: getWrappedWorldX(x),
+    y: getClampedWorldY(y)
+  };
 }
 
 function getFoodPositionKey(x, y) {
-  return x + ":" + y;
+  return getWrappedWorldX(x) + ":" + getClampedWorldY(y);
 }
 
 function getFoodBucketSize() {
@@ -12,7 +15,7 @@ function getFoodBucketSize() {
 
 function getFoodBucketKey(x, y) {
   var bucketSize = getFoodBucketSize();
-  return Math.floor(x / bucketSize) + ":" + Math.floor(y / bucketSize);
+  return Math.floor(getWrappedWorldX(x) / bucketSize) + ":" + Math.floor(getClampedWorldY(y) / bucketSize);
 }
 
 function rebuildFoodPositions() {
@@ -138,14 +141,16 @@ function removeFood(food) {
 }
 
 function findFoodAt(x, y) {
-  var bucket = ensureFoodBuckets()[getFoodBucketKey(x, y)];
+  var tileX = getWrappedWorldX(x);
+  var tileY = getClampedWorldY(y);
+  var bucket = ensureFoodBuckets()[getFoodBucketKey(tileX, tileY)];
 
   if (!bucket) {
     return null;
   }
 
   for (var i = 0; i < bucket.length; i++) {
-    if (bucket[i].x === x && bucket[i].y === y) {
+    if (bucket[i].x === tileX && bucket[i].y === tileY) {
       return bucket[i];
     }
   }
@@ -160,15 +165,16 @@ function removeFoodAtPosition(x, y) {
 function findNearestFoodInBuckets(x, y, searchRadius) {
   var buckets = ensureFoodBuckets();
   var bucketSize = getFoodBucketSize();
-  var minBucketX = Math.floor(Math.max(0, x - searchRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + searchRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - searchRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + searchRadius) / bucketSize);
+  var normalizedRadius = Math.max(0, Math.round(Number(searchRadius) || 0));
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var nearest = null;
   var nearestDistance = Infinity;
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = buckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -177,11 +183,9 @@ function findNearestFoodInBuckets(x, y, searchRadius) {
 
       for (var i = 0; i < bucket.length; i++) {
         var food = bucket[i];
-        var dx = food.x - x;
-        var dy = food.y - y;
-        var distance = Math.abs(dx) + Math.abs(dy);
+        var distance = getTileManhattanDistance(x, y, food.x, food.y);
 
-        if (distance < nearestDistance && distance <= searchRadius) {
+        if (distance < nearestDistance && distance <= normalizedRadius) {
           nearest = food;
           nearestDistance = distance;
         }
@@ -197,18 +201,18 @@ function collectFoodInRadius(x, y, radius, limit) {
   var bucketSize = getFoodBucketSize();
   var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
   var normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.round(Number(limit))) : Infinity;
-  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var foods = [];
 
   if (normalizedLimit <= 0) {
     return foods;
   }
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = buckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -217,7 +221,7 @@ function collectFoodInRadius(x, y, radius, limit) {
 
       for (var i = 0; i < bucket.length; i++) {
         var food = bucket[i];
-        var distance = Math.abs(food.x - x) + Math.abs(food.y - y);
+        var distance = getTileManhattanDistance(x, y, food.x, food.y);
 
         if (distance <= normalizedRadius) {
           foods.push(food);
@@ -237,14 +241,14 @@ function countFoodInRadius(x, y, radius) {
   var buckets = ensureFoodBuckets();
   var bucketSize = getFoodBucketSize();
   var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
-  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var count = 0;
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = buckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -254,7 +258,7 @@ function countFoodInRadius(x, y, radius) {
       for (var i = 0; i < bucket.length; i++) {
         var food = bucket[i];
 
-        if (Math.abs(food.x - x) + Math.abs(food.y - y) <= normalizedRadius) {
+        if (getTileManhattanDistance(x, y, food.x, food.y) <= normalizedRadius) {
           count++;
         }
       }
