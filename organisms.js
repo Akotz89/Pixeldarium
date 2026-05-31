@@ -489,6 +489,7 @@ function updateLineageSummaryCache() {
   }
 
   if (lineages.length === 0) {
+    world.lineageSummary = null;
     world.lineageSummaryText = "LINEAGES: -";
     return world.lineageSummaryText;
   }
@@ -521,6 +522,7 @@ function updateLineageSummaryCache() {
   });
 
   var visibleLineages = [];
+  var visibleLineageSummaries = [];
 
   for (var topIndex = 0; topIndex < Math.min(5, topLineages.length); topIndex++) {
     visibleLineages.push(
@@ -528,6 +530,11 @@ function updateLineageSummaryCache() {
       " " + topLineages[topIndex].activeCount +
       " peak " + topLineages[topIndex].peakPopulation
     );
+    visibleLineageSummaries.push({
+      id: topLineages[topIndex].id,
+      activeCount: topLineages[topIndex].activeCount,
+      peakPopulation: topLineages[topIndex].peakPopulation
+    });
   }
 
   var newestText = "newest L" + newestLineage.id + " founder";
@@ -541,6 +548,14 @@ function updateLineageSummaryCache() {
     " active / " + extinctCount + " extinct   " +
     newestText +
     "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
+  world.lineageSummary = {
+    activeCount: activeCount,
+    extinctCount: extinctCount,
+    newestId: newestLineage.id,
+    newestParentId: newestLineage.parentId,
+    newestCreatedTick: newestLineage.createdTick,
+    topLineages: visibleLineageSummaries
+  };
 
   return world.lineageSummaryText;
 }

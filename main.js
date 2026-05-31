@@ -53,6 +53,7 @@ function clearWorld() {
   world.ecosystemHistory = [];
   world.simulationAlerts = [];
   world.populationTraitSummary = null;
+  world.lineageSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
   world.eventLog = [];
