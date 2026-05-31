@@ -1738,6 +1738,12 @@ function applyWorldSaveData(saveData) {
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
   world.eventLog = restoreSimulationEvents(saveData.eventLog);
+  world.ecosystemSummary = null;
+
+  if (typeof refreshEcosystemSummary === "function") {
+    refreshEcosystemSummary();
+  }
+
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;

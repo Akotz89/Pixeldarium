@@ -32,6 +32,7 @@ function clearWorld() {
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
   world.inspectedTile = null;
+  world.ecosystemSummary = null;
   world.populationTraitSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
@@ -214,6 +215,84 @@ function recordSimulationMilestones(previousSnapshot) {
   }
 }
 
+function getActiveLineageCount() {
+  var activeLineages = 0;
+  var lineages = world.lineages || {};
+
+  for (var lineageKey in lineages) {
+    if (
+      Object.prototype.hasOwnProperty.call(lineages, lineageKey) &&
+      Math.max(0, Math.round(Number(lineages[lineageKey].activeCount) || 0)) > 0
+    ) {
+      activeLineages++;
+    }
+  }
+
+  return activeLineages;
+}
+
+function getEcosystemPressure(population, averageEnergy, foodPerOrganism) {
+  if (population <= 0) {
+    return "extinct";
+  }
+
+  if (population >= CONFIG.MAX_ORGANISMS * 0.92) {
+    return "crowded";
+  }
+
+  if (foodPerOrganism < 0.18 || averageEnergy < CONFIG.CHILD_ORGANISM_ENERGY * 0.45) {
+    return "starving";
+  }
+
+  if (foodPerOrganism < 0.55 || averageEnergy < CONFIG.CHILD_ORGANISM_ENERGY * 0.8) {
+    return "strained";
+  }
+
+  if (foodPerOrganism >= 1.2 && averageEnergy >= CONFIG.STARTING_ORGANISM_ENERGY * 0.85) {
+    return "growing";
+  }
+
+  return "balanced";
+}
+
+function refreshEcosystemSummary() {
+  var population = world.organisms.length;
+  var totalEnergy = 0;
+  var totalAge = 0;
+  var matureOrganisms = 0;
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var traits = ensureOrganismTraits(organism);
+
+    totalEnergy += Math.max(0, Number(organism.energy) || 0);
+    totalAge += Math.max(0, Number(organism.age) || 0);
+
+    if (organism.energy >= traits.reproductionEnergy) {
+      matureOrganisms++;
+    }
+  }
+
+  var averageEnergy = population > 0 ? totalEnergy / population : 0;
+  var averageAge = population > 0 ? totalAge / population : 0;
+  var foodPerOrganism = population > 0 ? world.food.length / population : world.food.length;
+  var fertilePercent = (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100;
+
+  world.ecosystemSummary = {
+    population: population,
+    food: world.food.length,
+    foodPerOrganism: foodPerOrganism,
+    averageEnergy: averageEnergy,
+    averageAge: averageAge,
+    matureOrganisms: matureOrganisms,
+    activeLineages: getActiveLineageCount(),
+    fertilePercent: fertilePercent,
+    pressure: getEcosystemPressure(population, averageEnergy, foodPerOrganism)
+  };
+
+  return world.ecosystemSummary;
+}
+
 function seedWorld() {
   clearWorld();
   seedTerrain();
@@ -241,6 +320,8 @@ function seedWorld() {
     addFoodAt(position.x, position.y);
   }
 
+  refreshEcosystemSummary();
+
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(true);
   }
@@ -266,6 +347,8 @@ function updateWorld() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
   }
+
+  refreshEcosystemSummary();
 
   if (typeof updateSettlements === "function") {
     updateSettlements();
