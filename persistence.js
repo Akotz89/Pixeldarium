@@ -109,6 +109,9 @@ function copySettlementForSave(settlement) {
     development: settlement.development,
     level: settlement.level,
     lastGrowthTick: settlement.lastGrowthTick,
+    influenceRadius: settlement.influenceRadius,
+    claimedTiles: settlement.claimedTiles,
+    claimedFood: settlement.claimedFood,
     isActive: settlement.isActive,
     lastActiveTick: settlement.lastActiveTick
   };
@@ -199,7 +202,9 @@ function createWorldSaveData() {
       settlementFoodHarvestPerGrowth: CONFIG.SETTLEMENT_FOOD_HARVEST_PER_GROWTH,
       settlementDevelopmentPerPopulation: CONFIG.SETTLEMENT_DEVELOPMENT_PER_POPULATION,
       settlementDevelopmentPerStoredFood: CONFIG.SETTLEMENT_DEVELOPMENT_PER_STORED_FOOD,
-      settlementLevelDevelopment: CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT
+      settlementLevelDevelopment: CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT,
+      settlementInfluenceBaseRadius: CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS,
+      settlementInfluenceRadiusPerLevel: CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -368,9 +373,20 @@ function restoreSettlement(settlement) {
       0,
       Math.round(restoreNumber(settlement.lastGrowthTick, restoreNumber(settlement.foundedTick, 0)))
     ),
+    influenceRadius: Math.max(1, Math.round(restoreNumber(settlement.influenceRadius, CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS))),
+    claimedTiles: Math.max(0, Math.round(restoreNumber(settlement.claimedTiles, 0))),
+    claimedFood: Math.max(0, Math.round(restoreNumber(settlement.claimedFood, 0))),
     isActive: Boolean(settlement.isActive),
     lastActiveTick: Math.max(0, Math.round(restoreNumber(settlement.lastActiveTick, 0)))
   };
+
+  if (typeof getSettlementInfluenceRadius === "function") {
+    restoredSettlement.influenceRadius = getSettlementInfluenceRadius(restoredSettlement);
+  }
+
+  if (typeof countSettlementClaimedTiles === "function") {
+    restoredSettlement.claimedTiles = countSettlementClaimedTiles(restoredSettlement);
+  }
 
   if (restoredSettlement.id >= world.nextSettlementId) {
     world.nextSettlementId = restoredSettlement.id + 1;
@@ -625,6 +641,14 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.settlementLevelDevelopment === "number") {
     CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT = saveConfig.settlementLevelDevelopment;
+  }
+
+  if (typeof saveConfig.settlementInfluenceBaseRadius === "number") {
+    CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS = saveConfig.settlementInfluenceBaseRadius;
+  }
+
+  if (typeof saveConfig.settlementInfluenceRadiusPerLevel === "number") {
+    CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL = saveConfig.settlementInfluenceRadiusPerLevel;
   }
 }
 

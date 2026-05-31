@@ -65,6 +65,19 @@ function drawFood() {
   }
 }
 
+function getRgbaFromHex(hexColor, alpha) {
+  var color = String(hexColor || "#ffffff").replace("#", "");
+
+  if (color.length !== 6) {
+    return "rgba(255, 255, 255, " + alpha + ")";
+  }
+
+  var red = parseInt(color.slice(0, 2), 16);
+  var green = parseInt(color.slice(2, 4), 16);
+  var blue = parseInt(color.slice(4, 6), 16);
+  return "rgba(" + red + ", " + green + ", " + blue + ", " + alpha + ")";
+}
+
 function getLineageColor(organism) {
   var lineageId = typeof organism.lineageId === "number" ? organism.lineageId : 1;
   return getLineageColorById(lineageId);
@@ -120,6 +133,33 @@ function getSettlementDrawSize(settlement) {
   return CONFIG.ORGANISM_DRAW_SIZE * growthScale;
 }
 
+function drawSettlementInfluence() {
+  if (!Array.isArray(world.settlements)) {
+    return;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var radius = Math.max(1, Math.round(Number(settlement.influenceRadius) || CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS));
+    var canvasX = settlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var canvasY = settlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var canvasRadius = radius * CONFIG.TILE_SIZE;
+    var lineageColor = getLineageColorById(settlement.lineageId);
+
+    ctx.beginPath();
+    ctx.moveTo(canvasX, canvasY - canvasRadius);
+    ctx.lineTo(canvasX + canvasRadius, canvasY);
+    ctx.lineTo(canvasX, canvasY + canvasRadius);
+    ctx.lineTo(canvasX - canvasRadius, canvasY);
+    ctx.closePath();
+    ctx.fillStyle = getRgbaFromHex(lineageColor, settlement.isActive ? 0.07 : 0.035);
+    ctx.fill();
+    ctx.strokeStyle = getRgbaFromHex(lineageColor, settlement.isActive ? 0.22 : 0.12);
+    ctx.lineWidth = Math.min(3, Math.max(1, Math.round(Number(settlement.level) || 1)));
+    ctx.stroke();
+  }
+}
+
 function drawSettlements() {
   if (!Array.isArray(world.settlements)) {
     return;
@@ -169,6 +209,7 @@ window.buildTerrainCache = buildTerrainCache;
 
 window.drawWorld = function() {
   drawTerrain();
+  drawSettlementInfluence();
   drawFood();
   drawSettlements();
   drawOrganisms();

@@ -51,8 +51,9 @@ function getNearestSettlementToTile(tileX, tileY) {
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
     var distance = Math.abs(settlement.x - tileX) + Math.abs(settlement.y - tileY);
+    var inspectDistance = Math.max(2, Math.round(Number(settlement.influenceRadius) || 0));
 
-    if (distance < nearestDistance && distance <= 2) {
+    if (distance < nearestDistance && distance <= inspectDistance) {
       nearestSettlement = settlement;
       nearestDistance = distance;
     }
@@ -216,6 +217,8 @@ function getSettlementSummary() {
   var totalFoodStock = 0;
   var totalStoredFood = 0;
   var totalDevelopment = 0;
+  var totalClaimedTiles = 0;
+  var totalClaimedFood = 0;
   var topSettlement = null;
 
   for (var i = 0; i < world.settlements.length; i++) {
@@ -229,11 +232,14 @@ function getSettlementSummary() {
     totalFoodStock += settlement.foodStock;
     totalStoredFood += Math.max(0, Number(settlement.storedFood) || 0);
     totalDevelopment += Math.max(0, Number(settlement.development) || 0);
+    totalClaimedTiles += Math.max(0, Number(settlement.claimedTiles) || 0);
+    totalClaimedFood += Math.max(0, Number(settlement.claimedFood) || 0);
 
     if (
       !topSettlement ||
       settlement.level > topSettlement.level ||
-      (settlement.level === topSettlement.level && settlement.population > topSettlement.population)
+      (settlement.level === topSettlement.level && settlement.influenceRadius > topSettlement.influenceRadius) ||
+      (settlement.level === topSettlement.level && settlement.influenceRadius === topSettlement.influenceRadius && settlement.population > topSettlement.population)
     ) {
       topSettlement = settlement;
     }
@@ -246,6 +252,8 @@ function getSettlementSummary() {
     totalFoodStock: totalFoodStock,
     totalStoredFood: totalStoredFood,
     totalDevelopment: totalDevelopment,
+    totalClaimedTiles: totalClaimedTiles,
+    totalClaimedFood: totalClaimedFood,
     topSettlement: topSettlement
   };
 }
@@ -264,9 +272,12 @@ function updateSettlementSummary() {
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
     "   dev " + summary.totalDevelopment.toFixed(1) +
+    "   claimed " + summary.totalClaimedTiles +
+    " food " + summary.totalClaimedFood +
     "   top S" + summary.topSettlement.id +
     " L" + summary.topSettlement.lineageId +
     " lvl " + summary.topSettlement.level +
+    " influence " + summary.topSettlement.influenceRadius +
     " pop " + summary.topSettlement.population +
     " stored " + summary.topSettlement.storedFood +
     " dev " + summary.topSettlement.development.toFixed(1);
@@ -441,6 +452,9 @@ function updateInspectPanel() {
       "S" + settlement.id +
       " lineage L" + settlement.lineageId +
       " lvl " + settlement.level +
+      " influence " + settlement.influenceRadius +
+      " claimed " + settlement.claimedTiles +
+      " claimed food " + settlement.claimedFood +
       " pop " + settlement.population +
       " nearby " + settlement.foodStock +
       " stored " + settlement.storedFood +

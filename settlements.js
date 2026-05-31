@@ -69,6 +69,49 @@ function getSettlementLevelForDevelopment(development) {
   return Math.max(1, Math.floor(Math.max(0, development) / threshold) + 1);
 }
 
+function getSettlementInfluenceRadius(settlement) {
+  var level = Math.max(1, Math.round(restoreSettlementGrowthNumber(settlement.level, 1)));
+  var baseRadius = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS) || 1));
+  var radiusPerLevel = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL) || 0));
+  return baseRadius + (level - 1) * radiusPerLevel;
+}
+
+function countSettlementClaimedTiles(settlement) {
+  var claimedTiles = 0;
+  var radius = Math.max(1, Math.round(settlement.influenceRadius || getSettlementInfluenceRadius(settlement)));
+  var minY = Math.max(0, settlement.y - radius);
+  var maxY = Math.min(WORLD_HEIGHT - 1, settlement.y + radius);
+
+  for (var y = minY; y <= maxY; y++) {
+    var rowDistance = Math.abs(settlement.y - y);
+    var rowRadius = radius - rowDistance;
+    var minX = Math.max(0, settlement.x - rowRadius);
+    var maxX = Math.min(WORLD_WIDTH - 1, settlement.x + rowRadius);
+    claimedTiles += maxX - minX + 1;
+  }
+
+  return Math.min(claimedTiles, WORLD_WIDTH * WORLD_HEIGHT);
+}
+
+function countSettlementClaimedFood(settlement) {
+  var claimedFood = 0;
+  var radius = Math.max(1, Math.round(settlement.influenceRadius || getSettlementInfluenceRadius(settlement)));
+
+  for (var i = 0; i < world.food.length; i++) {
+    if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= radius) {
+      claimedFood++;
+    }
+  }
+
+  return claimedFood;
+}
+
+function updateSettlementInfluence(settlement) {
+  settlement.influenceRadius = getSettlementInfluenceRadius(settlement);
+  settlement.claimedTiles = countSettlementClaimedTiles(settlement);
+  settlement.claimedFood = countSettlementClaimedFood(settlement);
+}
+
 function normalizeSettlementGrowth(settlement) {
   settlement.storedFood = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.storedFood, 0)));
   settlement.development = Math.max(0, restoreSettlementGrowthNumber(settlement.development, 0));
@@ -80,10 +123,17 @@ function normalizeSettlementGrowth(settlement) {
     0,
     Math.round(restoreSettlementGrowthNumber(settlement.lastGrowthTick, settlement.foundedTick || 0))
   );
+  settlement.influenceRadius = Math.max(
+    1,
+    Math.round(restoreSettlementGrowthNumber(settlement.influenceRadius, getSettlementInfluenceRadius(settlement)))
+  );
+  settlement.claimedTiles = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.claimedTiles, 0)));
+  settlement.claimedFood = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.claimedFood, 0)));
 }
 
 function updateSettlementLevel(settlement) {
   settlement.level = getSettlementLevelForDevelopment(settlement.development);
+  updateSettlementInfluence(settlement);
 }
 
 function countSettlementFoodStock(settlement) {
@@ -121,6 +171,7 @@ function updateSettlementMetrics(settlement) {
   settlement.foodStock = countSettlementFoodStock(settlement);
   settlement.isActive = settlement.population > 0;
   updateSettlementLevel(settlement);
+  updateSettlementInfluence(settlement);
 
   if (settlement.isActive) {
     settlement.lastActiveTick = world.tick;
@@ -181,6 +232,9 @@ function makeSettlement(lineage, organisms) {
     development: 0,
     level: 1,
     lastGrowthTick: world.tick,
+    influenceRadius: CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS,
+    claimedTiles: 0,
+    claimedFood: 0,
     isActive: true,
     lastActiveTick: world.tick
   };
