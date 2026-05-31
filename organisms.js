@@ -338,22 +338,7 @@ function refreshLineageRegistry() {
 }
 
 function findNearestFood(organism, searchRadius) {
-  var nearest = null;
-  var nearestDistance = Infinity;
-
-  for (var i = 0; i < world.food.length; i++) {
-    var food = world.food[i];
-    var dx = food.x - organism.x;
-    var dy = food.y - organism.y;
-    var distance = Math.abs(dx) + Math.abs(dy);
-
-    if (distance < nearestDistance && distance <= searchRadius) {
-      nearest = food;
-      nearestDistance = distance;
-    }
-  }
-
-  return nearest;
+  return findNearestFoodInBuckets(organism.x, organism.y, searchRadius);
 }
 
 function moveTowardFood(organism, food) {
@@ -425,17 +410,12 @@ function chooseRoamingDirection(organism, traits) {
 }
 
 function eatFoodOnCurrentTile(organism) {
-  for (var i = world.food.length - 1; i >= 0; i--) {
-    var food = world.food[i];
-
-    if (food.x === organism.x && food.y === organism.y) {
-      removeFoodAtIndex(i);
-      organism.energy += CONFIG.FOOD_ENERGY_VALUE;
-      return true;
-    }
+  if (!removeFoodAtPosition(organism.x, organism.y)) {
+    return false;
   }
 
-  return false;
+  organism.energy += CONFIG.FOOD_ENERGY_VALUE;
+  return true;
 }
 
 function reproduceIfReady(organism) {

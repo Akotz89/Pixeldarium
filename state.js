@@ -47,6 +47,7 @@ const world = {
   organisms: [],
   food: [],
   foodPositions: {},
+  foodBuckets: {},
   terrain: [],
   fertileTiles: 0,
   isPaused: false,
