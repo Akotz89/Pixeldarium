@@ -564,6 +564,66 @@ function updateWorld() {
   }
 }
 
+function setSimulationPaused(isPaused) {
+  if (world.isExtinct) {
+    return false;
+  }
+
+  var nextPaused = Boolean(isPaused);
+
+  if (world.isPaused === nextPaused) {
+    return false;
+  }
+
+  world.isPaused = nextPaused;
+  world.needsRender = true;
+
+  if (typeof syncControlStates === "function") {
+    syncControlStates();
+  }
+
+  return true;
+}
+
+function toggleSimulationPaused() {
+  return setSimulationPaused(!world.isPaused);
+}
+
+function setSimulationSpeed(speed) {
+  var nextSpeed = clamp(Math.round(Number(speed) || world.speed), 1, 10);
+
+  if (world.speed === nextSpeed) {
+    return false;
+  }
+
+  world.speed = nextSpeed;
+  return true;
+}
+
+function adjustSimulationSpeed(delta) {
+  return setSimulationSpeed(world.speed + Math.round(Number(delta) || 0));
+}
+
+function stepSimulationOnce() {
+  if (!world.isPaused || world.isExtinct) {
+    return false;
+  }
+
+  var updateStart = performance.now();
+  updateWorld();
+  world.updateMs = performance.now() - updateStart;
+  world.maxUpdateMs = Math.max(world.maxUpdateMs, world.updateMs);
+  world.interpolation = 1;
+
+  var drawStart = performance.now();
+  drawWorld();
+  world.drawMs = performance.now() - drawStart;
+  world.maxDrawMs = Math.max(world.maxDrawMs, world.drawMs);
+
+  updateHud();
+  return true;
+}
+
 var lastFrameTime = performance.now();
 var simAccumulatorMs = 0;
 var statsTimer = performance.now();

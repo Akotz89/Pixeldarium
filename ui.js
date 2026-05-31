@@ -106,6 +106,16 @@ function syncControlStates() {
   setButtonDisabled(stepButton, world.isExtinct || !world.isPaused);
   setButtonDisabled(speedDownButton, world.isExtinct || world.speed <= 1);
   setButtonDisabled(speedUpButton, world.isExtinct || world.speed >= 10);
+  pauseButton.title = world.isExtinct ? "Run extinct. Restart to seed a new population." : "Pause or resume simulation (Space)";
+  stepButton.title = "Advance one tick while paused (N)";
+  speedDownButton.title = "Decrease simulation speed (-)";
+  speedUpButton.title = "Increase simulation speed (+)";
+  restartButton.title = "Restart with current tuning (R)";
+  pauseButton.setAttribute("aria-keyshortcuts", "Space");
+  stepButton.setAttribute("aria-keyshortcuts", "N");
+  speedDownButton.setAttribute("aria-keyshortcuts", "-");
+  speedUpButton.setAttribute("aria-keyshortcuts", "+");
+  restartButton.setAttribute("aria-keyshortcuts", "R");
 }
 
 function applyTuningFromControls(redraw) {
@@ -736,6 +746,67 @@ function setPersistenceStatus(message, isError) {
   persistenceStatus.classList.toggle("error", Boolean(isError));
 }
 
+function restartSimulationFromControls() {
+  applyTuningFromControls(false);
+  seedWorld();
+  drawWorld();
+  updateHud();
+  setPersistenceStatus("SAVE: Ready", false);
+}
+
+function shouldIgnoreSimulationShortcut(target) {
+  if (!target) {
+    return false;
+  }
+
+  var tagName = String(target.tagName || "").toLowerCase();
+
+  return (
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    tagName === "button" ||
+    Boolean(target.isContentEditable)
+  );
+}
+
+function handleSimulationShortcut(event) {
+  if (shouldIgnoreSimulationShortcut(event.target)) {
+    return;
+  }
+
+  var key = String(event.key || "");
+  var code = String(event.code || "");
+  var handled = false;
+
+  if (code === "Space" || key === " ") {
+    handled = true;
+    toggleSimulationPaused();
+  } else if (code === "KeyN" || key.toLowerCase() === "n") {
+    handled = true;
+    stepSimulationOnce();
+  } else if (code === "Equal" || code === "NumpadAdd" || key === "+" || key === "=") {
+    handled = true;
+
+    if (adjustSimulationSpeed(1)) {
+      updateHud();
+    }
+  } else if (code === "Minus" || code === "NumpadSubtract" || key === "-" || key === "_") {
+    handled = true;
+
+    if (adjustSimulationSpeed(-1)) {
+      updateHud();
+    }
+  } else if (code === "KeyR" || key.toLowerCase() === "r") {
+    handled = true;
+    restartSimulationFromControls();
+  }
+
+  if (handled && typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
+}
+
 window.setupControls = function() {
   canvas.addEventListener("click", function(event) {
     var tile = getTileFromCanvasEvent(event);
@@ -743,40 +814,23 @@ window.setupControls = function() {
   });
 
   pauseButton.addEventListener("click", function() {
-    if (world.isExtinct) {
-      return;
-    }
-
-    world.isPaused = !world.isPaused;
-    world.needsRender = true;
-    syncControlStates();
+    toggleSimulationPaused();
   });
 
   stepButton.addEventListener("click", function() {
-    if (world.isPaused) {
-      var updateStart = performance.now();
-      updateWorld();
-      world.updateMs = performance.now() - updateStart;
-      world.maxUpdateMs = Math.max(world.maxUpdateMs, world.updateMs);
-      world.interpolation = 1;
+    stepSimulationOnce();
+  });
 
-      var drawStart = performance.now();
-      drawWorld();
-      world.drawMs = performance.now() - drawStart;
-      world.maxDrawMs = Math.max(world.maxDrawMs, world.drawMs);
-
+  speedDownButton.addEventListener("click", function() {
+    if (adjustSimulationSpeed(-1)) {
       updateHud();
     }
   });
 
-  speedDownButton.addEventListener("click", function() {
-    world.speed = Math.max(1, world.speed - 1);
-    updateHud();
-  });
-
   speedUpButton.addEventListener("click", function() {
-    world.speed = Math.min(10, world.speed + 1);
-    updateHud();
+    if (adjustSimulationSpeed(1)) {
+      updateHud();
+    }
   });
 
   speedSlider.addEventListener("input", function() {
@@ -816,12 +870,10 @@ window.setupControls = function() {
   syncControlStates();
 
   restartButton.addEventListener("click", function() {
-    applyTuningFromControls(false);
-    seedWorld();
-    drawWorld();
-    updateHud();
-    setPersistenceStatus("SAVE: Ready", false);
+    restartSimulationFromControls();
   });
+
+  document.addEventListener("keydown", handleSimulationShortcut);
 
   saveButton.addEventListener("click", function() {
     setPersistenceStatus("SAVE: Saving...", false);
