@@ -677,9 +677,12 @@ h1 {
 }
 
 .summary-chip-value {
+  min-width: 0;
   color: #f4f7ff;
   font-size: 12px;
   font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
