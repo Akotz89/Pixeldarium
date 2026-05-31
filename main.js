@@ -569,6 +569,44 @@ function formatEcosystemStabilityFactorScore(profile) {
   );
 }
 
+function getEcosystemRecoveryAction(summary) {
+  if (!summary || !summary.stabilityProfile) {
+    return "observe";
+  }
+
+  var factor = summary.stabilityProfile.limitingFactor;
+
+  if (summary.population <= 0 || factor === "population") {
+    return "restart seed";
+  }
+
+  if (factor === "food") {
+    if (summary.resourceBalance === "draining") {
+      return "reduce food drain";
+    }
+
+    return "grow food stock";
+  }
+
+  if (factor === "energy") {
+    return "restore energy";
+  }
+
+  if (factor === "maturity") {
+    return "let adults form";
+  }
+
+  if (factor === "diversity") {
+    return "protect lineages";
+  }
+
+  if (factor === "crowding") {
+    return "relieve crowding";
+  }
+
+  return "stabilize";
+}
+
 function getPopulationBalance(populationDelta, population) {
   if (population <= 0) {
     return "extinct";
@@ -668,9 +706,11 @@ function refreshEcosystemSummary() {
     foodNetThisTick: foodNetThisTick,
     pressure: pressure,
     stabilityScore: stabilityProfile.stabilityScore,
-    stabilityProfile: stabilityProfile
+    stabilityProfile: stabilityProfile,
+    recoveryAction: ""
   };
 
+  world.ecosystemSummary.recoveryAction = getEcosystemRecoveryAction(world.ecosystemSummary);
   world.ecosystemSummary.trend = getEcosystemTrend(world.ecosystemSummary);
   return world.ecosystemSummary;
 }
@@ -884,7 +924,7 @@ function refreshSimulationAlerts() {
       alerts,
       "warning",
       "Low stability",
-      formatEcosystemStabilityFactorScore(ecosystemSummary.stabilityProfile),
+      ecosystemSummary.recoveryAction + " - " + formatEcosystemStabilityFactorScore(ecosystemSummary.stabilityProfile),
       24
     );
   }
