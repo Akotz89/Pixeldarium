@@ -76,8 +76,12 @@ h1 {
   gap: 8px;
   flex-wrap: wrap;
   margin: 0;
+  padding: 8px;
   width: 100%;
   box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(160, 175, 255, 0.18);
+  border-radius: 12px;
 }
 
 .sim-button {
@@ -145,8 +149,12 @@ h1 {
   grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 8px;
   margin: 0;
+  padding: 8px;
   width: 100%;
   box-sizing: border-box;
+  background: rgba(112, 240, 208, 0.035);
+  border: 1px solid rgba(112, 240, 208, 0.16);
+  border-radius: 12px;
 }
 
 .tuning-control {
@@ -315,8 +323,8 @@ h1 {
 
 #ecosystem-history-wrap {
   display: grid;
-  grid-template-rows: auto minmax(72px, 1fr);
-  gap: 6px;
+  grid-template-rows: auto minmax(168px, 1fr);
+  gap: 8px;
   min-width: 0;
   min-height: 0;
 }
@@ -562,10 +570,113 @@ h1 {
   white-space: normal;
 }
 
+#ecosystem-summary.ecosystem-dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  text-align: left;
+  white-space: normal;
+}
+
+.dashboard-card {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.052);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 4px solid rgba(114, 215, 255, 0.62);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.dashboard-card h2 {
+  margin: 0;
+  color: #aeb7d9;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+.dashboard-status {
+  border-left-color: #70f0d0;
+}
+
+.dashboard-population {
+  border-left-color: #72d7ff;
+}
+
+.dashboard-food {
+  border-left-color: #fff26b;
+}
+
+.dashboard-trend {
+  border-left-color: #c884ff;
+}
+
+.primary-metric {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 0 5px;
+}
+
+.primary-metric span {
+  color: #aeb7d9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.primary-metric strong {
+  color: #f4f7ff;
+  font-size: clamp(20px, 1.65vw, 28px);
+  font-weight: 900;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.primary-metric small {
+  color: #c7d0f6;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.metric-row {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.75fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.metric-row b {
+  color: #aeb7d9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.metric-row span {
+  color: #f4f7ff;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 #ecosystem-history {
   width: 100%;
   height: 100%;
-  min-height: 72px;
+  min-height: 168px;
   display: block;
   background: rgba(5, 6, 10, 0.74);
   border: 1px solid rgba(114, 215, 255, 0.24);
@@ -868,6 +979,10 @@ h1 {
     grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   }
 
+  #ecosystem-summary.ecosystem-dashboard {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
   #event-log.event-grid {
     grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   }
@@ -929,6 +1044,14 @@ h1 {
   #settlement-summary.summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: 150px;
+  }
+
+  #ecosystem-summary.ecosystem-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  #ecosystem-history {
+    min-height: 132px;
   }
 
   .summary-chip {
