@@ -412,6 +412,89 @@ function updateColonyNetworkState() {
   return summary;
 }
 
+function getSpaceProgramInvestmentColonies(foodCost) {
+  var colonies = [];
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+
+    if (settlement.isColony && settlement.isActive && settlement.storedFood >= foodCost) {
+      colonies.push(settlement);
+    }
+  }
+
+  return colonies;
+}
+
+function updateSpaceProgramReadiness(networkSummary) {
+  networkSummary = networkSummary || getColonyNetworkSummary();
+
+  world.spaceProgramProgress = Math.max(0, restoreSettlementGrowthNumber(world.spaceProgramProgress, 0));
+  world.orbitalLaunches = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.orbitalLaunches, 0)));
+  world.lastSpaceProgramTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastSpaceProgramTick, 0)));
+
+  var minScore = Math.max(0, Math.round(Number(CONFIG.SPACE_PROGRAM_MIN_NETWORK_SCORE) || 0));
+  var minColonies = Math.max(0, Math.round(Number(CONFIG.SPACE_PROGRAM_MIN_COLONIES) || 0));
+  var minRoutes = Math.max(0, Math.round(Number(CONFIG.SPACE_PROGRAM_MIN_ACTIVE_ROUTES) || 0));
+
+  world.spaceProgramReady = Boolean(
+    networkSummary.score >= minScore &&
+    networkSummary.colonies >= minColonies &&
+    networkSummary.activeRoutes >= minRoutes
+  );
+
+  if (world.orbitalLaunches > 0) {
+    world.era = "Orbital";
+  } else if (world.spaceProgramReady) {
+    world.era = "Space Program";
+  }
+
+  return world.spaceProgramReady;
+}
+
+function updateSpaceProgramState(networkSummary) {
+  var isReady = updateSpaceProgramReadiness(networkSummary);
+
+  if (!isReady) {
+    return;
+  }
+
+  var progressInterval = Math.max(1, Math.round(Number(CONFIG.SPACE_PROGRAM_PROGRESS_INTERVAL) || 1));
+  var foodCost = Math.max(0, Math.round(Number(CONFIG.SPACE_PROGRAM_COLONY_FOOD_COST) || 0));
+  var launchThreshold = Math.max(1, Number(CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD) || 1);
+
+  if (world.tick - world.lastSpaceProgramTick < progressInterval) {
+    world.era = world.orbitalLaunches > 0 ? "Orbital" : "Space Program";
+    return;
+  }
+
+  world.lastSpaceProgramTick = world.tick;
+
+  var investmentColonies = getSpaceProgramInvestmentColonies(foodCost);
+
+  if (investmentColonies.length === 0) {
+    world.era = world.orbitalLaunches > 0 ? "Orbital" : "Space Program";
+    return;
+  }
+
+  for (var i = 0; i < investmentColonies.length; i++) {
+    investmentColonies[i].storedFood = Math.max(0, investmentColonies[i].storedFood - foodCost);
+  }
+
+  world.spaceProgramProgress +=
+    networkSummary.score * CONFIG.SPACE_PROGRAM_PROGRESS_PER_NETWORK_SCORE +
+    networkSummary.activeRoutes * CONFIG.SPACE_PROGRAM_PROGRESS_PER_ACTIVE_ROUTE +
+    investmentColonies.length;
+
+  if (world.spaceProgramProgress >= launchThreshold) {
+    var launches = Math.floor(world.spaceProgramProgress / launchThreshold);
+    world.orbitalLaunches += launches;
+    world.spaceProgramProgress = world.spaceProgramProgress % launchThreshold;
+  }
+
+  world.era = world.orbitalLaunches > 0 ? "Orbital" : "Space Program";
+}
+
 function makeSettlement(lineage, organisms) {
   var center = getLineageCenter(organisms);
   return makeSettlementAt(lineage.id, center.x, center.y, {
@@ -755,5 +838,6 @@ function updateSettlements() {
     }
   }
 
-  updateColonyNetworkState();
+  var networkSummary = updateColonyNetworkState();
+  updateSpaceProgramState(networkSummary);
 }

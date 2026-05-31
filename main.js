@@ -36,6 +36,10 @@ function clearWorld() {
   world.colonyNetworkColonies = 0;
   world.colonyNetworkActiveRoutes = 0;
   world.colonyNetworkClaimedTiles = 0;
+  world.spaceProgramProgress = 0;
+  world.orbitalLaunches = 0;
+  world.lastSpaceProgramTick = 0;
+  world.spaceProgramReady = false;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

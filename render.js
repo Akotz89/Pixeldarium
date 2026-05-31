@@ -227,6 +227,16 @@ function drawSettlements() {
     ctx.setLineDash([]);
     ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
     ctx.fillRect(canvasX - markerSize / 2, canvasY - markerSize / 2, markerSize, markerSize);
+
+    if (settlement.isColony && world.spaceProgramReady) {
+      ctx.beginPath();
+      ctx.moveTo(canvasX, canvasY - size / 2 - 10);
+      ctx.lineTo(canvasX + 5, canvasY - size / 2 - 2);
+      ctx.lineTo(canvasX - 5, canvasY - size / 2 - 2);
+      ctx.closePath();
+      ctx.fillStyle = world.orbitalLaunches > 0 ? "#ffffff" : "#72d7ff";
+      ctx.fill();
+    }
   }
 }
 

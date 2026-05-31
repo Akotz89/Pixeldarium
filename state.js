@@ -58,5 +58,9 @@ const world = {
   colonyNetworkScore: 0,
   colonyNetworkColonies: 0,
   colonyNetworkActiveRoutes: 0,
-  colonyNetworkClaimedTiles: 0
+  colonyNetworkClaimedTiles: 0,
+  spaceProgramProgress: 0,
+  orbitalLaunches: 0,
+  lastSpaceProgramTick: 0,
+  spaceProgramReady: false
 };

@@ -174,8 +174,14 @@ function getSettlementRoutesForSave() {
 }
 
 function createWorldSaveData() {
+  var networkSummary = null;
+
   if (typeof updateColonyNetworkState === "function") {
-    updateColonyNetworkState();
+    networkSummary = updateColonyNetworkState();
+  }
+
+  if (typeof updateSpaceProgramReadiness === "function") {
+    updateSpaceProgramReadiness(networkSummary);
   }
 
   return {
@@ -195,6 +201,10 @@ function createWorldSaveData() {
     colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
     colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
     colonyNetworkClaimedTiles: Math.max(0, Math.round(Number(world.colonyNetworkClaimedTiles) || 0)),
+    spaceProgramProgress: Math.max(0, Number(world.spaceProgramProgress) || 0),
+    orbitalLaunches: Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)),
+    lastSpaceProgramTick: Math.max(0, Math.round(Number(world.lastSpaceProgramTick) || 0)),
+    spaceProgramReady: Boolean(world.spaceProgramReady),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -261,7 +271,15 @@ function createWorldSaveData() {
       colonyNetworkRouteScore: CONFIG.COLONY_NETWORK_ROUTE_SCORE,
       colonyNetworkStoredFoodScore: CONFIG.COLONY_NETWORK_STORED_FOOD_SCORE,
       colonyNetworkTransferredFoodScore: CONFIG.COLONY_NETWORK_TRANSFERRED_FOOD_SCORE,
-      colonyNetworkClaimedTileScore: CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE
+      colonyNetworkClaimedTileScore: CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE,
+      spaceProgramMinNetworkScore: CONFIG.SPACE_PROGRAM_MIN_NETWORK_SCORE,
+      spaceProgramMinColonies: CONFIG.SPACE_PROGRAM_MIN_COLONIES,
+      spaceProgramMinActiveRoutes: CONFIG.SPACE_PROGRAM_MIN_ACTIVE_ROUTES,
+      spaceProgramProgressInterval: CONFIG.SPACE_PROGRAM_PROGRESS_INTERVAL,
+      spaceProgramColonyFoodCost: CONFIG.SPACE_PROGRAM_COLONY_FOOD_COST,
+      spaceProgramProgressPerNetworkScore: CONFIG.SPACE_PROGRAM_PROGRESS_PER_NETWORK_SCORE,
+      spaceProgramProgressPerActiveRoute: CONFIG.SPACE_PROGRAM_PROGRESS_PER_ACTIVE_ROUTE,
+      spaceProgramLaunchThreshold: CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -837,6 +855,38 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.colonyNetworkClaimedTileScore === "number") {
     CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE = saveConfig.colonyNetworkClaimedTileScore;
   }
+
+  if (typeof saveConfig.spaceProgramMinNetworkScore === "number") {
+    CONFIG.SPACE_PROGRAM_MIN_NETWORK_SCORE = saveConfig.spaceProgramMinNetworkScore;
+  }
+
+  if (typeof saveConfig.spaceProgramMinColonies === "number") {
+    CONFIG.SPACE_PROGRAM_MIN_COLONIES = saveConfig.spaceProgramMinColonies;
+  }
+
+  if (typeof saveConfig.spaceProgramMinActiveRoutes === "number") {
+    CONFIG.SPACE_PROGRAM_MIN_ACTIVE_ROUTES = saveConfig.spaceProgramMinActiveRoutes;
+  }
+
+  if (typeof saveConfig.spaceProgramProgressInterval === "number") {
+    CONFIG.SPACE_PROGRAM_PROGRESS_INTERVAL = saveConfig.spaceProgramProgressInterval;
+  }
+
+  if (typeof saveConfig.spaceProgramColonyFoodCost === "number") {
+    CONFIG.SPACE_PROGRAM_COLONY_FOOD_COST = saveConfig.spaceProgramColonyFoodCost;
+  }
+
+  if (typeof saveConfig.spaceProgramProgressPerNetworkScore === "number") {
+    CONFIG.SPACE_PROGRAM_PROGRESS_PER_NETWORK_SCORE = saveConfig.spaceProgramProgressPerNetworkScore;
+  }
+
+  if (typeof saveConfig.spaceProgramProgressPerActiveRoute === "number") {
+    CONFIG.SPACE_PROGRAM_PROGRESS_PER_ACTIVE_ROUTE = saveConfig.spaceProgramProgressPerActiveRoute;
+  }
+
+  if (typeof saveConfig.spaceProgramLaunchThreshold === "number") {
+    CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD = saveConfig.spaceProgramLaunchThreshold;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -853,6 +903,10 @@ function applyWorldSaveData(saveData) {
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
   world.colonyNetworkClaimedTiles = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkClaimedTiles, 0)));
+  world.spaceProgramProgress = Math.max(0, restoreNumber(saveData.spaceProgramProgress, 0));
+  world.orbitalLaunches = Math.max(0, Math.round(restoreNumber(saveData.orbitalLaunches, 0)));
+  world.lastSpaceProgramTick = Math.max(0, Math.round(restoreNumber(saveData.lastSpaceProgramTick, 0)));
+  world.spaceProgramReady = Boolean(saveData.spaceProgramReady);
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -867,7 +921,11 @@ function applyWorldSaveData(saveData) {
   }
 
   if (typeof updateColonyNetworkState === "function") {
-    updateColonyNetworkState();
+    var networkSummary = updateColonyNetworkState();
+
+    if (typeof updateSpaceProgramReadiness === "function") {
+      updateSpaceProgramReadiness(networkSummary);
+    }
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
