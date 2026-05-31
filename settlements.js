@@ -684,6 +684,10 @@ function ensurePlanetaryState() {
     world.planetaryBodies = [];
   }
 
+  if (!world.planetaryBodiesById) {
+    rebuildPlanetaryBodyIndexes();
+  }
+
   if (typeof world.nextPlanetaryBodyId !== "number" || world.nextPlanetaryBodyId < 1) {
     world.nextPlanetaryBodyId = 1;
   }
@@ -733,11 +737,39 @@ function makePlanetaryBody() {
   };
 }
 
+function registerPlanetaryBodyInIndex(body) {
+  if (!body) {
+    return;
+  }
+
+  if (!world.planetaryBodiesById) {
+    world.planetaryBodiesById = {};
+  }
+
+  world.planetaryBodiesById[String(body.id)] = body;
+}
+
+function rebuildPlanetaryBodyIndexes() {
+  world.planetaryBodiesById = {};
+
+  if (!Array.isArray(world.planetaryBodies)) {
+    return world.planetaryBodiesById;
+  }
+
+  for (var i = 0; i < world.planetaryBodies.length; i++) {
+    registerPlanetaryBodyInIndex(world.planetaryBodies[i]);
+  }
+
+  return world.planetaryBodiesById;
+}
+
 function normalizePlanetaryBodies() {
   ensurePlanetaryState();
+  world.planetaryBodiesById = {};
 
   for (var i = 0; i < world.planetaryBodies.length; i++) {
     normalizePlanetaryBody(world.planetaryBodies[i]);
+    registerPlanetaryBodyInIndex(world.planetaryBodies[i]);
   }
 }
 
@@ -804,7 +836,9 @@ function updatePlanetarySurveyState() {
     world.planetarySurveyProgress >= discoveryThreshold &&
     world.planetaryBodies.length < CONFIG.PLANETARY_SURVEY_MAX_BODIES
   ) {
-    world.planetaryBodies.push(makePlanetaryBody());
+    var planetaryBody = makePlanetaryBody();
+    world.planetaryBodies.push(planetaryBody);
+    registerPlanetaryBodyInIndex(planetaryBody);
     world.planetarySurveyProgress -= discoveryThreshold;
   }
 
@@ -834,15 +868,15 @@ function allocateProbeMissionId() {
 }
 
 function getPlanetaryBodyById(bodyId) {
-  normalizePlanetaryBodies();
+  ensurePlanetaryState();
+  var bodyKey = String(bodyId);
 
-  for (var i = 0; i < world.planetaryBodies.length; i++) {
-    if (world.planetaryBodies[i].id === bodyId) {
-      return world.planetaryBodies[i];
-    }
+  if (world.planetaryBodiesById[bodyKey]) {
+    return world.planetaryBodiesById[bodyKey];
   }
 
-  return null;
+  rebuildPlanetaryBodyIndexes();
+  return world.planetaryBodiesById[bodyKey] || null;
 }
 
 function getProbeMissionTargetBodyId() {
@@ -1353,7 +1387,14 @@ function getClaimedStarSystems() {
 
 function getStarSystemById(systemId) {
   ensureStarMapState();
-  return world.starSystemsById[String(systemId)] || null;
+  var systemKey = String(systemId);
+
+  if (world.starSystemsById[systemKey]) {
+    return world.starSystemsById[systemKey];
+  }
+
+  rebuildStarSystemIndexes();
+  return world.starSystemsById[systemKey] || null;
 }
 
 function getInterstellarFleetEndpoints() {

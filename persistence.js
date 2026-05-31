@@ -1628,6 +1628,7 @@ function applyWorldSaveData(saveData) {
   rebuildSettlementIndexes();
   world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
   world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
+  rebuildPlanetaryBodyIndexes();
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
   world.starSystems = restoreStarSystems(saveData.starSystems);
   rebuildStarSystemIndexes();
