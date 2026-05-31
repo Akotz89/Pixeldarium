@@ -135,7 +135,7 @@ h1 {
   box-sizing: border-box;
 }
 
-#hud span {
+#hud > span {
   background: rgba(255, 255, 255, 0.075);
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 10px;
@@ -146,6 +146,43 @@ h1 {
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#hud > .hud-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(74px, 1fr));
+  gap: 6px;
+  padding: 7px;
+  text-align: left;
+}
+
+.hud-metric {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+.hud-metric b {
+  min-width: 0;
+  color: #aeb7d9;
+  font-size: 10px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-metric span {
+  color: #f4f7ff;
+  font-size: 11px;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -447,6 +484,10 @@ h1 {
     gap: 8px;
   }
 
+  #hud > .hud-metrics {
+    grid-template-columns: repeat(4, minmax(64px, 1fr));
+  }
+
   #inspect-panel,
   #trait-history-panel {
     grid-template-columns: 1fr;
@@ -497,6 +538,10 @@ h1 {
   #settlement-panel,
   #trait-history-panel {
     grid-template-columns: 1fr;
+  }
+
+  #hud > .hud-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tuning-control {
