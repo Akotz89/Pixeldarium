@@ -14,6 +14,72 @@ function ensureSettlementState() {
   if (typeof world.nextSettlementRouteId !== "number" || world.nextSettlementRouteId < 1) {
     world.nextSettlementRouteId = 1;
   }
+
+  if (!world.settlementsById || !world.settlementByLineage || !world.rootSettlementByLineage || !world.settlementRoutesByKey) {
+    rebuildSettlementIndexes();
+  }
+}
+
+function getSettlementRouteKey(parentSettlementId, childSettlementId) {
+  return parentSettlementId + ":" + childSettlementId;
+}
+
+function registerSettlementInIndexes(settlement) {
+  if (!settlement) {
+    return;
+  }
+
+  if (!world.settlementsById) {
+    world.settlementsById = {};
+  }
+
+  if (!world.settlementByLineage) {
+    world.settlementByLineage = {};
+  }
+
+  if (!world.rootSettlementByLineage) {
+    world.rootSettlementByLineage = {};
+  }
+
+  var idKey = String(settlement.id);
+  var lineageKey = String(settlement.lineageId);
+  world.settlementsById[idKey] = settlement;
+
+  if (!world.settlementByLineage[lineageKey]) {
+    world.settlementByLineage[lineageKey] = settlement;
+  }
+
+  if (!settlement.isOutpost && !world.rootSettlementByLineage[lineageKey]) {
+    world.rootSettlementByLineage[lineageKey] = settlement;
+  }
+}
+
+function registerSettlementRouteInIndex(route) {
+  if (!route) {
+    return;
+  }
+
+  if (!world.settlementRoutesByKey) {
+    world.settlementRoutesByKey = {};
+  }
+
+  route._indexKey = getSettlementRouteKey(route.parentSettlementId, route.childSettlementId);
+  world.settlementRoutesByKey[route._indexKey] = route;
+}
+
+function rebuildSettlementIndexes() {
+  world.settlementsById = {};
+  world.settlementByLineage = {};
+  world.rootSettlementByLineage = {};
+  world.settlementRoutesByKey = {};
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    registerSettlementInIndexes(world.settlements[i]);
+  }
+
+  for (var routeIndex = 0; routeIndex < world.settlementRoutes.length; routeIndex++) {
+    registerSettlementRouteInIndex(world.settlementRoutes[routeIndex]);
+  }
 }
 
 function allocateSettlementId() {
@@ -34,38 +100,17 @@ function allocateSettlementRouteId() {
 
 function getSettlementById(settlementId) {
   ensureSettlementState();
-
-  for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].id === settlementId) {
-      return world.settlements[i];
-    }
-  }
-
-  return null;
+  return world.settlementsById[String(settlementId)] || null;
 }
 
 function getSettlementForLineage(lineageId) {
   ensureSettlementState();
-
-  for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].lineageId === lineageId) {
-      return world.settlements[i];
-    }
-  }
-
-  return null;
+  return world.settlementByLineage[String(lineageId)] || null;
 }
 
 function getRootSettlementForLineage(lineageId) {
   ensureSettlementState();
-
-  for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].lineageId === lineageId && !world.settlements[i].isOutpost) {
-      return world.settlements[i];
-    }
-  }
-
-  return null;
+  return world.rootSettlementByLineage[String(lineageId)] || null;
 }
 
 function getOrganismsForLineage(lineageId) {
@@ -1652,6 +1697,7 @@ function foundSettlementForLineage(lineage) {
   var settlement = makeSettlement(lineage, organisms);
   updateSettlementMetrics(settlement);
   world.settlements.push(settlement);
+  registerSettlementInIndexes(settlement);
   return settlement;
 }
 
@@ -1747,6 +1793,7 @@ function foundOutpostFromSettlement(parentSettlement) {
   });
   updateSettlementMetrics(outpost);
   world.settlements.push(outpost);
+  registerSettlementInIndexes(outpost);
   return outpost;
 }
 
@@ -1760,16 +1807,7 @@ function updateSettlementOutposts() {
 
 function getSettlementRoute(parentSettlementId, childSettlementId) {
   ensureSettlementState();
-
-  for (var i = 0; i < world.settlementRoutes.length; i++) {
-    var route = world.settlementRoutes[i];
-
-    if (route.parentSettlementId === parentSettlementId && route.childSettlementId === childSettlementId) {
-      return route;
-    }
-  }
-
-  return null;
+  return world.settlementRoutesByKey[getSettlementRouteKey(parentSettlementId, childSettlementId)] || null;
 }
 
 function makeSettlementRoute(parentSettlement, childSettlement) {
@@ -1792,12 +1830,14 @@ function ensureSettlementRoute(parentSettlement, childSettlement) {
   if (!route) {
     route = makeSettlementRoute(parentSettlement, childSettlement);
     world.settlementRoutes.push(route);
+    registerSettlementRouteInIndex(route);
   }
 
   return route;
 }
 
 function normalizeSettlementRoute(route) {
+  var previousRouteKey = route._indexKey || getSettlementRouteKey(route.parentSettlementId, route.childSettlementId);
   route.parentSettlementId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.parentSettlementId, 1)));
   route.childSettlementId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.childSettlementId, 1)));
   route.lineageId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.lineageId, 1)));
@@ -1806,6 +1846,15 @@ function normalizeSettlementRoute(route) {
   route.foodTransferred = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.foodTransferred, 0)));
   route.lastTransferTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.lastTransferTick, route.foundedTick)));
   route.isActive = Boolean(route.isActive);
+
+  if (
+    world.settlementRoutesByKey &&
+    previousRouteKey !== getSettlementRouteKey(route.parentSettlementId, route.childSettlementId)
+  ) {
+    delete world.settlementRoutesByKey[previousRouteKey];
+  }
+
+  registerSettlementRouteInIndex(route);
 }
 
 function transferSettlementRouteFood(route, parentSettlement, childSettlement) {

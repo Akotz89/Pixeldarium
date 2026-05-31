@@ -37,9 +37,13 @@ function clearWorld() {
   world.lineages = {};
   world.nextSettlementId = 1;
   world.settlements = [];
+  world.settlementsById = {};
+  world.settlementByLineage = {};
+  world.rootSettlementByLineage = {};
   world.settlementSummary = null;
   world.nextSettlementRouteId = 1;
   world.settlementRoutes = [];
+  world.settlementRoutesByKey = {};
   world.colonyNetworkScore = 0;
   world.colonyNetworkColonies = 0;
   world.colonyNetworkActiveRoutes = 0;
