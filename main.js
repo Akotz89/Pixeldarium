@@ -447,14 +447,18 @@ function getEcosystemTrend(summary) {
     return {
       populationDelta: 0,
       energyDelta: 0,
-      foodDelta: 0
+      foodDelta: 0,
+      stabilityDelta: 0,
+      foodNetDelta: 0
     };
   }
 
   return {
     populationDelta: summary.population - sample.population,
     energyDelta: summary.averageEnergy - sample.averageEnergy,
-    foodDelta: summary.food - sample.food
+    foodDelta: summary.food - sample.food,
+    stabilityDelta: summary.stabilityScore - (Number(sample.stabilityScore) || 0),
+    foodNetDelta: summary.foodNetThisTick - (Number(sample.foodNetThisTick) || 0)
   };
 }
 
@@ -926,6 +930,16 @@ function refreshSimulationAlerts() {
       "Low stability",
       ecosystemSummary.recoveryAction + " - " + formatEcosystemStabilityFactorScore(ecosystemSummary.stabilityProfile),
       24
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.trend && ecosystemSummary.trend.stabilityDelta <= -12) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Stability falling",
+      formatMilestoneSignedNumber(ecosystemSummary.trend.stabilityDelta) + " - " + ecosystemSummary.recoveryAction,
+      26
     );
   }
 
