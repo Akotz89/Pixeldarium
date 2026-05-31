@@ -19,6 +19,7 @@ function ensureSettlementState() {
     !world.settlementsById ||
     !world.settlementByLineage ||
     !world.rootSettlementByLineage ||
+    !world.settlementChildOutpostCountByParentId ||
     !world.settlementRoutesByKey ||
     !world.settlementRouteStatsById
   ) {
@@ -47,8 +48,18 @@ function registerSettlementInIndexes(settlement) {
     world.rootSettlementByLineage = {};
   }
 
+  if (!world.settlementChildOutpostCountByParentId) {
+    world.settlementChildOutpostCountByParentId = {};
+  }
+
   var idKey = String(settlement.id);
   var lineageKey = String(settlement.lineageId);
+  var previousSettlement = world.settlementsById[idKey];
+
+  if (previousSettlement === settlement) {
+    return;
+  }
+
   world.settlementsById[idKey] = settlement;
 
   if (!world.settlementByLineage[lineageKey]) {
@@ -57,6 +68,14 @@ function registerSettlementInIndexes(settlement) {
 
   if (!settlement.isOutpost && !world.rootSettlementByLineage[lineageKey]) {
     world.rootSettlementByLineage[lineageKey] = settlement;
+  }
+
+  var parentSettlementId = Math.max(0, Math.round(Number(settlement.parentSettlementId) || 0));
+
+  if (parentSettlementId > 0) {
+    var parentKey = String(parentSettlementId);
+    world.settlementChildOutpostCountByParentId[parentKey] =
+      (world.settlementChildOutpostCountByParentId[parentKey] || 0) + 1;
   }
 }
 
@@ -141,6 +160,7 @@ function rebuildSettlementIndexes() {
   world.settlementsById = {};
   world.settlementByLineage = {};
   world.rootSettlementByLineage = {};
+  world.settlementChildOutpostCountByParentId = {};
   world.settlementRoutesByKey = {};
   world.settlementRouteStatsById = {};
 
@@ -350,15 +370,16 @@ function runSettlementGrowth(settlement) {
 }
 
 function countChildOutposts(settlement) {
-  var childOutposts = 0;
-
-  for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].parentSettlementId === settlement.id) {
-      childOutposts++;
-    }
+  if (!settlement) {
+    return 0;
   }
 
-  return childOutposts;
+  ensureSettlementState();
+
+  return Math.max(
+    0,
+    Math.round(Number(world.settlementChildOutpostCountByParentId[String(settlement.id)]) || 0)
+  );
 }
 
 function countRoutesForSettlement(settlementId) {
