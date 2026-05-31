@@ -147,7 +147,7 @@ h1 {
 
 #trait-history-legend {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 6px;
   align-content: center;
   padding: 8px 12px;
@@ -190,6 +190,10 @@ h1 {
 
 .trait-key.roam::before {
   background: #c884ff;
+}
+
+.trait-key.habitat::before {
+  background: #70f0d0;
 }
 
 #trait-history {

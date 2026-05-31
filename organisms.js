@@ -37,11 +37,19 @@ function makeInitialOrganismTraits() {
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+    ),
+    terrainAffinity: varyTraitValue(
+      CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MAX,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP
     )
   };
 }
 
 function inheritOrganismTraits(parentTraits) {
+  parentTraits = normalizeOrganismTraits(parentTraits);
+
   return {
     vision: inheritTraitValue(
       parentTraits.vision,
@@ -66,16 +74,25 @@ function inheritOrganismTraits(parentTraits) {
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+    ),
+    terrainAffinity: inheritTraitValue(
+      parentTraits.terrainAffinity,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MAX,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP
     )
   };
 }
 
 function copyTraitsForLineage(traits) {
+  traits = normalizeOrganismTraits(traits);
+
   return {
     vision: traits.vision,
     metabolism: traits.metabolism,
     reproductionEnergy: traits.reproductionEnergy,
-    movementTendency: traits.movementTendency
+    movementTendency: traits.movementTendency,
+    terrainAffinity: traits.terrainAffinity
   };
 }
 
@@ -136,6 +153,8 @@ function registerLineage(lineageId, parentId, founderGeneration, founderTraits, 
 
     if (!record.founderTraits) {
       record.founderTraits = copyTraitsForLineage(founderTraits || makeInitialOrganismTraits());
+    } else {
+      record.founderTraits = copyTraitsForLineage(record.founderTraits);
     }
 
     record.activeCount = Math.max(0, Math.round(record.activeCount || 0));
@@ -180,11 +199,15 @@ function ensureOrganismLineage(organism) {
 }
 
 function getTraitDivergenceScore(parentTraits, childTraits) {
+  parentTraits = normalizeOrganismTraits(parentTraits);
+  childTraits = normalizeOrganismTraits(childTraits);
+
   return (
     Math.abs(childTraits.vision - parentTraits.vision) / CONFIG.TRAIT_VISION_MUTATION_STEP +
     Math.abs(childTraits.metabolism - parentTraits.metabolism) / CONFIG.TRAIT_METABOLISM_MUTATION_STEP +
     Math.abs(childTraits.reproductionEnergy - parentTraits.reproductionEnergy) / CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP +
-    Math.abs(childTraits.movementTendency - parentTraits.movementTendency) / CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+    Math.abs(childTraits.movementTendency - parentTraits.movementTendency) / CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP +
+    Math.abs(childTraits.terrainAffinity - parentTraits.terrainAffinity) / CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP
   );
 }
 
@@ -210,7 +233,51 @@ function ensureOrganismTraits(organism) {
     organism.traits = makeInitialOrganismTraits();
   }
 
-  return organism.traits;
+  return normalizeOrganismTraits(organism.traits);
+}
+
+function normalizeOrganismTraits(traits) {
+  traits = traits || {};
+
+  if (typeof traits.vision !== "number") {
+    traits.vision = CONFIG.TRAIT_VISION_DEFAULT;
+  }
+
+  if (typeof traits.metabolism !== "number") {
+    traits.metabolism = CONFIG.TRAIT_METABOLISM_DEFAULT;
+  }
+
+  if (typeof traits.reproductionEnergy !== "number") {
+    traits.reproductionEnergy = CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT;
+  }
+
+  if (typeof traits.movementTendency !== "number") {
+    traits.movementTendency = CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT;
+  }
+
+  if (typeof traits.terrainAffinity !== "number") {
+    traits.terrainAffinity = CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT;
+  }
+
+  traits.vision = clamp(traits.vision, CONFIG.TRAIT_VISION_MIN, CONFIG.TRAIT_VISION_MAX);
+  traits.metabolism = clamp(traits.metabolism, CONFIG.TRAIT_METABOLISM_MIN, CONFIG.TRAIT_METABOLISM_MAX);
+  traits.reproductionEnergy = clamp(
+    traits.reproductionEnergy,
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX
+  );
+  traits.movementTendency = clamp(
+    traits.movementTendency,
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
+  );
+  traits.terrainAffinity = clamp(
+    traits.terrainAffinity,
+    CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+    CONFIG.TRAIT_TERRAIN_AFFINITY_MAX
+  );
+
+  return traits;
 }
 
 function makeOrganism(x, y, lineageId) {
@@ -307,6 +374,56 @@ function moveTowardFood(organism, food) {
   }
 }
 
+function getTerrainAffinityTargetValue(x, y) {
+  return isFertile(x, y) ? 1 : 0;
+}
+
+function getTerrainMismatchForTraits(traits, x, y) {
+  return Math.abs(traits.terrainAffinity - getTerrainAffinityTargetValue(x, y));
+}
+
+function getTerrainEnergyCost(traits, x, y) {
+  return getTerrainMismatchForTraits(traits, x, y) * CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST;
+}
+
+function applyTerrainEnergyCost(organism, traits) {
+  organism.energy -= getTerrainEnergyCost(traits, organism.x, organism.y);
+}
+
+function chooseRoamingDirection(organism, traits) {
+  var bestDirections = [];
+  var bestMismatch = Infinity;
+
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) {
+        continue;
+      }
+
+      var nextX = clamp(organism.x + dx, 0, WORLD_WIDTH - 1);
+      var nextY = clamp(organism.y + dy, 0, WORLD_HEIGHT - 1);
+      var mismatch = getTerrainMismatchForTraits(traits, nextX, nextY);
+
+      if (mismatch < bestMismatch) {
+        bestMismatch = mismatch;
+        bestDirections = [{ dx: dx, dy: dy }];
+      } else if (mismatch === bestMismatch) {
+        bestDirections.push({ dx: dx, dy: dy });
+      }
+    }
+  }
+
+  if (bestDirections.length === 0) {
+    organism.directionX = randomInt(3) - 1;
+    organism.directionY = randomInt(3) - 1;
+    return;
+  }
+
+  var direction = bestDirections[randomInt(bestDirections.length)];
+  organism.directionX = direction.dx;
+  organism.directionY = direction.dy;
+}
+
 function eatFoodOnCurrentTile(organism) {
   for (var i = world.food.length - 1; i >= 0; i--) {
     var food = world.food[i];
@@ -354,6 +471,7 @@ function updateOrganism(organism) {
 
   if (world.tick % 3 === 0) {
     organism.energy -= traits.metabolism;
+    applyTerrainEnergyCost(organism, traits);
   }
 
   var nearestFood = findNearestFood(organism, traits.vision);
@@ -361,8 +479,7 @@ function updateOrganism(organism) {
   if (nearestFood) {
     moveTowardFood(organism, nearestFood);
   } else if (chance(traits.movementTendency)) {
-    organism.directionX = randomInt(3) - 1;
-    organism.directionY = randomInt(3) - 1;
+    chooseRoamingDirection(organism, traits);
   }
 
   organism.x += organism.directionX;

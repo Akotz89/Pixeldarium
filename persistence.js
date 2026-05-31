@@ -32,11 +32,14 @@ function openPixelSimDatabase() {
 }
 
 function copyOrganismTraitsForSave(traits) {
+  traits = normalizeOrganismTraits(traits);
+
   return {
     vision: traits.vision,
     metabolism: traits.metabolism,
     reproductionEnergy: traits.reproductionEnergy,
-    movementTendency: traits.movementTendency
+    movementTendency: traits.movementTendency,
+    terrainAffinity: traits.terrainAffinity
   };
 }
 
@@ -73,7 +76,8 @@ function copyTraitHistorySampleForSave(sample) {
     vision: sample.vision,
     metabolism: sample.metabolism,
     reproductionEnergy: sample.reproductionEnergy,
-    movementTendency: sample.movementTendency
+    movementTendency: sample.movementTendency,
+    terrainAffinity: sample.terrainAffinity
   };
 }
 
@@ -150,6 +154,11 @@ function createWorldSaveData() {
       traitMovementTendencyMax: CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
       traitMovementTendencyDefault: CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
       traitMovementTendencyMutationStep: CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP,
+      traitTerrainAffinityMin: CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+      traitTerrainAffinityMax: CONFIG.TRAIT_TERRAIN_AFFINITY_MAX,
+      traitTerrainAffinityDefault: CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT,
+      traitTerrainAffinityMutationStep: CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP,
+      terrainMismatchMaxEnergyCost: CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST,
       traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
       traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
       lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
@@ -247,6 +256,12 @@ function restoreOrganismTraits(traits) {
       CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
+    ),
+    terrainAffinity: restoreClampedNumber(
+      traits.terrainAffinity,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MAX
     )
   };
 }
@@ -344,6 +359,12 @@ function restoreTraitHistorySample(sample) {
       CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
+    ),
+    terrainAffinity: restoreClampedNumber(
+      sample.terrainAffinity,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
+      CONFIG.TRAIT_TERRAIN_AFFINITY_MAX
     )
   };
 }
@@ -461,6 +482,26 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.traitMovementTendencyMutationStep === "number") {
     CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP = saveConfig.traitMovementTendencyMutationStep;
+  }
+
+  if (typeof saveConfig.traitTerrainAffinityMin === "number") {
+    CONFIG.TRAIT_TERRAIN_AFFINITY_MIN = saveConfig.traitTerrainAffinityMin;
+  }
+
+  if (typeof saveConfig.traitTerrainAffinityMax === "number") {
+    CONFIG.TRAIT_TERRAIN_AFFINITY_MAX = saveConfig.traitTerrainAffinityMax;
+  }
+
+  if (typeof saveConfig.traitTerrainAffinityDefault === "number") {
+    CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT = saveConfig.traitTerrainAffinityDefault;
+  }
+
+  if (typeof saveConfig.traitTerrainAffinityMutationStep === "number") {
+    CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP = saveConfig.traitTerrainAffinityMutationStep;
+  }
+
+  if (typeof saveConfig.terrainMismatchMaxEnergyCost === "number") {
+    CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST = saveConfig.terrainMismatchMaxEnergyCost;
   }
 
   if (typeof saveConfig.traitHistorySampleInterval === "number") {

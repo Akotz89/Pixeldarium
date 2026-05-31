@@ -46,7 +46,8 @@ function formatOrganismTraits(organism) {
     "traits vision " + traits.vision +
     " metabolism " + traits.metabolism +
     " reproduce " + traits.reproductionEnergy +
-    " roam " + traits.movementTendency.toFixed(2)
+    " roam " + traits.movementTendency.toFixed(2) +
+    " habitat " + traits.terrainAffinity.toFixed(2)
   );
 }
 
@@ -59,7 +60,8 @@ function getPopulationTraitSummary() {
     vision: 0,
     metabolism: 0,
     reproductionEnergy: 0,
-    movementTendency: 0
+    movementTendency: 0,
+    terrainAffinity: 0
   };
 
   for (var i = 0; i < world.organisms.length; i++) {
@@ -68,13 +70,15 @@ function getPopulationTraitSummary() {
     totals.metabolism += traits.metabolism;
     totals.reproductionEnergy += traits.reproductionEnergy;
     totals.movementTendency += traits.movementTendency;
+    totals.terrainAffinity += traits.terrainAffinity;
   }
 
   return {
     vision: totals.vision / world.organisms.length,
     metabolism: totals.metabolism / world.organisms.length,
     reproductionEnergy: totals.reproductionEnergy / world.organisms.length,
-    movementTendency: totals.movementTendency / world.organisms.length
+    movementTendency: totals.movementTendency / world.organisms.length,
+    terrainAffinity: totals.terrainAffinity / world.organisms.length
   };
 }
 
@@ -82,7 +86,7 @@ function updateTraitSummary() {
   var summary = getPopulationTraitSummary();
 
   if (!summary) {
-    traitSummaryText.textContent = "TRAITS AVG: vision -   metabolism -   reproduce -   roam -";
+    traitSummaryText.textContent = "TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -";
     return;
   }
 
@@ -90,7 +94,8 @@ function updateTraitSummary() {
     "TRAITS AVG: vision " + summary.vision.toFixed(1) +
     "   metabolism " + summary.metabolism.toFixed(2) +
     "   reproduce " + summary.reproductionEnergy.toFixed(1) +
-    "   roam " + summary.movementTendency.toFixed(2);
+    "   roam " + summary.movementTendency.toFixed(2) +
+    "   habitat " + summary.terrainAffinity.toFixed(2);
 }
 
 function getLineageSummary() {
@@ -186,7 +191,8 @@ function makeTraitHistorySample(summary) {
     vision: summary.vision,
     metabolism: summary.metabolism,
     reproductionEnergy: summary.reproductionEnergy,
-    movementTendency: summary.movementTendency
+    movementTendency: summary.movementTendency,
+    terrainAffinity: summary.terrainAffinity
   };
 }
 
@@ -305,6 +311,10 @@ function drawTraitHistory() {
   drawTraitHistoryLine(world.traitHistory, function(sample) {
     return sample.movementTendency;
   }, CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN, CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX, "#c884ff", chart);
+
+  drawTraitHistoryLine(world.traitHistory, function(sample) {
+    return sample.terrainAffinity;
+  }, CONFIG.TRAIT_TERRAIN_AFFINITY_MIN, CONFIG.TRAIT_TERRAIN_AFFINITY_MAX, "#70f0d0", chart);
 }
 
 function updateInspectPanel() {
