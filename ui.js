@@ -16,6 +16,7 @@ function updateHud() {
     makeHudMetric("Tick", world.tick),
     makeHudMetric("Food", world.food.length),
     makeHudMetric("Fertile", fertilePercent + "%"),
+    makeHudMetric("Scale", world.planetSummary ? world.planetSummary.equatorKmPerTile.toFixed(0) + " km/tile" : "-"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
     makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
@@ -1078,7 +1079,8 @@ function updateInspectPanel() {
 
   var tileX = world.inspectedTile.x;
   var tileY = world.inspectedTile.y;
-  var terrainName = isFertile(tileX, tileY) ? "fertile" : "barren";
+  var planetTile = getPlanetTile(tileX, tileY);
+  var terrainName = planetTile ? planetTile.biome : (isFertile(tileX, tileY) ? "fertile" : "barren");
   var hasFood = foodExistsAt(tileX, tileY);
   var organism = getNearestOrganismToTile(tileX, tileY);
   var settlement = getNearestSettlementToTile(tileX, tileY);
@@ -1086,6 +1088,8 @@ function updateInspectPanel() {
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
+    makeInspectChip("Lat/Lon", planetTile ? planetTile.latitude.toFixed(1) + " / " + planetTile.longitude.toFixed(1) : "-"),
+    makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
@@ -1155,6 +1159,13 @@ function getTileFromCanvasEvent(event) {
   var rect = canvas.getBoundingClientRect();
   var canvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
   var canvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+  var planetTile = typeof getPlanetTileFromCanvasPoint === "function"
+    ? getPlanetTileFromCanvasPoint(canvasX, canvasY)
+    : null;
+
+  if (planetTile) {
+    return planetTile;
+  }
 
   return {
     x: clamp(Math.floor(canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),

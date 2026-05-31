@@ -65,6 +65,8 @@ const world = {
   foodPositions: {},
   foodBuckets: {},
   terrain: [],
+  planetTiles: [],
+  planetSummary: null,
   fertileTiles: 0,
   birthsThisTick: 0,
   deathsThisTick: 0,
