@@ -81,6 +81,15 @@ function copyTraitHistorySampleForSave(sample) {
   };
 }
 
+function copySimulationEventForSave(event) {
+  return {
+    tick: Math.max(0, Math.round(Number(event.tick) || 0)),
+    type: String(event.type || "sim"),
+    label: String(event.label || "Event"),
+    detail: String(event.detail || "")
+  };
+}
+
 function copyLineageForSave(lineage) {
   return {
     id: lineage.id,
@@ -443,6 +452,8 @@ function createWorldSaveData() {
       terrainMismatchMaxEnergyCost: CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST,
       traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
       traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
+      eventLogMaxEntries: CONFIG.EVENT_LOG_MAX_ENTRIES,
+      eventLogVisibleEntries: CONFIG.EVENT_LOG_VISIBLE_ENTRIES,
       lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
       lineageRegistryVersion: 1,
       lineageColors: CONFIG.LINEAGE_COLORS.slice(),
@@ -544,6 +555,7 @@ function createWorldSaveData() {
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave),
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
+    eventLog: (Array.isArray(world.eventLog) ? world.eventLog : []).map(copySimulationEventForSave),
     lineages: getLineagesForSave(),
     settlements: getSettlementsForSave(),
     settlementRoutes: getSettlementRoutesForSave(),
@@ -1035,6 +1047,27 @@ function restoreTraitHistory(traitHistory) {
     .map(restoreTraitHistorySample);
 }
 
+function restoreSimulationEvent(event) {
+  event = event || {};
+
+  return {
+    tick: Math.max(0, Math.round(restoreNumber(event.tick, 0))),
+    type: String(event.type || "sim"),
+    label: String(event.label || "Event"),
+    detail: String(event.detail || "")
+  };
+}
+
+function restoreSimulationEvents(eventLog) {
+  if (!Array.isArray(eventLog)) {
+    return [];
+  }
+
+  return eventLog
+    .slice(-CONFIG.EVENT_LOG_MAX_ENTRIES)
+    .map(restoreSimulationEvent);
+}
+
 function countFertileTiles() {
   var fertileTiles = 0;
 
@@ -1186,6 +1219,14 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.traitHistoryMaxSamples === "number") {
     CONFIG.TRAIT_HISTORY_MAX_SAMPLES = saveConfig.traitHistoryMaxSamples;
+  }
+
+  if (typeof saveConfig.eventLogMaxEntries === "number") {
+    CONFIG.EVENT_LOG_MAX_ENTRIES = Math.max(1, Math.round(saveConfig.eventLogMaxEntries));
+  }
+
+  if (typeof saveConfig.eventLogVisibleEntries === "number") {
+    CONFIG.EVENT_LOG_VISIBLE_ENTRIES = Math.max(1, Math.round(saveConfig.eventLogVisibleEntries));
   }
 
   if (typeof saveConfig.lineageDivergenceScoreForNewLineage === "number") {
@@ -1687,6 +1728,7 @@ function applyWorldSaveData(saveData) {
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
+  world.eventLog = restoreSimulationEvents(saveData.eventLog);
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;

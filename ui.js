@@ -23,6 +23,7 @@ function updateHud() {
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
+  updateEventLog();
   updateInspectPanel();
 }
 
@@ -216,6 +217,15 @@ function makeInspectChip(label, value) {
   );
 }
 
+function makeEventChip(event) {
+  return (
+    "<span class=\"event-chip event-" + escapeSummaryText(event.type || "sim") + "\">" +
+    "<b>" + escapeSummaryText(event.label || "Event") + "</b>" +
+    "<span>T" + escapeSummaryText(event.tick) + " " + escapeSummaryText(event.detail || "") + "</span>" +
+    "</span>"
+  );
+}
+
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {
   var ratio = getProgressRatio(currentValue, targetValue);
   var percent = Math.round(ratio * 100);
@@ -287,6 +297,27 @@ function updateSettlementSummary() {
 
   setElementClass(settlementSummaryText, "summary-grid");
   setElementHtml(settlementSummaryText, chips.join(""));
+}
+
+function updateEventLog() {
+  var events = Array.isArray(world.eventLog) ? world.eventLog : [];
+
+  if (events.length === 0) {
+    setElementClass(eventLogText, "");
+    setElementText(eventLogText, "EVENTS: Waiting for milestones");
+    return;
+  }
+
+  var visibleCount = Math.max(1, Math.round(Number(CONFIG.EVENT_LOG_VISIBLE_ENTRIES) || 6));
+  var startIndex = Math.max(0, events.length - visibleCount);
+  var chips = [];
+
+  for (var i = events.length - 1; i >= startIndex; i--) {
+    chips.push(makeEventChip(events[i]));
+  }
+
+  setElementClass(eventLogText, "event-grid");
+  setElementHtml(eventLogText, chips.join(""));
 }
 
 function makeTraitHistorySample(summary) {
