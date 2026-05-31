@@ -44,6 +44,7 @@ function clearWorld() {
   world.nextSettlementRouteId = 1;
   world.settlementRoutes = [];
   world.settlementRoutesByKey = {};
+  world.settlementRouteStatsById = {};
   world.colonyNetworkScore = 0;
   world.colonyNetworkColonies = 0;
   world.colonyNetworkActiveRoutes = 0;

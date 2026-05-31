@@ -15,7 +15,13 @@ function ensureSettlementState() {
     world.nextSettlementRouteId = 1;
   }
 
-  if (!world.settlementsById || !world.settlementByLineage || !world.rootSettlementByLineage || !world.settlementRoutesByKey) {
+  if (
+    !world.settlementsById ||
+    !world.settlementByLineage ||
+    !world.rootSettlementByLineage ||
+    !world.settlementRoutesByKey ||
+    !world.settlementRouteStatsById
+  ) {
     rebuildSettlementIndexes();
   }
 }
@@ -67,11 +73,76 @@ function registerSettlementRouteInIndex(route) {
   world.settlementRoutesByKey[route._indexKey] = route;
 }
 
+function makeSettlementRouteStats() {
+  return {
+    routeCount: 0,
+    activeRoutes: 0,
+    foodTransferred: 0
+  };
+}
+
+function getMutableSettlementRouteStats(settlementId) {
+  if (!world.settlementRouteStatsById) {
+    world.settlementRouteStatsById = {};
+  }
+
+  var key = String(settlementId);
+
+  if (!world.settlementRouteStatsById[key]) {
+    world.settlementRouteStatsById[key] = makeSettlementRouteStats();
+  }
+
+  return world.settlementRouteStatsById[key];
+}
+
+function addRouteToSettlementRouteStats(route, settlementId) {
+  var stats = getMutableSettlementRouteStats(settlementId);
+  stats.routeCount++;
+  stats.foodTransferred += Math.max(0, Number(route.foodTransferred) || 0);
+
+  if (route.isActive) {
+    stats.activeRoutes++;
+  }
+}
+
+function registerSettlementRouteStats(route) {
+  if (!route) {
+    return;
+  }
+
+  addRouteToSettlementRouteStats(route, route.parentSettlementId);
+
+  if (route.childSettlementId !== route.parentSettlementId) {
+    addRouteToSettlementRouteStats(route, route.childSettlementId);
+  }
+}
+
+function rebuildSettlementRouteStats() {
+  world.settlementRouteStatsById = {};
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    registerSettlementRouteStats(world.settlementRoutes[i]);
+  }
+}
+
+function getSettlementRouteStats(settlementId) {
+  ensureSettlementState();
+
+  var stats = world.settlementRouteStatsById[String(settlementId)];
+
+  if (!stats) {
+    return makeSettlementRouteStats();
+  }
+
+  return stats;
+}
+
 function rebuildSettlementIndexes() {
   world.settlementsById = {};
   world.settlementByLineage = {};
   world.rootSettlementByLineage = {};
   world.settlementRoutesByKey = {};
+  world.settlementRouteStatsById = {};
 
   for (var i = 0; i < world.settlements.length; i++) {
     registerSettlementInIndexes(world.settlements[i]);
@@ -79,6 +150,7 @@ function rebuildSettlementIndexes() {
 
   for (var routeIndex = 0; routeIndex < world.settlementRoutes.length; routeIndex++) {
     registerSettlementRouteInIndex(world.settlementRoutes[routeIndex]);
+    registerSettlementRouteStats(world.settlementRoutes[routeIndex]);
   }
 }
 
@@ -290,40 +362,11 @@ function countChildOutposts(settlement) {
 }
 
 function countRoutesForSettlement(settlementId) {
-  ensureSettlementState();
-
-  var routeCount = 0;
-
-  for (var i = 0; i < world.settlementRoutes.length; i++) {
-    if (
-      world.settlementRoutes[i].parentSettlementId === settlementId ||
-      world.settlementRoutes[i].childSettlementId === settlementId
-    ) {
-      routeCount++;
-    }
-  }
-
-  return routeCount;
+  return getSettlementRouteStats(settlementId).routeCount;
 }
 
 function countActiveRoutesForSettlement(settlementId) {
-  ensureSettlementState();
-
-  var activeRouteCount = 0;
-
-  for (var i = 0; i < world.settlementRoutes.length; i++) {
-    if (
-      world.settlementRoutes[i].isActive &&
-      (
-        world.settlementRoutes[i].parentSettlementId === settlementId ||
-        world.settlementRoutes[i].childSettlementId === settlementId
-      )
-    ) {
-      activeRouteCount++;
-    }
-  }
-
-  return activeRouteCount;
+  return getSettlementRouteStats(settlementId).activeRoutes;
 }
 
 function getColonyNetworkSummary() {
@@ -1831,6 +1874,7 @@ function ensureSettlementRoute(parentSettlement, childSettlement) {
     route = makeSettlementRoute(parentSettlement, childSettlement);
     world.settlementRoutes.push(route);
     registerSettlementRouteInIndex(route);
+    registerSettlementRouteStats(route);
   }
 
   return route;
@@ -1922,6 +1966,8 @@ function updateSettlementRoutes() {
   for (var i = 0; i < world.settlementRoutes.length; i++) {
     updateSettlementRoute(world.settlementRoutes[i]);
   }
+
+  rebuildSettlementRouteStats();
 }
 
 function runSuppliedOutpostGrowth(settlement) {
