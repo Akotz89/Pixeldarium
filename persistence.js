@@ -380,6 +380,8 @@ function createWorldSaveData() {
     tick: world.tick,
     speed: world.speed,
     era: world.era,
+    isExtinct: Boolean(world.isExtinct),
+    extinctionTick: Math.max(0, Math.round(Number(world.extinctionTick) || 0)),
     seedText: normalizeSeedText(world.seedText),
     rngState: Math.max(1, Math.round(Number(world.rngState) || 1)) >>> 0,
     nextLineageId: world.nextLineageId,
@@ -1671,6 +1673,8 @@ function applyWorldSaveData(saveData) {
   world.tick = Number(saveData.tick);
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
+  world.isExtinct = Boolean(saveData.isExtinct);
+  world.extinctionTick = Math.max(0, Math.round(restoreNumber(saveData.extinctionTick, 0)));
   world.seedText = normalizeSeedText(saveData.seedText);
   world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
@@ -1738,6 +1742,14 @@ function applyWorldSaveData(saveData) {
   rebuildFoodPositions();
   world.organisms = saveData.organisms.map(restoreOrganism);
   refreshLineageRegistry();
+  world.isExtinct = world.organisms.length === 0;
+
+  if (world.isExtinct) {
+    world.extinctionTick = Math.max(0, world.extinctionTick || world.tick);
+    world.isPaused = true;
+  } else {
+    world.extinctionTick = 0;
+  }
 
   if (typeof ensureOutpostRoutes === "function") {
     ensureOutpostRoutes();

@@ -87,6 +87,12 @@ h1 {
   border-color: rgba(255, 255, 255, 0.72);
 }
 
+.sim-button.danger {
+  color: #2b0808;
+  background: linear-gradient(180deg, #ffb37a, #ff7878);
+  border-color: rgba(255, 200, 180, 0.78);
+}
+
 .sim-button:disabled {
   cursor: not-allowed;
   color: rgba(220, 229, 255, 0.48);
@@ -99,6 +105,12 @@ h1 {
 .sim-button:disabled:hover {
   border-color: rgba(255, 255, 255, 0.08);
   transform: none;
+}
+
+.sim-button.danger:disabled {
+  color: rgba(255, 238, 232, 0.9);
+  background: rgba(130, 34, 34, 0.36);
+  border-color: rgba(255, 120, 120, 0.46);
 }
 
 .speed-label {
@@ -519,6 +531,10 @@ h1 {
 .event-space,
 .event-galaxy {
   border-color: rgba(112, 240, 208, 0.32);
+}
+
+.event-lifecycle {
+  border-color: rgba(255, 120, 120, 0.48);
 }
 
 .summary-chip {

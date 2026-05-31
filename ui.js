@@ -99,11 +99,13 @@ function setButtonDisabled(button, isDisabled) {
 }
 
 function syncControlStates() {
-  setElementText(pauseButton, world.isPaused ? "Resume" : "Pause");
+  setElementText(pauseButton, world.isExtinct ? "Extinct" : (world.isPaused ? "Resume" : "Pause"));
   setButtonPressed(pauseButton, world.isPaused);
-  setButtonDisabled(stepButton, !world.isPaused);
-  setButtonDisabled(speedDownButton, world.speed <= 1);
-  setButtonDisabled(speedUpButton, world.speed >= 10);
+  pauseButton.classList.toggle("danger", Boolean(world.isExtinct));
+  setButtonDisabled(pauseButton, world.isExtinct);
+  setButtonDisabled(stepButton, world.isExtinct || !world.isPaused);
+  setButtonDisabled(speedDownButton, world.isExtinct || world.speed <= 1);
+  setButtonDisabled(speedUpButton, world.isExtinct || world.speed >= 10);
 }
 
 function applyTuningFromControls(redraw) {
@@ -239,7 +241,11 @@ function updateEcosystemSummary() {
   }
 
   var trend = summary.trend || {};
+  var lifecycleLabel = world.isExtinct
+    ? "extinct T" + Math.max(0, Math.round(Number(world.extinctionTick) || 0))
+    : "active";
   var chips = [
+    makeSummaryChip("Lifecycle", lifecycleLabel),
     makeSummaryChip("Pressure", summary.pressure),
     makeSummaryChip("Stability", summary.stabilityScore + "/100"),
     makeSummaryChip("Pop Trend", formatSignedNumber(trend.populationDelta || 0, 0)),
@@ -737,6 +743,10 @@ window.setupControls = function() {
   });
 
   pauseButton.addEventListener("click", function() {
+    if (world.isExtinct) {
+      return;
+    }
+
     world.isPaused = !world.isPaused;
     world.needsRender = true;
     syncControlStates();
