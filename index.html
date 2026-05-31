@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pixel Sim Engine</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,7 +19,40 @@
       <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
       <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
       <button id="restart-button" class="sim-button" type="button">Restart</button>
+      <button id="save-button" class="sim-button" type="button">Save</button>
+      <button id="load-button" class="sim-button" type="button">Load</button>
+      <button id="export-json-button" class="sim-button" type="button">Export JSON</button>
+      <button id="import-json-button" class="sim-button" type="button">Import JSON</button>
+      <input id="import-json-file" type="file" accept="application/json,.json" hidden>
       <span id="speed-label" class="speed-label">Speed: 1x</span>
+    </section>
+
+    <section id="tuning-panel" aria-label="Simulation tuning">
+      <label class="tuning-control">
+        <span>Speed</span>
+        <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
+        <output id="speed-value">1x</output>
+      </label>
+      <label class="tuning-control">
+        <span>Organism</span>
+        <input id="organism-size-slider" type="range" min="2" max="14" step="1" value="7">
+        <output id="organism-size-value">7px</output>
+      </label>
+      <label class="tuning-control">
+        <span>Food</span>
+        <input id="food-size-slider" type="range" min="1" max="8" step="1" value="2">
+        <output id="food-size-value">2px</output>
+      </label>
+      <label class="tuning-control">
+        <span>Start Food</span>
+        <input id="starting-food-slider" type="range" min="100" max="1000" step="20" value="420">
+        <output id="starting-food-value">420</output>
+      </label>
+      <label class="tuning-control">
+        <span>Growth</span>
+        <input id="food-growth-slider" type="range" min="0" max="100" step="1" value="95">
+        <output id="food-growth-value">95%</output>
+      </label>
     </section>
 
     <section id="hud" aria-label="Simulation status">
@@ -26,6 +60,36 @@
       <span id="population">POPULATION: 0</span>
       <span id="food">TICK: 0 FOOD: 0 FERTILE: 0%</span>
     </section>
+
+    <section id="inspect-panel" aria-label="Inspect result">
+      <span id="inspect-summary">INSPECT: None</span>
+      <span id="inspect-details">TERRAIN: -   FOOD: -   ORGANISM: -</span>
+    </section>
+
+    <section id="trait-panel" aria-label="Population trait summary">
+      <span id="trait-summary">TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -</span>
+    </section>
+
+    <section id="lineage-panel" aria-label="Lineage summary">
+      <span id="lineage-summary">LINEAGES: -</span>
+    </section>
+
+    <section id="settlement-panel" aria-label="Settlement summary">
+      <span id="settlement-summary">SETTLEMENTS: -</span>
+    </section>
+
+    <section id="trait-history-panel" aria-label="Trait history">
+      <div id="trait-history-legend">
+        <span class="trait-key vision">Vision</span>
+        <span class="trait-key metabolism">Metabolism</span>
+        <span class="trait-key reproduce">Reproduce</span>
+        <span class="trait-key roam">Roam</span>
+        <span class="trait-key habitat">Habitat</span>
+      </div>
+      <canvas id="trait-history" width="900" height="92"></canvas>
+    </section>
+
+    <section id="persistence-status" aria-label="Save status">SAVE: Ready</section>
 
     <p class="help">
       Watch simple organisms compete for food across fertile and barren terrain.
@@ -73,7 +137,9 @@
   <script src="terrain.js"></script>
   <script src="food.js"></script>
   <script src="organisms.js"></script>
+  <script src="settlements.js"></script>
   <script src="render.js"></script>
+  <script src="persistence.js"></script>
   <script src="ui.js"></script>
   <script src="main.js"></script>
 </body>

@@ -13,6 +13,7 @@ function reportRuntimeError(error) {
 
 function clearWorld() {
   world.tick = 0;
+  world.era = "Organisms";
   world.organisms = [];
   world.food = [];
   world.terrain = [];
@@ -24,6 +25,66 @@ function clearWorld() {
   world.drawMs = 0;
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
+  world.inspectedTile = null;
+  world.nextLineageId = 1;
+  world.lineages = {};
+  world.nextSettlementId = 1;
+  world.settlements = [];
+  world.nextSettlementRouteId = 1;
+  world.settlementRoutes = [];
+  world.colonyNetworkScore = 0;
+  world.colonyNetworkColonies = 0;
+  world.colonyNetworkActiveRoutes = 0;
+  world.colonyNetworkClaimedTiles = 0;
+  world.spaceProgramProgress = 0;
+  world.orbitalLaunches = 0;
+  world.lastSpaceProgramTick = 0;
+  world.spaceProgramReady = false;
+  world.nextOrbitalAssetId = 1;
+  world.orbitalAssets = [];
+  world.orbitalInfrastructureScore = 0;
+  world.orbitalPlatformReady = false;
+  world.nextPlanetaryBodyId = 1;
+  world.planetaryBodies = [];
+  world.planetarySurveyProgress = 0;
+  world.planetarySurveyReady = false;
+  world.lastPlanetarySurveyTick = 0;
+  world.nextProbeMissionId = 1;
+  world.probeMissions = [];
+  world.probeMissionProgress = 0;
+  world.probeMissionReady = false;
+  world.lastProbeMissionTick = 0;
+  world.nextStarSystemId = 1;
+  world.starSystems = [];
+  world.starMapProgress = 0;
+  world.starMapReady = false;
+  world.lastStarMapTick = 0;
+  world.galacticInfluenceProgress = 0;
+  world.galacticInfluenceReady = false;
+  world.galacticClaimedSystems = 0;
+  world.lastGalacticInfluenceTick = 0;
+  world.nextInterstellarFleetId = 1;
+  world.interstellarFleets = [];
+  world.interstellarFleetProgress = 0;
+  world.interstellarFleetReady = false;
+  world.interstellarFleetActive = 0;
+  world.interstellarFleetCompleted = 0;
+  world.lastInterstellarFleetTick = 0;
+  world.nextEmpireSectorId = 1;
+  world.empireSectors = [];
+  world.empireSectorProgress = 0;
+  world.empireSectorReady = false;
+  world.empireSectorCount = 0;
+  world.lastEmpireSectorTick = 0;
+  world.empireLegacyProgress = 0;
+  world.empireLegacyLevel = 0;
+  world.empireLegacyReady = false;
+  world.empireLegacyComplete = false;
+  world.lastEmpireLegacyTick = 0;
+
+  if (typeof resetTraitHistory === "function") {
+    resetTraitHistory();
+  }
 }
 
 function seedWorld() {
@@ -44,9 +105,17 @@ function seedWorld() {
     ));
   }
 
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
   for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
     var position = randomFoodPosition();
     world.food.push(makeFood(position.x, position.y));
+  }
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(true);
   }
 }
 
@@ -62,6 +131,18 @@ function updateWorld() {
 
   removeDeadOrganisms();
   trimOrganismPopulation();
+
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
+  if (typeof updateSettlements === "function") {
+    updateSettlements();
+  }
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(false);
+  }
 }
 
 var frameCounter = 0;
