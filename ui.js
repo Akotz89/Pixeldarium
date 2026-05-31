@@ -332,6 +332,9 @@ function getSettlementSummary() {
     completedProbeMissions: typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0,
     probeMissionProgress: Math.max(0, Number(world.probeMissionProgress) || 0),
     probeMissionReady: Boolean(world.probeMissionReady),
+    starSystems: Array.isArray(world.starSystems) ? world.starSystems.length : 0,
+    starMapProgress: Math.max(0, Number(world.starMapProgress) || 0),
+    starMapReady: Boolean(world.starMapReady),
     topSettlement: topSettlement
   };
 }
@@ -366,6 +369,9 @@ function updateSettlementSummary() {
     "   probes " + summary.completedProbeMissions + "/" + summary.probeMissions +
     " build " + summary.probeMissionProgress.toFixed(1) + "/" + CONFIG.PROBE_MISSION_THRESHOLD +
     " " + (summary.probeMissionReady ? "ready" : "waiting") +
+    "   stars " + summary.starSystems +
+    " map " + summary.starMapProgress.toFixed(1) + "/" + CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD +
+    " " + (summary.starMapReady ? "mapping" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -560,6 +566,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " orbit assets " + (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " infra " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)) : "") +
       (settlement.isColony ? " planets " + (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " survey " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " probes " + (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0) : "") +
+      (settlement.isColony ? " stars " + (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " map " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

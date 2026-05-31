@@ -171,6 +171,18 @@ function copyProbeMissionForSave(mission) {
   };
 }
 
+function copyStarSystemForSave(system) {
+  return {
+    id: system.id,
+    name: system.name,
+    discoveredTick: system.discoveredTick,
+    mapValue: system.mapValue,
+    mapX: system.mapX,
+    mapY: system.mapY,
+    isMapped: system.isMapped
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -244,6 +256,18 @@ function getProbeMissionsForSave() {
   return world.probeMissions.map(copyProbeMissionForSave);
 }
 
+function getStarSystemsForSave() {
+  if (typeof updateStarMapReadiness === "function") {
+    updateStarMapReadiness();
+  }
+
+  if (!Array.isArray(world.starSystems)) {
+    return [];
+  }
+
+  return world.starSystems.map(copyStarSystemForSave);
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -271,6 +295,7 @@ function createWorldSaveData() {
     nextOrbitalAssetId: Math.max(1, Math.round(Number(world.nextOrbitalAssetId) || 1)),
     nextPlanetaryBodyId: Math.max(1, Math.round(Number(world.nextPlanetaryBodyId) || 1)),
     nextProbeMissionId: Math.max(1, Math.round(Number(world.nextProbeMissionId) || 1)),
+    nextStarSystemId: Math.max(1, Math.round(Number(world.nextStarSystemId) || 1)),
     colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
     colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
     colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
@@ -287,6 +312,9 @@ function createWorldSaveData() {
     probeMissionProgress: Math.max(0, Number(world.probeMissionProgress) || 0),
     probeMissionReady: Boolean(world.probeMissionReady),
     lastProbeMissionTick: Math.max(0, Math.round(Number(world.lastProbeMissionTick) || 0)),
+    starMapProgress: Math.max(0, Number(world.starMapProgress) || 0),
+    starMapReady: Boolean(world.starMapReady),
+    lastStarMapTick: Math.max(0, Math.round(Number(world.lastStarMapTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -377,7 +405,14 @@ function createWorldSaveData() {
       probeMissionProgressPerInfrastructure: CONFIG.PROBE_MISSION_PROGRESS_PER_INFRASTRUCTURE,
       probeMissionThreshold: CONFIG.PROBE_MISSION_THRESHOLD,
       probeMissionCompleteTicks: CONFIG.PROBE_MISSION_COMPLETE_TICKS,
-      stellarCartographyMissionCount: CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT
+      stellarCartographyMissionCount: CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT,
+      starMapMinCompletedProbes: CONFIG.STAR_MAP_MIN_COMPLETED_PROBES,
+      starMapInterval: CONFIG.STAR_MAP_INTERVAL,
+      starMapProgressPerCompletedProbe: CONFIG.STAR_MAP_PROGRESS_PER_COMPLETED_PROBE,
+      starMapProgressPerInfrastructure: CONFIG.STAR_MAP_PROGRESS_PER_INFRASTRUCTURE,
+      starSystemDiscoveryThreshold: CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD,
+      starMapMaxSystems: CONFIG.STAR_MAP_MAX_SYSTEMS,
+      galacticMapSystemCount: CONFIG.GALACTIC_MAP_SYSTEM_COUNT
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -388,7 +423,8 @@ function createWorldSaveData() {
     settlementRoutes: getSettlementRoutesForSave(),
     orbitalAssets: getOrbitalAssetsForSave(),
     planetaryBodies: getPlanetaryBodiesForSave(),
-    probeMissions: getProbeMissionsForSave()
+    probeMissions: getProbeMissionsForSave(),
+    starSystems: getStarSystemsForSave()
   };
 }
 
@@ -711,6 +747,35 @@ function restoreProbeMissions(missions) {
   }
 
   return missions.map(restoreProbeMission);
+}
+
+function restoreStarSystem(system) {
+  system = system || {};
+
+  var id = Math.max(1, Math.round(restoreNumber(system.id, world.nextStarSystemId)));
+  var restoredSystem = {
+    id: id,
+    name: String(system.name || "S-" + String(200 + id)),
+    discoveredTick: Math.max(0, Math.round(restoreNumber(system.discoveredTick, 0))),
+    mapValue: Math.max(1, Math.round(restoreNumber(system.mapValue, 40 + id * 11))),
+    mapX: Math.max(-1, Math.min(1, restoreNumber(system.mapX, Math.cos(id * 2.1)))),
+    mapY: Math.max(-1, Math.min(1, restoreNumber(system.mapY, Math.sin(id * 2.1)))),
+    isMapped: system.isMapped !== false
+  };
+
+  if (restoredSystem.id >= world.nextStarSystemId) {
+    world.nextStarSystemId = restoredSystem.id + 1;
+  }
+
+  return restoredSystem;
+}
+
+function restoreStarSystems(systems) {
+  if (!Array.isArray(systems)) {
+    return [];
+  }
+
+  return systems.map(restoreStarSystem);
 }
 
 function restoreOrganism(organism) {
@@ -1140,6 +1205,34 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.stellarCartographyMissionCount === "number") {
     CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT = saveConfig.stellarCartographyMissionCount;
   }
+
+  if (typeof saveConfig.starMapMinCompletedProbes === "number") {
+    CONFIG.STAR_MAP_MIN_COMPLETED_PROBES = saveConfig.starMapMinCompletedProbes;
+  }
+
+  if (typeof saveConfig.starMapInterval === "number") {
+    CONFIG.STAR_MAP_INTERVAL = saveConfig.starMapInterval;
+  }
+
+  if (typeof saveConfig.starMapProgressPerCompletedProbe === "number") {
+    CONFIG.STAR_MAP_PROGRESS_PER_COMPLETED_PROBE = saveConfig.starMapProgressPerCompletedProbe;
+  }
+
+  if (typeof saveConfig.starMapProgressPerInfrastructure === "number") {
+    CONFIG.STAR_MAP_PROGRESS_PER_INFRASTRUCTURE = saveConfig.starMapProgressPerInfrastructure;
+  }
+
+  if (typeof saveConfig.starSystemDiscoveryThreshold === "number") {
+    CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD = saveConfig.starSystemDiscoveryThreshold;
+  }
+
+  if (typeof saveConfig.starMapMaxSystems === "number") {
+    CONFIG.STAR_MAP_MAX_SYSTEMS = saveConfig.starMapMaxSystems;
+  }
+
+  if (typeof saveConfig.galacticMapSystemCount === "number") {
+    CONFIG.GALACTIC_MAP_SYSTEM_COUNT = saveConfig.galacticMapSystemCount;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -1155,6 +1248,7 @@ function applyWorldSaveData(saveData) {
   world.nextOrbitalAssetId = Math.max(1, Math.round(restoreNumber(saveData.nextOrbitalAssetId, 1)));
   world.nextPlanetaryBodyId = Math.max(1, Math.round(restoreNumber(saveData.nextPlanetaryBodyId, 1)));
   world.nextProbeMissionId = Math.max(1, Math.round(restoreNumber(saveData.nextProbeMissionId, 1)));
+  world.nextStarSystemId = Math.max(1, Math.round(restoreNumber(saveData.nextStarSystemId, 1)));
   world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
@@ -1171,12 +1265,16 @@ function applyWorldSaveData(saveData) {
   world.probeMissionProgress = Math.max(0, restoreNumber(saveData.probeMissionProgress, 0));
   world.probeMissionReady = Boolean(saveData.probeMissionReady);
   world.lastProbeMissionTick = Math.max(0, Math.round(restoreNumber(saveData.lastProbeMissionTick, 0)));
+  world.starMapProgress = Math.max(0, restoreNumber(saveData.starMapProgress, 0));
+  world.starMapReady = Boolean(saveData.starMapReady);
+  world.lastStarMapTick = Math.max(0, Math.round(restoreNumber(saveData.lastStarMapTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
   world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
   world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
+  world.starSystems = restoreStarSystems(saveData.starSystems);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
@@ -1205,6 +1303,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateProbeMissionReadiness === "function") {
     updateProbeMissionReadiness();
+  }
+
+  if (typeof updateStarMapReadiness === "function") {
+    updateStarMapReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

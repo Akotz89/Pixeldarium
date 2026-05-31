@@ -840,7 +840,9 @@ function updateProbeMissionTravel() {
 }
 
 function updateProbeMissionEra() {
-  if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
+  if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
+    world.era = "Galactic Map";
+  } else if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
     world.era = "Stellar Cartography";
   } else if (world.probeMissions.length > 0) {
     world.era = "Interplanetary Missions";
@@ -886,6 +888,133 @@ function updateProbeMissionState() {
   }
 
   updateProbeMissionReadiness();
+}
+
+function ensureStarMapState() {
+  if (!Array.isArray(world.starSystems)) {
+    world.starSystems = [];
+  }
+
+  if (typeof world.nextStarSystemId !== "number" || world.nextStarSystemId < 1) {
+    world.nextStarSystemId = 1;
+  }
+
+  world.starMapProgress = Math.max(0, restoreSettlementGrowthNumber(world.starMapProgress, 0));
+  world.starMapReady = Boolean(world.starMapReady);
+  world.lastStarMapTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastStarMapTick, 0)));
+}
+
+function allocateStarSystemId() {
+  ensureStarMapState();
+
+  var systemId = world.nextStarSystemId;
+  world.nextStarSystemId++;
+  return systemId;
+}
+
+function getStarSystemName(systemId) {
+  return "S-" + String(200 + systemId);
+}
+
+function normalizeStarSystem(system) {
+  system.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(system.id, world.nextStarSystemId)));
+  system.name = String(system.name || getStarSystemName(system.id));
+  system.discoveredTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(system.discoveredTick, world.tick)));
+  system.mapValue = Math.max(1, Math.round(restoreSettlementGrowthNumber(system.mapValue, 40 + system.id * 11)));
+  system.mapX = Math.max(-1, Math.min(1, restoreSettlementGrowthNumber(system.mapX, Math.cos(system.id * 2.1))));
+  system.mapY = Math.max(-1, Math.min(1, restoreSettlementGrowthNumber(system.mapY, Math.sin(system.id * 2.1))));
+  system.isMapped = system.isMapped !== false;
+
+  if (system.id >= world.nextStarSystemId) {
+    world.nextStarSystemId = system.id + 1;
+  }
+}
+
+function makeStarSystem() {
+  var systemId = allocateStarSystemId();
+  var angle = systemId * 2.1;
+  var distance = 0.34 + (systemId % 4) * 0.16;
+
+  return {
+    id: systemId,
+    name: getStarSystemName(systemId),
+    discoveredTick: world.tick,
+    mapValue: 40 + systemId * 11,
+    mapX: Math.cos(angle) * distance,
+    mapY: Math.sin(angle) * distance,
+    isMapped: true
+  };
+}
+
+function normalizeStarSystems() {
+  ensureStarMapState();
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    normalizeStarSystem(world.starSystems[i]);
+  }
+}
+
+function getDiscoveredStarSystemCount() {
+  normalizeStarSystems();
+
+  var discoveredSystems = 0;
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].isMapped) {
+      discoveredSystems++;
+    }
+  }
+
+  return discoveredSystems;
+}
+
+function updateStarMapEra() {
+  if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
+    world.era = "Galactic Map";
+  } else if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
+    world.era = "Stellar Cartography";
+  }
+}
+
+function updateStarMapReadiness() {
+  ensureStarMapState();
+
+  world.starMapReady = Boolean(
+    getCompletedProbeMissionCount() >= CONFIG.STAR_MAP_MIN_COMPLETED_PROBES &&
+    world.starSystems.length < CONFIG.STAR_MAP_MAX_SYSTEMS
+  );
+
+  updateStarMapEra();
+  return world.starMapReady;
+}
+
+function updateStarMapState() {
+  if (!updateStarMapReadiness()) {
+    return;
+  }
+
+  var mapInterval = Math.max(1, Math.round(Number(CONFIG.STAR_MAP_INTERVAL) || 1));
+
+  if (world.tick - world.lastStarMapTick < mapInterval) {
+    return;
+  }
+
+  world.lastStarMapTick = world.tick;
+  world.starMapProgress +=
+    getCompletedProbeMissionCount() * CONFIG.STAR_MAP_PROGRESS_PER_COMPLETED_PROBE +
+    world.orbitalInfrastructureScore * CONFIG.STAR_MAP_PROGRESS_PER_INFRASTRUCTURE;
+
+  var discoveryThreshold = Math.max(1, Number(CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD) || 1);
+
+  while (
+    world.starMapProgress >= discoveryThreshold &&
+    world.starSystems.length < CONFIG.STAR_MAP_MAX_SYSTEMS
+  ) {
+    world.starSystems.push(makeStarSystem());
+    world.starMapProgress -= discoveryThreshold;
+  }
+
+  updateStarMapReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1235,4 +1364,5 @@ function updateSettlements() {
   updateSpaceProgramState(networkSummary);
   updatePlanetarySurveyState();
   updateProbeMissionState();
+  updateStarMapState();
 }

@@ -76,5 +76,10 @@ const world = {
   probeMissions: [],
   probeMissionProgress: 0,
   probeMissionReady: false,
-  lastProbeMissionTick: 0
+  lastProbeMissionTick: 0,
+  nextStarSystemId: 1,
+  starSystems: [],
+  starMapProgress: 0,
+  starMapReady: false,
+  lastStarMapTick: 0
 };

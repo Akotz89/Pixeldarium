@@ -54,6 +54,11 @@ function clearWorld() {
   world.probeMissionProgress = 0;
   world.probeMissionReady = false;
   world.lastProbeMissionTick = 0;
+  world.nextStarSystemId = 1;
+  world.starSystems = [];
+  world.starMapProgress = 0;
+  world.starMapReady = false;
+  world.lastStarMapTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
