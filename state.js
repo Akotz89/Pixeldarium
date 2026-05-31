@@ -62,5 +62,9 @@ const world = {
   spaceProgramProgress: 0,
   orbitalLaunches: 0,
   lastSpaceProgramTick: 0,
-  spaceProgramReady: false
+  spaceProgramReady: false,
+  nextOrbitalAssetId: 1,
+  orbitalAssets: [],
+  orbitalInfrastructureScore: 0,
+  orbitalPlatformReady: false
 };

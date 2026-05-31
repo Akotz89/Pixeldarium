@@ -240,6 +240,41 @@ function drawSettlements() {
   }
 }
 
+function drawOrbitalAssets() {
+  if (!Array.isArray(world.orbitalAssets) || world.orbitalAssets.length === 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+  var platformReady = Boolean(world.orbitalPlatformReady);
+
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+  ctx.strokeStyle = platformReady ? "rgba(255, 255, 255, 0.42)" : "rgba(114, 215, 255, 0.28)";
+  ctx.lineWidth = platformReady ? 2 : 1;
+  ctx.setLineDash([4, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  for (var i = 0; i < world.orbitalAssets.length; i++) {
+    var asset = world.orbitalAssets[i];
+
+    if (!asset.isActive) {
+      continue;
+    }
+
+    var angle = ((asset.orbitAngle + world.tick * 0.08) % 360) * Math.PI / 180;
+    var radius = 28 + Math.max(1, Math.round(Number(asset.orbitBand) || 1)) * 8;
+    var assetX = centerX + Math.cos(angle) * radius;
+    var assetY = centerY + Math.sin(angle) * radius;
+    var assetSize = platformReady ? 5 : 4;
+
+    ctx.fillStyle = platformReady ? "#ffffff" : "#72d7ff";
+    ctx.fillRect(assetX - assetSize / 2, assetY - assetSize / 2, assetSize, assetSize);
+  }
+}
+
 function drawScanlines() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
@@ -272,6 +307,7 @@ window.drawWorld = function() {
   drawFood();
   drawSettlements();
   drawOrganisms();
+  drawOrbitalAssets();
   drawInspectSelection();
   drawScanlines();
 };

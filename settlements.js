@@ -443,7 +443,9 @@ function updateSpaceProgramReadiness(networkSummary) {
     networkSummary.activeRoutes >= minRoutes
   );
 
-  if (world.orbitalLaunches > 0) {
+  if (world.orbitalLaunches > 0 && typeof updateOrbitalInfrastructureState === "function") {
+    updateOrbitalInfrastructureState();
+  } else if (world.orbitalLaunches > 0) {
     world.era = "Orbital";
   } else if (world.spaceProgramReady) {
     world.era = "Space Program";
@@ -493,6 +495,98 @@ function updateSpaceProgramState(networkSummary) {
   }
 
   world.era = world.orbitalLaunches > 0 ? "Orbital" : "Space Program";
+
+  if (world.orbitalLaunches > 0) {
+    updateOrbitalInfrastructureState();
+  }
+}
+
+function ensureOrbitalState() {
+  if (!Array.isArray(world.orbitalAssets)) {
+    world.orbitalAssets = [];
+  }
+
+  if (typeof world.nextOrbitalAssetId !== "number" || world.nextOrbitalAssetId < 1) {
+    world.nextOrbitalAssetId = 1;
+  }
+
+  world.orbitalInfrastructureScore = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.orbitalInfrastructureScore, 0)));
+  world.orbitalPlatformReady = Boolean(world.orbitalPlatformReady);
+}
+
+function allocateOrbitalAssetId() {
+  ensureOrbitalState();
+
+  var assetId = world.nextOrbitalAssetId;
+  world.nextOrbitalAssetId++;
+  return assetId;
+}
+
+function normalizeOrbitalAsset(asset) {
+  asset.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(asset.id, world.nextOrbitalAssetId)));
+  asset.launchNumber = Math.max(1, Math.round(restoreSettlementGrowthNumber(asset.launchNumber, asset.id)));
+  asset.launchedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(asset.launchedTick, world.tick)));
+  asset.infrastructureScore = Math.max(0, Math.round(restoreSettlementGrowthNumber(asset.infrastructureScore, CONFIG.ORBITAL_ASSET_SCORE)));
+  asset.orbitAngle = Math.max(0, Math.round(restoreSettlementGrowthNumber(asset.orbitAngle, asset.launchNumber * 137))) % 360;
+  asset.orbitBand = Math.max(1, Math.round(restoreSettlementGrowthNumber(asset.orbitBand, ((asset.launchNumber - 1) % 3) + 1)));
+  asset.isActive = asset.isActive !== false;
+
+  if (asset.id >= world.nextOrbitalAssetId) {
+    world.nextOrbitalAssetId = asset.id + 1;
+  }
+}
+
+function makeOrbitalAsset(launchNumber) {
+  var assetId = allocateOrbitalAssetId();
+
+  return {
+    id: assetId,
+    launchNumber: Math.max(1, Math.round(launchNumber)),
+    launchedTick: world.tick,
+    infrastructureScore: Math.max(1, Math.round(Number(CONFIG.ORBITAL_ASSET_SCORE) || 1)),
+    orbitAngle: (assetId * 137) % 360,
+    orbitBand: ((assetId - 1) % 3) + 1,
+    isActive: true
+  };
+}
+
+function ensureOrbitalAssetsForLaunches() {
+  ensureOrbitalState();
+
+  for (var i = 0; i < world.orbitalAssets.length; i++) {
+    normalizeOrbitalAsset(world.orbitalAssets[i]);
+  }
+
+  while (world.orbitalAssets.length < world.orbitalLaunches) {
+    world.orbitalAssets.push(makeOrbitalAsset(world.orbitalAssets.length + 1));
+  }
+}
+
+function updateOrbitalInfrastructureState() {
+  ensureOrbitalAssetsForLaunches();
+
+  var infrastructureScore = 0;
+  var activeAssets = 0;
+
+  for (var i = 0; i < world.orbitalAssets.length; i++) {
+    var asset = world.orbitalAssets[i];
+
+    if (!asset.isActive) {
+      continue;
+    }
+
+    activeAssets++;
+    infrastructureScore += Math.max(0, Number(asset.infrastructureScore) || 0);
+  }
+
+  world.orbitalInfrastructureScore = Math.round(infrastructureScore);
+  world.orbitalPlatformReady = world.orbitalInfrastructureScore >= CONFIG.ORBITAL_PLATFORM_SCORE && activeAssets > 0;
+
+  if (world.orbitalPlatformReady) {
+    world.era = "Orbital Platform";
+  } else if (world.orbitalLaunches > 0) {
+    world.era = "Orbital";
+  }
 }
 
 function makeSettlement(lineage, organisms) {

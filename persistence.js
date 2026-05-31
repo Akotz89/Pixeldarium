@@ -136,6 +136,18 @@ function copySettlementRouteForSave(route) {
   };
 }
 
+function copyOrbitalAssetForSave(asset) {
+  return {
+    id: asset.id,
+    launchNumber: asset.launchNumber,
+    launchedTick: asset.launchedTick,
+    infrastructureScore: asset.infrastructureScore,
+    orbitAngle: asset.orbitAngle,
+    orbitBand: asset.orbitBand,
+    isActive: asset.isActive
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -173,6 +185,18 @@ function getSettlementRoutesForSave() {
   return world.settlementRoutes.map(copySettlementRouteForSave);
 }
 
+function getOrbitalAssetsForSave() {
+  if (typeof updateOrbitalInfrastructureState === "function") {
+    updateOrbitalInfrastructureState();
+  }
+
+  if (!Array.isArray(world.orbitalAssets)) {
+    return [];
+  }
+
+  return world.orbitalAssets.map(copyOrbitalAssetForSave);
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -197,6 +221,7 @@ function createWorldSaveData() {
     nextLineageId: world.nextLineageId,
     nextSettlementId: world.nextSettlementId,
     nextSettlementRouteId: world.nextSettlementRouteId,
+    nextOrbitalAssetId: Math.max(1, Math.round(Number(world.nextOrbitalAssetId) || 1)),
     colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
     colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
     colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
@@ -205,6 +230,8 @@ function createWorldSaveData() {
     orbitalLaunches: Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)),
     lastSpaceProgramTick: Math.max(0, Math.round(Number(world.lastSpaceProgramTick) || 0)),
     spaceProgramReady: Boolean(world.spaceProgramReady),
+    orbitalInfrastructureScore: Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)),
+    orbitalPlatformReady: Boolean(world.orbitalPlatformReady),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -279,7 +306,9 @@ function createWorldSaveData() {
       spaceProgramColonyFoodCost: CONFIG.SPACE_PROGRAM_COLONY_FOOD_COST,
       spaceProgramProgressPerNetworkScore: CONFIG.SPACE_PROGRAM_PROGRESS_PER_NETWORK_SCORE,
       spaceProgramProgressPerActiveRoute: CONFIG.SPACE_PROGRAM_PROGRESS_PER_ACTIVE_ROUTE,
-      spaceProgramLaunchThreshold: CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD
+      spaceProgramLaunchThreshold: CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD,
+      orbitalAssetScore: CONFIG.ORBITAL_ASSET_SCORE,
+      orbitalPlatformScore: CONFIG.ORBITAL_PLATFORM_SCORE
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -287,7 +316,8 @@ function createWorldSaveData() {
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
     lineages: getLineagesForSave(),
     settlements: getSettlementsForSave(),
-    settlementRoutes: getSettlementRoutesForSave()
+    settlementRoutes: getSettlementRoutesForSave(),
+    orbitalAssets: getOrbitalAssetsForSave()
   };
 }
 
@@ -522,6 +552,34 @@ function restoreSettlementRoutes(routes) {
   }
 
   return routes.map(restoreSettlementRoute);
+}
+
+function restoreOrbitalAsset(asset) {
+  asset = asset || {};
+
+  var restoredAsset = {
+    id: Math.max(1, Math.round(restoreNumber(asset.id, world.nextOrbitalAssetId))),
+    launchNumber: Math.max(1, Math.round(restoreNumber(asset.launchNumber, asset.id || 1))),
+    launchedTick: Math.max(0, Math.round(restoreNumber(asset.launchedTick, 0))),
+    infrastructureScore: Math.max(0, Math.round(restoreNumber(asset.infrastructureScore, CONFIG.ORBITAL_ASSET_SCORE))),
+    orbitAngle: Math.max(0, Math.round(restoreNumber(asset.orbitAngle, 0))) % 360,
+    orbitBand: Math.max(1, Math.round(restoreNumber(asset.orbitBand, 1))),
+    isActive: asset.isActive !== false
+  };
+
+  if (restoredAsset.id >= world.nextOrbitalAssetId) {
+    world.nextOrbitalAssetId = restoredAsset.id + 1;
+  }
+
+  return restoredAsset;
+}
+
+function restoreOrbitalAssets(assets) {
+  if (!Array.isArray(assets)) {
+    return [];
+  }
+
+  return assets.map(restoreOrbitalAsset);
 }
 
 function restoreOrganism(organism) {
@@ -887,6 +945,14 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.spaceProgramLaunchThreshold === "number") {
     CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD = saveConfig.spaceProgramLaunchThreshold;
   }
+
+  if (typeof saveConfig.orbitalAssetScore === "number") {
+    CONFIG.ORBITAL_ASSET_SCORE = saveConfig.orbitalAssetScore;
+  }
+
+  if (typeof saveConfig.orbitalPlatformScore === "number") {
+    CONFIG.ORBITAL_PLATFORM_SCORE = saveConfig.orbitalPlatformScore;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -899,6 +965,7 @@ function applyWorldSaveData(saveData) {
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
+  world.nextOrbitalAssetId = Math.max(1, Math.round(restoreNumber(saveData.nextOrbitalAssetId, 1)));
   world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
@@ -907,9 +974,12 @@ function applyWorldSaveData(saveData) {
   world.orbitalLaunches = Math.max(0, Math.round(restoreNumber(saveData.orbitalLaunches, 0)));
   world.lastSpaceProgramTick = Math.max(0, Math.round(restoreNumber(saveData.lastSpaceProgramTick, 0)));
   world.spaceProgramReady = Boolean(saveData.spaceProgramReady);
+  world.orbitalInfrastructureScore = Math.max(0, Math.round(restoreNumber(saveData.orbitalInfrastructureScore, 0)));
+  world.orbitalPlatformReady = Boolean(saveData.orbitalPlatformReady);
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
+  world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
@@ -926,6 +996,10 @@ function applyWorldSaveData(saveData) {
     if (typeof updateSpaceProgramReadiness === "function") {
       updateSpaceProgramReadiness(networkSummary);
     }
+  }
+
+  if (typeof updateOrbitalInfrastructureState === "function") {
+    updateOrbitalInfrastructureState();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

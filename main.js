@@ -40,6 +40,10 @@ function clearWorld() {
   world.orbitalLaunches = 0;
   world.lastSpaceProgramTick = 0;
   world.spaceProgramReady = false;
+  world.nextOrbitalAssetId = 1;
+  world.orbitalAssets = [];
+  world.orbitalInfrastructureScore = 0;
+  world.orbitalPlatformReady = false;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

@@ -322,6 +322,9 @@ function getSettlementSummary() {
     spaceProgramProgress: Math.max(0, Number(world.spaceProgramProgress) || 0),
     orbitalLaunches: Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)),
     spaceProgramReady: Boolean(world.spaceProgramReady),
+    orbitalAssets: Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0,
+    orbitalInfrastructureScore: Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)),
+    orbitalPlatformReady: Boolean(world.orbitalPlatformReady),
     topSettlement: topSettlement
   };
 }
@@ -347,6 +350,9 @@ function updateSettlementSummary() {
     "   space " + summary.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD +
     " launches " + summary.orbitalLaunches +
     " " + (summary.spaceProgramReady ? "ready" : "building") +
+    "   orbit assets " + summary.orbitalAssets +
+    " infra " + summary.orbitalInfrastructureScore +
+    " " + (summary.orbitalPlatformReady ? "platform" : "orbital") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -538,6 +544,7 @@ function updateInspectPanel() {
       " route food " + settlementRouteSummary.foodTransferred +
       (settlement.isColony ? " network " + Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)) : "") +
       (settlement.isColony ? " space " + Math.max(0, Number(world.spaceProgramProgress) || 0).toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD + " launches " + Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)) : "") +
+      (settlement.isColony ? " orbit assets " + (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " infra " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +
