@@ -29,5 +29,9 @@ const world = {
   speed: 1,
   interpolation: 0,
   fps: 0,
-  tps: 0
+  tps: 0,
+  updateMs: 0,
+  drawMs: 0,
+  maxUpdateMs: 0,
+  maxDrawMs: 0
 };
