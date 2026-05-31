@@ -507,6 +507,33 @@ function getSymmetricHistoryRange(samples, getValue, fallbackMagnitude) {
   };
 }
 
+function getFoodRunwayHistoryRange(samples) {
+  var maxRunway = 40;
+
+  for (var i = 0; i < samples.length; i++) {
+    var value = Number(samples[i].foodRunwayTicks);
+
+    if (Number.isFinite(value) && value >= 0) {
+      maxRunway = Math.max(maxRunway, value);
+    }
+  }
+
+  return {
+    min: 0,
+    max: Math.max(1, maxRunway)
+  };
+}
+
+function getFoodRunwayHistoryValue(sample, range) {
+  var runwayTicks = Number(sample.foodRunwayTicks);
+
+  if (Number.isFinite(runwayTicks) && runwayTicks >= 0) {
+    return runwayTicks;
+  }
+
+  return range.max;
+}
+
 function drawEcosystemHistoryGuide(chart, ratio, color) {
   var y = chart.y + clamp(Number(ratio) || 0, 0, 1) * chart.height;
 
@@ -603,6 +630,11 @@ function drawEcosystemHistory() {
   }, "#ff9c69", chart, getSymmetricHistoryRange(samples, function(sample) {
     return sample.foodNetThisTick;
   }, Math.ceil(CONFIG.STARTING_FOOD * 0.08)));
+
+  var runwayRange = getFoodRunwayHistoryRange(samples);
+  drawEcosystemHistoryLine(samples, function(sample) {
+    return getFoodRunwayHistoryValue(sample, runwayRange);
+  }, "#c884ff", chart, runwayRange);
 }
 
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {
