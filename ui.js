@@ -335,6 +335,9 @@ function getSettlementSummary() {
     starSystems: Array.isArray(world.starSystems) ? world.starSystems.length : 0,
     starMapProgress: Math.max(0, Number(world.starMapProgress) || 0),
     starMapReady: Boolean(world.starMapReady),
+    galacticClaimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
+    galacticInfluenceProgress: Math.max(0, Number(world.galacticInfluenceProgress) || 0),
+    galacticInfluenceReady: Boolean(world.galacticInfluenceReady),
     topSettlement: topSettlement
   };
 }
@@ -372,6 +375,9 @@ function updateSettlementSummary() {
     "   stars " + summary.starSystems +
     " map " + summary.starMapProgress.toFixed(1) + "/" + CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD +
     " " + (summary.starMapReady ? "mapping" : "waiting") +
+    "   galactic claims " + summary.galacticClaimedSystems +
+    " influence " + summary.galacticInfluenceProgress.toFixed(1) + "/" + CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD +
+    " " + (summary.galacticInfluenceReady ? "claiming" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -567,6 +573,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " planets " + (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " survey " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " probes " + (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0) : "") +
       (settlement.isColony ? " stars " + (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " map " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1) : "") +
+      (settlement.isColony ? " galactic claims " + Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " influence " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

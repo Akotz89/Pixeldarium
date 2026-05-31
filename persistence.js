@@ -179,7 +179,10 @@ function copyStarSystemForSave(system) {
     mapValue: system.mapValue,
     mapX: system.mapX,
     mapY: system.mapY,
-    isMapped: system.isMapped
+    isMapped: system.isMapped,
+    influenceValue: system.influenceValue,
+    isClaimed: system.isClaimed,
+    claimedTick: system.claimedTick
   };
 }
 
@@ -261,6 +264,10 @@ function getStarSystemsForSave() {
     updateStarMapReadiness();
   }
 
+  if (typeof updateGalacticInfluenceReadiness === "function") {
+    updateGalacticInfluenceReadiness();
+  }
+
   if (!Array.isArray(world.starSystems)) {
     return [];
   }
@@ -277,6 +284,10 @@ function createWorldSaveData() {
 
   if (typeof updateSpaceProgramReadiness === "function") {
     updateSpaceProgramReadiness(networkSummary);
+  }
+
+  if (typeof updateGalacticInfluenceReadiness === "function") {
+    updateGalacticInfluenceReadiness();
   }
 
   return {
@@ -315,6 +326,10 @@ function createWorldSaveData() {
     starMapProgress: Math.max(0, Number(world.starMapProgress) || 0),
     starMapReady: Boolean(world.starMapReady),
     lastStarMapTick: Math.max(0, Math.round(Number(world.lastStarMapTick) || 0)),
+    galacticInfluenceProgress: Math.max(0, Number(world.galacticInfluenceProgress) || 0),
+    galacticInfluenceReady: Boolean(world.galacticInfluenceReady),
+    galacticClaimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
+    lastGalacticInfluenceTick: Math.max(0, Math.round(Number(world.lastGalacticInfluenceTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -412,7 +427,14 @@ function createWorldSaveData() {
       starMapProgressPerInfrastructure: CONFIG.STAR_MAP_PROGRESS_PER_INFRASTRUCTURE,
       starSystemDiscoveryThreshold: CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD,
       starMapMaxSystems: CONFIG.STAR_MAP_MAX_SYSTEMS,
-      galacticMapSystemCount: CONFIG.GALACTIC_MAP_SYSTEM_COUNT
+      galacticMapSystemCount: CONFIG.GALACTIC_MAP_SYSTEM_COUNT,
+      galacticInfluenceMinSystems: CONFIG.GALACTIC_INFLUENCE_MIN_SYSTEMS,
+      galacticInfluenceInterval: CONFIG.GALACTIC_INFLUENCE_INTERVAL,
+      galacticInfluenceProgressPerMapValue: CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_MAP_VALUE,
+      galacticInfluenceProgressPerCompletedProbe: CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_COMPLETED_PROBE,
+      galacticInfluenceProgressPerInfrastructure: CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_INFRASTRUCTURE,
+      galacticSystemClaimThreshold: CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD,
+      protoEmpireSystemCount: CONFIG.PROTO_EMPIRE_SYSTEM_COUNT
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -760,7 +782,10 @@ function restoreStarSystem(system) {
     mapValue: Math.max(1, Math.round(restoreNumber(system.mapValue, 40 + id * 11))),
     mapX: Math.max(-1, Math.min(1, restoreNumber(system.mapX, Math.cos(id * 2.1)))),
     mapY: Math.max(-1, Math.min(1, restoreNumber(system.mapY, Math.sin(id * 2.1)))),
-    isMapped: system.isMapped !== false
+    isMapped: system.isMapped !== false,
+    influenceValue: Math.max(1, Math.round(restoreNumber(system.influenceValue, restoreNumber(system.mapValue, 40 + id * 11)))),
+    isClaimed: Boolean(system.isClaimed),
+    claimedTick: Math.max(0, Math.round(restoreNumber(system.claimedTick, 0)))
   };
 
   if (restoredSystem.id >= world.nextStarSystemId) {
@@ -1233,6 +1258,34 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.galacticMapSystemCount === "number") {
     CONFIG.GALACTIC_MAP_SYSTEM_COUNT = saveConfig.galacticMapSystemCount;
   }
+
+  if (typeof saveConfig.galacticInfluenceMinSystems === "number") {
+    CONFIG.GALACTIC_INFLUENCE_MIN_SYSTEMS = saveConfig.galacticInfluenceMinSystems;
+  }
+
+  if (typeof saveConfig.galacticInfluenceInterval === "number") {
+    CONFIG.GALACTIC_INFLUENCE_INTERVAL = saveConfig.galacticInfluenceInterval;
+  }
+
+  if (typeof saveConfig.galacticInfluenceProgressPerMapValue === "number") {
+    CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_MAP_VALUE = saveConfig.galacticInfluenceProgressPerMapValue;
+  }
+
+  if (typeof saveConfig.galacticInfluenceProgressPerCompletedProbe === "number") {
+    CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_COMPLETED_PROBE = saveConfig.galacticInfluenceProgressPerCompletedProbe;
+  }
+
+  if (typeof saveConfig.galacticInfluenceProgressPerInfrastructure === "number") {
+    CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_INFRASTRUCTURE = saveConfig.galacticInfluenceProgressPerInfrastructure;
+  }
+
+  if (typeof saveConfig.galacticSystemClaimThreshold === "number") {
+    CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD = saveConfig.galacticSystemClaimThreshold;
+  }
+
+  if (typeof saveConfig.protoEmpireSystemCount === "number") {
+    CONFIG.PROTO_EMPIRE_SYSTEM_COUNT = saveConfig.protoEmpireSystemCount;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -1268,6 +1321,10 @@ function applyWorldSaveData(saveData) {
   world.starMapProgress = Math.max(0, restoreNumber(saveData.starMapProgress, 0));
   world.starMapReady = Boolean(saveData.starMapReady);
   world.lastStarMapTick = Math.max(0, Math.round(restoreNumber(saveData.lastStarMapTick, 0)));
+  world.galacticInfluenceProgress = Math.max(0, restoreNumber(saveData.galacticInfluenceProgress, 0));
+  world.galacticInfluenceReady = Boolean(saveData.galacticInfluenceReady);
+  world.galacticClaimedSystems = Math.max(0, Math.round(restoreNumber(saveData.galacticClaimedSystems, 0)));
+  world.lastGalacticInfluenceTick = Math.max(0, Math.round(restoreNumber(saveData.lastGalacticInfluenceTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -1307,6 +1364,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateStarMapReadiness === "function") {
     updateStarMapReadiness();
+  }
+
+  if (typeof updateGalacticInfluenceReadiness === "function") {
+    updateGalacticInfluenceReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

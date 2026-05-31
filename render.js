@@ -348,11 +348,12 @@ function drawStarSystems() {
   var centerX = canvas.width - 92;
   var centerY = 84;
   var mapRadius = 88;
-  var galacticMap = world.era === "Galactic Map";
+  var galacticMap = world.era === "Galactic Map" || world.era === "Galactic Influence" || world.era === "Proto-Empire";
+  var empireEra = world.era === "Galactic Influence" || world.era === "Proto-Empire";
 
   ctx.beginPath();
   ctx.arc(centerX, centerY, mapRadius, 0, Math.PI * 2);
-  ctx.strokeStyle = galacticMap ? "rgba(200, 132, 255, 0.34)" : "rgba(255, 255, 255, 0.16)";
+  ctx.strokeStyle = empireEra ? "rgba(255, 242, 107, 0.42)" : (galacticMap ? "rgba(200, 132, 255, 0.34)" : "rgba(255, 255, 255, 0.16)");
   ctx.lineWidth = 1;
   ctx.setLineDash([2, 10]);
   ctx.stroke();
@@ -367,9 +368,24 @@ function drawStarSystems() {
 
     var starX = centerX + system.mapX * mapRadius;
     var starY = centerY + system.mapY * mapRadius;
-    var size = galacticMap ? 5 : 4;
+    var claimed = Boolean(system.isClaimed);
+    var size = claimed ? 8 : (galacticMap ? 5 : 4);
 
-    ctx.fillStyle = galacticMap ? "#c884ff" : "#ffffff";
+    if (claimed) {
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(starX, starY);
+      ctx.strokeStyle = world.era === "Proto-Empire" ? "rgba(255, 242, 107, 0.36)" : "rgba(112, 240, 208, 0.30)";
+      ctx.lineWidth = world.era === "Proto-Empire" ? 2 : 1;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(starX, starY, 9, 0, Math.PI * 2);
+      ctx.fillStyle = world.era === "Proto-Empire" ? "rgba(255, 242, 107, 0.18)" : "rgba(112, 240, 208, 0.16)";
+      ctx.fill();
+    }
+
+    ctx.fillStyle = claimed ? (world.era === "Proto-Empire" ? "#fff26b" : "#70f0d0") : (galacticMap ? "#c884ff" : "#ffffff");
     ctx.fillRect(starX - size / 2, starY - size / 2, size, size);
   }
 }

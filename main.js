@@ -59,6 +59,10 @@ function clearWorld() {
   world.starMapProgress = 0;
   world.starMapReady = false;
   world.lastStarMapTick = 0;
+  world.galacticInfluenceProgress = 0;
+  world.galacticInfluenceReady = false;
+  world.galacticClaimedSystems = 0;
+  world.lastGalacticInfluenceTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

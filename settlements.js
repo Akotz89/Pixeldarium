@@ -840,7 +840,11 @@ function updateProbeMissionTravel() {
 }
 
 function updateProbeMissionEra() {
-  if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
+  if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+    world.era = "Proto-Empire";
+  } else if (getClaimedStarSystemCount() > 0) {
+    world.era = "Galactic Influence";
+  } else if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
     world.era = "Galactic Map";
   } else if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
     world.era = "Stellar Cartography";
@@ -924,6 +928,9 @@ function normalizeStarSystem(system) {
   system.mapX = Math.max(-1, Math.min(1, restoreSettlementGrowthNumber(system.mapX, Math.cos(system.id * 2.1))));
   system.mapY = Math.max(-1, Math.min(1, restoreSettlementGrowthNumber(system.mapY, Math.sin(system.id * 2.1))));
   system.isMapped = system.isMapped !== false;
+  system.influenceValue = Math.max(1, Math.round(restoreSettlementGrowthNumber(system.influenceValue, system.mapValue)));
+  system.isClaimed = Boolean(system.isClaimed);
+  system.claimedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(system.claimedTick, 0)));
 
   if (system.id >= world.nextStarSystemId) {
     world.nextStarSystemId = system.id + 1;
@@ -942,7 +949,10 @@ function makeStarSystem() {
     mapValue: 40 + systemId * 11,
     mapX: Math.cos(angle) * distance,
     mapY: Math.sin(angle) * distance,
-    isMapped: true
+    isMapped: true,
+    influenceValue: 40 + systemId * 11,
+    isClaimed: false,
+    claimedTick: 0
   };
 }
 
@@ -968,8 +978,40 @@ function getDiscoveredStarSystemCount() {
   return discoveredSystems;
 }
 
+function getMappedStarSystemValue() {
+  normalizeStarSystems();
+
+  var mapValue = 0;
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].isMapped) {
+      mapValue += Math.max(0, Number(world.starSystems[i].mapValue) || 0);
+    }
+  }
+
+  return mapValue;
+}
+
+function getClaimedStarSystemCount() {
+  normalizeStarSystems();
+
+  var claimedSystems = 0;
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].isMapped && world.starSystems[i].isClaimed) {
+      claimedSystems++;
+    }
+  }
+
+  return claimedSystems;
+}
+
 function updateStarMapEra() {
-  if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
+  if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+    world.era = "Proto-Empire";
+  } else if (getClaimedStarSystemCount() > 0) {
+    world.era = "Galactic Influence";
+  } else if (getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_MAP_SYSTEM_COUNT) {
     world.era = "Galactic Map";
   } else if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
     world.era = "Stellar Cartography";
@@ -1015,6 +1057,104 @@ function updateStarMapState() {
   }
 
   updateStarMapReadiness();
+}
+
+function ensureGalacticInfluenceState() {
+  normalizeStarSystems();
+
+  world.galacticInfluenceProgress = Math.max(0, restoreSettlementGrowthNumber(world.galacticInfluenceProgress, 0));
+  world.galacticInfluenceReady = Boolean(world.galacticInfluenceReady);
+  world.galacticClaimedSystems = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.galacticClaimedSystems, 0)));
+  world.lastGalacticInfluenceTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastGalacticInfluenceTick, 0)));
+}
+
+function getNextClaimableStarSystem() {
+  normalizeStarSystems();
+
+  var claimableSystem = null;
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    var system = world.starSystems[i];
+
+    if (!system.isMapped || system.isClaimed) {
+      continue;
+    }
+
+    if (
+      !claimableSystem ||
+      system.influenceValue > claimableSystem.influenceValue ||
+      (system.influenceValue === claimableSystem.influenceValue && system.id < claimableSystem.id)
+    ) {
+      claimableSystem = system;
+    }
+  }
+
+  return claimableSystem;
+}
+
+function updateGalacticInfluenceEra() {
+  world.galacticClaimedSystems = getClaimedStarSystemCount();
+
+  if (world.galacticClaimedSystems >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+    world.era = "Proto-Empire";
+  } else if (world.galacticClaimedSystems > 0) {
+    world.era = "Galactic Influence";
+  } else {
+    updateStarMapEra();
+  }
+}
+
+function updateGalacticInfluenceReadiness() {
+  ensureGalacticInfluenceState();
+
+  world.galacticClaimedSystems = getClaimedStarSystemCount();
+  world.galacticInfluenceReady = Boolean(
+    getDiscoveredStarSystemCount() >= CONFIG.GALACTIC_INFLUENCE_MIN_SYSTEMS &&
+    getNextClaimableStarSystem()
+  );
+
+  updateGalacticInfluenceEra();
+  return world.galacticInfluenceReady;
+}
+
+function claimNextStarSystem() {
+  var system = getNextClaimableStarSystem();
+
+  if (!system) {
+    return null;
+  }
+
+  system.isClaimed = true;
+  system.claimedTick = world.tick;
+  world.galacticClaimedSystems = getClaimedStarSystemCount();
+  return system;
+}
+
+function updateGalacticInfluenceState() {
+  if (!updateGalacticInfluenceReadiness()) {
+    return;
+  }
+
+  var influenceInterval = Math.max(1, Math.round(Number(CONFIG.GALACTIC_INFLUENCE_INTERVAL) || 1));
+
+  if (world.tick - world.lastGalacticInfluenceTick < influenceInterval) {
+    return;
+  }
+
+  world.lastGalacticInfluenceTick = world.tick;
+  world.galacticInfluenceProgress +=
+    getMappedStarSystemValue() * CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_MAP_VALUE +
+    getCompletedProbeMissionCount() * CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_COMPLETED_PROBE +
+    world.orbitalInfrastructureScore * CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_INFRASTRUCTURE;
+
+  var claimThreshold = Math.max(1, Number(CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD) || 1);
+
+  while (world.galacticInfluenceProgress >= claimThreshold && getNextClaimableStarSystem()) {
+    claimNextStarSystem();
+    world.galacticInfluenceProgress -= claimThreshold;
+  }
+
+  updateGalacticInfluenceReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1365,4 +1505,5 @@ function updateSettlements() {
   updatePlanetarySurveyState();
   updateProbeMissionState();
   updateStarMapState();
+  updateGalacticInfluenceState();
 }

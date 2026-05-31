@@ -81,5 +81,9 @@ const world = {
   starSystems: [],
   starMapProgress: 0,
   starMapReady: false,
-  lastStarMapTick: 0
+  lastStarMapTick: 0,
+  galacticInfluenceProgress: 0,
+  galacticInfluenceReady: false,
+  galacticClaimedSystems: 0,
+  lastGalacticInfluenceTick: 0
 };
