@@ -414,6 +414,8 @@ function createWorldSaveData() {
       foodDrawSize: CONFIG.FOOD_DRAW_SIZE,
       fertileFoodGrowthChance: CONFIG.FERTILE_FOOD_GROWTH_CHANCE,
       barrenFoodGrowthChance: CONFIG.BARREN_FOOD_GROWTH_CHANCE,
+      simUpdateIntervalMs: CONFIG.SIM_UPDATE_INTERVAL_MS,
+      maxSimUpdatesPerFrame: CONFIG.MAX_SIM_UPDATES_PER_FRAME,
       ticksPerSimUpdate: CONFIG.TICKS_PER_SIM_UPDATE,
       simSpeedMultiplier: CONFIG.SIM_SPEED_MULTIPLIER,
       traitMutationChance: CONFIG.TRAIT_MUTATION_CHANCE,
@@ -1075,6 +1077,14 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.barrenFoodGrowthChance === "number") {
     CONFIG.BARREN_FOOD_GROWTH_CHANCE = saveConfig.barrenFoodGrowthChance;
+  }
+
+  if (typeof saveConfig.simUpdateIntervalMs === "number") {
+    CONFIG.SIM_UPDATE_INTERVAL_MS = saveConfig.simUpdateIntervalMs;
+  }
+
+  if (typeof saveConfig.maxSimUpdatesPerFrame === "number") {
+    CONFIG.MAX_SIM_UPDATES_PER_FRAME = saveConfig.maxSimUpdatesPerFrame;
   }
 
   if (typeof saveConfig.traitMutationChance === "number") {

@@ -254,7 +254,7 @@ h1 {
 #inspect-panel span,
 #trait-panel span,
 #lineage-panel span,
-#settlement-panel span {
+#settlement-summary {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(114, 215, 255, 0.24);
   border-radius: 10px;
@@ -264,6 +264,46 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.5px;
   box-sizing: border-box;
+}
+
+#settlement-summary.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  max-height: 112px;
+  overflow: auto;
+  text-align: left;
+}
+
+.summary-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.summary-chip b {
+  min-width: 0;
+  color: #aeb7d9;
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-chip span {
+  color: #f4f7ff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 #persistence-status {
