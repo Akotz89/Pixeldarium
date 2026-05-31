@@ -25,11 +25,14 @@ function clearWorld() {
   world.birthsThisTick = 0;
   world.deathsThisTick = 0;
   world.populationDeltaThisTick = 0;
+  world.reproductionScarcityPressure = 0;
   world.totalBirths = 0;
   world.totalDeaths = 0;
   world.foodSpawnedThisTick = 0;
   world.foodConsumedThisTick = 0;
   world.foodHarvestedThisTick = 0;
+  world.foodRecoveryPressure = 0;
+  world.foodRecoveryAttemptsThisTick = 0;
   world.totalFoodSpawned = 0;
   world.totalFoodConsumed = 0;
   world.totalFoodHarvested = 0;
@@ -793,9 +796,12 @@ function refreshEcosystemSummary() {
     activeLineages: activeLineages,
     fertilePercent: fertilePercent,
     populationBalance: getPopulationBalance(Math.round(Number(world.populationDeltaThisTick) || 0), population),
+    reproductionScarcityPressure: clamp(Number(world.reproductionScarcityPressure) || 0, 0, 1),
     resourceBalance: getResourceBalance(foodNetThisTick, world.food.length),
     foodNetThisTick: foodNetThisTick,
     foodRunwayTicks: getFoodRunwayTicks(world.food.length, foodNetThisTick),
+    foodRecoveryPressure: clamp(Number(world.foodRecoveryPressure) || 0, 0, 1),
+    foodRecoveryAttempts: Math.max(0, Math.round(Number(world.foodRecoveryAttemptsThisTick) || 0)),
     pressure: pressure,
     stabilityScore: stabilityProfile.stabilityScore,
     stabilityProfile: stabilityProfile,
@@ -852,12 +858,15 @@ function resetPopulationFlowCounters() {
   world.birthsThisTick = 0;
   world.deathsThisTick = 0;
   world.populationDeltaThisTick = 0;
+  world.reproductionScarcityPressure = 0;
 }
 
 function resetFoodFlowCounters() {
   world.foodSpawnedThisTick = 0;
   world.foodConsumedThisTick = 0;
   world.foodHarvestedThisTick = 0;
+  world.foodRecoveryPressure = 0;
+  world.foodRecoveryAttemptsThisTick = 0;
 }
 
 function recordOrganismBirth(count) {
@@ -1009,8 +1018,35 @@ function refreshSimulationAlerts() {
     addSimulationAlert(alerts, "danger", "Population crash", String(world.populationDeltaThisTick), 12);
   }
 
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.reproductionScarcityPressure >= 0.55
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Birth throttle",
+      Math.round(ecosystemSummary.reproductionScarcityPressure * 100) + "% scarce",
+      34
+    );
+  }
+
   if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
     addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick), 28);
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRecoveryPressure >= 0.55 &&
+    ecosystemSummary.foodRecoveryAttempts > 0
+  ) {
+    addSimulationAlert(
+      alerts,
+      "ready",
+      "Regrowth push",
+      Math.round(ecosystemSummary.foodRecoveryPressure * 100) + "% x" + ecosystemSummary.foodRecoveryAttempts,
+      56
+    );
   }
 
   if (
