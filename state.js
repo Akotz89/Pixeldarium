@@ -122,6 +122,7 @@ const world = {
   lastInterstellarFleetTick: 0,
   nextEmpireSectorId: 1,
   empireSectors: [],
+  empireSectorBySystemId: {},
   empireSectorProgress: 0,
   empireSectorReady: false,
   empireSectorCount: 0,
