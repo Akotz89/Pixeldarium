@@ -22,6 +22,11 @@ function clearWorld() {
   world.foodBuckets = {};
   world.terrain = [];
   world.fertileTiles = 0;
+  world.birthsThisTick = 0;
+  world.deathsThisTick = 0;
+  world.populationDeltaThisTick = 0;
+  world.totalBirths = 0;
+  world.totalDeaths = 0;
   world.isPaused = false;
   world.isExtinct = false;
   world.extinctionTick = 0;
@@ -473,6 +478,34 @@ function recordEcosystemHistorySample(force) {
   }
 }
 
+function resetPopulationFlowCounters() {
+  world.birthsThisTick = 0;
+  world.deathsThisTick = 0;
+  world.populationDeltaThisTick = 0;
+}
+
+function recordOrganismBirth(count) {
+  var birthCount = Math.max(0, Math.round(Number(count) || 0));
+
+  if (birthCount <= 0) {
+    return;
+  }
+
+  world.birthsThisTick += birthCount;
+  world.totalBirths += birthCount;
+}
+
+function recordOrganismDeath(count) {
+  var deathCount = Math.max(0, Math.round(Number(count) || 0));
+
+  if (deathCount <= 0) {
+    return;
+  }
+
+  world.deathsThisTick += deathCount;
+  world.totalDeaths += deathCount;
+}
+
 function makeSimulationAlert(severity, label, detail) {
   return {
     severity: String(severity || "info"),
@@ -596,6 +629,7 @@ function seedWorld() {
 function updateWorld() {
   world.tick++;
   world.needsRender = true;
+  resetPopulationFlowCounters();
   var milestoneSnapshot = getSimulationMilestoneSnapshot();
   growFood();
 
@@ -607,6 +641,7 @@ function updateWorld() {
 
   removeDeadOrganisms();
   trimOrganismPopulation();
+  world.populationDeltaThisTick = world.organisms.length - organismsAtStartOfTick;
 
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
