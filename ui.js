@@ -167,6 +167,39 @@ function toggleMenuOpen() {
   return setMenuOpen(!world.isMenuOpen);
 }
 
+function syncMenuPage() {
+  var activePage = world.menuPage || "controls";
+  var pages = uiMenu.querySelectorAll("[data-menu-page]");
+  var tabs = menuTabs.querySelectorAll("[data-menu-target]");
+
+  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    pages[pageIndex].hidden = pages[pageIndex].getAttribute("data-menu-page") !== activePage;
+  }
+
+  for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+    var isActive = tabs[tabIndex].getAttribute("data-menu-target") === activePage;
+    tabs[tabIndex].classList.toggle("active", isActive);
+    tabs[tabIndex].setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+}
+
+function setMenuPage(pageName) {
+  var nextPage = String(pageName || "controls");
+
+  if (!/^(controls|status|ecosystem|log)$/.test(nextPage)) {
+    nextPage = "controls";
+  }
+
+  if (world.menuPage === nextPage) {
+    syncMenuPage();
+    return false;
+  }
+
+  world.menuPage = nextPage;
+  syncMenuPage();
+  return true;
+}
+
 function applyTuningFromControls(redraw) {
   world.speed = clamp(Math.round(getTuningInputNumber(speedSlider, world.speed)), 1, 10);
   CONFIG.ORGANISM_DRAW_SIZE = clamp(Math.round(getTuningInputNumber(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE)), 2, 14);
@@ -1198,6 +1231,18 @@ function handleSimulationShortcut(event) {
   } else if (code === "KeyR" || key.toLowerCase() === "r") {
     handled = true;
     restartSimulationFromControls();
+  } else if (world.isMenuOpen && code === "Digit1") {
+    handled = true;
+    setMenuPage("controls");
+  } else if (world.isMenuOpen && code === "Digit2") {
+    handled = true;
+    setMenuPage("status");
+  } else if (world.isMenuOpen && code === "Digit3") {
+    handled = true;
+    setMenuPage("ecosystem");
+  } else if (world.isMenuOpen && code === "Digit4") {
+    handled = true;
+    setMenuPage("log");
   }
 
   if (handled && typeof event.preventDefault === "function") {
@@ -1206,6 +1251,14 @@ function handleSimulationShortcut(event) {
 }
 
 window.setupControls = function() {
+  var tabButtons = menuTabs.querySelectorAll("[data-menu-target]");
+
+  for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
+    tabButtons[tabIndex].addEventListener("click", function(event) {
+      setMenuPage(event.currentTarget.getAttribute("data-menu-target"));
+    });
+  }
+
   menuToggleButton.addEventListener("click", function() {
     toggleMenuOpen();
   });
@@ -1271,6 +1324,7 @@ window.setupControls = function() {
 
   syncControlStates();
   syncMenuState();
+  syncMenuPage();
 
   restartButton.addEventListener("click", function() {
     restartSimulationFromControls();
