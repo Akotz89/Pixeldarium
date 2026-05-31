@@ -16,9 +16,82 @@ function updateHud() {
     "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
 
   speedLabel.textContent = "Speed: " + world.speed + "x";
+  updateInspectPanel();
+}
+
+function getNearestOrganismToTile(tileX, tileY) {
+  var nearestOrganism = null;
+  var nearestDistance = Infinity;
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var distance = Math.abs(organism.x - tileX) + Math.abs(organism.y - tileY);
+
+    if (distance < nearestDistance && distance <= 1) {
+      nearestOrganism = organism;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearestOrganism;
+}
+
+function updateInspectPanel() {
+  if (!world.inspectedTile) {
+    inspectSummaryText.textContent = "INSPECT: None";
+    inspectDetailsText.textContent = "TERRAIN: -   FOOD: -   ORGANISM: -";
+    return;
+  }
+
+  var tileX = world.inspectedTile.x;
+  var tileY = world.inspectedTile.y;
+  var terrainName = isFertile(tileX, tileY) ? "fertile" : "barren";
+  var hasFood = foodExistsAt(tileX, tileY);
+  var organism = getNearestOrganismToTile(tileX, tileY);
+  var organismText = "none";
+
+  if (organism) {
+    organismText =
+      "energy " + organism.energy +
+      " age " + organism.age +
+      " pos " + organism.x + "," + organism.y +
+      " dir " + organism.directionX + "," + organism.directionY;
+  }
+
+  inspectSummaryText.textContent = "INSPECT: Tile " + tileX + "," + tileY;
+  inspectDetailsText.textContent =
+    "TERRAIN: " + terrainName +
+    "   FOOD: " + (hasFood ? "yes" : "no") +
+    "   ORGANISM: " + organismText;
+}
+
+function getTileFromCanvasEvent(event) {
+  var rect = canvas.getBoundingClientRect();
+  var canvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
+  var canvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+  return {
+    x: clamp(Math.floor(canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.floor(canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
+  };
+}
+
+function inspectTile(tileX, tileY) {
+  world.inspectedTile = {
+    x: clamp(tileX, 0, WORLD_WIDTH - 1),
+    y: clamp(tileY, 0, WORLD_HEIGHT - 1)
+  };
+
+  drawWorld();
+  updateHud();
 }
 
 window.setupControls = function() {
+  canvas.addEventListener("click", function(event) {
+    var tile = getTileFromCanvasEvent(event);
+    inspectTile(tile.x, tile.y);
+  });
+
   pauseButton.addEventListener("click", function() {
     world.isPaused = !world.isPaused;
     pauseButton.textContent = world.isPaused ? "Resume" : "Pause";

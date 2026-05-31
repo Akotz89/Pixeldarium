@@ -24,6 +24,7 @@ function clearWorld() {
   world.drawMs = 0;
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
+  world.inspectedTile = null;
 }
 
 function seedWorld() {

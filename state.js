@@ -4,6 +4,8 @@ const ctx = canvas.getContext("2d");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
+const inspectSummaryText = document.getElementById("inspect-summary");
+const inspectDetailsText = document.getElementById("inspect-details");
 
 const pauseButton = document.getElementById("pause-button");
 const stepButton = document.getElementById("step-button");
@@ -33,5 +35,6 @@ const world = {
   updateMs: 0,
   drawMs: 0,
   maxUpdateMs: 0,
-  maxDrawMs: 0
+  maxDrawMs: 0,
+  inspectedTile: null
 };

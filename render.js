@@ -112,11 +112,27 @@ function drawScanlines() {
   }
 }
 
+function drawInspectSelection() {
+  if (!world.inspectedTile) {
+    return;
+  }
+
+  var canvasX = world.inspectedTile.x * CONFIG.TILE_SIZE;
+  var canvasY = world.inspectedTile.y * CONFIG.TILE_SIZE;
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+  ctx.fillRect(canvasX, canvasY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(canvasX - 1, canvasY - 1, CONFIG.TILE_SIZE + 2, CONFIG.TILE_SIZE + 2);
+}
+
 window.buildTerrainCache = buildTerrainCache;
 
 window.drawWorld = function() {
   drawTerrain();
   drawFood();
   drawOrganisms();
+  drawInspectSelection();
   drawScanlines();
 };
