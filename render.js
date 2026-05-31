@@ -390,6 +390,62 @@ function drawStarSystems() {
   }
 }
 
+function getRenderedStarSystemById(systemId) {
+  if (!Array.isArray(world.starSystems)) {
+    return null;
+  }
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].id === systemId) {
+      return world.starSystems[i];
+    }
+  }
+
+  return null;
+}
+
+function drawInterstellarFleets() {
+  if (!Array.isArray(world.interstellarFleets) || world.interstellarFleets.length === 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+  var mapRadius = 88;
+  var empireNetwork = world.era === "Empire Network";
+
+  for (var i = 0; i < world.interstellarFleets.length; i++) {
+    var fleet = world.interstellarFleets[i];
+    var sourceSystem = getRenderedStarSystemById(fleet.sourceSystemId);
+    var targetSystem = getRenderedStarSystemById(fleet.targetSystemId);
+
+    if (!sourceSystem || !targetSystem) {
+      continue;
+    }
+
+    var sourceX = centerX + sourceSystem.mapX * mapRadius;
+    var sourceY = centerY + sourceSystem.mapY * mapRadius;
+    var targetX = centerX + targetSystem.mapX * mapRadius;
+    var targetY = centerY + targetSystem.mapY * mapRadius;
+    var progress = Math.max(0, Math.min(1, Number(fleet.progress) || 0));
+    var fleetX = sourceX + (targetX - sourceX) * progress;
+    var fleetY = sourceY + (targetY - sourceY) * progress;
+    var fleetSize = fleet.isComplete ? 5 : 4;
+
+    ctx.beginPath();
+    ctx.moveTo(sourceX, sourceY);
+    ctx.lineTo(targetX, targetY);
+    ctx.strokeStyle = fleet.isComplete ? (empireNetwork ? "rgba(255, 242, 107, 0.34)" : "rgba(112, 240, 208, 0.26)") : "rgba(255, 255, 255, 0.20)";
+    ctx.lineWidth = fleet.isComplete && empireNetwork ? 2 : 1;
+    ctx.setLineDash(fleet.isComplete ? [] : [3, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = fleet.isComplete ? (empireNetwork ? "#fff26b" : "#70f0d0") : "#ffffff";
+    ctx.fillRect(fleetX - fleetSize / 2, fleetY - fleetSize / 2, fleetSize, fleetSize);
+  }
+}
+
 function drawScanlines() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
@@ -425,6 +481,7 @@ window.drawWorld = function() {
   drawOrbitalAssets();
   drawPlanetaryBodies();
   drawProbeMissions();
+  drawInterstellarFleets();
   drawStarSystems();
   drawInspectSelection();
   drawScanlines();

@@ -338,6 +338,10 @@ function getSettlementSummary() {
     galacticClaimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
     galacticInfluenceProgress: Math.max(0, Number(world.galacticInfluenceProgress) || 0),
     galacticInfluenceReady: Boolean(world.galacticInfluenceReady),
+    interstellarFleets: Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0,
+    interstellarFleetCompleted: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
+    interstellarFleetProgress: Math.max(0, Number(world.interstellarFleetProgress) || 0),
+    interstellarFleetReady: Boolean(world.interstellarFleetReady),
     topSettlement: topSettlement
   };
 }
@@ -378,6 +382,9 @@ function updateSettlementSummary() {
     "   galactic claims " + summary.galacticClaimedSystems +
     " influence " + summary.galacticInfluenceProgress.toFixed(1) + "/" + CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD +
     " " + (summary.galacticInfluenceReady ? "claiming" : "waiting") +
+    "   fleets " + summary.interstellarFleetCompleted + "/" + summary.interstellarFleets +
+    " build " + summary.interstellarFleetProgress.toFixed(1) + "/" + CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD +
+    " " + (summary.interstellarFleetReady ? "ready" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -574,6 +581,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " probes " + (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0) : "") +
       (settlement.isColony ? " stars " + (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " map " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " galactic claims " + Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " influence " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1) : "") +
+      (settlement.isColony ? " fleets " + Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)) + "/" + (Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0) + " build " + Math.max(0, Number(world.interstellarFleetProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

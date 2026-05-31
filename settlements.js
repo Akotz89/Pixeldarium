@@ -840,7 +840,11 @@ function updateProbeMissionTravel() {
 }
 
 function updateProbeMissionEra() {
-  if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+    world.era = "Empire Network";
+  } else if (getInterstellarFleetCount() > 0) {
+    world.era = "Interstellar Fleets";
+  } else if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
     world.era = "Proto-Empire";
   } else if (getClaimedStarSystemCount() > 0) {
     world.era = "Galactic Influence";
@@ -1007,7 +1011,11 @@ function getClaimedStarSystemCount() {
 }
 
 function updateStarMapEra() {
-  if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+    world.era = "Empire Network";
+  } else if (getInterstellarFleetCount() > 0) {
+    world.era = "Interstellar Fleets";
+  } else if (getClaimedStarSystemCount() >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
     world.era = "Proto-Empire";
   } else if (getClaimedStarSystemCount() > 0) {
     world.era = "Galactic Influence";
@@ -1095,7 +1103,11 @@ function getNextClaimableStarSystem() {
 function updateGalacticInfluenceEra() {
   world.galacticClaimedSystems = getClaimedStarSystemCount();
 
-  if (world.galacticClaimedSystems >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
+  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+    world.era = "Empire Network";
+  } else if (getInterstellarFleetCount() > 0) {
+    world.era = "Interstellar Fleets";
+  } else if (world.galacticClaimedSystems >= CONFIG.PROTO_EMPIRE_SYSTEM_COUNT) {
     world.era = "Proto-Empire";
   } else if (world.galacticClaimedSystems > 0) {
     world.era = "Galactic Influence";
@@ -1155,6 +1167,225 @@ function updateGalacticInfluenceState() {
   }
 
   updateGalacticInfluenceReadiness();
+}
+
+function ensureInterstellarFleetState() {
+  if (!Array.isArray(world.interstellarFleets)) {
+    world.interstellarFleets = [];
+  }
+
+  if (typeof world.nextInterstellarFleetId !== "number" || world.nextInterstellarFleetId < 1) {
+    world.nextInterstellarFleetId = 1;
+  }
+
+  world.interstellarFleetProgress = Math.max(0, restoreSettlementGrowthNumber(world.interstellarFleetProgress, 0));
+  world.interstellarFleetReady = Boolean(world.interstellarFleetReady);
+  world.interstellarFleetActive = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.interstellarFleetActive, 0)));
+  world.interstellarFleetCompleted = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.interstellarFleetCompleted, 0)));
+  world.lastInterstellarFleetTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastInterstellarFleetTick, 0)));
+}
+
+function allocateInterstellarFleetId() {
+  ensureInterstellarFleetState();
+
+  var fleetId = world.nextInterstellarFleetId;
+  world.nextInterstellarFleetId++;
+  return fleetId;
+}
+
+function getClaimedStarSystems() {
+  normalizeStarSystems();
+
+  var claimedSystems = [];
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].isMapped && world.starSystems[i].isClaimed) {
+      claimedSystems.push(world.starSystems[i]);
+    }
+  }
+
+  claimedSystems.sort(function(a, b) {
+    return a.id - b.id;
+  });
+
+  return claimedSystems;
+}
+
+function getStarSystemById(systemId) {
+  normalizeStarSystems();
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    if (world.starSystems[i].id === systemId) {
+      return world.starSystems[i];
+    }
+  }
+
+  return null;
+}
+
+function getInterstellarFleetEndpoints() {
+  var claimedSystems = getClaimedStarSystems();
+
+  if (claimedSystems.length < 2) {
+    return null;
+  }
+
+  var sourceIndex = world.interstellarFleets.length % claimedSystems.length;
+  var targetIndex = (sourceIndex + 1 + Math.floor(world.interstellarFleets.length / claimedSystems.length)) % claimedSystems.length;
+
+  if (targetIndex === sourceIndex) {
+    targetIndex = (sourceIndex + 1) % claimedSystems.length;
+  }
+
+  return {
+    sourceSystemId: claimedSystems[sourceIndex].id,
+    targetSystemId: claimedSystems[targetIndex].id
+  };
+}
+
+function normalizeInterstellarFleet(fleet) {
+  fleet.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(fleet.id, world.nextInterstellarFleetId)));
+  fleet.sourceSystemId = Math.max(1, Math.round(restoreSettlementGrowthNumber(fleet.sourceSystemId, 1)));
+  fleet.targetSystemId = Math.max(1, Math.round(restoreSettlementGrowthNumber(fleet.targetSystemId, fleet.sourceSystemId)));
+  fleet.launchedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(fleet.launchedTick, world.tick)));
+  fleet.arrivalTick = Math.max(fleet.launchedTick, Math.round(restoreSettlementGrowthNumber(fleet.arrivalTick, fleet.launchedTick)));
+  fleet.progress = Math.max(0, Math.min(1, restoreSettlementGrowthNumber(fleet.progress, 0)));
+  fleet.isComplete = Boolean(fleet.isComplete);
+
+  if (fleet.id >= world.nextInterstellarFleetId) {
+    world.nextInterstellarFleetId = fleet.id + 1;
+  }
+}
+
+function makeInterstellarFleet() {
+  var endpoints = getInterstellarFleetEndpoints();
+
+  if (!endpoints) {
+    return null;
+  }
+
+  var fleetId = allocateInterstellarFleetId();
+  var travelTicks = Math.max(1, Math.round(Number(CONFIG.INTERSTELLAR_FLEET_TRAVEL_TICKS) || 1));
+
+  return {
+    id: fleetId,
+    sourceSystemId: endpoints.sourceSystemId,
+    targetSystemId: endpoints.targetSystemId,
+    launchedTick: world.tick,
+    arrivalTick: world.tick + travelTicks,
+    progress: 0,
+    isComplete: false
+  };
+}
+
+function normalizeInterstellarFleets() {
+  ensureInterstellarFleetState();
+
+  for (var i = 0; i < world.interstellarFleets.length; i++) {
+    normalizeInterstellarFleet(world.interstellarFleets[i]);
+  }
+}
+
+function updateInterstellarFleetTravel() {
+  normalizeInterstellarFleets();
+
+  var activeFleets = 0;
+  var completedFleets = 0;
+
+  for (var i = 0; i < world.interstellarFleets.length; i++) {
+    var fleet = world.interstellarFleets[i];
+
+    if (fleet.isComplete) {
+      fleet.progress = 1;
+      completedFleets++;
+      continue;
+    }
+
+    var travelTicks = Math.max(1, fleet.arrivalTick - fleet.launchedTick);
+    fleet.progress = Math.max(0, Math.min(1, (world.tick - fleet.launchedTick) / travelTicks));
+
+    if (world.tick >= fleet.arrivalTick) {
+      fleet.progress = 1;
+      fleet.isComplete = true;
+      completedFleets++;
+    } else {
+      activeFleets++;
+    }
+  }
+
+  world.interstellarFleetActive = activeFleets;
+  world.interstellarFleetCompleted = completedFleets;
+}
+
+function getInterstellarFleetCount() {
+  ensureInterstellarFleetState();
+  return world.interstellarFleets.length;
+}
+
+function getCompletedInterstellarFleetCount() {
+  updateInterstellarFleetTravel();
+  return world.interstellarFleetCompleted;
+}
+
+function updateInterstellarFleetEra() {
+  updateInterstellarFleetTravel();
+
+  if (world.interstellarFleetCompleted >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+    world.era = "Empire Network";
+  } else if (world.interstellarFleets.length > 0) {
+    world.era = "Interstellar Fleets";
+  } else {
+    updateGalacticInfluenceEra();
+  }
+}
+
+function updateInterstellarFleetReadiness() {
+  ensureInterstellarFleetState();
+  updateInterstellarFleetTravel();
+
+  var maxMissions = Math.max(1, Math.round(Number(CONFIG.INTERSTELLAR_FLEET_MAX_MISSIONS) || 1));
+  world.interstellarFleetReady = Boolean(
+    getClaimedStarSystemCount() >= CONFIG.INTERSTELLAR_FLEET_MIN_CLAIMED_SYSTEMS &&
+    world.interstellarFleets.length < maxMissions &&
+    getInterstellarFleetEndpoints()
+  );
+
+  updateInterstellarFleetEra();
+  return world.interstellarFleetReady;
+}
+
+function updateInterstellarFleetState() {
+  if (!updateInterstellarFleetReadiness()) {
+    return;
+  }
+
+  var buildInterval = Math.max(1, Math.round(Number(CONFIG.INTERSTELLAR_FLEET_BUILD_INTERVAL) || 1));
+
+  if (world.tick - world.lastInterstellarFleetTick < buildInterval) {
+    return;
+  }
+
+  world.lastInterstellarFleetTick = world.tick;
+  world.interstellarFleetProgress +=
+    getClaimedStarSystemCount() * CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_CLAIMED_SYSTEM +
+    getCompletedProbeMissionCount() * CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_COMPLETED_PROBE +
+    world.orbitalInfrastructureScore * CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_INFRASTRUCTURE;
+
+  var buildThreshold = Math.max(1, Number(CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD) || 1);
+  var maxMissions = Math.max(1, Math.round(Number(CONFIG.INTERSTELLAR_FLEET_MAX_MISSIONS) || 1));
+
+  while (world.interstellarFleetProgress >= buildThreshold && world.interstellarFleets.length < maxMissions) {
+    var fleet = makeInterstellarFleet();
+
+    if (!fleet) {
+      break;
+    }
+
+    world.interstellarFleets.push(fleet);
+    world.interstellarFleetProgress -= buildThreshold;
+  }
+
+  updateInterstellarFleetReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1506,4 +1737,5 @@ function updateSettlements() {
   updateProbeMissionState();
   updateStarMapState();
   updateGalacticInfluenceState();
+  updateInterstellarFleetState();
 }

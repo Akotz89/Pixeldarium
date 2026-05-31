@@ -85,5 +85,12 @@ const world = {
   galacticInfluenceProgress: 0,
   galacticInfluenceReady: false,
   galacticClaimedSystems: 0,
-  lastGalacticInfluenceTick: 0
+  lastGalacticInfluenceTick: 0,
+  nextInterstellarFleetId: 1,
+  interstellarFleets: [],
+  interstellarFleetProgress: 0,
+  interstellarFleetReady: false,
+  interstellarFleetActive: 0,
+  interstellarFleetCompleted: 0,
+  lastInterstellarFleetTick: 0
 };

@@ -186,6 +186,18 @@ function copyStarSystemForSave(system) {
   };
 }
 
+function copyInterstellarFleetForSave(fleet) {
+  return {
+    id: fleet.id,
+    sourceSystemId: fleet.sourceSystemId,
+    targetSystemId: fleet.targetSystemId,
+    launchedTick: fleet.launchedTick,
+    arrivalTick: fleet.arrivalTick,
+    progress: fleet.progress,
+    isComplete: fleet.isComplete
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -275,6 +287,18 @@ function getStarSystemsForSave() {
   return world.starSystems.map(copyStarSystemForSave);
 }
 
+function getInterstellarFleetsForSave() {
+  if (typeof updateInterstellarFleetReadiness === "function") {
+    updateInterstellarFleetReadiness();
+  }
+
+  if (!Array.isArray(world.interstellarFleets)) {
+    return [];
+  }
+
+  return world.interstellarFleets.map(copyInterstellarFleetForSave);
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -288,6 +312,10 @@ function createWorldSaveData() {
 
   if (typeof updateGalacticInfluenceReadiness === "function") {
     updateGalacticInfluenceReadiness();
+  }
+
+  if (typeof updateInterstellarFleetReadiness === "function") {
+    updateInterstellarFleetReadiness();
   }
 
   return {
@@ -330,6 +358,12 @@ function createWorldSaveData() {
     galacticInfluenceReady: Boolean(world.galacticInfluenceReady),
     galacticClaimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
     lastGalacticInfluenceTick: Math.max(0, Math.round(Number(world.lastGalacticInfluenceTick) || 0)),
+    nextInterstellarFleetId: Math.max(1, Math.round(Number(world.nextInterstellarFleetId) || 1)),
+    interstellarFleetProgress: Math.max(0, Number(world.interstellarFleetProgress) || 0),
+    interstellarFleetReady: Boolean(world.interstellarFleetReady),
+    interstellarFleetActive: Math.max(0, Math.round(Number(world.interstellarFleetActive) || 0)),
+    interstellarFleetCompleted: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
+    lastInterstellarFleetTick: Math.max(0, Math.round(Number(world.lastInterstellarFleetTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -434,7 +468,16 @@ function createWorldSaveData() {
       galacticInfluenceProgressPerCompletedProbe: CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_COMPLETED_PROBE,
       galacticInfluenceProgressPerInfrastructure: CONFIG.GALACTIC_INFLUENCE_PROGRESS_PER_INFRASTRUCTURE,
       galacticSystemClaimThreshold: CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD,
-      protoEmpireSystemCount: CONFIG.PROTO_EMPIRE_SYSTEM_COUNT
+      protoEmpireSystemCount: CONFIG.PROTO_EMPIRE_SYSTEM_COUNT,
+      interstellarFleetMinClaimedSystems: CONFIG.INTERSTELLAR_FLEET_MIN_CLAIMED_SYSTEMS,
+      interstellarFleetBuildInterval: CONFIG.INTERSTELLAR_FLEET_BUILD_INTERVAL,
+      interstellarFleetProgressPerClaimedSystem: CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_CLAIMED_SYSTEM,
+      interstellarFleetProgressPerCompletedProbe: CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_COMPLETED_PROBE,
+      interstellarFleetProgressPerInfrastructure: CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_INFRASTRUCTURE,
+      interstellarFleetBuildThreshold: CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD,
+      interstellarFleetTravelTicks: CONFIG.INTERSTELLAR_FLEET_TRAVEL_TICKS,
+      interstellarFleetMaxMissions: CONFIG.INTERSTELLAR_FLEET_MAX_MISSIONS,
+      empireNetworkCompletedFleets: CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -446,7 +489,8 @@ function createWorldSaveData() {
     orbitalAssets: getOrbitalAssetsForSave(),
     planetaryBodies: getPlanetaryBodiesForSave(),
     probeMissions: getProbeMissionsForSave(),
-    starSystems: getStarSystemsForSave()
+    starSystems: getStarSystemsForSave(),
+    interstellarFleets: getInterstellarFleetsForSave()
   };
 }
 
@@ -801,6 +845,38 @@ function restoreStarSystems(systems) {
   }
 
   return systems.map(restoreStarSystem);
+}
+
+function restoreInterstellarFleet(fleet) {
+  fleet = fleet || {};
+
+  var restoredFleet = {
+    id: Math.max(1, Math.round(restoreNumber(fleet.id, world.nextInterstellarFleetId))),
+    sourceSystemId: Math.max(1, Math.round(restoreNumber(fleet.sourceSystemId, 1))),
+    targetSystemId: Math.max(1, Math.round(restoreNumber(fleet.targetSystemId, 1))),
+    launchedTick: Math.max(0, Math.round(restoreNumber(fleet.launchedTick, 0))),
+    arrivalTick: Math.max(0, Math.round(restoreNumber(fleet.arrivalTick, 0))),
+    progress: Math.max(0, Math.min(1, restoreNumber(fleet.progress, 0))),
+    isComplete: Boolean(fleet.isComplete)
+  };
+
+  if (restoredFleet.arrivalTick < restoredFleet.launchedTick) {
+    restoredFleet.arrivalTick = restoredFleet.launchedTick;
+  }
+
+  if (restoredFleet.id >= world.nextInterstellarFleetId) {
+    world.nextInterstellarFleetId = restoredFleet.id + 1;
+  }
+
+  return restoredFleet;
+}
+
+function restoreInterstellarFleets(fleets) {
+  if (!Array.isArray(fleets)) {
+    return [];
+  }
+
+  return fleets.map(restoreInterstellarFleet);
 }
 
 function restoreOrganism(organism) {
@@ -1286,6 +1362,42 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.protoEmpireSystemCount === "number") {
     CONFIG.PROTO_EMPIRE_SYSTEM_COUNT = saveConfig.protoEmpireSystemCount;
   }
+
+  if (typeof saveConfig.interstellarFleetMinClaimedSystems === "number") {
+    CONFIG.INTERSTELLAR_FLEET_MIN_CLAIMED_SYSTEMS = saveConfig.interstellarFleetMinClaimedSystems;
+  }
+
+  if (typeof saveConfig.interstellarFleetBuildInterval === "number") {
+    CONFIG.INTERSTELLAR_FLEET_BUILD_INTERVAL = saveConfig.interstellarFleetBuildInterval;
+  }
+
+  if (typeof saveConfig.interstellarFleetProgressPerClaimedSystem === "number") {
+    CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_CLAIMED_SYSTEM = saveConfig.interstellarFleetProgressPerClaimedSystem;
+  }
+
+  if (typeof saveConfig.interstellarFleetProgressPerCompletedProbe === "number") {
+    CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_COMPLETED_PROBE = saveConfig.interstellarFleetProgressPerCompletedProbe;
+  }
+
+  if (typeof saveConfig.interstellarFleetProgressPerInfrastructure === "number") {
+    CONFIG.INTERSTELLAR_FLEET_PROGRESS_PER_INFRASTRUCTURE = saveConfig.interstellarFleetProgressPerInfrastructure;
+  }
+
+  if (typeof saveConfig.interstellarFleetBuildThreshold === "number") {
+    CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD = saveConfig.interstellarFleetBuildThreshold;
+  }
+
+  if (typeof saveConfig.interstellarFleetTravelTicks === "number") {
+    CONFIG.INTERSTELLAR_FLEET_TRAVEL_TICKS = saveConfig.interstellarFleetTravelTicks;
+  }
+
+  if (typeof saveConfig.interstellarFleetMaxMissions === "number") {
+    CONFIG.INTERSTELLAR_FLEET_MAX_MISSIONS = saveConfig.interstellarFleetMaxMissions;
+  }
+
+  if (typeof saveConfig.empireNetworkCompletedFleets === "number") {
+    CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS = saveConfig.empireNetworkCompletedFleets;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -1302,6 +1414,7 @@ function applyWorldSaveData(saveData) {
   world.nextPlanetaryBodyId = Math.max(1, Math.round(restoreNumber(saveData.nextPlanetaryBodyId, 1)));
   world.nextProbeMissionId = Math.max(1, Math.round(restoreNumber(saveData.nextProbeMissionId, 1)));
   world.nextStarSystemId = Math.max(1, Math.round(restoreNumber(saveData.nextStarSystemId, 1)));
+  world.nextInterstellarFleetId = Math.max(1, Math.round(restoreNumber(saveData.nextInterstellarFleetId, 1)));
   world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
@@ -1325,6 +1438,11 @@ function applyWorldSaveData(saveData) {
   world.galacticInfluenceReady = Boolean(saveData.galacticInfluenceReady);
   world.galacticClaimedSystems = Math.max(0, Math.round(restoreNumber(saveData.galacticClaimedSystems, 0)));
   world.lastGalacticInfluenceTick = Math.max(0, Math.round(restoreNumber(saveData.lastGalacticInfluenceTick, 0)));
+  world.interstellarFleetProgress = Math.max(0, restoreNumber(saveData.interstellarFleetProgress, 0));
+  world.interstellarFleetReady = Boolean(saveData.interstellarFleetReady);
+  world.interstellarFleetActive = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetActive, 0)));
+  world.interstellarFleetCompleted = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetCompleted, 0)));
+  world.lastInterstellarFleetTick = Math.max(0, Math.round(restoreNumber(saveData.lastInterstellarFleetTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -1332,6 +1450,7 @@ function applyWorldSaveData(saveData) {
   world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
   world.starSystems = restoreStarSystems(saveData.starSystems);
+  world.interstellarFleets = restoreInterstellarFleets(saveData.interstellarFleets);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
@@ -1368,6 +1487,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateGalacticInfluenceReadiness === "function") {
     updateGalacticInfluenceReadiness();
+  }
+
+  if (typeof updateInterstellarFleetReadiness === "function") {
+    updateInterstellarFleetReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

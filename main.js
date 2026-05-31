@@ -63,6 +63,13 @@ function clearWorld() {
   world.galacticInfluenceReady = false;
   world.galacticClaimedSystems = 0;
   world.lastGalacticInfluenceTick = 0;
+  world.nextInterstellarFleetId = 1;
+  world.interstellarFleets = [];
+  world.interstellarFleetProgress = 0;
+  world.interstellarFleetReady = false;
+  world.interstellarFleetActive = 0;
+  world.interstellarFleetCompleted = 0;
+  world.lastInterstellarFleetTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
