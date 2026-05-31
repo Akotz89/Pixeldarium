@@ -68,7 +68,15 @@
 
     <section id="ecosystem-panel" aria-label="Ecosystem health">
       <div id="ecosystem-summary">ECOSYSTEM: -</div>
-      <canvas id="ecosystem-history" width="900" height="72"></canvas>
+      <div id="ecosystem-history-wrap">
+        <div id="ecosystem-history-legend" aria-label="Ecosystem history legend">
+          <span class="ecosystem-key stability">Stability</span>
+          <span class="ecosystem-key population">Population</span>
+          <span class="ecosystem-key food">Food</span>
+          <span class="ecosystem-key flow">Food Net</span>
+        </div>
+        <canvas id="ecosystem-history" width="900" height="72"></canvas>
+      </div>
     </section>
 
     <section id="alert-panel" aria-label="Simulation alerts">
