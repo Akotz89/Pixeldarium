@@ -23,6 +23,7 @@ function clearWorld() {
   world.terrain = [];
   world.fertileTiles = 0;
   world.needsRender = true;
+  setWorldSeed(world.seedText);
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;
@@ -244,7 +245,7 @@ function seedWorld() {
     recordTraitHistorySample(true);
   }
 
-  recordSimulationEvent("seed", "Simulation seeded", world.organisms.length + " organisms");
+  recordSimulationEvent("seed", "Simulation seeded", world.organisms.length + " organisms seed " + world.seedText);
 }
 
 function updateWorld() {

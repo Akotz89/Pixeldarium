@@ -17,7 +17,7 @@ function seedTerrain() {
     for (let x = 0; x < WORLD_WIDTH; x++) {
       const waveA = Math.sin(x * 0.06) + Math.cos(y * 0.09);
       const waveB = Math.sin((x + y) * 0.04);
-      const noise = Math.random() * 0.75;
+      const noise = randomUnit() * 0.75;
       const fertilityScore = waveA + waveB + noise;
 
       const terrain = fertilityScore > CONFIG.TERRAIN_FERTILITY_CUTOFF
