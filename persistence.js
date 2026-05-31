@@ -1634,6 +1634,7 @@ function applyWorldSaveData(saveData) {
   rebuildStarSystemIndexes();
   world.interstellarFleets = restoreInterstellarFleets(saveData.interstellarFleets);
   world.empireSectors = restoreEmpireSectors(saveData.empireSectors);
+  rebuildEmpireSectorIndexes();
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);

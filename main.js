@@ -89,6 +89,7 @@ function clearWorld() {
   world.lastInterstellarFleetTick = 0;
   world.nextEmpireSectorId = 1;
   world.empireSectors = [];
+  world.empireSectorBySystemId = {};
   world.empireSectorProgress = 0;
   world.empireSectorReady = false;
   world.empireSectorCount = 0;

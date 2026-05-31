@@ -1573,6 +1573,10 @@ function ensureEmpireSectorState() {
     world.empireSectors = [];
   }
 
+  if (!world.empireSectorBySystemId) {
+    rebuildEmpireSectorIndexes();
+  }
+
   if (typeof world.nextEmpireSectorId !== "number" || world.nextEmpireSectorId < 1) {
     world.nextEmpireSectorId = 1;
   }
@@ -1604,11 +1608,39 @@ function normalizeEmpireSector(sector) {
   }
 }
 
+function registerEmpireSectorInIndex(sector) {
+  if (!sector) {
+    return;
+  }
+
+  if (!world.empireSectorBySystemId) {
+    world.empireSectorBySystemId = {};
+  }
+
+  world.empireSectorBySystemId[String(sector.systemId)] = sector;
+}
+
+function rebuildEmpireSectorIndexes() {
+  world.empireSectorBySystemId = {};
+
+  if (!Array.isArray(world.empireSectors)) {
+    return world.empireSectorBySystemId;
+  }
+
+  for (var i = 0; i < world.empireSectors.length; i++) {
+    registerEmpireSectorInIndex(world.empireSectors[i]);
+  }
+
+  return world.empireSectorBySystemId;
+}
+
 function normalizeEmpireSectors() {
   ensureEmpireSectorState();
+  world.empireSectorBySystemId = {};
 
   for (var i = 0; i < world.empireSectors.length; i++) {
     normalizeEmpireSector(world.empireSectors[i]);
+    registerEmpireSectorInIndex(world.empireSectors[i]);
   }
 
   world.empireSectorCount = world.empireSectors.length;
@@ -1620,15 +1652,15 @@ function getEmpireSectorCount() {
 }
 
 function hasEmpireSectorForSystem(systemId) {
-  normalizeEmpireSectors();
+  ensureEmpireSectorState();
+  var systemKey = String(systemId);
 
-  for (var i = 0; i < world.empireSectors.length; i++) {
-    if (world.empireSectors[i].systemId === systemId) {
-      return true;
-    }
+  if (world.empireSectorBySystemId[systemKey]) {
+    return true;
   }
 
-  return false;
+  rebuildEmpireSectorIndexes();
+  return Boolean(world.empireSectorBySystemId[systemKey]);
 }
 
 function getNextSectorSystem() {
@@ -1718,7 +1750,9 @@ function updateEmpireSectorState() {
       break;
     }
 
-    world.empireSectors.push(makeEmpireSector(system));
+    var sector = makeEmpireSector(system);
+    world.empireSectors.push(sector);
+    registerEmpireSectorInIndex(sector);
     world.empireSectorProgress -= sectorThreshold;
   }
 
