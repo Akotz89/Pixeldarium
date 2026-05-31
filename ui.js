@@ -178,6 +178,15 @@ function makeSummaryChip(label, value) {
   );
 }
 
+function makeInspectChip(label, value) {
+  return (
+    "<span class=\"inspect-chip\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span>" + escapeSummaryText(value) + "</span>" +
+    "</span>"
+  );
+}
+
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {
   var ratio = getProgressRatio(currentValue, targetValue);
   var percent = Math.round(ratio * 100);
@@ -386,6 +395,7 @@ function drawTraitHistory() {
 
 function updateInspectPanel() {
   if (!world.inspectedTile) {
+    setElementClass(inspectDetailsText, "");
     setElementText(inspectSummaryText, "INSPECT: None");
     setElementText(inspectDetailsText, "TERRAIN: -   FOOD: -   ORGANISM: -");
     return;
@@ -397,65 +407,66 @@ function updateInspectPanel() {
   var hasFood = foodExistsAt(tileX, tileY);
   var organism = getNearestOrganismToTile(tileX, tileY);
   var settlement = getNearestSettlementToTile(tileX, tileY);
-  var organismText = "none";
-  var settlementText = "none";
+  var detailChips = [
+    makeInspectChip("Terrain", terrainName),
+    makeInspectChip("Food", hasFood ? "yes" : "no")
+  ];
 
   if (organism) {
     var lineageRecord = world.lineages ? world.lineages[String(ensureOrganismLineage(organism))] : null;
     var parentText = lineageRecord && lineageRecord.parentId > 0 ? " parent L" + lineageRecord.parentId : " founder";
+    var traits = ensureOrganismTraits(organism);
 
-    organismText =
-      "energy " + organism.energy +
-      " age " + organism.age +
-      " lineage L" + ensureOrganismLineage(organism) +
-      parentText +
-      " gen " + organism.generation +
-      " pos " + organism.x + "," + organism.y +
-      " dir " + organism.directionX + "," + organism.directionY +
-      "   " + formatOrganismTraits(organism);
+    detailChips.push(makeInspectChip("Organism", "L" + ensureOrganismLineage(organism) + parentText));
+    detailChips.push(makeInspectChip("Org Energy", organism.energy));
+    detailChips.push(makeInspectChip("Org Age", organism.age));
+    detailChips.push(makeInspectChip("Org Gen", organism.generation));
+    detailChips.push(makeInspectChip("Org Pos", organism.x + "," + organism.y));
+    detailChips.push(makeInspectChip("Org Dir", organism.directionX + "," + organism.directionY));
+    detailChips.push(makeInspectChip("Org Traits", "V" + traits.vision + " M" + traits.metabolism + " R" + traits.reproductionEnergy + " roam " + traits.movementTendency.toFixed(2) + " hab " + traits.terrainAffinity.toFixed(2)));
+  } else {
+    detailChips.push(makeInspectChip("Organism", "none"));
   }
 
   if (settlement) {
     var settlementRouteSummary = getRouteSummaryForSettlement(settlement.id);
+    var settlementType = settlement.isColony ? "colony S" + settlement.parentSettlementId : (settlement.isOutpost ? "outpost S" + settlement.parentSettlementId : "root camp");
 
-    settlementText =
-      "S" + settlement.id +
-      " lineage L" + settlement.lineageId +
-      (settlement.isColony ? " colony parent S" + settlement.parentSettlementId : (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp")) +
-      " routes " + settlementRouteSummary.activeRoutes + "/" + settlementRouteSummary.routeCount +
-      " route food " + settlementRouteSummary.foodTransferred +
-      (settlement.isColony ? " network " + Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)) : "") +
-      (settlement.isColony ? " space " + Math.max(0, Number(world.spaceProgramProgress) || 0).toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD + " launches " + Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)) : "") +
-      (settlement.isColony ? " orbit assets " + (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " infra " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)) : "") +
-      (settlement.isColony ? " planets " + (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " survey " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1) : "") +
-      (settlement.isColony ? " probes " + (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0) : "") +
-      (settlement.isColony ? " stars " + (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " map " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1) : "") +
-      (settlement.isColony ? " galactic claims " + Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " influence " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1) : "") +
-      (settlement.isColony ? " fleets " + Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)) + "/" + (Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0) + " build " + Math.max(0, Number(world.interstellarFleetProgress) || 0).toFixed(1) : "") +
-      (settlement.isColony ? " sectors " + (Array.isArray(world.empireSectors) ? world.empireSectors.length : 0) + " build " + Math.max(0, Number(world.empireSectorProgress) || 0).toFixed(1) : "") +
-      (settlement.isColony ? " legacy lvl " + Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)) + " progress " + Math.max(0, Number(world.empireLegacyProgress) || 0).toFixed(1) : "") +
-      " lvl " + settlement.level +
-      " influence " + settlement.influenceRadius +
-      " claimed " + settlement.claimedTiles +
-      " claimed food " + settlement.claimedFood +
-      " last outpost " + settlement.lastOutpostTick +
-      " supply growth " + settlement.lastSupplyGrowthTick +
-      " pop " + settlement.population +
-      " nearby " + settlement.foodStock +
-      " stored " + settlement.storedFood +
-      " dev " + settlement.development.toFixed(1) +
-      " last growth " + settlement.lastGrowthTick +
-      " founded " + settlement.foundedTick +
-      " " + (settlement.isActive ? "active" : "stale");
+    detailChips.push(makeInspectChip("Settlement", "S" + settlement.id + " L" + settlement.lineageId));
+    detailChips.push(makeInspectChip("Set Type", settlementType));
+    detailChips.push(makeInspectChip("Routes", settlementRouteSummary.activeRoutes + "/" + settlementRouteSummary.routeCount));
+    detailChips.push(makeInspectChip("Route Food", settlementRouteSummary.foodTransferred));
+    detailChips.push(makeInspectChip("Level", settlement.level));
+    detailChips.push(makeInspectChip("Influence", settlement.influenceRadius));
+    detailChips.push(makeInspectChip("Claimed", settlement.claimedTiles + " / food " + settlement.claimedFood));
+    detailChips.push(makeInspectChip("Population", settlement.population));
+    detailChips.push(makeInspectChip("Nearby Food", settlement.foodStock));
+    detailChips.push(makeInspectChip("Stored", settlement.storedFood));
+    detailChips.push(makeInspectChip("Dev", settlement.development.toFixed(1)));
+    detailChips.push(makeInspectChip("Growth", "last " + settlement.lastGrowthTick + " supply " + settlement.lastSupplyGrowthTick));
+    detailChips.push(makeInspectChip("Outpost", "last " + settlement.lastOutpostTick));
+    detailChips.push(makeInspectChip("Founded", settlement.foundedTick));
+    detailChips.push(makeInspectChip("Status", settlement.isActive ? "active" : "stale"));
+
+    if (settlement.isColony) {
+      detailChips.push(makeInspectChip("Network", Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0))));
+      detailChips.push(makeInspectChip("Space", Math.max(0, Number(world.spaceProgramProgress) || 0).toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD));
+      detailChips.push(makeInspectChip("Orbit", (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " / " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0))));
+      detailChips.push(makeInspectChip("Planets", (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " / " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1)));
+      detailChips.push(makeInspectChip("Probes", (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0)));
+      detailChips.push(makeInspectChip("Stars", (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " / " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1)));
+      detailChips.push(makeInspectChip("Claims", Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " / " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1)));
+      detailChips.push(makeInspectChip("Fleets", Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)) + "/" + (Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0)));
+      detailChips.push(makeInspectChip("Sectors", (Array.isArray(world.empireSectors) ? world.empireSectors.length : 0) + " / " + Math.max(0, Number(world.empireSectorProgress) || 0).toFixed(1)));
+      detailChips.push(makeInspectChip("Legacy", "L" + Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)) + " / " + Math.max(0, Number(world.empireLegacyProgress) || 0).toFixed(1)));
+    }
+  } else {
+    detailChips.push(makeInspectChip("Settlement", "none"));
   }
 
   setElementText(inspectSummaryText, "INSPECT: Tile " + tileX + "," + tileY);
-  setElementText(inspectDetailsText,
-    "TERRAIN: " + terrainName +
-    "   FOOD: " + (hasFood ? "yes" : "no") +
-    "   ORGANISM: " + organismText +
-    "   SETTLEMENT: " + settlementText
-  );
+  setElementClass(inspectDetailsText, "inspect-grid");
+  setElementHtml(inspectDetailsText, detailChips.join(""));
 }
 
 function getTileFromCanvasEvent(event) {
