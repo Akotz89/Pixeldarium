@@ -92,5 +92,11 @@ const world = {
   interstellarFleetReady: false,
   interstellarFleetActive: 0,
   interstellarFleetCompleted: 0,
-  lastInterstellarFleetTick: 0
+  lastInterstellarFleetTick: 0,
+  nextEmpireSectorId: 1,
+  empireSectors: [],
+  empireSectorProgress: 0,
+  empireSectorReady: false,
+  empireSectorCount: 0,
+  lastEmpireSectorTick: 0
 };

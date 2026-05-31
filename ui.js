@@ -342,6 +342,9 @@ function getSettlementSummary() {
     interstellarFleetCompleted: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
     interstellarFleetProgress: Math.max(0, Number(world.interstellarFleetProgress) || 0),
     interstellarFleetReady: Boolean(world.interstellarFleetReady),
+    empireSectors: Array.isArray(world.empireSectors) ? world.empireSectors.length : 0,
+    empireSectorProgress: Math.max(0, Number(world.empireSectorProgress) || 0),
+    empireSectorReady: Boolean(world.empireSectorReady),
     topSettlement: topSettlement
   };
 }
@@ -385,6 +388,9 @@ function updateSettlementSummary() {
     "   fleets " + summary.interstellarFleetCompleted + "/" + summary.interstellarFleets +
     " build " + summary.interstellarFleetProgress.toFixed(1) + "/" + CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD +
     " " + (summary.interstellarFleetReady ? "ready" : "waiting") +
+    "   sectors " + summary.empireSectors +
+    " build " + summary.empireSectorProgress.toFixed(1) + "/" + CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD +
+    " " + (summary.empireSectorReady ? "forming" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -582,6 +588,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " stars " + (Array.isArray(world.starSystems) ? world.starSystems.length : 0) + " map " + Math.max(0, Number(world.starMapProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " galactic claims " + Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " influence " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " fleets " + Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)) + "/" + (Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0) + " build " + Math.max(0, Number(world.interstellarFleetProgress) || 0).toFixed(1) : "") +
+      (settlement.isColony ? " sectors " + (Array.isArray(world.empireSectors) ? world.empireSectors.length : 0) + " build " + Math.max(0, Number(world.empireSectorProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

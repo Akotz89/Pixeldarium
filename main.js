@@ -70,6 +70,12 @@ function clearWorld() {
   world.interstellarFleetActive = 0;
   world.interstellarFleetCompleted = 0;
   world.lastInterstellarFleetTick = 0;
+  world.nextEmpireSectorId = 1;
+  world.empireSectors = [];
+  world.empireSectorProgress = 0;
+  world.empireSectorReady = false;
+  world.empireSectorCount = 0;
+  world.lastEmpireSectorTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

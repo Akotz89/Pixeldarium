@@ -198,6 +198,17 @@ function copyInterstellarFleetForSave(fleet) {
   };
 }
 
+function copyEmpireSectorForSave(sector) {
+  return {
+    id: sector.id,
+    systemId: sector.systemId,
+    foundedTick: sector.foundedTick,
+    controlValue: sector.controlValue,
+    controlRadius: sector.controlRadius,
+    isActive: sector.isActive
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -299,6 +310,18 @@ function getInterstellarFleetsForSave() {
   return world.interstellarFleets.map(copyInterstellarFleetForSave);
 }
 
+function getEmpireSectorsForSave() {
+  if (typeof updateEmpireSectorReadiness === "function") {
+    updateEmpireSectorReadiness();
+  }
+
+  if (!Array.isArray(world.empireSectors)) {
+    return [];
+  }
+
+  return world.empireSectors.map(copyEmpireSectorForSave);
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -316,6 +339,10 @@ function createWorldSaveData() {
 
   if (typeof updateInterstellarFleetReadiness === "function") {
     updateInterstellarFleetReadiness();
+  }
+
+  if (typeof updateEmpireSectorReadiness === "function") {
+    updateEmpireSectorReadiness();
   }
 
   return {
@@ -364,6 +391,11 @@ function createWorldSaveData() {
     interstellarFleetActive: Math.max(0, Math.round(Number(world.interstellarFleetActive) || 0)),
     interstellarFleetCompleted: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
     lastInterstellarFleetTick: Math.max(0, Math.round(Number(world.lastInterstellarFleetTick) || 0)),
+    nextEmpireSectorId: Math.max(1, Math.round(Number(world.nextEmpireSectorId) || 1)),
+    empireSectorProgress: Math.max(0, Number(world.empireSectorProgress) || 0),
+    empireSectorReady: Boolean(world.empireSectorReady),
+    empireSectorCount: Math.max(0, Math.round(Number(world.empireSectorCount) || 0)),
+    lastEmpireSectorTick: Math.max(0, Math.round(Number(world.lastEmpireSectorTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -477,7 +509,15 @@ function createWorldSaveData() {
       interstellarFleetBuildThreshold: CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD,
       interstellarFleetTravelTicks: CONFIG.INTERSTELLAR_FLEET_TRAVEL_TICKS,
       interstellarFleetMaxMissions: CONFIG.INTERSTELLAR_FLEET_MAX_MISSIONS,
-      empireNetworkCompletedFleets: CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS
+      empireNetworkCompletedFleets: CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS,
+      empireSectorMinCompletedFleets: CONFIG.EMPIRE_SECTOR_MIN_COMPLETED_FLEETS,
+      empireSectorBuildInterval: CONFIG.EMPIRE_SECTOR_BUILD_INTERVAL,
+      empireSectorProgressPerCompletedFleet: CONFIG.EMPIRE_SECTOR_PROGRESS_PER_COMPLETED_FLEET,
+      empireSectorProgressPerClaimedSystem: CONFIG.EMPIRE_SECTOR_PROGRESS_PER_CLAIMED_SYSTEM,
+      empireSectorProgressPerInfrastructure: CONFIG.EMPIRE_SECTOR_PROGRESS_PER_INFRASTRUCTURE,
+      empireSectorBuildThreshold: CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD,
+      empireSectorMaxSectors: CONFIG.EMPIRE_SECTOR_MAX_SECTORS,
+      galacticEmpireSectorCount: CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -490,7 +530,8 @@ function createWorldSaveData() {
     planetaryBodies: getPlanetaryBodiesForSave(),
     probeMissions: getProbeMissionsForSave(),
     starSystems: getStarSystemsForSave(),
-    interstellarFleets: getInterstellarFleetsForSave()
+    interstellarFleets: getInterstellarFleetsForSave(),
+    empireSectors: getEmpireSectorsForSave()
   };
 }
 
@@ -877,6 +918,33 @@ function restoreInterstellarFleets(fleets) {
   }
 
   return fleets.map(restoreInterstellarFleet);
+}
+
+function restoreEmpireSector(sector) {
+  sector = sector || {};
+
+  var restoredSector = {
+    id: Math.max(1, Math.round(restoreNumber(sector.id, world.nextEmpireSectorId))),
+    systemId: Math.max(1, Math.round(restoreNumber(sector.systemId, 1))),
+    foundedTick: Math.max(0, Math.round(restoreNumber(sector.foundedTick, 0))),
+    controlValue: Math.max(1, Math.round(restoreNumber(sector.controlValue, 40))),
+    controlRadius: Math.max(0.08, restoreNumber(sector.controlRadius, 0.18)),
+    isActive: sector.isActive !== false
+  };
+
+  if (restoredSector.id >= world.nextEmpireSectorId) {
+    world.nextEmpireSectorId = restoredSector.id + 1;
+  }
+
+  return restoredSector;
+}
+
+function restoreEmpireSectors(sectors) {
+  if (!Array.isArray(sectors)) {
+    return [];
+  }
+
+  return sectors.map(restoreEmpireSector);
 }
 
 function restoreOrganism(organism) {
@@ -1398,6 +1466,38 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.empireNetworkCompletedFleets === "number") {
     CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS = saveConfig.empireNetworkCompletedFleets;
   }
+
+  if (typeof saveConfig.empireSectorMinCompletedFleets === "number") {
+    CONFIG.EMPIRE_SECTOR_MIN_COMPLETED_FLEETS = saveConfig.empireSectorMinCompletedFleets;
+  }
+
+  if (typeof saveConfig.empireSectorBuildInterval === "number") {
+    CONFIG.EMPIRE_SECTOR_BUILD_INTERVAL = saveConfig.empireSectorBuildInterval;
+  }
+
+  if (typeof saveConfig.empireSectorProgressPerCompletedFleet === "number") {
+    CONFIG.EMPIRE_SECTOR_PROGRESS_PER_COMPLETED_FLEET = saveConfig.empireSectorProgressPerCompletedFleet;
+  }
+
+  if (typeof saveConfig.empireSectorProgressPerClaimedSystem === "number") {
+    CONFIG.EMPIRE_SECTOR_PROGRESS_PER_CLAIMED_SYSTEM = saveConfig.empireSectorProgressPerClaimedSystem;
+  }
+
+  if (typeof saveConfig.empireSectorProgressPerInfrastructure === "number") {
+    CONFIG.EMPIRE_SECTOR_PROGRESS_PER_INFRASTRUCTURE = saveConfig.empireSectorProgressPerInfrastructure;
+  }
+
+  if (typeof saveConfig.empireSectorBuildThreshold === "number") {
+    CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD = saveConfig.empireSectorBuildThreshold;
+  }
+
+  if (typeof saveConfig.empireSectorMaxSectors === "number") {
+    CONFIG.EMPIRE_SECTOR_MAX_SECTORS = saveConfig.empireSectorMaxSectors;
+  }
+
+  if (typeof saveConfig.galacticEmpireSectorCount === "number") {
+    CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT = saveConfig.galacticEmpireSectorCount;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -1415,6 +1515,7 @@ function applyWorldSaveData(saveData) {
   world.nextProbeMissionId = Math.max(1, Math.round(restoreNumber(saveData.nextProbeMissionId, 1)));
   world.nextStarSystemId = Math.max(1, Math.round(restoreNumber(saveData.nextStarSystemId, 1)));
   world.nextInterstellarFleetId = Math.max(1, Math.round(restoreNumber(saveData.nextInterstellarFleetId, 1)));
+  world.nextEmpireSectorId = Math.max(1, Math.round(restoreNumber(saveData.nextEmpireSectorId, 1)));
   world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
@@ -1443,6 +1544,10 @@ function applyWorldSaveData(saveData) {
   world.interstellarFleetActive = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetActive, 0)));
   world.interstellarFleetCompleted = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetCompleted, 0)));
   world.lastInterstellarFleetTick = Math.max(0, Math.round(restoreNumber(saveData.lastInterstellarFleetTick, 0)));
+  world.empireSectorProgress = Math.max(0, restoreNumber(saveData.empireSectorProgress, 0));
+  world.empireSectorReady = Boolean(saveData.empireSectorReady);
+  world.empireSectorCount = Math.max(0, Math.round(restoreNumber(saveData.empireSectorCount, 0)));
+  world.lastEmpireSectorTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireSectorTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -1451,6 +1556,7 @@ function applyWorldSaveData(saveData) {
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
   world.starSystems = restoreStarSystems(saveData.starSystems);
   world.interstellarFleets = restoreInterstellarFleets(saveData.interstellarFleets);
+  world.empireSectors = restoreEmpireSectors(saveData.empireSectors);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
@@ -1491,6 +1597,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateInterstellarFleetReadiness === "function") {
     updateInterstellarFleetReadiness();
+  }
+
+  if (typeof updateEmpireSectorReadiness === "function") {
+    updateEmpireSectorReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

@@ -404,6 +404,38 @@ function getRenderedStarSystemById(systemId) {
   return null;
 }
 
+function drawEmpireSectors() {
+  if (!Array.isArray(world.empireSectors) || world.empireSectors.length === 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+  var mapRadius = 88;
+  var galacticEmpire = world.era === "Galactic Empire";
+
+  for (var i = 0; i < world.empireSectors.length; i++) {
+    var sector = world.empireSectors[i];
+    var system = getRenderedStarSystemById(sector.systemId);
+
+    if (!system) {
+      continue;
+    }
+
+    var sectorX = centerX + system.mapX * mapRadius;
+    var sectorY = centerY + system.mapY * mapRadius;
+    var sectorRadius = Math.max(8, Math.round((Number(sector.controlRadius) || 0.18) * mapRadius));
+
+    ctx.beginPath();
+    ctx.arc(sectorX, sectorY, sectorRadius, 0, Math.PI * 2);
+    ctx.fillStyle = galacticEmpire ? "rgba(255, 242, 107, 0.14)" : "rgba(200, 132, 255, 0.12)";
+    ctx.fill();
+    ctx.strokeStyle = galacticEmpire ? "rgba(255, 242, 107, 0.44)" : "rgba(200, 132, 255, 0.34)";
+    ctx.lineWidth = galacticEmpire ? 2 : 1;
+    ctx.stroke();
+  }
+}
+
 function drawInterstellarFleets() {
   if (!Array.isArray(world.interstellarFleets) || world.interstellarFleets.length === 0) {
     return;
@@ -481,6 +513,7 @@ window.drawWorld = function() {
   drawOrbitalAssets();
   drawPlanetaryBodies();
   drawProbeMissions();
+  drawEmpireSectors();
   drawInterstellarFleets();
   drawStarSystems();
   drawInspectSelection();

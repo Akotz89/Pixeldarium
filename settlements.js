@@ -840,7 +840,11 @@ function updateProbeMissionTravel() {
 }
 
 function updateProbeMissionEra() {
-  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+    world.era = "Galactic Empire";
+  } else if (getEmpireSectorCount() > 0) {
+    world.era = "Empire Sectors";
+  } else if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
     world.era = "Empire Network";
   } else if (getInterstellarFleetCount() > 0) {
     world.era = "Interstellar Fleets";
@@ -1011,7 +1015,11 @@ function getClaimedStarSystemCount() {
 }
 
 function updateStarMapEra() {
-  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+    world.era = "Galactic Empire";
+  } else if (getEmpireSectorCount() > 0) {
+    world.era = "Empire Sectors";
+  } else if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
     world.era = "Empire Network";
   } else if (getInterstellarFleetCount() > 0) {
     world.era = "Interstellar Fleets";
@@ -1103,7 +1111,11 @@ function getNextClaimableStarSystem() {
 function updateGalacticInfluenceEra() {
   world.galacticClaimedSystems = getClaimedStarSystemCount();
 
-  if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+    world.era = "Galactic Empire";
+  } else if (getEmpireSectorCount() > 0) {
+    world.era = "Empire Sectors";
+  } else if (getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
     world.era = "Empire Network";
   } else if (getInterstellarFleetCount() > 0) {
     world.era = "Interstellar Fleets";
@@ -1330,7 +1342,11 @@ function getCompletedInterstellarFleetCount() {
 function updateInterstellarFleetEra() {
   updateInterstellarFleetTravel();
 
-  if (world.interstellarFleetCompleted >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
+  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+    world.era = "Galactic Empire";
+  } else if (getEmpireSectorCount() > 0) {
+    world.era = "Empire Sectors";
+  } else if (world.interstellarFleetCompleted >= CONFIG.EMPIRE_NETWORK_COMPLETED_FLEETS) {
     world.era = "Empire Network";
   } else if (world.interstellarFleets.length > 0) {
     world.era = "Interstellar Fleets";
@@ -1386,6 +1402,161 @@ function updateInterstellarFleetState() {
   }
 
   updateInterstellarFleetReadiness();
+}
+
+function ensureEmpireSectorState() {
+  if (!Array.isArray(world.empireSectors)) {
+    world.empireSectors = [];
+  }
+
+  if (typeof world.nextEmpireSectorId !== "number" || world.nextEmpireSectorId < 1) {
+    world.nextEmpireSectorId = 1;
+  }
+
+  world.empireSectorProgress = Math.max(0, restoreSettlementGrowthNumber(world.empireSectorProgress, 0));
+  world.empireSectorReady = Boolean(world.empireSectorReady);
+  world.empireSectorCount = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.empireSectorCount, 0)));
+  world.lastEmpireSectorTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastEmpireSectorTick, 0)));
+}
+
+function allocateEmpireSectorId() {
+  ensureEmpireSectorState();
+
+  var sectorId = world.nextEmpireSectorId;
+  world.nextEmpireSectorId++;
+  return sectorId;
+}
+
+function normalizeEmpireSector(sector) {
+  sector.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(sector.id, world.nextEmpireSectorId)));
+  sector.systemId = Math.max(1, Math.round(restoreSettlementGrowthNumber(sector.systemId, 1)));
+  sector.foundedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(sector.foundedTick, world.tick)));
+  sector.controlValue = Math.max(1, Math.round(restoreSettlementGrowthNumber(sector.controlValue, 40 + sector.id * 9)));
+  sector.controlRadius = Math.max(0.08, restoreSettlementGrowthNumber(sector.controlRadius, 0.18 + (sector.id % 3) * 0.04));
+  sector.isActive = sector.isActive !== false;
+
+  if (sector.id >= world.nextEmpireSectorId) {
+    world.nextEmpireSectorId = sector.id + 1;
+  }
+}
+
+function normalizeEmpireSectors() {
+  ensureEmpireSectorState();
+
+  for (var i = 0; i < world.empireSectors.length; i++) {
+    normalizeEmpireSector(world.empireSectors[i]);
+  }
+
+  world.empireSectorCount = world.empireSectors.length;
+}
+
+function getEmpireSectorCount() {
+  normalizeEmpireSectors();
+  return world.empireSectorCount;
+}
+
+function hasEmpireSectorForSystem(systemId) {
+  normalizeEmpireSectors();
+
+  for (var i = 0; i < world.empireSectors.length; i++) {
+    if (world.empireSectors[i].systemId === systemId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getNextSectorSystem() {
+  var claimedSystems = getClaimedStarSystems();
+  var bestSystem = null;
+
+  for (var i = 0; i < claimedSystems.length; i++) {
+    var system = claimedSystems[i];
+
+    if (hasEmpireSectorForSystem(system.id)) {
+      continue;
+    }
+
+    if (!bestSystem || system.influenceValue > bestSystem.influenceValue || (system.influenceValue === bestSystem.influenceValue && system.id < bestSystem.id)) {
+      bestSystem = system;
+    }
+  }
+
+  return bestSystem;
+}
+
+function makeEmpireSector(system) {
+  var sectorId = allocateEmpireSectorId();
+
+  return {
+    id: sectorId,
+    systemId: system.id,
+    foundedTick: world.tick,
+    controlValue: Math.max(1, Math.round(Number(system.influenceValue || system.mapValue) || 1)),
+    controlRadius: 0.18 + (sectorId % 3) * 0.04,
+    isActive: true
+  };
+}
+
+function updateEmpireSectorEra() {
+  normalizeEmpireSectors();
+
+  if (world.empireSectorCount >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+    world.era = "Galactic Empire";
+  } else if (world.empireSectorCount > 0) {
+    world.era = "Empire Sectors";
+  } else {
+    updateInterstellarFleetEra();
+  }
+}
+
+function updateEmpireSectorReadiness() {
+  normalizeEmpireSectors();
+
+  var maxSectors = Math.max(1, Math.round(Number(CONFIG.EMPIRE_SECTOR_MAX_SECTORS) || 1));
+  world.empireSectorReady = Boolean(
+    getCompletedInterstellarFleetCount() >= CONFIG.EMPIRE_SECTOR_MIN_COMPLETED_FLEETS &&
+    world.empireSectors.length < maxSectors &&
+    getNextSectorSystem()
+  );
+
+  updateEmpireSectorEra();
+  return world.empireSectorReady;
+}
+
+function updateEmpireSectorState() {
+  if (!updateEmpireSectorReadiness()) {
+    return;
+  }
+
+  var sectorInterval = Math.max(1, Math.round(Number(CONFIG.EMPIRE_SECTOR_BUILD_INTERVAL) || 1));
+
+  if (world.tick - world.lastEmpireSectorTick < sectorInterval) {
+    return;
+  }
+
+  world.lastEmpireSectorTick = world.tick;
+  world.empireSectorProgress +=
+    getCompletedInterstellarFleetCount() * CONFIG.EMPIRE_SECTOR_PROGRESS_PER_COMPLETED_FLEET +
+    getClaimedStarSystemCount() * CONFIG.EMPIRE_SECTOR_PROGRESS_PER_CLAIMED_SYSTEM +
+    world.orbitalInfrastructureScore * CONFIG.EMPIRE_SECTOR_PROGRESS_PER_INFRASTRUCTURE;
+
+  var sectorThreshold = Math.max(1, Number(CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD) || 1);
+  var maxSectors = Math.max(1, Math.round(Number(CONFIG.EMPIRE_SECTOR_MAX_SECTORS) || 1));
+
+  while (world.empireSectorProgress >= sectorThreshold && world.empireSectors.length < maxSectors) {
+    var system = getNextSectorSystem();
+
+    if (!system) {
+      break;
+    }
+
+    world.empireSectors.push(makeEmpireSector(system));
+    world.empireSectorProgress -= sectorThreshold;
+  }
+
+  updateEmpireSectorReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1738,4 +1909,5 @@ function updateSettlements() {
   updateStarMapState();
   updateGalacticInfluenceState();
   updateInterstellarFleetState();
+  updateEmpireSectorState();
 }
