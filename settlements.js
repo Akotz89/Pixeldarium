@@ -1830,6 +1830,65 @@ function getDistanceToNearestSettlement(x, y, searchRadius) {
   return nearestDistance;
 }
 
+function getNearestSettlementInRadius(x, y, searchRadius, requireInfluence) {
+  ensureSettlementState();
+
+  var buckets = world.settlementBuckets;
+  var bucketSize = getSettlementBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(searchRadius) || 0));
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var nearestSettlement = null;
+  var nearestDistance = Infinity;
+
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = buckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var settlement = bucket[i];
+        var distance = Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
+
+        if (distance > normalizedRadius) {
+          continue;
+        }
+
+        if (requireInfluence && distance > Math.max(2, Math.round(Number(settlement.influenceRadius) || 0))) {
+          continue;
+        }
+
+        if (distance < nearestDistance) {
+          nearestSettlement = settlement;
+          nearestDistance = distance;
+        }
+      }
+    }
+  }
+
+  return nearestSettlement;
+}
+
+function getNearestInfluencingSettlement(x, y) {
+  var summary = world.settlementSummary || refreshSettlementSummaryCache();
+
+  if (!summary) {
+    return null;
+  }
+
+  return getNearestSettlementInRadius(
+    x,
+    y,
+    Math.max(2, Math.round(Number(summary.maxInfluenceRadius) || 0)),
+    true
+  );
+}
+
 function countFoodNearTile(x, y, radius) {
   return countFoodInRadius(x, y, radius);
 }
@@ -2088,6 +2147,7 @@ function refreshSettlementSummaryCache() {
   var totalClaimedFood = 0;
   var totalOutposts = 0;
   var totalColonies = 0;
+  var maxInfluenceRadius = 0;
   var totalRoutes = Array.isArray(world.settlementRoutes) ? world.settlementRoutes.length : 0;
   var activeRoutes = 0;
   var totalRouteFoodTransferred = 0;
@@ -2124,6 +2184,7 @@ function refreshSettlementSummaryCache() {
     totalDevelopment += Math.max(0, Number(settlement.development) || 0);
     totalClaimedTiles += Math.max(0, Number(settlement.claimedTiles) || 0);
     totalClaimedFood += Math.max(0, Number(settlement.claimedFood) || 0);
+    maxInfluenceRadius = Math.max(maxInfluenceRadius, Math.max(2, Math.round(Number(settlement.influenceRadius) || 0)));
 
     if (
       !topSettlement ||
@@ -2144,6 +2205,7 @@ function refreshSettlementSummaryCache() {
     totalDevelopment: totalDevelopment,
     totalClaimedTiles: totalClaimedTiles,
     totalClaimedFood: totalClaimedFood,
+    maxInfluenceRadius: maxInfluenceRadius,
     totalOutposts: totalOutposts,
     totalColonies: totalColonies,
     totalRoutes: totalRoutes,
