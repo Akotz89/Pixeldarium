@@ -45,6 +45,8 @@ const world = {
   tick: 0,
   era: "Organisms",
   organisms: [],
+  organismBuckets: {},
+  organismsByLineage: {},
   food: [],
   foodPositions: {},
   foodBuckets: {},

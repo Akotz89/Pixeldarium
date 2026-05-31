@@ -90,20 +90,7 @@ function applyTuningFromControls(redraw) {
 }
 
 function getNearestOrganismToTile(tileX, tileY) {
-  var nearestOrganism = null;
-  var nearestDistance = Infinity;
-
-  for (var i = 0; i < world.organisms.length; i++) {
-    var organism = world.organisms[i];
-    var distance = Math.abs(organism.x - tileX) + Math.abs(organism.y - tileY);
-
-    if (distance < nearestDistance && distance <= 1) {
-      nearestOrganism = organism;
-      nearestDistance = distance;
-    }
-  }
-
-  return nearestOrganism;
+  return getNearestOrganismInRadius(tileX, tileY, 1);
 }
 
 function getNearestSettlementToTile(tileX, tileY) {
