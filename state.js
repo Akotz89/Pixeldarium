@@ -66,5 +66,10 @@ const world = {
   nextOrbitalAssetId: 1,
   orbitalAssets: [],
   orbitalInfrastructureScore: 0,
-  orbitalPlatformReady: false
+  orbitalPlatformReady: false,
+  nextPlanetaryBodyId: 1,
+  planetaryBodies: [],
+  planetarySurveyProgress: 0,
+  planetarySurveyReady: false,
+  lastPlanetarySurveyTick: 0
 };

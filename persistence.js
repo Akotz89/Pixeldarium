@@ -148,6 +148,18 @@ function copyOrbitalAssetForSave(asset) {
   };
 }
 
+function copyPlanetaryBodyForSave(body) {
+  return {
+    id: body.id,
+    name: body.name,
+    discoveredTick: body.discoveredTick,
+    surveyValue: body.surveyValue,
+    orbitAngle: body.orbitAngle,
+    orbitRadius: body.orbitRadius,
+    isSurveyed: body.isSurveyed
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -197,6 +209,18 @@ function getOrbitalAssetsForSave() {
   return world.orbitalAssets.map(copyOrbitalAssetForSave);
 }
 
+function getPlanetaryBodiesForSave() {
+  if (typeof updatePlanetarySurveyReadiness === "function") {
+    updatePlanetarySurveyReadiness();
+  }
+
+  if (!Array.isArray(world.planetaryBodies)) {
+    return [];
+  }
+
+  return world.planetaryBodies.map(copyPlanetaryBodyForSave);
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -222,6 +246,7 @@ function createWorldSaveData() {
     nextSettlementId: world.nextSettlementId,
     nextSettlementRouteId: world.nextSettlementRouteId,
     nextOrbitalAssetId: Math.max(1, Math.round(Number(world.nextOrbitalAssetId) || 1)),
+    nextPlanetaryBodyId: Math.max(1, Math.round(Number(world.nextPlanetaryBodyId) || 1)),
     colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
     colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
     colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
@@ -232,6 +257,9 @@ function createWorldSaveData() {
     spaceProgramReady: Boolean(world.spaceProgramReady),
     orbitalInfrastructureScore: Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)),
     orbitalPlatformReady: Boolean(world.orbitalPlatformReady),
+    planetarySurveyProgress: Math.max(0, Number(world.planetarySurveyProgress) || 0),
+    planetarySurveyReady: Boolean(world.planetarySurveyReady),
+    lastPlanetarySurveyTick: Math.max(0, Math.round(Number(world.lastPlanetarySurveyTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -308,7 +336,14 @@ function createWorldSaveData() {
       spaceProgramProgressPerActiveRoute: CONFIG.SPACE_PROGRAM_PROGRESS_PER_ACTIVE_ROUTE,
       spaceProgramLaunchThreshold: CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD,
       orbitalAssetScore: CONFIG.ORBITAL_ASSET_SCORE,
-      orbitalPlatformScore: CONFIG.ORBITAL_PLATFORM_SCORE
+      orbitalPlatformScore: CONFIG.ORBITAL_PLATFORM_SCORE,
+      planetarySurveyMinInfrastructure: CONFIG.PLANETARY_SURVEY_MIN_INFRASTRUCTURE,
+      planetarySurveyInterval: CONFIG.PLANETARY_SURVEY_INTERVAL,
+      planetarySurveyProgressPerInfrastructure: CONFIG.PLANETARY_SURVEY_PROGRESS_PER_INFRASTRUCTURE,
+      planetarySurveyProgressPerOrbitalAsset: CONFIG.PLANETARY_SURVEY_PROGRESS_PER_ORBITAL_ASSET,
+      planetaryDiscoveryThreshold: CONFIG.PLANETARY_DISCOVERY_THRESHOLD,
+      planetarySurveyMaxBodies: CONFIG.PLANETARY_SURVEY_MAX_BODIES,
+      interplanetaryBodyCount: CONFIG.INTERPLANETARY_BODY_COUNT
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -317,7 +352,8 @@ function createWorldSaveData() {
     lineages: getLineagesForSave(),
     settlements: getSettlementsForSave(),
     settlementRoutes: getSettlementRoutesForSave(),
-    orbitalAssets: getOrbitalAssetsForSave()
+    orbitalAssets: getOrbitalAssetsForSave(),
+    planetaryBodies: getPlanetaryBodiesForSave()
   };
 }
 
@@ -580,6 +616,35 @@ function restoreOrbitalAssets(assets) {
   }
 
   return assets.map(restoreOrbitalAsset);
+}
+
+function restorePlanetaryBody(body) {
+  body = body || {};
+
+  var id = Math.max(1, Math.round(restoreNumber(body.id, world.nextPlanetaryBodyId)));
+  var restoredBody = {
+    id: id,
+    name: String(body.name || "P-" + String(100 + id)),
+    discoveredTick: Math.max(0, Math.round(restoreNumber(body.discoveredTick, 0))),
+    surveyValue: Math.max(1, Math.round(restoreNumber(body.surveyValue, 20 + id * 7))),
+    orbitAngle: Math.max(0, Math.round(restoreNumber(body.orbitAngle, id * 67))) % 360,
+    orbitRadius: Math.max(1, Math.round(restoreNumber(body.orbitRadius, 64 + id * 10))),
+    isSurveyed: body.isSurveyed !== false
+  };
+
+  if (restoredBody.id >= world.nextPlanetaryBodyId) {
+    world.nextPlanetaryBodyId = restoredBody.id + 1;
+  }
+
+  return restoredBody;
+}
+
+function restorePlanetaryBodies(bodies) {
+  if (!Array.isArray(bodies)) {
+    return [];
+  }
+
+  return bodies.map(restorePlanetaryBody);
 }
 
 function restoreOrganism(organism) {
@@ -953,6 +1018,34 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.orbitalPlatformScore === "number") {
     CONFIG.ORBITAL_PLATFORM_SCORE = saveConfig.orbitalPlatformScore;
   }
+
+  if (typeof saveConfig.planetarySurveyMinInfrastructure === "number") {
+    CONFIG.PLANETARY_SURVEY_MIN_INFRASTRUCTURE = saveConfig.planetarySurveyMinInfrastructure;
+  }
+
+  if (typeof saveConfig.planetarySurveyInterval === "number") {
+    CONFIG.PLANETARY_SURVEY_INTERVAL = saveConfig.planetarySurveyInterval;
+  }
+
+  if (typeof saveConfig.planetarySurveyProgressPerInfrastructure === "number") {
+    CONFIG.PLANETARY_SURVEY_PROGRESS_PER_INFRASTRUCTURE = saveConfig.planetarySurveyProgressPerInfrastructure;
+  }
+
+  if (typeof saveConfig.planetarySurveyProgressPerOrbitalAsset === "number") {
+    CONFIG.PLANETARY_SURVEY_PROGRESS_PER_ORBITAL_ASSET = saveConfig.planetarySurveyProgressPerOrbitalAsset;
+  }
+
+  if (typeof saveConfig.planetaryDiscoveryThreshold === "number") {
+    CONFIG.PLANETARY_DISCOVERY_THRESHOLD = saveConfig.planetaryDiscoveryThreshold;
+  }
+
+  if (typeof saveConfig.planetarySurveyMaxBodies === "number") {
+    CONFIG.PLANETARY_SURVEY_MAX_BODIES = saveConfig.planetarySurveyMaxBodies;
+  }
+
+  if (typeof saveConfig.interplanetaryBodyCount === "number") {
+    CONFIG.INTERPLANETARY_BODY_COUNT = saveConfig.interplanetaryBodyCount;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -966,6 +1059,7 @@ function applyWorldSaveData(saveData) {
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
   world.nextOrbitalAssetId = Math.max(1, Math.round(restoreNumber(saveData.nextOrbitalAssetId, 1)));
+  world.nextPlanetaryBodyId = Math.max(1, Math.round(restoreNumber(saveData.nextPlanetaryBodyId, 1)));
   world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
   world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
   world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
@@ -976,10 +1070,14 @@ function applyWorldSaveData(saveData) {
   world.spaceProgramReady = Boolean(saveData.spaceProgramReady);
   world.orbitalInfrastructureScore = Math.max(0, Math.round(restoreNumber(saveData.orbitalInfrastructureScore, 0)));
   world.orbitalPlatformReady = Boolean(saveData.orbitalPlatformReady);
+  world.planetarySurveyProgress = Math.max(0, restoreNumber(saveData.planetarySurveyProgress, 0));
+  world.planetarySurveyReady = Boolean(saveData.planetarySurveyReady);
+  world.lastPlanetarySurveyTick = Math.max(0, Math.round(restoreNumber(saveData.lastPlanetarySurveyTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
   world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
+  world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
@@ -1000,6 +1098,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateOrbitalInfrastructureState === "function") {
     updateOrbitalInfrastructureState();
+  }
+
+  if (typeof updatePlanetarySurveyReadiness === "function") {
+    updatePlanetarySurveyReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

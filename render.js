@@ -275,6 +275,33 @@ function drawOrbitalAssets() {
   }
 }
 
+function drawPlanetaryBodies() {
+  if (!Array.isArray(world.planetaryBodies) || world.planetaryBodies.length === 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+  var interplanetary = world.era === "Interplanetary";
+
+  for (var i = 0; i < world.planetaryBodies.length; i++) {
+    var body = world.planetaryBodies[i];
+    var angle = ((body.orbitAngle + world.tick * 0.02) % 360) * Math.PI / 180;
+    var radius = Math.max(1, Math.round(Number(body.orbitRadius) || 64)) * 0.72;
+    var bodyX = centerX + Math.cos(angle) * radius;
+    var bodyY = centerY + Math.sin(angle) * radius;
+    var size = interplanetary ? 7 : 5;
+
+    ctx.beginPath();
+    ctx.arc(bodyX, bodyY, size, 0, Math.PI * 2);
+    ctx.fillStyle = interplanetary ? "rgba(112, 240, 208, 0.92)" : "rgba(242, 184, 91, 0.88)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
 function drawScanlines() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
@@ -308,6 +335,7 @@ window.drawWorld = function() {
   drawSettlements();
   drawOrganisms();
   drawOrbitalAssets();
+  drawPlanetaryBodies();
   drawInspectSelection();
   drawScanlines();
 };

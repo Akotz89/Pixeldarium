@@ -44,6 +44,11 @@ function clearWorld() {
   world.orbitalAssets = [];
   world.orbitalInfrastructureScore = 0;
   world.orbitalPlatformReady = false;
+  world.nextPlanetaryBodyId = 1;
+  world.planetaryBodies = [];
+  world.planetarySurveyProgress = 0;
+  world.planetarySurveyReady = false;
+  world.lastPlanetarySurveyTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

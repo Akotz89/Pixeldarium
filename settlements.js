@@ -587,6 +587,138 @@ function updateOrbitalInfrastructureState() {
   } else if (world.orbitalLaunches > 0) {
     world.era = "Orbital";
   }
+
+  updatePlanetarySurveyReadiness();
+}
+
+function ensurePlanetaryState() {
+  if (!Array.isArray(world.planetaryBodies)) {
+    world.planetaryBodies = [];
+  }
+
+  if (typeof world.nextPlanetaryBodyId !== "number" || world.nextPlanetaryBodyId < 1) {
+    world.nextPlanetaryBodyId = 1;
+  }
+
+  world.planetarySurveyProgress = Math.max(0, restoreSettlementGrowthNumber(world.planetarySurveyProgress, 0));
+  world.planetarySurveyReady = Boolean(world.planetarySurveyReady);
+  world.lastPlanetarySurveyTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastPlanetarySurveyTick, 0)));
+}
+
+function allocatePlanetaryBodyId() {
+  ensurePlanetaryState();
+
+  var bodyId = world.nextPlanetaryBodyId;
+  world.nextPlanetaryBodyId++;
+  return bodyId;
+}
+
+function getPlanetaryBodyName(bodyId) {
+  return "P-" + String(100 + bodyId);
+}
+
+function normalizePlanetaryBody(body) {
+  body.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(body.id, world.nextPlanetaryBodyId)));
+  body.name = String(body.name || getPlanetaryBodyName(body.id));
+  body.discoveredTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(body.discoveredTick, world.tick)));
+  body.surveyValue = Math.max(1, Math.round(restoreSettlementGrowthNumber(body.surveyValue, 20 + body.id * 7)));
+  body.orbitAngle = Math.max(0, Math.round(restoreSettlementGrowthNumber(body.orbitAngle, body.id * 67))) % 360;
+  body.orbitRadius = Math.max(1, Math.round(restoreSettlementGrowthNumber(body.orbitRadius, 64 + body.id * 10)));
+  body.isSurveyed = body.isSurveyed !== false;
+
+  if (body.id >= world.nextPlanetaryBodyId) {
+    world.nextPlanetaryBodyId = body.id + 1;
+  }
+}
+
+function makePlanetaryBody() {
+  var bodyId = allocatePlanetaryBodyId();
+
+  return {
+    id: bodyId,
+    name: getPlanetaryBodyName(bodyId),
+    discoveredTick: world.tick,
+    surveyValue: 20 + bodyId * 7,
+    orbitAngle: (bodyId * 67) % 360,
+    orbitRadius: 64 + bodyId * 10,
+    isSurveyed: true
+  };
+}
+
+function normalizePlanetaryBodies() {
+  ensurePlanetaryState();
+
+  for (var i = 0; i < world.planetaryBodies.length; i++) {
+    normalizePlanetaryBody(world.planetaryBodies[i]);
+  }
+}
+
+function getDiscoveredPlanetaryBodyCount() {
+  normalizePlanetaryBodies();
+
+  var discoveredBodies = 0;
+
+  for (var i = 0; i < world.planetaryBodies.length; i++) {
+    if (world.planetaryBodies[i].isSurveyed) {
+      discoveredBodies++;
+    }
+  }
+
+  return discoveredBodies;
+}
+
+function updatePlanetarySurveyEra() {
+  var discoveredBodies = getDiscoveredPlanetaryBodyCount();
+
+  if (discoveredBodies >= CONFIG.INTERPLANETARY_BODY_COUNT) {
+    world.era = "Interplanetary";
+  } else if (discoveredBodies > 0) {
+    world.era = "Planetary Survey";
+  } else if (world.orbitalPlatformReady) {
+    world.era = "Orbital Platform";
+  }
+}
+
+function updatePlanetarySurveyReadiness() {
+  ensurePlanetaryState();
+
+  world.planetarySurveyReady = Boolean(
+    world.orbitalPlatformReady &&
+    world.orbitalInfrastructureScore >= CONFIG.PLANETARY_SURVEY_MIN_INFRASTRUCTURE &&
+    world.planetaryBodies.length < CONFIG.PLANETARY_SURVEY_MAX_BODIES
+  );
+
+  updatePlanetarySurveyEra();
+  return world.planetarySurveyReady;
+}
+
+function updatePlanetarySurveyState() {
+  if (!updatePlanetarySurveyReadiness()) {
+    return;
+  }
+
+  var surveyInterval = Math.max(1, Math.round(Number(CONFIG.PLANETARY_SURVEY_INTERVAL) || 1));
+
+  if (world.tick - world.lastPlanetarySurveyTick < surveyInterval) {
+    return;
+  }
+
+  world.lastPlanetarySurveyTick = world.tick;
+  world.planetarySurveyProgress +=
+    world.orbitalInfrastructureScore * CONFIG.PLANETARY_SURVEY_PROGRESS_PER_INFRASTRUCTURE +
+    world.orbitalAssets.length * CONFIG.PLANETARY_SURVEY_PROGRESS_PER_ORBITAL_ASSET;
+
+  var discoveryThreshold = Math.max(1, Number(CONFIG.PLANETARY_DISCOVERY_THRESHOLD) || 1);
+
+  while (
+    world.planetarySurveyProgress >= discoveryThreshold &&
+    world.planetaryBodies.length < CONFIG.PLANETARY_SURVEY_MAX_BODIES
+  ) {
+    world.planetaryBodies.push(makePlanetaryBody());
+    world.planetarySurveyProgress -= discoveryThreshold;
+  }
+
+  updatePlanetarySurveyReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -934,4 +1066,5 @@ function updateSettlements() {
 
   var networkSummary = updateColonyNetworkState();
   updateSpaceProgramState(networkSummary);
+  updatePlanetarySurveyState();
 }

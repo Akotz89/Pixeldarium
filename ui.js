@@ -325,6 +325,9 @@ function getSettlementSummary() {
     orbitalAssets: Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0,
     orbitalInfrastructureScore: Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)),
     orbitalPlatformReady: Boolean(world.orbitalPlatformReady),
+    planetaryBodies: Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0,
+    planetarySurveyProgress: Math.max(0, Number(world.planetarySurveyProgress) || 0),
+    planetarySurveyReady: Boolean(world.planetarySurveyReady),
     topSettlement: topSettlement
   };
 }
@@ -353,6 +356,9 @@ function updateSettlementSummary() {
     "   orbit assets " + summary.orbitalAssets +
     " infra " + summary.orbitalInfrastructureScore +
     " " + (summary.orbitalPlatformReady ? "platform" : "orbital") +
+    "   planets " + summary.planetaryBodies +
+    " survey " + summary.planetarySurveyProgress.toFixed(1) + "/" + CONFIG.PLANETARY_DISCOVERY_THRESHOLD +
+    " " + (summary.planetarySurveyReady ? "surveying" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -545,6 +551,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " network " + Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)) : "") +
       (settlement.isColony ? " space " + Math.max(0, Number(world.spaceProgramProgress) || 0).toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD + " launches " + Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)) : "") +
       (settlement.isColony ? " orbit assets " + (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " infra " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)) : "") +
+      (settlement.isColony ? " planets " + (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " survey " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +
