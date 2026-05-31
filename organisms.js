@@ -70,6 +70,57 @@ function inheritOrganismTraits(parentTraits) {
   };
 }
 
+function allocateLineageId() {
+  var lineageId = world.nextLineageId;
+  world.nextLineageId++;
+  return lineageId;
+}
+
+function ensureOrganismLineage(organism) {
+  if (typeof organism.lineageId !== "number" || organism.lineageId < 1) {
+    organism.lineageId = allocateLineageId();
+  }
+
+  if (typeof organism.lineageParentId !== "number") {
+    organism.lineageParentId = 0;
+  }
+
+  if (typeof organism.generation !== "number") {
+    organism.generation = 0;
+  }
+
+  if (organism.lineageId >= world.nextLineageId) {
+    world.nextLineageId = organism.lineageId + 1;
+  }
+
+  return organism.lineageId;
+}
+
+function getTraitDivergenceScore(parentTraits, childTraits) {
+  return (
+    Math.abs(childTraits.vision - parentTraits.vision) / CONFIG.TRAIT_VISION_MUTATION_STEP +
+    Math.abs(childTraits.metabolism - parentTraits.metabolism) / CONFIG.TRAIT_METABOLISM_MUTATION_STEP +
+    Math.abs(childTraits.reproductionEnergy - parentTraits.reproductionEnergy) / CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP +
+    Math.abs(childTraits.movementTendency - parentTraits.movementTendency) / CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+  );
+}
+
+function assignChildLineage(child, parent, parentTraits) {
+  var childTraits = ensureOrganismTraits(child);
+  var divergenceScore = getTraitDivergenceScore(parentTraits, childTraits);
+  var parentLineageId = ensureOrganismLineage(parent);
+
+  child.generation = parent.generation + 1;
+
+  if (divergenceScore >= CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE) {
+    child.lineageId = allocateLineageId();
+    child.lineageParentId = parentLineageId;
+  } else {
+    child.lineageId = parentLineageId;
+    child.lineageParentId = parent.lineageParentId;
+  }
+}
+
 function ensureOrganismTraits(organism) {
   if (!organism.traits) {
     organism.traits = makeInitialOrganismTraits();
@@ -78,7 +129,7 @@ function ensureOrganismTraits(organism) {
   return organism.traits;
 }
 
-function makeOrganism(x, y) {
+function makeOrganism(x, y, lineageId) {
   return {
     x: x,
     y: y,
@@ -88,7 +139,10 @@ function makeOrganism(x, y) {
     age: 0,
     directionX: randomInt(3) - 1,
     directionY: randomInt(3) - 1,
-    traits: makeInitialOrganismTraits()
+    traits: makeInitialOrganismTraits(),
+    lineageId: lineageId || allocateLineageId(),
+    lineageParentId: 0,
+    generation: 0
   };
 }
 
@@ -154,11 +208,13 @@ function reproduceIfReady(organism) {
 
   var child = makeOrganism(
     organism.x + randomInt(3) - 1,
-    organism.y + randomInt(3) - 1
+    organism.y + randomInt(3) - 1,
+    organism.lineageId
   );
 
   child.energy = CONFIG.CHILD_ORGANISM_ENERGY;
   child.traits = inheritOrganismTraits(traits);
+  assignChildLineage(child, organism, traits);
   clampToWorld(child);
   child.prevX = child.x;
   child.prevY = child.y;

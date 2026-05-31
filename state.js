@@ -7,6 +7,7 @@ const foodText = document.getElementById("food");
 const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
 const traitSummaryText = document.getElementById("trait-summary");
+const lineageSummaryText = document.getElementById("lineage-summary");
 const traitHistoryCanvas = document.getElementById("trait-history");
 const traitHistoryCtx = traitHistoryCanvas.getContext("2d", { willReadFrequently: true });
 
@@ -46,5 +47,6 @@ const world = {
   maxUpdateMs: 0,
   maxDrawMs: 0,
   inspectedTile: null,
-  traitHistory: []
+  traitHistory: [],
+  nextLineageId: 1
 };

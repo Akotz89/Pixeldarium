@@ -52,7 +52,10 @@ function copyOrganismForSave(organism) {
     age: organism.age,
     directionX: organism.directionX,
     directionY: organism.directionY,
-    traits: copyOrganismTraitsForSave(traits)
+    traits: copyOrganismTraitsForSave(traits),
+    lineageId: ensureOrganismLineage(organism),
+    lineageParentId: organism.lineageParentId,
+    generation: organism.generation
   };
 }
 
@@ -85,6 +88,7 @@ function createWorldSaveData() {
     tick: world.tick,
     speed: world.speed,
     era: world.era,
+    nextLineageId: world.nextLineageId,
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -112,7 +116,9 @@ function createWorldSaveData() {
       traitMovementTendencyDefault: CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
       traitMovementTendencyMutationStep: CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP,
       traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
-      traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES
+      traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
+      lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
+      lineageColors: CONFIG.LINEAGE_COLORS.slice()
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -209,7 +215,7 @@ function restoreOrganismTraits(traits) {
 }
 
 function restoreOrganism(organism) {
-  return {
+  var restoredOrganism = {
     x: clamp(Math.round(Number(organism.x)), 0, WORLD_WIDTH - 1),
     y: clamp(Math.round(Number(organism.y)), 0, WORLD_HEIGHT - 1),
     prevX: clamp(Math.round(Number(organism.prevX)), 0, WORLD_WIDTH - 1),
@@ -218,8 +224,14 @@ function restoreOrganism(organism) {
     age: Number(organism.age),
     directionX: clamp(Math.round(Number(organism.directionX)), -1, 1),
     directionY: clamp(Math.round(Number(organism.directionY)), -1, 1),
-    traits: restoreOrganismTraits(organism.traits)
+    traits: restoreOrganismTraits(organism.traits),
+    lineageId: Math.round(restoreNumber(organism.lineageId, 0)),
+    lineageParentId: Math.max(0, Math.round(restoreNumber(organism.lineageParentId, 0))),
+    generation: Math.max(0, Math.round(restoreNumber(organism.generation, 0)))
   };
+
+  ensureOrganismLineage(restoredOrganism);
+  return restoredOrganism;
 }
 
 function restoreTraitHistorySample(sample) {
@@ -375,6 +387,14 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.traitHistoryMaxSamples === "number") {
     CONFIG.TRAIT_HISTORY_MAX_SAMPLES = saveConfig.traitHistoryMaxSamples;
   }
+
+  if (typeof saveConfig.lineageDivergenceScoreForNewLineage === "number") {
+    CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE = saveConfig.lineageDivergenceScoreForNewLineage;
+  }
+
+  if (Array.isArray(saveConfig.lineageColors) && saveConfig.lineageColors.length > 0) {
+    CONFIG.LINEAGE_COLORS = saveConfig.lineageColors.slice();
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -384,6 +404,7 @@ function applyWorldSaveData(saveData) {
   world.tick = Number(saveData.tick);
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
+  world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);

@@ -65,6 +65,12 @@ function drawFood() {
   }
 }
 
+function getLineageColor(organism) {
+  var lineageId = typeof organism.lineageId === "number" ? organism.lineageId : 1;
+  var colorIndex = (lineageId - 1) % CONFIG.LINEAGE_COLORS.length;
+  return CONFIG.LINEAGE_COLORS[colorIndex];
+}
+
 function getOrganismColor(organism) {
   if (organism.energy > 200) {
     return "#fff26b";
@@ -74,7 +80,7 @@ function getOrganismColor(organism) {
     return "#ff9c69";
   }
 
-  return "#72d7ff";
+  return getLineageColor(organism);
 }
 
 function drawOrganisms() {

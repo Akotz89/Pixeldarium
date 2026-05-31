@@ -25,6 +25,7 @@ function clearWorld() {
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
   world.inspectedTile = null;
+  world.nextLineageId = 1;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

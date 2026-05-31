@@ -17,6 +17,7 @@ function updateHud() {
 
   speedLabel.textContent = "Speed: " + world.speed + "x";
   updateTraitSummary();
+  updateLineageSummary();
   updateInspectPanel();
   drawTraitHistory();
 }
@@ -90,6 +91,52 @@ function updateTraitSummary() {
     "   metabolism " + summary.metabolism.toFixed(2) +
     "   reproduce " + summary.reproductionEnergy.toFixed(1) +
     "   roam " + summary.movementTendency.toFixed(2);
+}
+
+function getLineageSummary() {
+  var lineageCounts = {};
+  var lineages = [];
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var lineageId = ensureOrganismLineage(world.organisms[i]);
+
+    if (!lineageCounts[lineageId]) {
+      lineageCounts[lineageId] = {
+        lineageId: lineageId,
+        count: 0
+      };
+      lineages.push(lineageCounts[lineageId]);
+    }
+
+    lineageCounts[lineageId].count++;
+  }
+
+  lineages.sort(function(a, b) {
+    if (b.count !== a.count) {
+      return b.count - a.count;
+    }
+
+    return a.lineageId - b.lineageId;
+  });
+
+  return lineages;
+}
+
+function updateLineageSummary() {
+  var lineages = getLineageSummary();
+
+  if (lineages.length === 0) {
+    lineageSummaryText.textContent = "LINEAGES: -";
+    return;
+  }
+
+  var visibleLineages = lineages.slice(0, 5).map(function(lineage) {
+    return "L" + lineage.lineageId + " " + lineage.count;
+  });
+
+  lineageSummaryText.textContent =
+    "LINEAGES: " + lineages.length +
+    " active   top " + visibleLineages.join(" | ");
 }
 
 function makeTraitHistorySample(summary) {
@@ -238,6 +285,8 @@ function updateInspectPanel() {
     organismText =
       "energy " + organism.energy +
       " age " + organism.age +
+      " lineage L" + ensureOrganismLineage(organism) +
+      " gen " + organism.generation +
       " pos " + organism.x + "," + organism.y +
       " dir " + organism.directionX + "," + organism.directionY +
       "   " + formatOrganismTraits(organism);
