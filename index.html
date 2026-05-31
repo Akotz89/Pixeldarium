@@ -18,7 +18,14 @@
     <aside id="ui-menu" aria-label="Simulation menu" aria-hidden="true" inert>
       <h1>PIXEL SIM ENGINE</h1>
 
-      <section id="controls" aria-label="Simulation controls">
+      <nav id="menu-tabs" class="menu-tabs" aria-label="Menu sections">
+        <button class="menu-tab active" type="button" data-menu-target="controls" aria-pressed="true">Controls</button>
+        <button class="menu-tab" type="button" data-menu-target="status" aria-pressed="false">Status</button>
+        <button class="menu-tab" type="button" data-menu-target="ecosystem" aria-pressed="false">Ecosystem</button>
+        <button class="menu-tab" type="button" data-menu-target="log" aria-pressed="false">Log</button>
+      </nav>
+
+      <section id="controls" data-menu-page="controls" aria-label="Simulation controls">
         <button id="pause-button" class="sim-button" type="button">Pause</button>
         <button id="step-button" class="sim-button" type="button">Step</button>
         <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
@@ -32,7 +39,7 @@
         <span id="speed-label" class="speed-label">Speed: 1x</span>
       </section>
 
-      <section id="tuning-panel" aria-label="Simulation tuning">
+      <section id="tuning-panel" data-menu-page="controls" aria-label="Simulation tuning">
         <label class="tuning-control">
           <span>Speed</span>
           <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
@@ -65,13 +72,13 @@
         </label>
       </section>
 
-    <section id="hud" aria-label="Simulation status">
+    <section id="hud" data-menu-page="status" aria-label="Simulation status" hidden>
       <span id="era">ERA: Organisms</span>
       <span id="population">POPULATION: 0</span>
       <span id="food" class="hud-metrics">TICK: 0 FOOD: 0 FERTILE: 0%</span>
     </section>
 
-    <section id="ecosystem-panel" aria-label="Ecosystem health">
+    <section id="ecosystem-panel" data-menu-page="ecosystem" aria-label="Ecosystem health" hidden>
       <div id="ecosystem-summary">ECOSYSTEM: -</div>
       <div id="ecosystem-history-wrap">
         <div id="ecosystem-history-legend" aria-label="Ecosystem history legend">
@@ -85,28 +92,28 @@
       </div>
     </section>
 
-    <section id="alert-panel" aria-label="Simulation alerts">
+    <section id="alert-panel" data-menu-page="status" aria-label="Simulation alerts" hidden>
       <div id="simulation-alerts">ALERTS: -</div>
     </section>
 
-    <section id="inspect-panel" aria-label="Inspect result">
+    <section id="inspect-panel" data-menu-page="status" aria-label="Inspect result" hidden>
       <span id="inspect-summary">INSPECT: None</span>
       <span id="inspect-details">TERRAIN: -   FOOD: -   ORGANISM: -</span>
     </section>
 
-    <section id="trait-panel" aria-label="Population trait summary">
+    <section id="trait-panel" data-menu-page="ecosystem" aria-label="Population trait summary" hidden>
       <span id="trait-summary">TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -</span>
     </section>
 
-    <section id="lineage-panel" aria-label="Lineage summary">
+    <section id="lineage-panel" data-menu-page="ecosystem" aria-label="Lineage summary" hidden>
       <span id="lineage-summary">LINEAGES: -</span>
     </section>
 
-    <section id="settlement-panel" aria-label="Settlement summary">
+    <section id="settlement-panel" data-menu-page="ecosystem" aria-label="Settlement summary" hidden>
       <div id="settlement-summary">SETTLEMENTS: -</div>
     </section>
 
-    <section id="trait-history-panel" aria-label="Trait history">
+    <section id="trait-history-panel" data-menu-page="ecosystem" aria-label="Trait history" hidden>
       <div id="trait-history-legend">
         <span class="trait-key vision">Vision</span>
         <span class="trait-key metabolism">Metabolism</span>
@@ -117,13 +124,13 @@
       <canvas id="trait-history" width="900" height="92"></canvas>
     </section>
 
-    <section id="event-panel" aria-label="Simulation milestones">
+    <section id="event-panel" data-menu-page="log" aria-label="Simulation milestones" hidden>
       <div id="event-log">EVENTS: Waiting for milestones</div>
     </section>
 
-    <section id="persistence-status" aria-label="Save status">SAVE: Ready</section>
+    <section id="persistence-status" data-menu-page="controls" aria-label="Save status">SAVE: Ready</section>
 
-      <p class="help">
+      <p class="help" data-menu-page="log" hidden>
         Watch simple organisms compete for food across fertile and barren terrain.
         Plain HTML, CSS, and JavaScript.
       </p>

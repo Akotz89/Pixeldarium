@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const gameWrap = document.getElementById("game-wrap");
 const uiMenu = document.getElementById("ui-menu");
 const menuToggleButton = document.getElementById("menu-toggle-button");
+const menuTabs = document.getElementById("menu-tabs");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
@@ -80,6 +81,7 @@ const world = {
   isPaused: false,
   isExtinct: false,
   isMenuOpen: false,
+  menuPage: "controls",
   extinctionTick: 0,
   needsRender: true,
   speed: 1,
