@@ -37,6 +37,7 @@ function clearWorld() {
   world.inspectedTile = null;
   world.ecosystemSummary = null;
   world.ecosystemHistory = [];
+  world.simulationAlerts = [];
   world.populationTraitSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
@@ -472,6 +473,66 @@ function recordEcosystemHistorySample(force) {
   }
 }
 
+function makeSimulationAlert(severity, label, detail) {
+  return {
+    severity: String(severity || "info"),
+    label: String(label || "Simulation"),
+    detail: String(detail || "")
+  };
+}
+
+function addSimulationAlert(alerts, severity, label, detail) {
+  alerts.push(makeSimulationAlert(severity, label, detail));
+}
+
+function refreshSimulationAlerts() {
+  var alerts = [];
+  var ecosystemSummary = world.ecosystemSummary || refreshEcosystemSummary();
+  var settlementSummary = world.settlementSummary || (
+    typeof refreshSettlementSummaryCache === "function" ? refreshSettlementSummaryCache() : null
+  );
+  var earlySummary = !settlementSummary && typeof refreshEarlyProgressionSummaryCache === "function"
+    ? refreshEarlyProgressionSummaryCache()
+    : null;
+
+  if (world.isExtinct) {
+    addSimulationAlert(alerts, "danger", "Extinction", "restart available");
+  } else if (ecosystemSummary.pressure === "starving") {
+    addSimulationAlert(alerts, "danger", "Food stress", "energy " + ecosystemSummary.averageEnergy.toFixed(1));
+  } else if (ecosystemSummary.pressure === "crowded") {
+    addSimulationAlert(alerts, "warning", "Crowding", ecosystemSummary.population + "/" + CONFIG.MAX_ORGANISMS);
+  } else if (ecosystemSummary.pressure === "strained") {
+    addSimulationAlert(alerts, "warning", "Strained", "food/org " + ecosystemSummary.foodPerOrganism.toFixed(2));
+  }
+
+  if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
+    addSimulationAlert(alerts, "warning", "Low stability", ecosystemSummary.stabilityScore + "/100");
+  }
+
+  if (earlySummary && earlySummary.settlementReady) {
+    addSimulationAlert(alerts, "ready", "Settlement ready", "top " + earlySummary.topActive + "/" + earlySummary.populationTarget);
+  }
+
+  if (world.spaceProgramReady) {
+    addSimulationAlert(alerts, "ready", "Launch ready", world.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD);
+  }
+
+  if (world.planetarySurveyReady) {
+    addSimulationAlert(alerts, "ready", "Survey ready", world.planetarySurveyProgress.toFixed(1));
+  }
+
+  if (world.probeMissionReady) {
+    addSimulationAlert(alerts, "ready", "Probe ready", world.probeMissionProgress.toFixed(1));
+  }
+
+  if (alerts.length === 0) {
+    addSimulationAlert(alerts, "info", "Nominal", ecosystemSummary.pressure + " stability " + ecosystemSummary.stabilityScore + "/100");
+  }
+
+  world.simulationAlerts = alerts.slice(0, 5);
+  return world.simulationAlerts;
+}
+
 function syncLifecycleState() {
   var population = Array.isArray(world.organisms) ? world.organisms.length : 0;
 
@@ -529,6 +590,7 @@ function seedWorld() {
   }
 
   recordSimulationEvent("seed", "Simulation seeded", world.organisms.length + " organisms seed " + world.seedText);
+  refreshSimulationAlerts();
 }
 
 function updateWorld() {
@@ -563,6 +625,8 @@ function updateWorld() {
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(false);
   }
+
+  refreshSimulationAlerts();
 }
 
 function setSimulationPaused(isPaused) {
