@@ -403,6 +403,7 @@ function updateEcosystemSummary() {
     makeSummaryChip("Stability", summary.stabilityScore + "/100"),
     makeSummaryChip("Limiter", formatStabilityLimiter(summary.stabilityProfile)),
     makeSummaryChip("Next Fix", summary.recoveryAction || "-"),
+    makeSummaryChip("Momentum", summary.momentum || "steady"),
     makeSummaryChip("Health Mix", formatStabilityProfileMix(summary.stabilityProfile)),
     makeSummaryChip("Pop State", summary.populationBalance),
     makeSummaryChip("Resource", summary.resourceBalance),
