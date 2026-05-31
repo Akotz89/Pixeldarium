@@ -71,6 +71,7 @@ const world = {
   nextSettlementId: 1,
   settlements: [],
   settlementsById: {},
+  settlementBuckets: {},
   settlementByLineage: {},
   rootSettlementByLineage: {},
   settlementChildOutpostCountByParentId: {},

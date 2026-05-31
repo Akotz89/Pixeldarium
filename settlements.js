@@ -17,6 +17,7 @@ function ensureSettlementState() {
 
   if (
     !world.settlementsById ||
+    !world.settlementBuckets ||
     !world.settlementByLineage ||
     !world.rootSettlementByLineage ||
     !world.settlementChildOutpostCountByParentId ||
@@ -31,6 +32,15 @@ function getSettlementRouteKey(parentSettlementId, childSettlementId) {
   return parentSettlementId + ":" + childSettlementId;
 }
 
+function getSettlementBucketSize() {
+  return Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_SPATIAL_BUCKET_SIZE) || 18));
+}
+
+function getSettlementBucketKey(x, y) {
+  var bucketSize = getSettlementBucketSize();
+  return Math.floor(x / bucketSize) + ":" + Math.floor(y / bucketSize);
+}
+
 function registerSettlementInIndexes(settlement) {
   if (!settlement) {
     return;
@@ -38,6 +48,10 @@ function registerSettlementInIndexes(settlement) {
 
   if (!world.settlementsById) {
     world.settlementsById = {};
+  }
+
+  if (!world.settlementBuckets) {
+    world.settlementBuckets = {};
   }
 
   if (!world.settlementByLineage) {
@@ -61,6 +75,14 @@ function registerSettlementInIndexes(settlement) {
   }
 
   world.settlementsById[idKey] = settlement;
+
+  var bucketKey = getSettlementBucketKey(settlement.x, settlement.y);
+
+  if (!world.settlementBuckets[bucketKey]) {
+    world.settlementBuckets[bucketKey] = [];
+  }
+
+  world.settlementBuckets[bucketKey].push(settlement);
 
   if (!world.settlementByLineage[lineageKey]) {
     world.settlementByLineage[lineageKey] = settlement;
@@ -158,6 +180,7 @@ function getSettlementRouteStats(settlementId) {
 
 function rebuildSettlementIndexes() {
   world.settlementsById = {};
+  world.settlementBuckets = {};
   world.settlementByLineage = {};
   world.rootSettlementByLineage = {};
   world.settlementChildOutpostCountByParentId = {};
@@ -1765,15 +1788,42 @@ function foundSettlementForLineage(lineage) {
   return settlement;
 }
 
-function getDistanceToNearestSettlement(x, y) {
+function getDistanceToNearestSettlement(x, y, searchRadius) {
+  ensureSettlementState();
+
+  var buckets = world.settlementBuckets;
+  var bucketSize = getSettlementBucketSize();
+  var isBoundedSearch = typeof searchRadius === "number" && searchRadius >= 0;
+  var normalizedRadius =
+    isBoundedSearch
+      ? searchRadius
+      : Math.max(WORLD_WIDTH, WORLD_HEIGHT);
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
   var nearestDistance = Infinity;
 
-  for (var i = 0; i < world.settlements.length; i++) {
-    var settlement = world.settlements[i];
-    var distance = Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = buckets[bucketX + ":" + bucketY];
 
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var settlement = bucket[i];
+        var distance = Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
+
+        if (isBoundedSearch && distance > normalizedRadius) {
+          continue;
+        }
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+        }
+      }
     }
   }
 
@@ -1799,7 +1849,7 @@ function getOutpostPlacement(parentSettlement) {
         var candidateX = clamp(parentSettlement.x + dxValues[dxIndex], 0, WORLD_WIDTH - 1);
         var candidateY = clamp(parentSettlement.y + dy, 0, WORLD_HEIGHT - 1);
 
-        if (getDistanceToNearestSettlement(candidateX, candidateY) < minDistance) {
+        if (getDistanceToNearestSettlement(candidateX, candidateY, minDistance - 1) < minDistance) {
           continue;
         }
 

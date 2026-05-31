@@ -38,6 +38,7 @@ function clearWorld() {
   world.nextSettlementId = 1;
   world.settlements = [];
   world.settlementsById = {};
+  world.settlementBuckets = {};
   world.settlementByLineage = {};
   world.rootSettlementByLineage = {};
   world.settlementChildOutpostCountByParentId = {};
