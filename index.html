@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pixel Sim Engine</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,6 +19,8 @@
       <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
       <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
       <button id="restart-button" class="sim-button" type="button">Restart</button>
+      <button id="save-button" class="sim-button" type="button">Save</button>
+      <button id="load-button" class="sim-button" type="button">Load</button>
       <span id="speed-label" class="speed-label">Speed: 1x</span>
     </section>
 
@@ -26,6 +29,8 @@
       <span id="population">POPULATION: 0</span>
       <span id="food">TICK: 0 FOOD: 0 FERTILE: 0%</span>
     </section>
+
+    <section id="persistence-status" aria-label="Save status">SAVE: Ready</section>
 
     <p class="help">
       Watch simple organisms compete for food across fertile and barren terrain.
@@ -74,6 +79,7 @@
   <script src="food.js"></script>
   <script src="organisms.js"></script>
   <script src="render.js"></script>
+  <script src="persistence.js"></script>
   <script src="ui.js"></script>
   <script src="main.js"></script>
 </body>
