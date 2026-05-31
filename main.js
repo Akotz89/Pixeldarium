@@ -475,6 +475,28 @@ function getEcosystemTrend(summary) {
   };
 }
 
+function getEcosystemMomentum(trend) {
+  trend = trend || {};
+
+  if ((Number(trend.stabilityDelta) || 0) >= 8 && (Number(trend.foodNetDelta) || 0) >= 0) {
+    return "recovering";
+  }
+
+  if ((Number(trend.stabilityDelta) || 0) <= -12) {
+    return "sliding";
+  }
+
+  if ((Number(trend.foodNetDelta) || 0) <= -18) {
+    return "draining";
+  }
+
+  if ((Number(trend.populationDelta) || 0) >= 8 && (Number(trend.foodNetDelta) || 0) >= 0) {
+    return "expanding";
+  }
+
+  return "steady";
+}
+
 function getLowestStabilityFactor(componentScores) {
   var lowestKey = "population";
   var lowestScore = componentScores.population;
@@ -729,6 +751,7 @@ function refreshEcosystemSummary() {
 
   world.ecosystemSummary.recoveryAction = getEcosystemRecoveryAction(world.ecosystemSummary);
   world.ecosystemSummary.trend = getEcosystemTrend(world.ecosystemSummary);
+  world.ecosystemSummary.momentum = getEcosystemMomentum(world.ecosystemSummary.trend);
   return world.ecosystemSummary;
 }
 
@@ -953,6 +976,16 @@ function refreshSimulationAlerts() {
       "Stability falling",
       formatMilestoneSignedNumber(ecosystemSummary.trend.stabilityDelta) + " - " + ecosystemSummary.recoveryAction,
       26
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.momentum === "recovering") {
+    addSimulationAlert(
+      alerts,
+      "ready",
+      "Recovery improving",
+      formatMilestoneSignedNumber(ecosystemSummary.trend.stabilityDelta) + " stability",
+      58
     );
   }
 
