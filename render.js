@@ -43,6 +43,85 @@ function getPlanetBiomeColor(biome) {
   }
 }
 
+function mixChannel(channel, target, amount) {
+  return Math.round(channel + (target - channel) * clamp(amount, 0, 1));
+}
+
+function getRgbFromHex(hexColor) {
+  var color = String(hexColor || "#ffffff").replace("#", "");
+
+  if (color.length !== 6) {
+    return { red: 255, green: 255, blue: 255 };
+  }
+
+  return {
+    red: parseInt(color.slice(0, 2), 16),
+    green: parseInt(color.slice(2, 4), 16),
+    blue: parseInt(color.slice(4, 6), 16)
+  };
+}
+
+function getHexFromRgb(red, green, blue) {
+  function toHex(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+
+  return "#" + toHex(red) + toHex(green) + toHex(blue);
+}
+
+function shadeHexColor(hexColor, shade) {
+  var rgb = getRgbFromHex(hexColor);
+  var normalizedShade = clamp(Number(shade) || 0, 0, 1);
+  var target = normalizedShade > 0.5 ? 255 : 0;
+  var amount = Math.abs(normalizedShade - 0.5) * 0.52;
+
+  return getHexFromRgb(
+    mixChannel(rgb.red, target, amount),
+    mixChannel(rgb.green, target, amount),
+    mixChannel(rgb.blue, target, amount)
+  );
+}
+
+function getPlanetSurfaceColor(sample) {
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var detail = sample && sample.detail ? sample.detail : null;
+  var baseColor = getPlanetBiomeColor(biome);
+
+  if (!detail) {
+    return baseColor;
+  }
+
+  if (detail.surface === "wave") {
+    return shadeHexColor("#0a3558", detail.shade);
+  }
+
+  if (detail.surface === "deep water") {
+    return shadeHexColor("#031026", detail.shade);
+  }
+
+  if (detail.surface === "clearing" || detail.surface === "meadow") {
+    return shadeHexColor("#2e6835", detail.shade);
+  }
+
+  if (detail.surface === "canopy") {
+    return shadeHexColor("#0c331d", detail.shade);
+  }
+
+  if (detail.surface === "rock" || detail.surface === "stone") {
+    return shadeHexColor("#4b4b43", detail.shade);
+  }
+
+  if (detail.surface === "dune" || detail.surface === "sand") {
+    return shadeHexColor("#755f2d", detail.shade);
+  }
+
+  if (detail.surface === "snow") {
+    return shadeHexColor("#c9e2ee", detail.shade);
+  }
+
+  return shadeHexColor(baseColor, detail.shade);
+}
+
 function drawPlanetShell(targetCtx) {
   var projection = getPlanetProjection();
   var gradient = targetCtx.createRadialGradient(
@@ -129,7 +208,7 @@ function buildLocalTerrainCache(tctx) {
       var screenX = x * CONFIG.TILE_SIZE;
       var screenY = y * CONFIG.TILE_SIZE;
 
-      tctx.fillStyle = getPlanetBiomeColor(sample.biome);
+      tctx.fillStyle = getPlanetSurfaceColor(sample);
       tctx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
     }
   }

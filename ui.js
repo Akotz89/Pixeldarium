@@ -1123,6 +1123,7 @@ function updateInspectPanel() {
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
     makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
+    makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
@@ -1188,6 +1189,19 @@ function updateInspectPanel() {
   setElementText(inspectSummaryText, "INSPECT: Tile " + tileX + "," + tileY);
   setElementClass(inspectDetailsText, "inspect-grid");
   setElementHtml(inspectDetailsText, detailChips.join(""));
+}
+
+function getInspectSurfaceLabel(tileX, tileY) {
+  if (!isPlanetLocalView()) {
+    return "global";
+  }
+
+  var tile = getPlanetTile(tileX, tileY);
+  var latitude = tile ? tile.latitude : getPlanetLatitudeForTile(tileY);
+  var longitude = tile ? tile.longitude : getPlanetLongitudeForTile(tileX);
+  var detail = getPlanetSurfaceDetail(latitude, longitude, tile);
+
+  return detail.surface + " " + Math.round(detail.shade * 100) + "%";
 }
 
 function getTileFromCanvasEvent(event) {

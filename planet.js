@@ -219,6 +219,7 @@ function getPlanetLocalSample(gridX, gridY) {
   var latLon = getLatLonFromLocalOffset(eastKm, northKm);
   var tilePosition = getTileFromLatLon(latLon.latitude, latLon.longitude);
   var tile = getPlanetTile(tilePosition.x, tilePosition.y);
+  var detail = getPlanetSurfaceDetail(latLon.latitude, latLon.longitude, tile);
 
   return {
     x: tilePosition.x,
@@ -227,8 +228,56 @@ function getPlanetLocalSample(gridX, gridY) {
     longitude: latLon.longitude,
     tile: tile,
     biome: tile ? tile.biome : "unknown",
+    detail: detail,
     eastKm: eastKm,
     northKm: northKm
+  };
+}
+
+function getDeterministicUnitNoise(a, b, c) {
+  var value = Math.sin((Number(a) || 0) * 12.9898 + (Number(b) || 0) * 78.233 + (Number(c) || 0) * 37.719) * 43758.5453;
+
+  return value - Math.floor(value);
+}
+
+function getQuantizedSurfaceNoise(latitude, longitude, metersPerPatch) {
+  var patchMeters = Math.max(1, Number(metersPerPatch) || 1);
+  var latitudeMeters = latitude * getLatitudeDistanceKmPerDegree() * 1000;
+  var longitudeMeters = longitude * getLongitudeDistanceKmPerDegree(latitude) * 1000;
+  var cellLatitude = Math.floor(latitudeMeters / patchMeters);
+  var cellLongitude = Math.floor(longitudeMeters / patchMeters);
+
+  return getDeterministicUnitNoise(cellLatitude, cellLongitude, patchMeters);
+}
+
+function getPlanetSurfaceDetail(latitude, longitude, tile) {
+  var biome = tile ? tile.biome : "unknown";
+  var scale = getPlanetViewScale();
+  var coarseNoise = getQuantizedSurfaceNoise(latitude, longitude, Math.max(8, scale.metersPerSample * 9));
+  var fineNoise = getQuantizedSurfaceNoise(latitude + 0.0007, longitude - 0.0009, Math.max(1, scale.metersPerSample * 2));
+  var mixedNoise = coarseNoise * 0.62 + fineNoise * 0.38;
+  var surface = "ground";
+  var shade = mixedNoise;
+
+  if (biome === "ocean") {
+    surface = mixedNoise > 0.78 ? "wave" : (mixedNoise < 0.18 ? "deep water" : "open water");
+  } else if (biome === "forest") {
+    surface = mixedNoise > 0.70 ? "canopy" : (mixedNoise < 0.25 ? "clearing" : "woodland");
+  } else if (biome === "grassland") {
+    surface = mixedNoise > 0.66 ? "brush" : (mixedNoise < 0.24 ? "meadow" : "grass");
+  } else if (biome === "desert") {
+    surface = mixedNoise > 0.72 ? "rock" : (mixedNoise < 0.25 ? "dune" : "sand");
+  } else if (biome === "tundra") {
+    surface = mixedNoise > 0.68 ? "stone" : (mixedNoise < 0.30 ? "moss" : "scrub");
+  } else if (biome === "ice") {
+    surface = mixedNoise > 0.70 ? "ridge ice" : (mixedNoise < 0.25 ? "snow" : "ice");
+  }
+
+  return {
+    surface: surface,
+    shade: shade,
+    coarseNoise: coarseNoise,
+    fineNoise: fineNoise
   };
 }
 
