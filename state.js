@@ -11,6 +11,16 @@ const speedDownButton = document.getElementById("speed-down-button");
 const speedUpButton = document.getElementById("speed-up-button");
 const restartButton = document.getElementById("restart-button");
 const speedLabel = document.getElementById("speed-label");
+const tuningToggle = document.getElementById("tuning-toggle");
+const tuningControls = document.getElementById("tuning-controls");
+const speedTune = document.getElementById("speed-tune");
+const speedTuneValue = document.getElementById("speed-tune-value");
+const organismSizeTune = document.getElementById("organism-size-tune");
+const organismSizeValue = document.getElementById("organism-size-value");
+const foodSizeTune = document.getElementById("food-size-tune");
+const foodSizeValue = document.getElementById("food-size-value");
+const foodTargetTune = document.getElementById("food-target-tune");
+const foodTargetValue = document.getElementById("food-target-value");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;
@@ -26,7 +36,7 @@ const world = {
   terrain: [],
   fertileTiles: 0,
   isPaused: false,
-  speed: 1,
+  speed: CONFIG.SPEED_MIN,
   interpolation: 0,
   fps: 0,
   tps: 0,

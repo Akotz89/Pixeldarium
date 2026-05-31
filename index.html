@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pixel Sim Engine</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,6 +20,32 @@
       <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
       <button id="restart-button" class="sim-button" type="button">Restart</button>
       <span id="speed-label" class="speed-label">Speed: 1x</span>
+    </section>
+
+    <section id="tuning-panel" aria-label="Simulation tuning">
+      <button id="tuning-toggle" class="sim-button tuning-toggle" type="button" aria-expanded="true" aria-controls="tuning-controls">Tuning</button>
+      <div id="tuning-controls" class="tuning-controls">
+        <label class="tuning-control" for="speed-tune">
+          <span>Speed</span>
+          <input id="speed-tune" type="range">
+          <output id="speed-tune-value" for="speed-tune">1x</output>
+        </label>
+        <label class="tuning-control" for="organism-size-tune">
+          <span>Organism</span>
+          <input id="organism-size-tune" type="range">
+          <output id="organism-size-value" for="organism-size-tune">7px</output>
+        </label>
+        <label class="tuning-control" for="food-size-tune">
+          <span>Food</span>
+          <input id="food-size-tune" type="range">
+          <output id="food-size-value" for="food-size-tune">2px</output>
+        </label>
+        <label class="tuning-control" for="food-target-tune">
+          <span>Food target</span>
+          <input id="food-target-tune" type="range">
+          <output id="food-target-value" for="food-target-tune">420</output>
+        </label>
+      </div>
     </section>
 
     <section id="hud" aria-label="Simulation status">

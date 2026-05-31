@@ -19,7 +19,7 @@ body {
   margin: 0;
   padding: 12px 18px 10px;
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) auto auto auto;
+  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto;
   gap: 10px;
   text-align: center;
   background: rgba(4, 6, 12, 0.42);
@@ -89,6 +89,56 @@ h1 {
   font-weight: 800;
 }
 
+#tuning-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tuning-toggle {
+  min-width: 96px;
+}
+
+.tuning-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.tuning-controls[hidden] {
+  display: none;
+}
+
+.tuning-control {
+  display: grid;
+  grid-template-columns: auto minmax(72px, 1fr) minmax(42px, auto);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  color: #eaf0ff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  box-sizing: border-box;
+}
+
+.tuning-control input {
+  width: 100%;
+  min-width: 0;
+}
+
+.tuning-control output {
+  color: #72d7ff;
+  text-align: right;
+}
+
 #hud {
   display: grid;
   grid-template-columns: 1fr 1fr 1.45fr;
@@ -107,6 +157,16 @@ h1 {
   font-weight: 800;
   letter-spacing: 1px;
   box-sizing: border-box;
+}
+
+@media (max-width: 920px) {
+  #tuning-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .tuning-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .help {
