@@ -84,4 +84,33 @@ window.setupControls = function() {
         setPersistenceStatus("LOAD ERROR: " + error.message, true);
       });
   });
+
+  exportJsonButton.addEventListener("click", function() {
+    try {
+      var saveData = exportWorldToJsonFile();
+      setPersistenceStatus("EXPORT: Downloaded tick " + saveData.tick, false);
+    } catch (error) {
+      setPersistenceStatus("EXPORT ERROR: " + error.message, true);
+    }
+  });
+
+  importJsonButton.addEventListener("click", function() {
+    importJsonFile.click();
+  });
+
+  importJsonFile.addEventListener("change", function() {
+    var file = importJsonFile.files[0];
+
+    setPersistenceStatus("IMPORT: Loading...", false);
+    importWorldFromJsonFile(file)
+      .then(function(saveData) {
+        setPersistenceStatus("IMPORT: Loaded tick " + saveData.tick, false);
+      })
+      .catch(function(error) {
+        setPersistenceStatus("IMPORT ERROR: " + error.message, true);
+      })
+      .finally(function() {
+        importJsonFile.value = "";
+      });
+  });
 };
