@@ -9,56 +9,61 @@
 </head>
 <body>
   <main id="game-wrap">
-    <h1>PIXEL SIM ENGINE</h1>
-
     <canvas id="game" width="1600" height="850"></canvas>
 
-    <section id="controls" aria-label="Simulation controls">
-      <button id="pause-button" class="sim-button" type="button">Pause</button>
-      <button id="step-button" class="sim-button" type="button">Step</button>
-      <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
-      <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
-      <button id="restart-button" class="sim-button" type="button">Restart</button>
-      <button id="save-button" class="sim-button" type="button">Save</button>
-      <button id="load-button" class="sim-button" type="button">Load</button>
-      <button id="export-json-button" class="sim-button" type="button">Export JSON</button>
-      <button id="import-json-button" class="sim-button" type="button">Import JSON</button>
-      <input id="import-json-file" type="file" accept="application/json,.json" hidden>
-      <span id="speed-label" class="speed-label">Speed: 1x</span>
-    </section>
+    <button id="menu-toggle-button" class="menu-toggle" type="button" aria-controls="ui-menu" aria-expanded="false">
+      Menu
+    </button>
 
-    <section id="tuning-panel" aria-label="Simulation tuning">
-      <label class="tuning-control">
-        <span>Speed</span>
-        <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
-        <output id="speed-value">1x</output>
-      </label>
-      <label class="tuning-control">
-        <span>Organism</span>
-        <input id="organism-size-slider" type="range" min="2" max="14" step="1" value="7">
-        <output id="organism-size-value">7px</output>
-      </label>
-      <label class="tuning-control">
-        <span>Food</span>
-        <input id="food-size-slider" type="range" min="1" max="8" step="1" value="2">
-        <output id="food-size-value">2px</output>
-      </label>
-      <label class="tuning-control">
-        <span>Start Food</span>
-        <input id="starting-food-slider" type="range" min="100" max="1000" step="20" value="420">
-        <output id="starting-food-value">420</output>
-      </label>
-      <label class="tuning-control">
-        <span>Growth</span>
-        <input id="food-growth-slider" type="range" min="0" max="100" step="1" value="95">
-        <output id="food-growth-value">95%</output>
-      </label>
-      <label class="tuning-control seed-control">
-        <span>Seed</span>
-        <input id="seed-input" type="text" value="PIXEL-2026" maxlength="32" spellcheck="false">
-        <button id="seed-random-button" class="seed-button" type="button">New</button>
-      </label>
-    </section>
+    <aside id="ui-menu" aria-label="Simulation menu" aria-hidden="true" inert>
+      <h1>PIXEL SIM ENGINE</h1>
+
+      <section id="controls" aria-label="Simulation controls">
+        <button id="pause-button" class="sim-button" type="button">Pause</button>
+        <button id="step-button" class="sim-button" type="button">Step</button>
+        <button id="speed-down-button" class="sim-button" type="button">Speed -</button>
+        <button id="speed-up-button" class="sim-button" type="button">Speed +</button>
+        <button id="restart-button" class="sim-button" type="button">Restart</button>
+        <button id="save-button" class="sim-button" type="button">Save</button>
+        <button id="load-button" class="sim-button" type="button">Load</button>
+        <button id="export-json-button" class="sim-button" type="button">Export JSON</button>
+        <button id="import-json-button" class="sim-button" type="button">Import JSON</button>
+        <input id="import-json-file" type="file" accept="application/json,.json" hidden>
+        <span id="speed-label" class="speed-label">Speed: 1x</span>
+      </section>
+
+      <section id="tuning-panel" aria-label="Simulation tuning">
+        <label class="tuning-control">
+          <span>Speed</span>
+          <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
+          <output id="speed-value">1x</output>
+        </label>
+        <label class="tuning-control">
+          <span>Organism</span>
+          <input id="organism-size-slider" type="range" min="2" max="14" step="1" value="7">
+          <output id="organism-size-value">7px</output>
+        </label>
+        <label class="tuning-control">
+          <span>Food</span>
+          <input id="food-size-slider" type="range" min="1" max="8" step="1" value="2">
+          <output id="food-size-value">2px</output>
+        </label>
+        <label class="tuning-control">
+          <span>Start Food</span>
+          <input id="starting-food-slider" type="range" min="100" max="1000" step="20" value="420">
+          <output id="starting-food-value">420</output>
+        </label>
+        <label class="tuning-control">
+          <span>Growth</span>
+          <input id="food-growth-slider" type="range" min="0" max="100" step="1" value="95">
+          <output id="food-growth-value">95%</output>
+        </label>
+        <label class="tuning-control seed-control">
+          <span>Seed</span>
+          <input id="seed-input" type="text" value="PIXEL-2026" maxlength="32" spellcheck="false">
+          <button id="seed-random-button" class="seed-button" type="button">New</button>
+        </label>
+      </section>
 
     <section id="hud" aria-label="Simulation status">
       <span id="era">ERA: Organisms</span>
@@ -118,10 +123,11 @@
 
     <section id="persistence-status" aria-label="Save status">SAVE: Ready</section>
 
-    <p class="help">
-      Watch simple organisms compete for food across fertile and barren terrain.
-      Plain HTML, CSS, and JavaScript.
-    </p>
+      <p class="help">
+        Watch simple organisms compete for food across fertile and barren terrain.
+        Plain HTML, CSS, and JavaScript.
+      </p>
+    </aside>
   </main>
 
   <pre id="debug-output" style="position: fixed; left: 10px; bottom: 10px; max-width: 700px; max-height: 220px; overflow: auto; z-index: 9999; padding: 10px; background: rgba(120, 0, 0, 0.92); color: white; font: 13px monospace; border: 1px solid #ff9999; border-radius: 8px; display: none; text-align: left;"></pre>
