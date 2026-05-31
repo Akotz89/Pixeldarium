@@ -10,7 +10,10 @@ function updateHud() {
     "   FOOD: " + world.food.length +
     "   FERTILE: " + fertilePercent + "%" +
     "   FPS: " + world.fps.toFixed(1) +
-    "   TPS: " + world.tps.toFixed(1);
+    "   TPS: " + world.tps.toFixed(1) +
+    "   UPDATE: " + world.updateMs.toFixed(2) + "ms" +
+    "   DRAW: " + world.drawMs.toFixed(2) + "ms" +
+    "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
 
   speedLabel.textContent = "Speed: " + world.speed + "x";
 }
@@ -23,9 +26,17 @@ window.setupControls = function() {
 
   stepButton.addEventListener("click", function() {
     if (world.isPaused) {
+      var updateStart = performance.now();
       updateWorld();
+      world.updateMs = performance.now() - updateStart;
+      world.maxUpdateMs = Math.max(world.maxUpdateMs, world.updateMs);
       world.interpolation = 1;
+
+      var drawStart = performance.now();
       drawWorld();
+      world.drawMs = performance.now() - drawStart;
+      world.maxDrawMs = Math.max(world.maxDrawMs, world.drawMs);
+
       updateHud();
     }
   });
