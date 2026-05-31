@@ -141,6 +141,8 @@ function syncMenuState() {
   setElementClass(gameWrap, world.isMenuOpen ? "menu-open" : "menu-closed");
   menuToggleButton.setAttribute("aria-expanded", world.isMenuOpen ? "true" : "false");
   uiMenu.setAttribute("aria-hidden", world.isMenuOpen ? "false" : "true");
+  menuBackdrop.setAttribute("aria-hidden", world.isMenuOpen ? "false" : "true");
+  menuBackdrop.tabIndex = world.isMenuOpen ? 0 : -1;
 
   if (world.isMenuOpen) {
     uiMenu.removeAttribute("inert");
@@ -1262,6 +1264,10 @@ window.setupControls = function() {
 
   menuToggleButton.addEventListener("click", function() {
     toggleMenuOpen();
+  });
+
+  menuBackdrop.addEventListener("click", function() {
+    setMenuOpen(false);
   });
 
   canvas.addEventListener("click", function(event) {

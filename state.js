@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 
 const gameWrap = document.getElementById("game-wrap");
 const uiMenu = document.getElementById("ui-menu");
+const menuBackdrop = document.getElementById("menu-backdrop");
 const menuToggleButton = document.getElementById("menu-toggle-button");
 const menuToggleText = menuToggleButton.querySelector(".menu-toggle-text");
 const menuTabs = document.getElementById("menu-tabs");

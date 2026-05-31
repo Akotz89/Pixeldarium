@@ -54,6 +54,29 @@ h1 {
   image-rendering: pixelated;
 }
 
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  padding: 0;
+  background:
+    linear-gradient(90deg, rgba(3, 4, 9, 0.58), rgba(3, 4, 9, 0.16) 45%, rgba(3, 4, 9, 0.02));
+  border: 0;
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.menu-open .menu-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.menu-backdrop:focus-visible {
+  outline: none;
+}
+
 .menu-toggle {
   position: fixed;
   top: 14px;
