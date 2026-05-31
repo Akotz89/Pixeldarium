@@ -18,6 +18,7 @@ function clearWorld() {
   world.food = [];
   world.terrain = [];
   world.fertileTiles = 0;
+  world.needsRender = true;
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;
@@ -121,6 +122,7 @@ function seedWorld() {
 
 function updateWorld() {
   world.tick++;
+  world.needsRender = true;
   growFood();
 
   var organismsAtStartOfTick = world.organisms.slice();
@@ -205,14 +207,17 @@ function gameLoop() {
       world.interpolation = 0;
     }
 
-    var drawStart = performance.now();
-    drawWorld();
-    var drawElapsed = performance.now() - drawStart;
-    drawMsSinceStatsUpdate += drawElapsed;
-    measuredDrawFrames++;
+    if (!world.isPaused || world.needsRender) {
+      var drawStart = performance.now();
+      drawWorld();
+      world.needsRender = false;
+      var drawElapsed = performance.now() - drawStart;
+      drawMsSinceStatsUpdate += drawElapsed;
+      measuredDrawFrames++;
 
-    if (drawElapsed > maxDrawMsSinceStatsUpdate) {
-      maxDrawMsSinceStatsUpdate = drawElapsed;
+      if (drawElapsed > maxDrawMsSinceStatsUpdate) {
+        maxDrawMsSinceStatsUpdate = drawElapsed;
+      }
     }
 
     var statsElapsed = now - statsTimer;
