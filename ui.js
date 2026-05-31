@@ -2,9 +2,15 @@ function updateHud() {
   var fertilePercent = Math.round(
     (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100
   );
+  var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
 
-  setElementText(eraText, "ERA: " + world.era);
-  setElementText(populationText, "POPULATION: " + world.organisms.length);
+  setElementClass(eraText, "hud-card hud-era");
+  setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
+  setElementClass(populationText, "hud-card hud-population");
+  setElementHtml(
+    populationText,
+    makeHudPrimary("Population", world.organisms.length, formatSignedNumber(world.populationDeltaThisTick, 0) + " this tick")
+  );
   setElementClass(foodText, "hud-metrics");
   setElementHtml(foodText, [
     makeHudMetric("Tick", world.tick),
@@ -64,6 +70,14 @@ function makeHudMetric(label, value) {
   );
 }
 
+function makeHudPrimary(label, value, detail) {
+  return (
+    "<span class=\"hud-primary-label\">" + escapeSummaryText(label) + "</span>" +
+    "<strong>" + escapeSummaryText(value) + "</strong>" +
+    "<small>" + escapeSummaryText(detail || "") + "</small>"
+  );
+}
+
 function getTuningInputNumber(input, fallbackValue) {
   if (!input) {
     return fallbackValue;
@@ -100,6 +114,10 @@ function setButtonDisabled(button, isDisabled) {
 }
 
 function syncControlStates() {
+  setElementClass(
+    controlsPanel,
+    "controls-state " + (world.isExtinct ? "controls-extinct" : (world.isPaused ? "controls-paused" : "controls-running"))
+  );
   setElementText(pauseButton, world.isExtinct ? "Extinct" : (world.isPaused ? "Resume" : "Pause"));
   setButtonPressed(pauseButton, world.isPaused);
   pauseButton.classList.toggle("danger", Boolean(world.isExtinct));
@@ -117,6 +135,36 @@ function syncControlStates() {
   speedDownButton.setAttribute("aria-keyshortcuts", "-");
   speedUpButton.setAttribute("aria-keyshortcuts", "+");
   restartButton.setAttribute("aria-keyshortcuts", "R");
+}
+
+function syncMenuState() {
+  setElementClass(gameWrap, world.isMenuOpen ? "menu-open" : "menu-closed");
+  menuToggleButton.setAttribute("aria-expanded", world.isMenuOpen ? "true" : "false");
+  uiMenu.setAttribute("aria-hidden", world.isMenuOpen ? "false" : "true");
+
+  if (world.isMenuOpen) {
+    uiMenu.removeAttribute("inert");
+  } else {
+    uiMenu.setAttribute("inert", "");
+  }
+
+  setElementText(menuToggleButton, world.isMenuOpen ? "Close" : "Menu");
+}
+
+function setMenuOpen(isOpen) {
+  var nextOpen = Boolean(isOpen);
+
+  if (world.isMenuOpen === nextOpen) {
+    return false;
+  }
+
+  world.isMenuOpen = nextOpen;
+  syncMenuState();
+  return true;
+}
+
+function toggleMenuOpen() {
+  return setMenuOpen(!world.isMenuOpen);
 }
 
 function applyTuningFromControls(redraw) {
@@ -512,10 +560,13 @@ function formatSignedNumber(value, decimals) {
 
 function makeEventChip(event) {
   return (
-    "<span class=\"event-chip event-" + escapeSummaryText(event.type || "sim") + "\">" +
+    "<article class=\"event-entry event-" + escapeSummaryText(event.type || "sim") + "\">" +
+    "<span class=\"event-tick\">T" + escapeSummaryText(event.tick) + "</span>" +
+    "<span class=\"event-copy\">" +
     "<b>" + escapeSummaryText(event.label || "Event") + "</b>" +
-    "<span>T" + escapeSummaryText(event.tick) + " " + escapeSummaryText(event.detail || "") + "</span>" +
-    "</span>"
+    "<span>" + escapeSummaryText(event.detail || "") + "</span>" +
+    "</span>" +
+    "</article>"
   );
 }
 
@@ -844,7 +895,7 @@ function updateEventLog() {
     chips.push(makeEventChip(events[i]));
   }
 
-  setElementClass(eventLogText, "event-grid");
+  setElementClass(eventLogText, "event-timeline");
   setElementHtml(eventLogText, chips.join(""));
 }
 
@@ -1115,15 +1166,18 @@ function shouldIgnoreSimulationShortcut(target) {
 }
 
 function handleSimulationShortcut(event) {
-  if (shouldIgnoreSimulationShortcut(event.target)) {
-    return;
-  }
-
   var key = String(event.key || "");
   var code = String(event.code || "");
   var handled = false;
 
-  if (code === "Space" || key === " ") {
+  if (code === "Escape" || key === "Escape") {
+    handled = setMenuOpen(false);
+  } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "KeyM" || key.toLowerCase() === "m")) {
+    handled = true;
+    toggleMenuOpen();
+  } else if (shouldIgnoreSimulationShortcut(event.target)) {
+    return;
+  } else if (code === "Space" || key === " ") {
     handled = true;
     toggleSimulationPaused();
   } else if (code === "KeyN" || key.toLowerCase() === "n") {
@@ -1152,6 +1206,10 @@ function handleSimulationShortcut(event) {
 }
 
 window.setupControls = function() {
+  menuToggleButton.addEventListener("click", function() {
+    toggleMenuOpen();
+  });
+
   canvas.addEventListener("click", function(event) {
     var tile = getTileFromCanvasEvent(event);
     inspectTile(tile.x, tile.y);
@@ -1212,6 +1270,7 @@ window.setupControls = function() {
   });
 
   syncControlStates();
+  syncMenuState();
 
   restartButton.addEventListener("click", function() {
     restartSimulationFromControls();

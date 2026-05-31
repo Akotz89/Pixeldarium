@@ -2,8 +2,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-  min-height: 100%;
-  overflow: auto;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -14,58 +15,107 @@ body {
 
 #game-wrap {
   box-sizing: border-box;
-  width: 100%;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   margin: 0;
-  padding: 10px 14px 12px;
-  display: grid;
-  grid-template-columns: minmax(560px, 1.25fr) minmax(520px, 0.95fr);
-  grid-template-rows: 42px auto auto auto auto auto auto auto auto auto auto;
-  grid-template-areas:
-    "title title"
-    "game ecosystem"
-    "controls ecosystem"
-    "tuning alerts"
-    "hud inspect"
-    "traits lineages"
-    "settlements settlements"
-    "history history"
-    "events events"
-    "save save"
-    "help help";
-  gap: 10px;
+  padding: 0;
+  display: block;
   text-align: center;
-  background: rgba(4, 6, 12, 0.42);
+  background: #030409;
 }
 
 h1 {
-  grid-area: title;
   margin: 0;
-  line-height: 42px;
-  letter-spacing: 5px;
-  font-size: clamp(22px, 2.4vw, 38px);
+  line-height: 1.05;
+  letter-spacing: 3px;
+  font-size: clamp(20px, 2.2vw, 30px);
   text-shadow: 0 0 18px rgba(114, 215, 255, 0.38);
 }
 
 #game {
-  grid-area: game;
-  width: min(100%, 960px);
-  height: auto;
-  aspect-ratio: 32 / 17;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
   max-width: none;
-  justify-self: center;
   display: block;
-  margin: 0 auto;
-  object-fit: contain;
+  margin: 0;
+  object-fit: fill;
   background: #05060a;
-  border: 2px solid rgba(145, 160, 255, 0.72);
-  border-radius: 12px;
+  border: 0;
+  border-radius: 0;
   box-sizing: border-box;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 0 42px rgba(88, 240, 108, 0.10),
     inset 0 0 30px rgba(0, 0, 0, 0.78);
   image-rendering: pixelated;
+}
+
+.menu-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 30;
+  min-width: 74px;
+  padding: 10px 13px;
+  color: #051016;
+  background: rgba(112, 240, 208, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+}
+
+.menu-toggle:hover,
+.menu-toggle:focus-visible {
+  background: #fff26b;
+  outline: 2px solid rgba(114, 215, 255, 0.72);
+  outline-offset: 3px;
+}
+
+#ui-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 20;
+  width: min(760px, calc(100vw - 24px));
+  height: 100vh;
+  padding: 22px 18px 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: max-content;
+  gap: 10px;
+  overflow: auto;
+  text-align: center;
+  background: rgba(8, 10, 18, 0.93);
+  border-left: 1px solid rgba(145, 160, 255, 0.35);
+  box-shadow: -24px 0 50px rgba(0, 0, 0, 0.48);
+  box-sizing: border-box;
+  transform: translateX(104%);
+  transition: transform 180ms ease, opacity 180ms ease;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.menu-open #ui-menu {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#ui-menu > * {
+  grid-area: auto;
+}
+
+#ui-menu h1 {
+  padding: 0 92px 4px 0;
+  text-align: center;
 }
 
 #controls {
@@ -82,6 +132,31 @@ h1 {
   background: rgba(255, 255, 255, 0.045);
   border: 1px solid rgba(160, 175, 255, 0.18);
   border-radius: 12px;
+}
+
+#controls.controls-state {
+  position: relative;
+}
+
+#controls.controls-state::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: #70f0d0;
+  box-shadow: 0 0 14px rgba(112, 240, 208, 0.46);
+  flex: 0 0 auto;
+}
+
+#controls.controls-paused::before {
+  background: #fff26b;
+  box-shadow: 0 0 14px rgba(255, 242, 107, 0.42);
+}
+
+#controls.controls-extinct::before {
+  background: #ff7878;
+  box-shadow: 0 0 14px rgba(255, 120, 120, 0.48);
 }
 
 .sim-button {
@@ -227,11 +302,49 @@ h1 {
   padding: 9px 12px;
   font-size: clamp(12px, 1vw, 15px);
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+#hud > .hud-card {
+  display: grid;
+  gap: 2px;
+  min-height: 70px;
+  text-align: left;
+}
+
+.hud-primary-label {
+  color: #aeb7d9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.hud-card strong {
+  color: #f4f7ff;
+  font-size: clamp(22px, 1.9vw, 32px);
+  font-weight: 900;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.hud-card small {
+  color: #c7d0f6;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.hud-era {
+  border-left: 4px solid #70f0d0;
+}
+
+.hud-population {
+  border-left: 4px solid #72d7ff;
 }
 
 #hud > .hud-metrics {
@@ -240,6 +353,7 @@ h1 {
   gap: 6px;
   padding: 7px;
   text-align: left;
+  white-space: normal;
 }
 
 .hud-metric {
@@ -711,6 +825,16 @@ h1 {
   white-space: normal;
 }
 
+#event-log.event-timeline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  max-height: 178px;
+  padding: 10px;
+  text-align: left;
+  white-space: normal;
+}
+
 .alert-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -802,8 +926,55 @@ h1 {
   white-space: nowrap;
 }
 
+.event-entry {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.048);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 4px solid rgba(114, 215, 255, 0.34);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.event-tick {
+  color: #aeb7d9;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.event-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.event-copy b {
+  color: #f4f7ff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.event-copy span {
+  color: #c7d0f6;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .event-seed {
   border-color: rgba(114, 215, 255, 0.26);
+}
+
+.event-entry.event-seed {
+  border-left-color: #72d7ff;
 }
 
 .event-era,
@@ -811,13 +982,27 @@ h1 {
   border-color: rgba(255, 242, 107, 0.36);
 }
 
+.event-entry.event-era,
+.event-entry.event-empire {
+  border-left-color: #fff26b;
+}
+
 .event-space,
 .event-galaxy {
   border-color: rgba(112, 240, 208, 0.32);
 }
 
+.event-entry.event-space,
+.event-entry.event-galaxy {
+  border-left-color: #70f0d0;
+}
+
 .event-lifecycle {
   border-color: rgba(255, 120, 120, 0.48);
+}
+
+.event-entry.event-lifecycle {
+  border-left-color: #ff7878;
 }
 
 .summary-chip {
@@ -1056,5 +1241,124 @@ h1 {
 
   .summary-chip {
     padding: 6px;
+  }
+}
+
+#game-wrap {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  object-fit: fill;
+}
+
+#ui-menu #controls,
+#ui-menu #tuning-panel,
+#ui-menu #hud,
+#ui-menu #inspect-panel,
+#ui-menu #trait-panel,
+#ui-menu #lineage-panel,
+#ui-menu #ecosystem-panel,
+#ui-menu #settlement-panel,
+#ui-menu #event-panel,
+#ui-menu #trait-history-panel,
+#ui-menu #alert-panel,
+#ui-menu #persistence-status,
+#ui-menu .help {
+  grid-area: auto;
+}
+
+#ui-menu #controls {
+  justify-content: flex-start;
+  padding-right: 10px;
+}
+
+#ui-menu .sim-button,
+#ui-menu .speed-label {
+  min-height: 38px;
+  padding: 8px 13px;
+  font-size: 13px;
+}
+
+#ui-menu #tuning-panel {
+  grid-template-columns: repeat(2, minmax(230px, 1fr));
+}
+
+#ui-menu .tuning-control {
+  grid-template-columns: minmax(82px, auto) minmax(90px, 1fr) minmax(48px, auto);
+}
+
+#ui-menu .seed-control {
+  grid-template-columns: minmax(48px, auto) minmax(132px, 1fr) minmax(48px, auto);
+}
+
+#ui-menu #hud {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#ui-menu #hud > .hud-metrics {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(86px, 1fr));
+}
+
+#ui-menu #hud > .hud-card {
+  min-height: 96px;
+}
+
+#ui-menu .hud-card strong {
+  font-size: clamp(26px, 4.1vw, 38px);
+}
+
+#ui-menu #ecosystem-summary.ecosystem-dashboard {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  #ui-menu {
+    width: 100vw;
+    padding: 62px 10px 12px;
+  }
+
+  .menu-toggle {
+    top: 10px;
+    right: 10px;
+  }
+
+  #ui-menu h1 {
+    padding-right: 86px;
+    font-size: 21px;
+    letter-spacing: 2px;
+  }
+
+  #ui-menu #tuning-panel,
+  #ui-menu #hud,
+  #ui-menu #ecosystem-summary.ecosystem-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  #ui-menu #hud > .hud-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #ui-menu .hud-card strong {
+    font-size: 30px;
   }
 }

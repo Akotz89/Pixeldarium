@@ -1,6 +1,9 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+const gameWrap = document.getElementById("game-wrap");
+const uiMenu = document.getElementById("ui-menu");
+const menuToggleButton = document.getElementById("menu-toggle-button");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
@@ -41,6 +44,7 @@ const foodGrowthSlider = document.getElementById("food-growth-slider");
 const foodGrowthValue = document.getElementById("food-growth-value");
 const seedInput = document.getElementById("seed-input");
 const seedRandomButton = document.getElementById("seed-random-button");
+const controlsPanel = document.getElementById("controls");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;
@@ -75,6 +79,7 @@ const world = {
   totalFoodHarvested: 0,
   isPaused: false,
   isExtinct: false,
+  isMenuOpen: false,
   extinctionTick: 0,
   needsRender: true,
   speed: 1,
