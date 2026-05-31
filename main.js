@@ -125,10 +125,10 @@ function updateWorld() {
   world.needsRender = true;
   growFood();
 
-  var organismsAtStartOfTick = world.organisms.slice();
+  var organismsAtStartOfTick = world.organisms.length;
 
-  for (var i = 0; i < organismsAtStartOfTick.length; i++) {
-    updateOrganism(organismsAtStartOfTick[i]);
+  for (var i = 0; i < organismsAtStartOfTick; i++) {
+    updateOrganism(world.organisms[i]);
   }
 
   removeDeadOrganisms();

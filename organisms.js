@@ -491,9 +491,18 @@ function updateOrganism(organism) {
 }
 
 function removeDeadOrganisms() {
-  world.organisms = world.organisms.filter(function (organism) {
-    return organism.energy > 0 && organism.age < CONFIG.ORGANISM_MAX_AGE;
-  });
+  var writeIndex = 0;
+
+  for (var readIndex = 0; readIndex < world.organisms.length; readIndex++) {
+    var organism = world.organisms[readIndex];
+
+    if (organism.energy > 0 && organism.age < CONFIG.ORGANISM_MAX_AGE) {
+      world.organisms[writeIndex] = organism;
+      writeIndex++;
+    }
+  }
+
+  world.organisms.length = writeIndex;
 }
 
 function trimOrganismPopulation() {
