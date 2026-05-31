@@ -71,5 +71,10 @@ const world = {
   planetaryBodies: [],
   planetarySurveyProgress: 0,
   planetarySurveyReady: false,
-  lastPlanetarySurveyTick: 0
+  lastPlanetarySurveyTick: 0,
+  nextProbeMissionId: 1,
+  probeMissions: [],
+  probeMissionProgress: 0,
+  probeMissionReady: false,
+  lastProbeMissionTick: 0
 };

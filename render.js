@@ -302,6 +302,44 @@ function drawPlanetaryBodies() {
   }
 }
 
+function drawProbeMissions() {
+  if (!Array.isArray(world.probeMissions) || world.probeMissions.length === 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+
+  for (var i = 0; i < world.probeMissions.length; i++) {
+    var mission = world.probeMissions[i];
+    var targetBody = typeof getPlanetaryBodyById === "function" ? getPlanetaryBodyById(mission.targetBodyId) : null;
+
+    if (!targetBody) {
+      continue;
+    }
+
+    var angle = ((targetBody.orbitAngle + world.tick * 0.02) % 360) * Math.PI / 180;
+    var radius = Math.max(1, Math.round(Number(targetBody.orbitRadius) || 64)) * 0.72;
+    var targetX = centerX + Math.cos(angle) * radius;
+    var targetY = centerY + Math.sin(angle) * radius;
+    var progress = Math.max(0, Math.min(1, Number(mission.progress) || 0));
+    var probeX = centerX + (targetX - centerX) * progress;
+    var probeY = centerY + (targetY - centerY) * progress;
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(targetX, targetY);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 8]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = mission.isComplete ? "#70f0d0" : "#ffffff";
+    ctx.fillRect(probeX - 2, probeY - 2, 4, 4);
+  }
+}
+
 function drawScanlines() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
@@ -336,6 +374,7 @@ window.drawWorld = function() {
   drawOrganisms();
   drawOrbitalAssets();
   drawPlanetaryBodies();
+  drawProbeMissions();
   drawInspectSelection();
   drawScanlines();
 };

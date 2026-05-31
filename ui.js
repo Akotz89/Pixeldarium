@@ -328,6 +328,10 @@ function getSettlementSummary() {
     planetaryBodies: Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0,
     planetarySurveyProgress: Math.max(0, Number(world.planetarySurveyProgress) || 0),
     planetarySurveyReady: Boolean(world.planetarySurveyReady),
+    probeMissions: Array.isArray(world.probeMissions) ? world.probeMissions.length : 0,
+    completedProbeMissions: typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0,
+    probeMissionProgress: Math.max(0, Number(world.probeMissionProgress) || 0),
+    probeMissionReady: Boolean(world.probeMissionReady),
     topSettlement: topSettlement
   };
 }
@@ -359,6 +363,9 @@ function updateSettlementSummary() {
     "   planets " + summary.planetaryBodies +
     " survey " + summary.planetarySurveyProgress.toFixed(1) + "/" + CONFIG.PLANETARY_DISCOVERY_THRESHOLD +
     " " + (summary.planetarySurveyReady ? "surveying" : "waiting") +
+    "   probes " + summary.completedProbeMissions + "/" + summary.probeMissions +
+    " build " + summary.probeMissionProgress.toFixed(1) + "/" + CONFIG.PROBE_MISSION_THRESHOLD +
+    " " + (summary.probeMissionReady ? "ready" : "waiting") +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -552,6 +559,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " space " + Math.max(0, Number(world.spaceProgramProgress) || 0).toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD + " launches " + Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)) : "") +
       (settlement.isColony ? " orbit assets " + (Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0) + " infra " + Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)) : "") +
       (settlement.isColony ? " planets " + (Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0) + " survey " + Math.max(0, Number(world.planetarySurveyProgress) || 0).toFixed(1) : "") +
+      (settlement.isColony ? " probes " + (typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0) + "/" + (Array.isArray(world.probeMissions) ? world.probeMissions.length : 0) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

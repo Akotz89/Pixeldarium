@@ -670,7 +670,9 @@ function getDiscoveredPlanetaryBodyCount() {
 function updatePlanetarySurveyEra() {
   var discoveredBodies = getDiscoveredPlanetaryBodyCount();
 
-  if (discoveredBodies >= CONFIG.INTERPLANETARY_BODY_COUNT) {
+  if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
+    world.era = "Stellar Cartography";
+  } else if (discoveredBodies >= CONFIG.INTERPLANETARY_BODY_COUNT) {
     world.era = "Interplanetary";
   } else if (discoveredBodies > 0) {
     world.era = "Planetary Survey";
@@ -719,6 +721,171 @@ function updatePlanetarySurveyState() {
   }
 
   updatePlanetarySurveyReadiness();
+}
+
+function ensureProbeMissionState() {
+  if (!Array.isArray(world.probeMissions)) {
+    world.probeMissions = [];
+  }
+
+  if (typeof world.nextProbeMissionId !== "number" || world.nextProbeMissionId < 1) {
+    world.nextProbeMissionId = 1;
+  }
+
+  world.probeMissionProgress = Math.max(0, restoreSettlementGrowthNumber(world.probeMissionProgress, 0));
+  world.probeMissionReady = Boolean(world.probeMissionReady);
+  world.lastProbeMissionTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastProbeMissionTick, 0)));
+}
+
+function allocateProbeMissionId() {
+  ensureProbeMissionState();
+
+  var missionId = world.nextProbeMissionId;
+  world.nextProbeMissionId++;
+  return missionId;
+}
+
+function getPlanetaryBodyById(bodyId) {
+  normalizePlanetaryBodies();
+
+  for (var i = 0; i < world.planetaryBodies.length; i++) {
+    if (world.planetaryBodies[i].id === bodyId) {
+      return world.planetaryBodies[i];
+    }
+  }
+
+  return null;
+}
+
+function getProbeMissionTargetBodyId() {
+  normalizePlanetaryBodies();
+
+  if (world.planetaryBodies.length === 0) {
+    return 0;
+  }
+
+  var targetIndex = world.probeMissions.length % world.planetaryBodies.length;
+  return world.planetaryBodies[targetIndex].id;
+}
+
+function normalizeProbeMission(mission) {
+  mission.id = Math.max(1, Math.round(restoreSettlementGrowthNumber(mission.id, world.nextProbeMissionId)));
+  mission.targetBodyId = Math.max(0, Math.round(restoreSettlementGrowthNumber(mission.targetBodyId, 0)));
+  mission.launchedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(mission.launchedTick, world.tick)));
+  mission.arrivalTick = Math.max(mission.launchedTick, Math.round(restoreSettlementGrowthNumber(mission.arrivalTick, mission.launchedTick)));
+  mission.progress = Math.max(0, Math.min(1, restoreSettlementGrowthNumber(mission.progress, 0)));
+  mission.isComplete = Boolean(mission.isComplete);
+
+  if (mission.id >= world.nextProbeMissionId) {
+    world.nextProbeMissionId = mission.id + 1;
+  }
+}
+
+function makeProbeMission() {
+  var missionId = allocateProbeMissionId();
+  var targetBodyId = getProbeMissionTargetBodyId();
+  var travelTicks = Math.max(1, Math.round(Number(CONFIG.PROBE_MISSION_COMPLETE_TICKS) || 1));
+
+  return {
+    id: missionId,
+    targetBodyId: targetBodyId,
+    launchedTick: world.tick,
+    arrivalTick: world.tick + travelTicks,
+    progress: 0,
+    isComplete: false
+  };
+}
+
+function normalizeProbeMissions() {
+  ensureProbeMissionState();
+
+  for (var i = 0; i < world.probeMissions.length; i++) {
+    normalizeProbeMission(world.probeMissions[i]);
+  }
+}
+
+function getCompletedProbeMissionCount() {
+  normalizeProbeMissions();
+
+  var completedMissions = 0;
+
+  for (var i = 0; i < world.probeMissions.length; i++) {
+    if (world.probeMissions[i].isComplete) {
+      completedMissions++;
+    }
+  }
+
+  return completedMissions;
+}
+
+function updateProbeMissionTravel() {
+  normalizeProbeMissions();
+
+  for (var i = 0; i < world.probeMissions.length; i++) {
+    var mission = world.probeMissions[i];
+
+    if (mission.isComplete) {
+      mission.progress = 1;
+      continue;
+    }
+
+    var travelTicks = Math.max(1, mission.arrivalTick - mission.launchedTick);
+    mission.progress = Math.max(0, Math.min(1, (world.tick - mission.launchedTick) / travelTicks));
+
+    if (world.tick >= mission.arrivalTick) {
+      mission.progress = 1;
+      mission.isComplete = true;
+    }
+  }
+}
+
+function updateProbeMissionEra() {
+  if (getCompletedProbeMissionCount() >= CONFIG.STELLAR_CARTOGRAPHY_MISSION_COUNT) {
+    world.era = "Stellar Cartography";
+  } else if (world.probeMissions.length > 0) {
+    world.era = "Interplanetary Missions";
+  } else {
+    updatePlanetarySurveyEra();
+  }
+}
+
+function updateProbeMissionReadiness() {
+  ensureProbeMissionState();
+  updateProbeMissionTravel();
+
+  world.probeMissionReady = Boolean(
+    getDiscoveredPlanetaryBodyCount() >= CONFIG.PROBE_MISSION_MIN_BODIES &&
+    world.orbitalPlatformReady
+  );
+
+  updateProbeMissionEra();
+  return world.probeMissionReady;
+}
+
+function updateProbeMissionState() {
+  if (!updateProbeMissionReadiness()) {
+    return;
+  }
+
+  var missionInterval = Math.max(1, Math.round(Number(CONFIG.PROBE_MISSION_INTERVAL) || 1));
+
+  if (world.tick - world.lastProbeMissionTick < missionInterval) {
+    return;
+  }
+
+  world.lastProbeMissionTick = world.tick;
+  world.probeMissionProgress +=
+    getDiscoveredPlanetaryBodyCount() * CONFIG.PROBE_MISSION_PROGRESS_PER_BODY +
+    world.orbitalInfrastructureScore * CONFIG.PROBE_MISSION_PROGRESS_PER_INFRASTRUCTURE;
+
+  var missionThreshold = Math.max(1, Number(CONFIG.PROBE_MISSION_THRESHOLD) || 1);
+
+  while (world.probeMissionProgress >= missionThreshold) {
+    world.probeMissions.push(makeProbeMission());
+    world.probeMissionProgress -= missionThreshold;
+  }
+
+  updateProbeMissionReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1067,4 +1234,5 @@ function updateSettlements() {
   var networkSummary = updateColonyNetworkState();
   updateSpaceProgramState(networkSummary);
   updatePlanetarySurveyState();
+  updateProbeMissionState();
 }

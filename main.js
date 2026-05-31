@@ -49,6 +49,11 @@ function clearWorld() {
   world.planetarySurveyProgress = 0;
   world.planetarySurveyReady = false;
   world.lastPlanetarySurveyTick = 0;
+  world.nextProbeMissionId = 1;
+  world.probeMissions = [];
+  world.probeMissionProgress = 0;
+  world.probeMissionReady = false;
+  world.lastProbeMissionTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
