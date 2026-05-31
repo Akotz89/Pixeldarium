@@ -19,6 +19,7 @@ function updateHud() {
 
   setElementText(speedLabel, "Speed: " + world.speed + "x");
   syncTuningControls();
+  syncControlStates();
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
@@ -82,6 +83,24 @@ function syncTuningControls() {
   setElementText(startingFoodValue, String(CONFIG.STARTING_FOOD));
   setInputValue(foodGrowthSlider, growthPercent);
   setElementText(foodGrowthValue, growthPercent + "%");
+}
+
+function setButtonPressed(button, isPressed) {
+  button.setAttribute("aria-pressed", isPressed ? "true" : "false");
+  button.classList.toggle("active", Boolean(isPressed));
+}
+
+function setButtonDisabled(button, isDisabled) {
+  button.disabled = Boolean(isDisabled);
+  button.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+}
+
+function syncControlStates() {
+  setElementText(pauseButton, world.isPaused ? "Resume" : "Pause");
+  setButtonPressed(pauseButton, world.isPaused);
+  setButtonDisabled(stepButton, !world.isPaused);
+  setButtonDisabled(speedDownButton, world.speed <= 1);
+  setButtonDisabled(speedUpButton, world.speed >= 10);
 }
 
 function applyTuningFromControls(redraw) {
@@ -514,7 +533,7 @@ window.setupControls = function() {
   pauseButton.addEventListener("click", function() {
     world.isPaused = !world.isPaused;
     world.needsRender = true;
-    setElementText(pauseButton, world.isPaused ? "Resume" : "Pause");
+    syncControlStates();
   });
 
   stepButton.addEventListener("click", function() {
@@ -563,6 +582,8 @@ window.setupControls = function() {
   foodGrowthSlider.addEventListener("input", function() {
     applyTuningFromControls(false);
   });
+
+  syncControlStates();
 
   restartButton.addEventListener("click", function() {
     applyTuningFromControls(false);

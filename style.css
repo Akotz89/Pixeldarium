@@ -81,6 +81,26 @@ h1 {
   transform: translateY(-1px);
 }
 
+.sim-button.active {
+  color: #051016;
+  background: linear-gradient(180deg, #fff26b, #70f0d0);
+  border-color: rgba(255, 255, 255, 0.72);
+}
+
+.sim-button:disabled {
+  cursor: not-allowed;
+  color: rgba(220, 229, 255, 0.48);
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  transform: none;
+}
+
+.sim-button:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: none;
+}
+
 .speed-label {
   padding: 9px 12px;
   color: #dce5ff;

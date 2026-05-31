@@ -275,6 +275,7 @@ function startGame() {
     seedWorld();
     drawWorld();
     updateHud();
+    syncControlStates();
     requestAnimationFrame(gameLoop);
   } catch (error) {
     reportRuntimeError(error);
