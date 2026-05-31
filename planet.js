@@ -56,6 +56,14 @@ function getPlanetZoomLevel(index) {
   };
 }
 
+function getPlanetZoomFactor() {
+  var scale = getPlanetViewScale();
+  var globeScale = getPlanetZoomLevel(0);
+  var ratio = globeScale.metersPerSample / Math.max(0.1, scale.metersPerSample);
+
+  return clamp(Math.sqrt(ratio), 1, 28);
+}
+
 function getPlanetView() {
   if (!world.planetView) {
     world.planetView = {
@@ -83,13 +91,51 @@ function getPlanetView() {
 function focusPlanetViewOnTile(x, y) {
   var tile = getPlanetTile(x, y);
   var view = getPlanetView();
+  var previousLatitude = view.latitude;
+  var previousLongitude = view.longitude;
 
   if (tile) {
     view.latitude = tile.latitude;
     view.longitude = tile.longitude;
   }
 
+  if (
+    previousLatitude !== view.latitude ||
+    previousLongitude !== view.longitude
+  ) {
+    invalidatePlanetRenderCache();
+  }
+
   return view;
+}
+
+function invalidatePlanetRenderCache() {
+  if (typeof invalidateTerrainCache === "function") {
+    invalidateTerrainCache();
+  }
+
+  world.needsRender = true;
+}
+
+function setPlanetZoomLevel(zoomLevel) {
+  var view = getPlanetView();
+  var nextZoom = clamp(
+    Math.round(Number(zoomLevel) || 0),
+    0,
+    getPlanetZoomLevels().length - 1
+  );
+
+  if (view.zoomLevel === nextZoom) {
+    return false;
+  }
+
+  view.zoomLevel = nextZoom;
+  invalidatePlanetRenderCache();
+  return true;
+}
+
+function adjustPlanetZoom(delta) {
+  return setPlanetZoomLevel(getPlanetView().zoomLevel + Math.round(Number(delta) || 0));
 }
 
 function getPlanetViewScale() {
@@ -131,7 +177,8 @@ function getPlanetChunkKeyForTile(x, y, zoomLevelIndex) {
 }
 
 function getPlanetProjection() {
-  var radius = Math.floor(Math.min(canvas.width, canvas.height) * 0.46);
+  var zoomFactor = getPlanetZoomFactor();
+  var radius = Math.floor(Math.min(canvas.width, canvas.height) * 0.46 * zoomFactor);
   var view = getPlanetView();
 
   return {
@@ -139,7 +186,8 @@ function getPlanetProjection() {
     centerY: canvas.height / 2,
     radius: radius,
     viewLongitudeDeg: view.longitude,
-    viewLatitudeDeg: view.latitude
+    viewLatitudeDeg: view.latitude,
+    zoomFactor: zoomFactor
   };
 }
 

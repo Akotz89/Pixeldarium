@@ -1,5 +1,9 @@
 var terrainCache;
 
+function invalidateTerrainCache() {
+  terrainCache = null;
+}
+
 function drawPixel(x, y, color) {
   ctx.fillStyle = color;
   ctx.fillRect(
@@ -757,6 +761,7 @@ function drawInspectSelection() {
 }
 
 window.buildTerrainCache = buildTerrainCache;
+window.invalidateTerrainCache = invalidateTerrainCache;
 
 window.drawWorld = function() {
   drawTerrain();

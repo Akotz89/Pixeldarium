@@ -1219,6 +1219,16 @@ function inspectTile(tileX, tileY) {
   updateHud();
 }
 
+function zoomPlanetView(delta) {
+  if (!adjustPlanetZoom(delta)) {
+    return false;
+  }
+
+  drawWorld();
+  updateHud();
+  return true;
+}
+
 function setPersistenceStatus(message, isError) {
   setElementText(persistenceStatus, message);
   persistenceStatus.classList.toggle("error", Boolean(isError));
@@ -1266,6 +1276,12 @@ function handleSimulationShortcut(event) {
   } else if (code === "KeyN" || key.toLowerCase() === "n") {
     handled = true;
     stepSimulationOnce();
+  } else if (code === "BracketRight" || key === "]") {
+    handled = true;
+    zoomPlanetView(1);
+  } else if (code === "BracketLeft" || key === "[") {
+    handled = true;
+    zoomPlanetView(-1);
   } else if (code === "Equal" || code === "NumpadAdd" || key === "+" || key === "=") {
     handled = true;
 
@@ -1321,6 +1337,16 @@ window.setupControls = function() {
     var tile = getTileFromCanvasEvent(event);
     inspectTile(tile.x, tile.y);
   });
+
+  canvas.addEventListener("wheel", function(event) {
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    var tile = getTileFromCanvasEvent(event);
+    inspectTile(tile.x, tile.y);
+    zoomPlanetView(event.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
 
   pauseButton.addEventListener("click", function() {
     toggleSimulationPaused();
