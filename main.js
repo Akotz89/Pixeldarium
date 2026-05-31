@@ -166,6 +166,7 @@ function getSimulationMilestoneSnapshot() {
     ecosystemStabilityBand: ecosystemSummary ? getEcosystemStabilityBand(ecosystemSummary.stabilityScore) : -1,
     ecosystemLimitingFactor: stabilityProfile ? stabilityProfile.limitingFactor : "unknown",
     ecosystemLimitingFactorDetail: stabilityProfile ? formatEcosystemStabilityFactorScore(stabilityProfile) : "unknown",
+    recoveryAction: ecosystemSummary ? String(ecosystemSummary.recoveryAction || "observe") : "unknown",
     settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
     outposts: countItems(world.settlements, function(settlement) {
       return settlement && settlement.isOutpost;
@@ -300,6 +301,18 @@ function recordEcosystemMilestones(previousSnapshot, currentSnapshot) {
       formatEcosystemStabilityFactor(previousSnapshot.ecosystemLimitingFactor) +
         " -> " +
         currentSnapshot.ecosystemLimitingFactorDetail
+    );
+  }
+
+  if (
+    previousSnapshot.recoveryAction !== "unknown" &&
+    currentSnapshot.recoveryAction !== "unknown" &&
+    currentSnapshot.recoveryAction !== previousSnapshot.recoveryAction
+  ) {
+    recordSimulationEvent(
+      "ecosystem",
+      "Recovery " + currentSnapshot.recoveryAction,
+      previousSnapshot.recoveryAction + " -> " + currentSnapshot.recoveryAction
     );
   }
 }
