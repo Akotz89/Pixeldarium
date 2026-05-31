@@ -719,6 +719,10 @@ function reproduceIfReady(organism) {
   child.prevX = child.x;
   child.prevY = child.y;
   world.organisms.push(child);
+
+  if (typeof recordOrganismBirth === "function") {
+    recordOrganismBirth(1);
+  }
 }
 
 function updateOrganism(organism) {
@@ -751,6 +755,7 @@ function updateOrganism(organism) {
 
 function removeDeadOrganisms() {
   var writeIndex = 0;
+  var removedCount = 0;
 
   for (var readIndex = 0; readIndex < world.organisms.length; readIndex++) {
     var organism = world.organisms[readIndex];
@@ -758,14 +763,25 @@ function removeDeadOrganisms() {
     if (organism.energy > 0 && organism.age < CONFIG.ORGANISM_MAX_AGE) {
       world.organisms[writeIndex] = organism;
       writeIndex++;
+    } else {
+      removedCount++;
     }
   }
 
   world.organisms.length = writeIndex;
+
+  if (typeof recordOrganismDeath === "function") {
+    recordOrganismDeath(removedCount);
+  }
 }
 
 function trimOrganismPopulation() {
   if (world.organisms.length > CONFIG.MAX_ORGANISMS) {
+    var trimmedCount = world.organisms.length - CONFIG.MAX_ORGANISMS;
     world.organisms.length = CONFIG.MAX_ORGANISMS;
+
+    if (typeof recordOrganismDeath === "function") {
+      recordOrganismDeath(trimmedCount);
+    }
   }
 }
