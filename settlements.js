@@ -59,6 +59,33 @@ function getDistanceToSettlement(settlement, x, y) {
   return Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
 }
 
+function restoreSettlementGrowthNumber(value, fallback) {
+  var numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function getSettlementLevelForDevelopment(development) {
+  var threshold = Math.max(1, Number(CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT) || 1);
+  return Math.max(1, Math.floor(Math.max(0, development) / threshold) + 1);
+}
+
+function normalizeSettlementGrowth(settlement) {
+  settlement.storedFood = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.storedFood, 0)));
+  settlement.development = Math.max(0, restoreSettlementGrowthNumber(settlement.development, 0));
+  settlement.level = Math.max(
+    1,
+    Math.round(restoreSettlementGrowthNumber(settlement.level, getSettlementLevelForDevelopment(settlement.development)))
+  );
+  settlement.lastGrowthTick = Math.max(
+    0,
+    Math.round(restoreSettlementGrowthNumber(settlement.lastGrowthTick, settlement.foundedTick || 0))
+  );
+}
+
+function updateSettlementLevel(settlement) {
+  settlement.level = getSettlementLevelForDevelopment(settlement.development);
+}
+
 function countSettlementFoodStock(settlement) {
   var foodStock = 0;
 
@@ -89,13 +116,53 @@ function countSettlementPopulation(settlement) {
 }
 
 function updateSettlementMetrics(settlement) {
+  normalizeSettlementGrowth(settlement);
   settlement.population = countSettlementPopulation(settlement);
   settlement.foodStock = countSettlementFoodStock(settlement);
   settlement.isActive = settlement.population > 0;
+  updateSettlementLevel(settlement);
 
   if (settlement.isActive) {
     settlement.lastActiveTick = world.tick;
   }
+}
+
+function harvestSettlementFood(settlement) {
+  var harvestLimit = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_FOOD_HARVEST_PER_GROWTH) || 0));
+  var harvestedFood = 0;
+
+  for (var i = world.food.length - 1; i >= 0 && harvestedFood < harvestLimit; i--) {
+    if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= settlement.radius) {
+      world.food.splice(i, 1);
+      harvestedFood++;
+    }
+  }
+
+  settlement.storedFood += harvestedFood;
+  settlement.foodStock = countSettlementFoodStock(settlement);
+  return harvestedFood;
+}
+
+function runSettlementGrowth(settlement) {
+  normalizeSettlementGrowth(settlement);
+
+  if (!settlement.isActive) {
+    return;
+  }
+
+  var growthInterval = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_GROWTH_INTERVAL) || 1));
+
+  if (world.tick - settlement.lastGrowthTick < growthInterval) {
+    return;
+  }
+
+  harvestSettlementFood(settlement);
+
+  settlement.development +=
+    settlement.population * CONFIG.SETTLEMENT_DEVELOPMENT_PER_POPULATION +
+    settlement.storedFood * CONFIG.SETTLEMENT_DEVELOPMENT_PER_STORED_FOOD;
+  settlement.lastGrowthTick = world.tick;
+  updateSettlementLevel(settlement);
 }
 
 function makeSettlement(lineage, organisms) {
@@ -110,6 +177,10 @@ function makeSettlement(lineage, organisms) {
     radius: CONFIG.SETTLEMENT_RADIUS,
     population: 0,
     foodStock: 0,
+    storedFood: 0,
+    development: 0,
+    level: 1,
+    lastGrowthTick: world.tick,
     isActive: true,
     lastActiveTick: world.tick
   };
@@ -142,7 +213,9 @@ function updateSettlements() {
   ensureSettlementState();
 
   for (var i = 0; i < world.settlements.length; i++) {
-    updateSettlementMetrics(world.settlements[i]);
+    var settlement = world.settlements[i];
+    updateSettlementMetrics(settlement);
+    runSettlementGrowth(settlement);
   }
 
   var lineages = world.lineages || {};

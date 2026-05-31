@@ -214,6 +214,8 @@ function getSettlementSummary() {
   var activeSettlements = 0;
   var totalPopulation = 0;
   var totalFoodStock = 0;
+  var totalStoredFood = 0;
+  var totalDevelopment = 0;
   var topSettlement = null;
 
   for (var i = 0; i < world.settlements.length; i++) {
@@ -225,8 +227,14 @@ function getSettlementSummary() {
 
     totalPopulation += settlement.population;
     totalFoodStock += settlement.foodStock;
+    totalStoredFood += Math.max(0, Number(settlement.storedFood) || 0);
+    totalDevelopment += Math.max(0, Number(settlement.development) || 0);
 
-    if (!topSettlement || settlement.population > topSettlement.population) {
+    if (
+      !topSettlement ||
+      settlement.level > topSettlement.level ||
+      (settlement.level === topSettlement.level && settlement.population > topSettlement.population)
+    ) {
       topSettlement = settlement;
     }
   }
@@ -236,6 +244,8 @@ function getSettlementSummary() {
     active: activeSettlements,
     totalPopulation: totalPopulation,
     totalFoodStock: totalFoodStock,
+    totalStoredFood: totalStoredFood,
+    totalDevelopment: totalDevelopment,
     topSettlement: topSettlement
   };
 }
@@ -251,10 +261,15 @@ function updateSettlementSummary() {
   settlementSummaryText.textContent =
     "SETTLEMENTS: " + summary.active + "/" + summary.total +
     " active   camp pop " + summary.totalPopulation +
-    "   stock " + summary.totalFoodStock +
+    "   nearby " + summary.totalFoodStock +
+    "   stored " + summary.totalStoredFood +
+    "   dev " + summary.totalDevelopment.toFixed(1) +
     "   top S" + summary.topSettlement.id +
     " L" + summary.topSettlement.lineageId +
-    " pop " + summary.topSettlement.population;
+    " lvl " + summary.topSettlement.level +
+    " pop " + summary.topSettlement.population +
+    " stored " + summary.topSettlement.storedFood +
+    " dev " + summary.topSettlement.development.toFixed(1);
 }
 
 function makeTraitHistorySample(summary) {
@@ -425,8 +440,12 @@ function updateInspectPanel() {
     settlementText =
       "S" + settlement.id +
       " lineage L" + settlement.lineageId +
+      " lvl " + settlement.level +
       " pop " + settlement.population +
-      " stock " + settlement.foodStock +
+      " nearby " + settlement.foodStock +
+      " stored " + settlement.storedFood +
+      " dev " + settlement.development.toFixed(1) +
+      " last growth " + settlement.lastGrowthTick +
       " founded " + settlement.foundedTick +
       " " + (settlement.isActive ? "active" : "stale");
   }

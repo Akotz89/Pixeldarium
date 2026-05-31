@@ -114,6 +114,12 @@ function drawOrganisms() {
   }
 }
 
+function getSettlementDrawSize(settlement) {
+  var level = Math.max(1, Math.round(Number(settlement.level) || 1));
+  var growthScale = 2.1 + Math.min(level - 1, 5) * 0.35;
+  return CONFIG.ORGANISM_DRAW_SIZE * growthScale;
+}
+
 function drawSettlements() {
   if (!Array.isArray(world.settlements)) {
     return;
@@ -123,15 +129,16 @@ function drawSettlements() {
     var settlement = world.settlements[i];
     var canvasX = settlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
     var canvasY = settlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
-    var size = CONFIG.ORGANISM_DRAW_SIZE * 2.2;
+    var size = getSettlementDrawSize(settlement);
+    var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1));
 
     ctx.fillStyle = "rgba(5, 6, 10, 0.72)";
     ctx.fillRect(canvasX - size / 2, canvasY - size / 2, size, size);
     ctx.strokeStyle = settlement.isActive ? getLineageColorById(settlement.lineageId) : "rgba(255, 255, 255, 0.42)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = Math.min(4, 1 + Math.max(1, Math.round(Number(settlement.level) || 1)));
     ctx.strokeRect(canvasX - size / 2, canvasY - size / 2, size, size);
     ctx.fillStyle = "#f2b85b";
-    ctx.fillRect(canvasX - 1.5, canvasY - 1.5, 3, 3);
+    ctx.fillRect(canvasX - markerSize / 2, canvasY - markerSize / 2, markerSize, markerSize);
   }
 }
 

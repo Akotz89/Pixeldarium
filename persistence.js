@@ -105,6 +105,10 @@ function copySettlementForSave(settlement) {
     radius: settlement.radius,
     population: settlement.population,
     foodStock: settlement.foodStock,
+    storedFood: settlement.storedFood,
+    development: settlement.development,
+    level: settlement.level,
+    lastGrowthTick: settlement.lastGrowthTick,
     isActive: settlement.isActive,
     lastActiveTick: settlement.lastActiveTick
   };
@@ -190,7 +194,12 @@ function createWorldSaveData() {
       lineageColors: CONFIG.LINEAGE_COLORS.slice(),
       settlementMinLineagePopulation: CONFIG.SETTLEMENT_MIN_LINEAGE_POPULATION,
       settlementMinLineagePeakPopulation: CONFIG.SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION,
-      settlementRadius: CONFIG.SETTLEMENT_RADIUS
+      settlementRadius: CONFIG.SETTLEMENT_RADIUS,
+      settlementGrowthInterval: CONFIG.SETTLEMENT_GROWTH_INTERVAL,
+      settlementFoodHarvestPerGrowth: CONFIG.SETTLEMENT_FOOD_HARVEST_PER_GROWTH,
+      settlementDevelopmentPerPopulation: CONFIG.SETTLEMENT_DEVELOPMENT_PER_POPULATION,
+      settlementDevelopmentPerStoredFood: CONFIG.SETTLEMENT_DEVELOPMENT_PER_STORED_FOOD,
+      settlementLevelDevelopment: CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -352,6 +361,13 @@ function restoreSettlement(settlement) {
     radius: Math.max(1, Math.round(restoreNumber(settlement.radius, CONFIG.SETTLEMENT_RADIUS))),
     population: Math.max(0, Math.round(restoreNumber(settlement.population, 0))),
     foodStock: Math.max(0, Math.round(restoreNumber(settlement.foodStock, 0))),
+    storedFood: Math.max(0, Math.round(restoreNumber(settlement.storedFood, 0))),
+    development: Math.max(0, restoreNumber(settlement.development, 0)),
+    level: Math.max(1, Math.round(restoreNumber(settlement.level, 1))),
+    lastGrowthTick: Math.max(
+      0,
+      Math.round(restoreNumber(settlement.lastGrowthTick, restoreNumber(settlement.foundedTick, 0)))
+    ),
     isActive: Boolean(settlement.isActive),
     lastActiveTick: Math.max(0, Math.round(restoreNumber(settlement.lastActiveTick, 0)))
   };
@@ -589,6 +605,26 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.settlementRadius === "number") {
     CONFIG.SETTLEMENT_RADIUS = saveConfig.settlementRadius;
+  }
+
+  if (typeof saveConfig.settlementGrowthInterval === "number") {
+    CONFIG.SETTLEMENT_GROWTH_INTERVAL = saveConfig.settlementGrowthInterval;
+  }
+
+  if (typeof saveConfig.settlementFoodHarvestPerGrowth === "number") {
+    CONFIG.SETTLEMENT_FOOD_HARVEST_PER_GROWTH = saveConfig.settlementFoodHarvestPerGrowth;
+  }
+
+  if (typeof saveConfig.settlementDevelopmentPerPopulation === "number") {
+    CONFIG.SETTLEMENT_DEVELOPMENT_PER_POPULATION = saveConfig.settlementDevelopmentPerPopulation;
+  }
+
+  if (typeof saveConfig.settlementDevelopmentPerStoredFood === "number") {
+    CONFIG.SETTLEMENT_DEVELOPMENT_PER_STORED_FOOD = saveConfig.settlementDevelopmentPerStoredFood;
+  }
+
+  if (typeof saveConfig.settlementLevelDevelopment === "number") {
+    CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT = saveConfig.settlementLevelDevelopment;
   }
 }
 
