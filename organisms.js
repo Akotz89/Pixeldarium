@@ -694,6 +694,11 @@ function eatFoodOnCurrentTile(organism) {
   }
 
   organism.energy += CONFIG.FOOD_ENERGY_VALUE;
+
+  if (typeof recordFoodConsumed === "function") {
+    recordFoodConsumed(1);
+  }
+
   return true;
 }
 

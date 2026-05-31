@@ -27,6 +27,12 @@ function clearWorld() {
   world.populationDeltaThisTick = 0;
   world.totalBirths = 0;
   world.totalDeaths = 0;
+  world.foodSpawnedThisTick = 0;
+  world.foodConsumedThisTick = 0;
+  world.foodHarvestedThisTick = 0;
+  world.totalFoodSpawned = 0;
+  world.totalFoodConsumed = 0;
+  world.totalFoodHarvested = 0;
   world.isPaused = false;
   world.isExtinct = false;
   world.extinctionTick = 0;
@@ -484,6 +490,12 @@ function resetPopulationFlowCounters() {
   world.populationDeltaThisTick = 0;
 }
 
+function resetFoodFlowCounters() {
+  world.foodSpawnedThisTick = 0;
+  world.foodConsumedThisTick = 0;
+  world.foodHarvestedThisTick = 0;
+}
+
 function recordOrganismBirth(count) {
   var birthCount = Math.max(0, Math.round(Number(count) || 0));
 
@@ -504,6 +516,40 @@ function recordOrganismDeath(count) {
 
   world.deathsThisTick += deathCount;
   world.totalDeaths += deathCount;
+}
+
+function recordFoodSpawned(count) {
+  var foodCount = Math.max(0, Math.round(Number(count) || 0));
+
+  if (foodCount <= 0) {
+    return;
+  }
+
+  world.foodSpawnedThisTick += foodCount;
+  world.totalFoodSpawned += foodCount;
+}
+
+function recordFoodConsumed(count) {
+  var foodCount = Math.max(0, Math.round(Number(count) || 0));
+
+  if (foodCount <= 0) {
+    return;
+  }
+
+  world.foodConsumedThisTick += foodCount;
+  world.totalFoodConsumed += foodCount;
+}
+
+function recordFoodHarvested(count) {
+  var foodCount = Math.max(0, Math.round(Number(count) || 0));
+
+  if (foodCount <= 0) {
+    return;
+  }
+
+  world.foodHarvestedThisTick += foodCount;
+  world.totalFoodHarvested += foodCount;
+  recordFoodConsumed(foodCount);
 }
 
 function makeSimulationAlert(severity, label, detail) {
@@ -630,6 +676,7 @@ function updateWorld() {
   world.tick++;
   world.needsRender = true;
   resetPopulationFlowCounters();
+  resetFoodFlowCounters();
   var milestoneSnapshot = getSimulationMilestoneSnapshot();
   growFood();
 
