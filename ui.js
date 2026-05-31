@@ -8,11 +8,12 @@ function updateHud() {
   foodText.textContent =
     "TICK: " + world.tick +
     "   FOOD: " + world.food.length +
-    "   FERTILE: " + fertilePercent + "%" +
-    "   FPS: " + world.fps.toFixed(1) +
+    "   FERTILE: " + fertilePercent + "%";
+
+  performanceText.textContent =
+    "FPS: " + world.fps.toFixed(1) +
     "   TPS: " + world.tps.toFixed(1) +
-    "   UPDATE: " + world.updateMs.toFixed(2) + "ms" +
-    "   DRAW: " + world.drawMs.toFixed(2) + "ms" +
+    "   AVG U/D: " + world.updateMs.toFixed(2) + "/" + world.drawMs.toFixed(2) + "ms" +
     "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
 
   speedLabel.textContent = "Speed: " + world.speed + "x";

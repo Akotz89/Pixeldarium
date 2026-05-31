@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
+const performanceText = document.getElementById("performance");
 
 const pauseButton = document.getElementById("pause-button");
 const stepButton = document.getElementById("step-button");

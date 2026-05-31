@@ -65,7 +65,6 @@ function updateWorld() {
 }
 
 var frameCounter = 0;
-var lastFrameTime = performance.now();
 var statsTimer = performance.now();
 var framesSinceStatsUpdate = 0;
 var simTicksSinceStatsUpdate = 0;
@@ -79,7 +78,6 @@ var maxDrawMsSinceStatsUpdate = 0;
 function gameLoop() {
   try {
     var now = performance.now();
-    lastFrameTime = now;
     framesSinceStatsUpdate++;
     frameCounter++;
 
@@ -122,7 +120,7 @@ function gameLoop() {
 
     var statsElapsed = now - statsTimer;
 
-    if (statsElapsed >= 500) {
+    if (statsElapsed >= CONFIG.STATS_UPDATE_MS) {
       world.fps = framesSinceStatsUpdate / (statsElapsed / 1000);
       world.tps = simTicksSinceStatsUpdate / (statsElapsed / 1000);
       world.updateMs = measuredUpdateFrames > 0 ? updateMsSinceStatsUpdate / measuredUpdateFrames : 0;
