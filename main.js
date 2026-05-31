@@ -34,6 +34,7 @@ function clearWorld() {
   world.populationTraitSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
+  world.eventLog = [];
   world.lineages = {};
   world.nextSettlementId = 1;
   world.settlements = [];
@@ -105,6 +106,113 @@ function clearWorld() {
   }
 }
 
+function ensureEventLog() {
+  if (!Array.isArray(world.eventLog)) {
+    world.eventLog = [];
+  }
+}
+
+function countItems(array, predicate) {
+  var count = 0;
+
+  if (!Array.isArray(array)) {
+    return count;
+  }
+
+  for (var i = 0; i < array.length; i++) {
+    if (predicate(array[i])) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+function getSimulationMilestoneSnapshot() {
+  return {
+    era: world.era,
+    settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
+    outposts: countItems(world.settlements, function(settlement) {
+      return settlement && settlement.isOutpost;
+    }),
+    colonies: countItems(world.settlements, function(settlement) {
+      return settlement && settlement.isColony;
+    }),
+    routes: Array.isArray(world.settlementRoutes) ? world.settlementRoutes.length : 0,
+    orbitalLaunches: Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)),
+    planetaryBodies: Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0,
+    completedProbeMissions: countItems(world.probeMissions, function(mission) {
+      return mission && mission.isComplete;
+    }),
+    starSystems: Array.isArray(world.starSystems) ? world.starSystems.length : 0,
+    claimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
+    interstellarFleets: Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0,
+    completedInterstellarFleets: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
+    empireSectors: Array.isArray(world.empireSectors) ? world.empireSectors.length : 0,
+    empireLegacyLevel: Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)),
+    empireLegacyComplete: Boolean(world.empireLegacyComplete)
+  };
+}
+
+function recordSimulationEvent(type, label, detail) {
+  ensureEventLog();
+
+  var lastEvent = world.eventLog[world.eventLog.length - 1];
+
+  if (
+    lastEvent &&
+    lastEvent.tick === world.tick &&
+    lastEvent.type === type &&
+    lastEvent.label === label &&
+    lastEvent.detail === detail
+  ) {
+    return;
+  }
+
+  world.eventLog.push({
+    tick: world.tick,
+    type: type,
+    label: label,
+    detail: detail
+  });
+
+  while (world.eventLog.length > CONFIG.EVENT_LOG_MAX_ENTRIES) {
+    world.eventLog.shift();
+  }
+}
+
+function recordCountMilestone(previous, current, key, type, label, detailPrefix) {
+  if (current[key] > previous[key]) {
+    recordSimulationEvent(type, label, detailPrefix + " " + current[key]);
+  }
+}
+
+function recordSimulationMilestones(previousSnapshot) {
+  var currentSnapshot = getSimulationMilestoneSnapshot();
+
+  if (currentSnapshot.era !== previousSnapshot.era) {
+    recordSimulationEvent("era", currentSnapshot.era, previousSnapshot.era + " -> " + currentSnapshot.era);
+  }
+
+  recordCountMilestone(previousSnapshot, currentSnapshot, "settlements", "settlement", "Settlement founded", "total");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "outposts", "settlement", "Outpost founded", "total");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "colonies", "settlement", "Colony matured", "total");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "routes", "network", "Trade route opened", "total");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "orbitalLaunches", "space", "Orbital launch", "launches");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "planetaryBodies", "space", "Planet discovered", "bodies");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "completedProbeMissions", "space", "Probe arrived", "completed");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "starSystems", "galaxy", "Star mapped", "systems");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "claimedSystems", "galaxy", "System claimed", "claimed");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "interstellarFleets", "galaxy", "Fleet launched", "fleets");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "completedInterstellarFleets", "galaxy", "Fleet arrived", "completed");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "empireSectors", "empire", "Sector founded", "sectors");
+  recordCountMilestone(previousSnapshot, currentSnapshot, "empireLegacyLevel", "empire", "Legacy advanced", "level");
+
+  if (currentSnapshot.empireLegacyComplete && !previousSnapshot.empireLegacyComplete) {
+    recordSimulationEvent("empire", "Ascendant empire", "legacy complete");
+  }
+}
+
 function seedWorld() {
   clearWorld();
   seedTerrain();
@@ -135,11 +243,14 @@ function seedWorld() {
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(true);
   }
+
+  recordSimulationEvent("seed", "Simulation seeded", world.organisms.length + " organisms");
 }
 
 function updateWorld() {
   world.tick++;
   world.needsRender = true;
+  var milestoneSnapshot = getSimulationMilestoneSnapshot();
   growFood();
 
   var organismsAtStartOfTick = world.organisms.length;
@@ -158,6 +269,8 @@ function updateWorld() {
   if (typeof updateSettlements === "function") {
     updateSettlements();
   }
+
+  recordSimulationMilestones(milestoneSnapshot);
 
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(false);
