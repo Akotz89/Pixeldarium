@@ -16,6 +16,7 @@ function clearWorld() {
   world.era = "Organisms";
   world.organisms = [];
   world.food = [];
+  world.foodPositions = {};
   world.terrain = [];
   world.fertileTiles = 0;
   world.needsRender = true;
@@ -112,7 +113,7 @@ function seedWorld() {
 
   for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
     var position = randomFoodPosition();
-    world.food.push(makeFood(position.x, position.y));
+    addFoodAt(position.x, position.y);
   }
 
   if (typeof recordTraitHistorySample === "function") {

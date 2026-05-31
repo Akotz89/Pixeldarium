@@ -244,7 +244,7 @@ function harvestSettlementFood(settlement) {
 
   for (var i = world.food.length - 1; i >= 0 && harvestedFood < harvestLimit; i--) {
     if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= settlement.radius) {
-      world.food.splice(i, 1);
+      removeFoodAtIndex(i);
       harvestedFood++;
     }
   }

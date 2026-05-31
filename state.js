@@ -46,6 +46,7 @@ const world = {
   era: "Organisms",
   organisms: [],
   food: [],
+  foodPositions: {},
   terrain: [],
   fertileTiles: 0,
   isPaused: false,
