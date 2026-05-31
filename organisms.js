@@ -429,7 +429,7 @@ function eatFoodOnCurrentTile(organism) {
     var food = world.food[i];
 
     if (food.x === organism.x && food.y === organism.y) {
-      world.food.splice(i, 1);
+      removeFoodAtIndex(i);
       organism.energy += CONFIG.FOOD_ENERGY_VALUE;
       return true;
     }

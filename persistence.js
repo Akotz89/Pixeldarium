@@ -1634,6 +1634,7 @@ function applyWorldSaveData(saveData) {
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
+  rebuildFoodPositions();
   world.organisms = saveData.organisms.map(restoreOrganism);
   refreshLineageRegistry();
 
