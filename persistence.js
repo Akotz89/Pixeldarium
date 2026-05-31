@@ -1625,6 +1625,7 @@ function applyWorldSaveData(saveData) {
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
+  rebuildSettlementIndexes();
   world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
   world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
