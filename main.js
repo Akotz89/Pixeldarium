@@ -132,8 +132,12 @@ function countItems(array, predicate) {
 }
 
 function getSimulationMilestoneSnapshot() {
+  var ecosystemSummary = world.ecosystemSummary || null;
+
   return {
     era: world.era,
+    ecosystemPressure: ecosystemSummary ? ecosystemSummary.pressure : "unknown",
+    ecosystemStabilityBand: ecosystemSummary ? getEcosystemStabilityBand(ecosystemSummary.stabilityScore) : -1,
     settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
     outposts: countItems(world.settlements, function(settlement) {
       return settlement && settlement.isOutpost;
@@ -190,6 +194,64 @@ function recordCountMilestone(previous, current, key, type, label, detailPrefix)
   }
 }
 
+function getEcosystemStabilityBand(stabilityScore) {
+  return clamp(Math.floor(Math.max(0, Math.round(Number(stabilityScore) || 0)) / 20), 0, 5);
+}
+
+function getEcosystemStabilityBandLabel(stabilityBand) {
+  if (stabilityBand <= 0) {
+    return "critical";
+  }
+
+  if (stabilityBand === 1) {
+    return "fragile";
+  }
+
+  if (stabilityBand === 2) {
+    return "strained";
+  }
+
+  if (stabilityBand === 3) {
+    return "stable";
+  }
+
+  if (stabilityBand === 4) {
+    return "strong";
+  }
+
+  return "thriving";
+}
+
+function recordEcosystemMilestones(previousSnapshot, currentSnapshot) {
+  if (
+    previousSnapshot.ecosystemPressure !== "unknown" &&
+    currentSnapshot.ecosystemPressure !== previousSnapshot.ecosystemPressure
+  ) {
+    recordSimulationEvent(
+      "ecosystem",
+      "Pressure " + currentSnapshot.ecosystemPressure,
+      previousSnapshot.ecosystemPressure + " -> " + currentSnapshot.ecosystemPressure
+    );
+  }
+
+  if (
+    previousSnapshot.ecosystemStabilityBand >= 0 &&
+    currentSnapshot.ecosystemStabilityBand !== previousSnapshot.ecosystemStabilityBand
+  ) {
+    var direction = currentSnapshot.ecosystemStabilityBand > previousSnapshot.ecosystemStabilityBand
+      ? "improved"
+      : "dropped";
+
+    recordSimulationEvent(
+      "ecosystem",
+      "Stability " + direction,
+      getEcosystemStabilityBandLabel(previousSnapshot.ecosystemStabilityBand) +
+        " -> " +
+        getEcosystemStabilityBandLabel(currentSnapshot.ecosystemStabilityBand)
+    );
+  }
+}
+
 function recordSimulationMilestones(previousSnapshot) {
   var currentSnapshot = getSimulationMilestoneSnapshot();
 
@@ -197,6 +259,7 @@ function recordSimulationMilestones(previousSnapshot) {
     recordSimulationEvent("era", currentSnapshot.era, previousSnapshot.era + " -> " + currentSnapshot.era);
   }
 
+  recordEcosystemMilestones(previousSnapshot, currentSnapshot);
   recordCountMilestone(previousSnapshot, currentSnapshot, "settlements", "settlement", "Settlement founded", "total");
   recordCountMilestone(previousSnapshot, currentSnapshot, "outposts", "settlement", "Outpost founded", "total");
   recordCountMilestone(previousSnapshot, currentSnapshot, "colonies", "settlement", "Colony matured", "total");
