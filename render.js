@@ -217,14 +217,14 @@ function drawSettlements() {
     var size = getSettlementDrawSize(settlement);
     var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1));
 
-    ctx.fillStyle = settlement.isOutpost ? "rgba(8, 10, 18, 0.58)" : "rgba(5, 6, 10, 0.72)";
+    ctx.fillStyle = settlement.isColony ? "rgba(8, 24, 26, 0.66)" : (settlement.isOutpost ? "rgba(8, 10, 18, 0.58)" : "rgba(5, 6, 10, 0.72)");
     ctx.fillRect(canvasX - size / 2, canvasY - size / 2, size, size);
     ctx.strokeStyle = settlement.isActive ? getLineageColorById(settlement.lineageId) : "rgba(255, 255, 255, 0.42)";
     ctx.lineWidth = Math.min(4, 1 + Math.max(1, Math.round(Number(settlement.level) || 1)));
-    ctx.setLineDash(settlement.isOutpost ? [3, 2] : []);
+    ctx.setLineDash(settlement.isOutpost && !settlement.isColony ? [3, 2] : []);
     ctx.strokeRect(canvasX - size / 2, canvasY - size / 2, size, size);
     ctx.setLineDash([]);
-    ctx.fillStyle = settlement.isOutpost ? "#fff26b" : "#f2b85b";
+    ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
     ctx.fillRect(canvasX - markerSize / 2, canvasY - markerSize / 2, markerSize, markerSize);
   }
 }

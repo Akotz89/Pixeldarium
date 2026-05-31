@@ -253,6 +253,7 @@ function getSettlementSummary() {
   var totalClaimedTiles = 0;
   var totalClaimedFood = 0;
   var totalOutposts = 0;
+  var totalColonies = 0;
   var totalRoutes = Array.isArray(world.settlementRoutes) ? world.settlementRoutes.length : 0;
   var activeRoutes = 0;
   var totalRouteFoodTransferred = 0;
@@ -273,6 +274,10 @@ function getSettlementSummary() {
 
     if (settlement.isOutpost) {
       totalOutposts++;
+    }
+
+    if (settlement.isColony) {
+      totalColonies++;
     }
 
     if (settlement.isActive) {
@@ -306,6 +311,7 @@ function getSettlementSummary() {
     totalClaimedTiles: totalClaimedTiles,
     totalClaimedFood: totalClaimedFood,
     totalOutposts: totalOutposts,
+    totalColonies: totalColonies,
     totalRoutes: totalRoutes,
     activeRoutes: activeRoutes,
     totalRouteFoodTransferred: totalRouteFoodTransferred,
@@ -324,6 +330,7 @@ function updateSettlementSummary() {
   settlementSummaryText.textContent =
     "SETTLEMENTS: " + summary.active + "/" + summary.total +
     " active   outposts " + summary.totalOutposts +
+    " colonies " + summary.totalColonies +
     " routes " + summary.activeRoutes + "/" + summary.totalRoutes +
     " moved " + summary.totalRouteFoodTransferred +
     "   camp pop " + summary.totalPopulation +
@@ -336,7 +343,7 @@ function updateSettlementSummary() {
     " L" + summary.topSettlement.lineageId +
     " lvl " + summary.topSettlement.level +
     " influence " + summary.topSettlement.influenceRadius +
-    (summary.topSettlement.isOutpost ? " outpost of S" + summary.topSettlement.parentSettlementId : " root camp") +
+    (summary.topSettlement.isColony ? " colony of S" + summary.topSettlement.parentSettlementId : (summary.topSettlement.isOutpost ? " outpost of S" + summary.topSettlement.parentSettlementId : " root camp")) +
     " pop " + summary.topSettlement.population +
     " stored " + summary.topSettlement.storedFood +
     " dev " + summary.topSettlement.development.toFixed(1);
@@ -512,7 +519,7 @@ function updateInspectPanel() {
     settlementText =
       "S" + settlement.id +
       " lineage L" + settlement.lineageId +
-      (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp") +
+      (settlement.isColony ? " colony parent S" + settlement.parentSettlementId : (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp")) +
       " routes " + settlementRouteSummary.activeRoutes + "/" + settlementRouteSummary.routeCount +
       " route food " + settlementRouteSummary.foodTransferred +
       " lvl " + settlement.level +
@@ -520,6 +527,7 @@ function updateInspectPanel() {
       " claimed " + settlement.claimedTiles +
       " claimed food " + settlement.claimedFood +
       " last outpost " + settlement.lastOutpostTick +
+      " supply growth " + settlement.lastSupplyGrowthTick +
       " pop " + settlement.population +
       " nearby " + settlement.foodStock +
       " stored " + settlement.storedFood +

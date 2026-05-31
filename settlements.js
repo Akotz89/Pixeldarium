@@ -169,9 +169,14 @@ function normalizeSettlementGrowth(settlement) {
   );
   settlement.parentSettlementId = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.parentSettlementId, 0)));
   settlement.isOutpost = Boolean(settlement.isOutpost);
+  settlement.isColony = Boolean(settlement.isColony);
   settlement.lastOutpostTick = Math.max(
     0,
     Math.round(restoreSettlementGrowthNumber(settlement.lastOutpostTick, settlement.foundedTick || 0))
+  );
+  settlement.lastSupplyGrowthTick = Math.max(
+    0,
+    Math.round(restoreSettlementGrowthNumber(settlement.lastSupplyGrowthTick, settlement.foundedTick || 0))
   );
   settlement.influenceRadius = Math.max(
     1,
@@ -183,6 +188,11 @@ function normalizeSettlementGrowth(settlement) {
 
 function updateSettlementLevel(settlement) {
   settlement.level = getSettlementLevelForDevelopment(settlement.development);
+
+  if (settlement.isOutpost && settlement.level >= CONFIG.SETTLEMENT_COLONY_LEVEL) {
+    settlement.isColony = true;
+  }
+
   updateSettlementInfluence(settlement);
 }
 
@@ -295,6 +305,26 @@ function countRoutesForSettlement(settlementId) {
   return routeCount;
 }
 
+function countActiveRoutesForSettlement(settlementId) {
+  ensureSettlementState();
+
+  var activeRouteCount = 0;
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    if (
+      world.settlementRoutes[i].isActive &&
+      (
+        world.settlementRoutes[i].parentSettlementId === settlementId ||
+        world.settlementRoutes[i].childSettlementId === settlementId
+      )
+    ) {
+      activeRouteCount++;
+    }
+  }
+
+  return activeRouteCount;
+}
+
 function makeSettlement(lineage, organisms) {
   var center = getLineageCenter(organisms);
   return makeSettlementAt(lineage.id, center.x, center.y, {
@@ -323,7 +353,9 @@ function makeSettlementAt(lineageId, x, y, options) {
     claimedFood: 0,
     parentSettlementId: Math.max(0, Math.round(options.parentSettlementId || 0)),
     isOutpost: Boolean(options.isOutpost),
+    isColony: Boolean(options.isColony),
     lastOutpostTick: world.tick,
+    lastSupplyGrowthTick: world.tick,
     isActive: true,
     lastActiveTick: world.tick
   };
@@ -580,6 +612,38 @@ function updateSettlementRoutes() {
   }
 }
 
+function runSuppliedOutpostGrowth(settlement) {
+  normalizeSettlementGrowth(settlement);
+
+  if (!settlement.isOutpost || countActiveRoutesForSettlement(settlement.id) === 0) {
+    return;
+  }
+
+  var supplyGrowthInterval = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_SUPPLY_GROWTH_INTERVAL) || 1));
+
+  if (world.tick - settlement.lastSupplyGrowthTick < supplyGrowthInterval) {
+    return;
+  }
+
+  var foodCost = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_SUPPLY_GROWTH_FOOD_COST) || 0));
+
+  settlement.lastSupplyGrowthTick = world.tick;
+
+  if (foodCost <= 0 || settlement.storedFood < foodCost) {
+    return;
+  }
+
+  settlement.storedFood -= foodCost;
+  settlement.development += foodCost * CONFIG.SETTLEMENT_DEVELOPMENT_PER_SUPPLIED_FOOD;
+  updateSettlementLevel(settlement);
+}
+
+function updateSuppliedOutpostGrowth() {
+  for (var i = 0; i < world.settlements.length; i++) {
+    runSuppliedOutpostGrowth(world.settlements[i]);
+  }
+}
+
 function updateSettlements() {
   ensureSettlementState();
 
@@ -591,6 +655,7 @@ function updateSettlements() {
 
   updateSettlementOutposts();
   updateSettlementRoutes();
+  updateSuppliedOutpostGrowth();
 
   var lineages = world.lineages || {};
 

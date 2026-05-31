@@ -114,7 +114,9 @@ function copySettlementForSave(settlement) {
     claimedFood: settlement.claimedFood,
     parentSettlementId: settlement.parentSettlementId,
     isOutpost: settlement.isOutpost,
+    isColony: settlement.isColony,
     lastOutpostTick: settlement.lastOutpostTick,
+    lastSupplyGrowthTick: settlement.lastSupplyGrowthTick,
     isActive: settlement.isActive,
     lastActiveTick: settlement.lastActiveTick
   };
@@ -242,7 +244,11 @@ function createWorldSaveData() {
       settlementOutpostMaxChildren: CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN,
       settlementRouteTransferInterval: CONFIG.SETTLEMENT_ROUTE_TRANSFER_INTERVAL,
       settlementRouteFoodTransfer: CONFIG.SETTLEMENT_ROUTE_FOOD_TRANSFER,
-      settlementRouteMinParentStoredFood: CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD
+      settlementRouteMinParentStoredFood: CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD,
+      settlementSupplyGrowthInterval: CONFIG.SETTLEMENT_SUPPLY_GROWTH_INTERVAL,
+      settlementSupplyGrowthFoodCost: CONFIG.SETTLEMENT_SUPPLY_GROWTH_FOOD_COST,
+      settlementDevelopmentPerSuppliedFood: CONFIG.SETTLEMENT_DEVELOPMENT_PER_SUPPLIED_FOOD,
+      settlementColonyLevel: CONFIG.SETTLEMENT_COLONY_LEVEL
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -417,9 +423,14 @@ function restoreSettlement(settlement) {
     claimedFood: Math.max(0, Math.round(restoreNumber(settlement.claimedFood, 0))),
     parentSettlementId: Math.max(0, Math.round(restoreNumber(settlement.parentSettlementId, 0))),
     isOutpost: Boolean(settlement.isOutpost),
+    isColony: Boolean(settlement.isColony),
     lastOutpostTick: Math.max(
       0,
       Math.round(restoreNumber(settlement.lastOutpostTick, restoreNumber(settlement.foundedTick, 0)))
+    ),
+    lastSupplyGrowthTick: Math.max(
+      0,
+      Math.round(restoreNumber(settlement.lastSupplyGrowthTick, restoreNumber(settlement.foundedTick, 0)))
     ),
     isActive: Boolean(settlement.isActive),
     lastActiveTick: Math.max(0, Math.round(restoreNumber(settlement.lastActiveTick, 0)))
@@ -431,6 +442,10 @@ function restoreSettlement(settlement) {
 
   if (typeof countSettlementClaimedTiles === "function") {
     restoredSettlement.claimedTiles = countSettlementClaimedTiles(restoredSettlement);
+  }
+
+  if (restoredSettlement.isOutpost && restoredSettlement.level >= CONFIG.SETTLEMENT_COLONY_LEVEL) {
+    restoredSettlement.isColony = true;
   }
 
   if (restoredSettlement.id >= world.nextSettlementId) {
@@ -772,6 +787,22 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.settlementRouteMinParentStoredFood === "number") {
     CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD = saveConfig.settlementRouteMinParentStoredFood;
+  }
+
+  if (typeof saveConfig.settlementSupplyGrowthInterval === "number") {
+    CONFIG.SETTLEMENT_SUPPLY_GROWTH_INTERVAL = saveConfig.settlementSupplyGrowthInterval;
+  }
+
+  if (typeof saveConfig.settlementSupplyGrowthFoodCost === "number") {
+    CONFIG.SETTLEMENT_SUPPLY_GROWTH_FOOD_COST = saveConfig.settlementSupplyGrowthFoodCost;
+  }
+
+  if (typeof saveConfig.settlementDevelopmentPerSuppliedFood === "number") {
+    CONFIG.SETTLEMENT_DEVELOPMENT_PER_SUPPLIED_FOOD = saveConfig.settlementDevelopmentPerSuppliedFood;
+  }
+
+  if (typeof saveConfig.settlementColonyLevel === "number") {
+    CONFIG.SETTLEMENT_COLONY_LEVEL = saveConfig.settlementColonyLevel;
   }
 }
 
