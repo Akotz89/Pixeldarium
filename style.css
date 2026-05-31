@@ -307,11 +307,48 @@ h1 {
   white-space: nowrap;
 }
 
-.summary-chip span {
+.summary-chip-value {
   color: #f4f7ff;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.summary-progress-chip {
+  display: grid;
+  grid-template-rows: auto 4px;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.summary-chip-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.summary-progress-track {
+  height: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+}
+
+.summary-progress-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #72d7ff, #70f0d0);
+  border-radius: inherit;
+}
+
+.summary-progress-chip.ready .summary-progress-track span {
+  background: linear-gradient(90deg, #fff26b, #70f0d0);
+}
+
+.summary-progress-chip.complete .summary-progress-track span {
+  background: linear-gradient(90deg, #70f0d0, #f4f7ff);
 }
 
 #persistence-status {
