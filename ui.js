@@ -144,6 +144,78 @@ function getNearestSettlementToTile(tileX, tileY) {
     : null;
 }
 
+function getInspectContextRadius() {
+  return Math.max(4, Math.round(Number(CONFIG.SETTLEMENT_RADIUS) / 2 || 6));
+}
+
+function countFertileTilesInRadius(tileX, tileY, radius) {
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var fertileTiles = 0;
+  var sampledTiles = 0;
+
+  for (var y = Math.max(0, tileY - normalizedRadius); y <= Math.min(WORLD_HEIGHT - 1, tileY + normalizedRadius); y++) {
+    var rowRadius = normalizedRadius - Math.abs(tileY - y);
+
+    for (var x = Math.max(0, tileX - rowRadius); x <= Math.min(WORLD_WIDTH - 1, tileX + rowRadius); x++) {
+      sampledTiles++;
+
+      if (isFertile(x, y)) {
+        fertileTiles++;
+      }
+    }
+  }
+
+  return {
+    fertileTiles: fertileTiles,
+    sampledTiles: sampledTiles,
+    fertilePercent: sampledTiles > 0 ? (fertileTiles / sampledTiles) * 100 : 0
+  };
+}
+
+function getDistanceLabel(distance) {
+  return Number.isFinite(distance) ? String(distance) : "-";
+}
+
+function getLocalInspectContext(tileX, tileY) {
+  var contextRadius = getInspectContextRadius();
+  var nearbyOrganisms = typeof collectOrganismsInRadius === "function"
+    ? collectOrganismsInRadius(tileX, tileY, contextRadius, 0)
+    : [];
+  var nearbyFood = typeof countFoodInRadius === "function"
+    ? countFoodInRadius(tileX, tileY, contextRadius)
+    : 0;
+  var fertileContext = countFertileTilesInRadius(tileX, tileY, contextRadius);
+  var nearestFood = typeof findNearestFoodInBuckets === "function"
+    ? findNearestFoodInBuckets(tileX, tileY, contextRadius * 2)
+    : null;
+  var nearestSettlementDistance = typeof getDistanceToNearestSettlement === "function"
+    ? getDistanceToNearestSettlement(tileX, tileY, contextRadius * 4)
+    : Infinity;
+  var localPressure = "open";
+
+  if (world.isExtinct) {
+    localPressure = "extinct";
+  } else if (nearbyOrganisms.length >= contextRadius * 2) {
+    localPressure = "crowded";
+  } else if (nearbyFood <= 0 && nearbyOrganisms.length > 0) {
+    localPressure = "starving";
+  } else if (nearbyFood >= nearbyOrganisms.length && fertileContext.fertilePercent >= 45) {
+    localPressure = "rich";
+  } else if (nearbyOrganisms.length > 0) {
+    localPressure = "active";
+  }
+
+  return {
+    radius: contextRadius,
+    nearbyOrganisms: nearbyOrganisms.length,
+    nearbyFood: nearbyFood,
+    fertilePercent: fertileContext.fertilePercent,
+    nearestFoodDistance: nearestFood ? Math.abs(nearestFood.x - tileX) + Math.abs(nearestFood.y - tileY) : Infinity,
+    nearestSettlementDistance: nearestSettlementDistance,
+    localPressure: localPressure
+  };
+}
+
 function getRouteSummaryForSettlement(settlementId) {
   if (typeof getSettlementRouteStats === "function") {
     return getSettlementRouteStats(settlementId);
@@ -699,9 +771,16 @@ function updateInspectPanel() {
   var hasFood = foodExistsAt(tileX, tileY);
   var organism = getNearestOrganismToTile(tileX, tileY);
   var settlement = getNearestSettlementToTile(tileX, tileY);
+  var localContext = getLocalInspectContext(tileX, tileY);
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
-    makeInspectChip("Food", hasFood ? "yes" : "no")
+    makeInspectChip("Food", hasFood ? "yes" : "no"),
+    makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
+    makeInspectChip("Local Org", localContext.nearbyOrganisms),
+    makeInspectChip("Local Food", localContext.nearbyFood),
+    makeInspectChip("Local Fertile", Math.round(localContext.fertilePercent) + "%"),
+    makeInspectChip("Near Food", getDistanceLabel(localContext.nearestFoodDistance)),
+    makeInspectChip("Near Camp", getDistanceLabel(localContext.nearestSettlementDistance))
   ];
 
   if (organism) {
