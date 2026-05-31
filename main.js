@@ -13,6 +13,7 @@ function reportRuntimeError(error) {
 
 function clearWorld() {
   world.tick = 0;
+  world.era = "Organisms";
   world.organisms = [];
   world.food = [];
   world.terrain = [];
@@ -31,6 +32,10 @@ function clearWorld() {
   world.settlements = [];
   world.nextSettlementRouteId = 1;
   world.settlementRoutes = [];
+  world.colonyNetworkScore = 0;
+  world.colonyNetworkColonies = 0;
+  world.colonyNetworkActiveRoutes = 0;
+  world.colonyNetworkClaimedTiles = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

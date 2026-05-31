@@ -174,6 +174,10 @@ function getSettlementRoutesForSave() {
 }
 
 function createWorldSaveData() {
+  if (typeof updateColonyNetworkState === "function") {
+    updateColonyNetworkState();
+  }
+
   return {
     id: PIXELSIM_SAVE_ID,
     version: PIXELSIM_SAVE_VERSION,
@@ -187,6 +191,10 @@ function createWorldSaveData() {
     nextLineageId: world.nextLineageId,
     nextSettlementId: world.nextSettlementId,
     nextSettlementRouteId: world.nextSettlementRouteId,
+    colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
+    colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
+    colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
+    colonyNetworkClaimedTiles: Math.max(0, Math.round(Number(world.colonyNetworkClaimedTiles) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -248,7 +256,12 @@ function createWorldSaveData() {
       settlementSupplyGrowthInterval: CONFIG.SETTLEMENT_SUPPLY_GROWTH_INTERVAL,
       settlementSupplyGrowthFoodCost: CONFIG.SETTLEMENT_SUPPLY_GROWTH_FOOD_COST,
       settlementDevelopmentPerSuppliedFood: CONFIG.SETTLEMENT_DEVELOPMENT_PER_SUPPLIED_FOOD,
-      settlementColonyLevel: CONFIG.SETTLEMENT_COLONY_LEVEL
+      settlementColonyLevel: CONFIG.SETTLEMENT_COLONY_LEVEL,
+      colonyNetworkEraScore: CONFIG.COLONY_NETWORK_ERA_SCORE,
+      colonyNetworkRouteScore: CONFIG.COLONY_NETWORK_ROUTE_SCORE,
+      colonyNetworkStoredFoodScore: CONFIG.COLONY_NETWORK_STORED_FOOD_SCORE,
+      colonyNetworkTransferredFoodScore: CONFIG.COLONY_NETWORK_TRANSFERRED_FOOD_SCORE,
+      colonyNetworkClaimedTileScore: CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -804,6 +817,26 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.settlementColonyLevel === "number") {
     CONFIG.SETTLEMENT_COLONY_LEVEL = saveConfig.settlementColonyLevel;
   }
+
+  if (typeof saveConfig.colonyNetworkEraScore === "number") {
+    CONFIG.COLONY_NETWORK_ERA_SCORE = saveConfig.colonyNetworkEraScore;
+  }
+
+  if (typeof saveConfig.colonyNetworkRouteScore === "number") {
+    CONFIG.COLONY_NETWORK_ROUTE_SCORE = saveConfig.colonyNetworkRouteScore;
+  }
+
+  if (typeof saveConfig.colonyNetworkStoredFoodScore === "number") {
+    CONFIG.COLONY_NETWORK_STORED_FOOD_SCORE = saveConfig.colonyNetworkStoredFoodScore;
+  }
+
+  if (typeof saveConfig.colonyNetworkTransferredFoodScore === "number") {
+    CONFIG.COLONY_NETWORK_TRANSFERRED_FOOD_SCORE = saveConfig.colonyNetworkTransferredFoodScore;
+  }
+
+  if (typeof saveConfig.colonyNetworkClaimedTileScore === "number") {
+    CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE = saveConfig.colonyNetworkClaimedTileScore;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -816,6 +849,10 @@ function applyWorldSaveData(saveData) {
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
+  world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
+  world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
+  world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
+  world.colonyNetworkClaimedTiles = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkClaimedTiles, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -827,6 +864,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof ensureOutpostRoutes === "function") {
     ensureOutpostRoutes();
+  }
+
+  if (typeof updateColonyNetworkState === "function") {
+    updateColonyNetworkState();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

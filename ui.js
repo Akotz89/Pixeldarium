@@ -315,6 +315,10 @@ function getSettlementSummary() {
     totalRoutes: totalRoutes,
     activeRoutes: activeRoutes,
     totalRouteFoodTransferred: totalRouteFoodTransferred,
+    colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
+    colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
+    colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
+    colonyNetworkClaimedTiles: Math.max(0, Math.round(Number(world.colonyNetworkClaimedTiles) || 0)),
     topSettlement: topSettlement
   };
 }
@@ -333,6 +337,10 @@ function updateSettlementSummary() {
     " colonies " + summary.totalColonies +
     " routes " + summary.activeRoutes + "/" + summary.totalRoutes +
     " moved " + summary.totalRouteFoodTransferred +
+    "   network score " + summary.colonyNetworkScore +
+    " colonies " + summary.colonyNetworkColonies +
+    " routes " + summary.colonyNetworkActiveRoutes +
+    " claimed " + summary.colonyNetworkClaimedTiles +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -522,6 +530,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " colony parent S" + settlement.parentSettlementId : (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp")) +
       " routes " + settlementRouteSummary.activeRoutes + "/" + settlementRouteSummary.routeCount +
       " route food " + settlementRouteSummary.foodTransferred +
+      (settlement.isColony ? " network " + Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

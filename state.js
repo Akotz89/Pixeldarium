@@ -54,5 +54,9 @@ const world = {
   nextSettlementId: 1,
   settlements: [],
   nextSettlementRouteId: 1,
-  settlementRoutes: []
+  settlementRoutes: [],
+  colonyNetworkScore: 0,
+  colonyNetworkColonies: 0,
+  colonyNetworkActiveRoutes: 0,
+  colonyNetworkClaimedTiles: 0
 };

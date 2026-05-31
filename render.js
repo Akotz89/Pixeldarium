@@ -166,13 +166,14 @@ function drawSettlementRoutes() {
     var childX = childSettlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
     var childY = childSettlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
     var lineageColor = getLineageColorById(route.lineageId || parentSettlement.lineageId);
+    var isColonyRoute = parentSettlement.isColony || childSettlement.isColony;
 
     ctx.beginPath();
     ctx.moveTo(parentX, parentY);
     ctx.lineTo(childX, childY);
-    ctx.strokeStyle = getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
-    ctx.lineWidth = route.isActive ? 2 : 1;
-    ctx.setLineDash(route.isActive ? [6, 4] : [2, 5]);
+    ctx.strokeStyle = isColonyRoute ? "rgba(112, 240, 208, 0.68)" : getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
+    ctx.lineWidth = isColonyRoute ? 3 : (route.isActive ? 2 : 1);
+    ctx.setLineDash(isColonyRoute ? [10, 3] : (route.isActive ? [6, 4] : [2, 5]));
     ctx.stroke();
     ctx.setLineDash([]);
   }

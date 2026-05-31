@@ -325,6 +325,93 @@ function countActiveRoutesForSettlement(settlementId) {
   return activeRouteCount;
 }
 
+function getColonyNetworkSummary() {
+  ensureSettlementState();
+
+  var colonies = 0;
+  var activeColonies = 0;
+  var activeColonyRoutes = 0;
+  var colonyRouteFoodTransferred = 0;
+  var colonyStoredFood = 0;
+  var colonyDevelopment = 0;
+  var colonyClaimedTiles = 0;
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+
+    if (!settlement.isColony) {
+      continue;
+    }
+
+    colonies++;
+    colonyStoredFood += Math.max(0, Number(settlement.storedFood) || 0);
+    colonyDevelopment += Math.max(0, Number(settlement.development) || 0);
+    colonyClaimedTiles += Math.max(0, Number(settlement.claimedTiles) || 0);
+
+    if (settlement.isActive) {
+      activeColonies++;
+    }
+  }
+
+  for (var routeIndex = 0; routeIndex < world.settlementRoutes.length; routeIndex++) {
+    var route = world.settlementRoutes[routeIndex];
+
+    if (!route.isActive) {
+      continue;
+    }
+
+    var parentSettlement = getSettlementById(route.parentSettlementId);
+    var childSettlement = getSettlementById(route.childSettlementId);
+
+    if (!parentSettlement || !childSettlement || (!parentSettlement.isColony && !childSettlement.isColony)) {
+      continue;
+    }
+
+    activeColonyRoutes++;
+    colonyRouteFoodTransferred += Math.max(0, Number(route.foodTransferred) || 0);
+  }
+
+  var score =
+    colonyDevelopment +
+    colonyStoredFood * CONFIG.COLONY_NETWORK_STORED_FOOD_SCORE +
+    activeColonyRoutes * CONFIG.COLONY_NETWORK_ROUTE_SCORE +
+    colonyRouteFoodTransferred * CONFIG.COLONY_NETWORK_TRANSFERRED_FOOD_SCORE +
+    colonyClaimedTiles * CONFIG.COLONY_NETWORK_CLAIMED_TILE_SCORE;
+
+  return {
+    colonies: colonies,
+    activeColonies: activeColonies,
+    activeRoutes: activeColonyRoutes,
+    foodTransferred: Math.round(colonyRouteFoodTransferred),
+    storedFood: Math.round(colonyStoredFood),
+    development: colonyDevelopment,
+    claimedTiles: Math.round(colonyClaimedTiles),
+    score: Math.max(0, Math.round(score))
+  };
+}
+
+function updateColonyNetworkState() {
+  var summary = getColonyNetworkSummary();
+
+  world.colonyNetworkScore = summary.score;
+  world.colonyNetworkColonies = summary.colonies;
+  world.colonyNetworkActiveRoutes = summary.activeRoutes;
+  world.colonyNetworkClaimedTiles = summary.claimedTiles;
+
+  if (summary.colonies > 0) {
+    world.era = summary.score >= CONFIG.COLONY_NETWORK_ERA_SCORE && summary.activeRoutes > 0 ? "Networks" : "Colonies";
+    return summary;
+  }
+
+  if (world.settlements.length > 0) {
+    world.era = "Settlements";
+    return summary;
+  }
+
+  world.era = "Organisms";
+  return summary;
+}
+
 function makeSettlement(lineage, organisms) {
   var center = getLineageCenter(organisms);
   return makeSettlementAt(lineage.id, center.x, center.y, {
@@ -668,9 +755,5 @@ function updateSettlements() {
     }
   }
 
-  if (world.settlements.length > 0) {
-    world.era = "Settlements";
-  } else {
-    world.era = "Organisms";
-  }
+  updateColonyNetworkState();
 }
