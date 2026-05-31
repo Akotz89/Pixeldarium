@@ -112,6 +112,9 @@ function copySettlementForSave(settlement) {
     influenceRadius: settlement.influenceRadius,
     claimedTiles: settlement.claimedTiles,
     claimedFood: settlement.claimedFood,
+    parentSettlementId: settlement.parentSettlementId,
+    isOutpost: settlement.isOutpost,
+    lastOutpostTick: settlement.lastOutpostTick,
     isActive: settlement.isActive,
     lastActiveTick: settlement.lastActiveTick
   };
@@ -204,7 +207,16 @@ function createWorldSaveData() {
       settlementDevelopmentPerStoredFood: CONFIG.SETTLEMENT_DEVELOPMENT_PER_STORED_FOOD,
       settlementLevelDevelopment: CONFIG.SETTLEMENT_LEVEL_DEVELOPMENT,
       settlementInfluenceBaseRadius: CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS,
-      settlementInfluenceRadiusPerLevel: CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL
+      settlementInfluenceRadiusPerLevel: CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL,
+      settlementOutpostMinLevel: CONFIG.SETTLEMENT_OUTPOST_MIN_LEVEL,
+      settlementOutpostMinStoredFood: CONFIG.SETTLEMENT_OUTPOST_MIN_STORED_FOOD,
+      settlementOutpostMinDevelopment: CONFIG.SETTLEMENT_OUTPOST_MIN_DEVELOPMENT,
+      settlementOutpostFoodCost: CONFIG.SETTLEMENT_OUTPOST_FOOD_COST,
+      settlementOutpostDevelopmentCost: CONFIG.SETTLEMENT_OUTPOST_DEVELOPMENT_COST,
+      settlementOutpostCooldown: CONFIG.SETTLEMENT_OUTPOST_COOLDOWN,
+      settlementOutpostSearchRadius: CONFIG.SETTLEMENT_OUTPOST_SEARCH_RADIUS,
+      settlementOutpostMinDistance: CONFIG.SETTLEMENT_OUTPOST_MIN_DISTANCE,
+      settlementOutpostMaxChildren: CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -376,6 +388,12 @@ function restoreSettlement(settlement) {
     influenceRadius: Math.max(1, Math.round(restoreNumber(settlement.influenceRadius, CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS))),
     claimedTiles: Math.max(0, Math.round(restoreNumber(settlement.claimedTiles, 0))),
     claimedFood: Math.max(0, Math.round(restoreNumber(settlement.claimedFood, 0))),
+    parentSettlementId: Math.max(0, Math.round(restoreNumber(settlement.parentSettlementId, 0))),
+    isOutpost: Boolean(settlement.isOutpost),
+    lastOutpostTick: Math.max(
+      0,
+      Math.round(restoreNumber(settlement.lastOutpostTick, restoreNumber(settlement.foundedTick, 0)))
+    ),
     isActive: Boolean(settlement.isActive),
     lastActiveTick: Math.max(0, Math.round(restoreNumber(settlement.lastActiveTick, 0)))
   };
@@ -649,6 +667,42 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.settlementInfluenceRadiusPerLevel === "number") {
     CONFIG.SETTLEMENT_INFLUENCE_RADIUS_PER_LEVEL = saveConfig.settlementInfluenceRadiusPerLevel;
+  }
+
+  if (typeof saveConfig.settlementOutpostMinLevel === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_MIN_LEVEL = saveConfig.settlementOutpostMinLevel;
+  }
+
+  if (typeof saveConfig.settlementOutpostMinStoredFood === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_MIN_STORED_FOOD = saveConfig.settlementOutpostMinStoredFood;
+  }
+
+  if (typeof saveConfig.settlementOutpostMinDevelopment === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_MIN_DEVELOPMENT = saveConfig.settlementOutpostMinDevelopment;
+  }
+
+  if (typeof saveConfig.settlementOutpostFoodCost === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_FOOD_COST = saveConfig.settlementOutpostFoodCost;
+  }
+
+  if (typeof saveConfig.settlementOutpostDevelopmentCost === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_DEVELOPMENT_COST = saveConfig.settlementOutpostDevelopmentCost;
+  }
+
+  if (typeof saveConfig.settlementOutpostCooldown === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_COOLDOWN = saveConfig.settlementOutpostCooldown;
+  }
+
+  if (typeof saveConfig.settlementOutpostSearchRadius === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_SEARCH_RADIUS = saveConfig.settlementOutpostSearchRadius;
+  }
+
+  if (typeof saveConfig.settlementOutpostMinDistance === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_MIN_DISTANCE = saveConfig.settlementOutpostMinDistance;
+  }
+
+  if (typeof saveConfig.settlementOutpostMaxChildren === "number") {
+    CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN = saveConfig.settlementOutpostMaxChildren;
   }
 }
 

@@ -219,10 +219,15 @@ function getSettlementSummary() {
   var totalDevelopment = 0;
   var totalClaimedTiles = 0;
   var totalClaimedFood = 0;
+  var totalOutposts = 0;
   var topSettlement = null;
 
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
+
+    if (settlement.isOutpost) {
+      totalOutposts++;
+    }
 
     if (settlement.isActive) {
       activeSettlements++;
@@ -254,6 +259,7 @@ function getSettlementSummary() {
     totalDevelopment: totalDevelopment,
     totalClaimedTiles: totalClaimedTiles,
     totalClaimedFood: totalClaimedFood,
+    totalOutposts: totalOutposts,
     topSettlement: topSettlement
   };
 }
@@ -268,7 +274,8 @@ function updateSettlementSummary() {
 
   settlementSummaryText.textContent =
     "SETTLEMENTS: " + summary.active + "/" + summary.total +
-    " active   camp pop " + summary.totalPopulation +
+    " active   outposts " + summary.totalOutposts +
+    "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
     "   dev " + summary.totalDevelopment.toFixed(1) +
@@ -278,6 +285,7 @@ function updateSettlementSummary() {
     " L" + summary.topSettlement.lineageId +
     " lvl " + summary.topSettlement.level +
     " influence " + summary.topSettlement.influenceRadius +
+    (summary.topSettlement.isOutpost ? " outpost of S" + summary.topSettlement.parentSettlementId : " root camp") +
     " pop " + summary.topSettlement.population +
     " stored " + summary.topSettlement.storedFood +
     " dev " + summary.topSettlement.development.toFixed(1);
@@ -451,10 +459,12 @@ function updateInspectPanel() {
     settlementText =
       "S" + settlement.id +
       " lineage L" + settlement.lineageId +
+      (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +
       " claimed food " + settlement.claimedFood +
+      " last outpost " + settlement.lastOutpostTick +
       " pop " + settlement.population +
       " nearby " + settlement.foodStock +
       " stored " + settlement.storedFood +

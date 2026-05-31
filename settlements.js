@@ -28,6 +28,18 @@ function getSettlementForLineage(lineageId) {
   return null;
 }
 
+function getRootSettlementForLineage(lineageId) {
+  ensureSettlementState();
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    if (world.settlements[i].lineageId === lineageId && !world.settlements[i].isOutpost) {
+      return world.settlements[i];
+    }
+  }
+
+  return null;
+}
+
 function getOrganismsForLineage(lineageId) {
   var organisms = [];
 
@@ -123,6 +135,12 @@ function normalizeSettlementGrowth(settlement) {
     0,
     Math.round(restoreSettlementGrowthNumber(settlement.lastGrowthTick, settlement.foundedTick || 0))
   );
+  settlement.parentSettlementId = Math.max(0, Math.round(restoreSettlementGrowthNumber(settlement.parentSettlementId, 0)));
+  settlement.isOutpost = Boolean(settlement.isOutpost);
+  settlement.lastOutpostTick = Math.max(
+    0,
+    Math.round(restoreSettlementGrowthNumber(settlement.lastOutpostTick, settlement.foundedTick || 0))
+  );
   settlement.influenceRadius = Math.max(
     1,
     Math.round(restoreSettlementGrowthNumber(settlement.influenceRadius, getSettlementInfluenceRadius(settlement)))
@@ -216,14 +234,33 @@ function runSettlementGrowth(settlement) {
   updateSettlementLevel(settlement);
 }
 
+function countChildOutposts(settlement) {
+  var childOutposts = 0;
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    if (world.settlements[i].parentSettlementId === settlement.id) {
+      childOutposts++;
+    }
+  }
+
+  return childOutposts;
+}
+
 function makeSettlement(lineage, organisms) {
   var center = getLineageCenter(organisms);
+  return makeSettlementAt(lineage.id, center.x, center.y, {
+    parentSettlementId: 0,
+    isOutpost: false
+  });
+}
 
+function makeSettlementAt(lineageId, x, y, options) {
+  options = options || {};
   return {
     id: allocateSettlementId(),
-    lineageId: lineage.id,
-    x: center.x,
-    y: center.y,
+    lineageId: lineageId,
+    x: clamp(Math.round(x), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.round(y), 0, WORLD_HEIGHT - 1),
     foundedTick: world.tick,
     radius: CONFIG.SETTLEMENT_RADIUS,
     population: 0,
@@ -235,6 +272,9 @@ function makeSettlement(lineage, organisms) {
     influenceRadius: CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS,
     claimedTiles: 0,
     claimedFood: 0,
+    parentSettlementId: Math.max(0, Math.round(options.parentSettlementId || 0)),
+    isOutpost: Boolean(options.isOutpost),
+    lastOutpostTick: world.tick,
     isActive: true,
     lastActiveTick: world.tick
   };
@@ -246,7 +286,7 @@ function canFoundSettlement(lineage) {
     lineage.activeCount >= CONFIG.SETTLEMENT_MIN_LINEAGE_POPULATION &&
     lineage.peakPopulation >= CONFIG.SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION &&
     !lineage.isExtinct &&
-    !getSettlementForLineage(lineage.id)
+    !getRootSettlementForLineage(lineage.id)
   );
 }
 
@@ -263,6 +303,117 @@ function foundSettlementForLineage(lineage) {
   return settlement;
 }
 
+function getDistanceToNearestSettlement(x, y) {
+  var nearestDistance = Infinity;
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var distance = Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+    }
+  }
+
+  return nearestDistance;
+}
+
+function countFoodNearTile(x, y, radius) {
+  var foodCount = 0;
+
+  for (var i = 0; i < world.food.length; i++) {
+    if (Math.abs(world.food[i].x - x) + Math.abs(world.food[i].y - y) <= radius) {
+      foodCount++;
+    }
+  }
+
+  return foodCount;
+}
+
+function getOutpostPlacement(parentSettlement) {
+  var searchRadius = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_OUTPOST_SEARCH_RADIUS) || 1));
+  var minDistance = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_OUTPOST_MIN_DISTANCE) || 1));
+  var bestCandidate = null;
+  var bestScore = -Infinity;
+
+  for (var distance = minDistance; distance <= searchRadius; distance++) {
+    for (var dy = -distance; dy <= distance; dy++) {
+      var dxMagnitude = distance - Math.abs(dy);
+      var dxValues = dxMagnitude === 0 ? [0] : [-dxMagnitude, dxMagnitude];
+
+      for (var dxIndex = 0; dxIndex < dxValues.length; dxIndex++) {
+        var candidateX = clamp(parentSettlement.x + dxValues[dxIndex], 0, WORLD_WIDTH - 1);
+        var candidateY = clamp(parentSettlement.y + dy, 0, WORLD_HEIGHT - 1);
+
+        if (getDistanceToNearestSettlement(candidateX, candidateY) < minDistance) {
+          continue;
+        }
+
+        var score =
+          countFoodNearTile(candidateX, candidateY, CONFIG.SETTLEMENT_RADIUS) * 4 +
+          (isFertile(candidateX, candidateY) ? 2 : 0) -
+          Math.abs(parentSettlement.x - candidateX) * 0.01 -
+          Math.abs(parentSettlement.y - candidateY) * 0.01;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = {
+            x: candidateX,
+            y: candidateY
+          };
+        }
+      }
+    }
+  }
+
+  return bestCandidate;
+}
+
+function canFoundOutpost(settlement) {
+  return (
+    settlement &&
+    settlement.isActive &&
+    settlement.level >= CONFIG.SETTLEMENT_OUTPOST_MIN_LEVEL &&
+    settlement.storedFood >= CONFIG.SETTLEMENT_OUTPOST_MIN_STORED_FOOD &&
+    settlement.development >= CONFIG.SETTLEMENT_OUTPOST_MIN_DEVELOPMENT &&
+    world.tick - settlement.lastOutpostTick >= CONFIG.SETTLEMENT_OUTPOST_COOLDOWN &&
+    countChildOutposts(settlement) < CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN
+  );
+}
+
+function foundOutpostFromSettlement(parentSettlement) {
+  if (!canFoundOutpost(parentSettlement)) {
+    return null;
+  }
+
+  var placement = getOutpostPlacement(parentSettlement);
+
+  if (!placement) {
+    return null;
+  }
+
+  parentSettlement.storedFood = Math.max(0, parentSettlement.storedFood - CONFIG.SETTLEMENT_OUTPOST_FOOD_COST);
+  parentSettlement.development = Math.max(0, parentSettlement.development - CONFIG.SETTLEMENT_OUTPOST_DEVELOPMENT_COST);
+  parentSettlement.lastOutpostTick = world.tick;
+  updateSettlementLevel(parentSettlement);
+
+  var outpost = makeSettlementAt(parentSettlement.lineageId, placement.x, placement.y, {
+    parentSettlementId: parentSettlement.id,
+    isOutpost: true
+  });
+  updateSettlementMetrics(outpost);
+  world.settlements.push(outpost);
+  return outpost;
+}
+
+function updateSettlementOutposts() {
+  var settlementCount = world.settlements.length;
+
+  for (var i = 0; i < settlementCount; i++) {
+    foundOutpostFromSettlement(world.settlements[i]);
+  }
+}
+
 function updateSettlements() {
   ensureSettlementState();
 
@@ -271,6 +422,8 @@ function updateSettlements() {
     updateSettlementMetrics(settlement);
     runSettlementGrowth(settlement);
   }
+
+  updateSettlementOutposts();
 
   var lineages = world.lineages || {};
 
