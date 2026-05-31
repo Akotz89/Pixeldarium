@@ -460,6 +460,30 @@ function getHistoryRange(samples, getValue, fallbackMax) {
   };
 }
 
+function getSymmetricHistoryRange(samples, getValue, fallbackMagnitude) {
+  var magnitude = Math.max(1, Math.abs(Number(fallbackMagnitude) || 1));
+
+  for (var i = 0; i < samples.length; i++) {
+    magnitude = Math.max(magnitude, Math.abs(Number(getValue(samples[i])) || 0));
+  }
+
+  return {
+    min: -magnitude,
+    max: magnitude
+  };
+}
+
+function drawEcosystemHistoryGuide(chart, ratio, color) {
+  var y = chart.y + clamp(Number(ratio) || 0, 0, 1) * chart.height;
+
+  ecosystemHistoryCtx.strokeStyle = color;
+  ecosystemHistoryCtx.lineWidth = 1;
+  ecosystemHistoryCtx.beginPath();
+  ecosystemHistoryCtx.moveTo(chart.x, y);
+  ecosystemHistoryCtx.lineTo(chart.x + chart.width, y);
+  ecosystemHistoryCtx.stroke();
+}
+
 function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
   if (samples.length === 0) {
     return;
@@ -519,12 +543,10 @@ function drawEcosystemHistory() {
   ecosystemHistoryCtx.lineWidth = 1;
 
   for (var i = 0; i <= 3; i++) {
-    var y = chart.y + (i / 3) * chart.height;
-    ecosystemHistoryCtx.beginPath();
-    ecosystemHistoryCtx.moveTo(chart.x, y);
-    ecosystemHistoryCtx.lineTo(chart.x + chart.width, y);
-    ecosystemHistoryCtx.stroke();
+    drawEcosystemHistoryGuide(chart, i / 3, "rgba(255, 255, 255, 0.10)");
   }
+
+  drawEcosystemHistoryGuide(chart, 0.5, "rgba(255, 156, 105, 0.22)");
 
   drawEcosystemHistoryLine(samples, function(sample) {
     return sample.stabilityScore;
@@ -541,6 +563,12 @@ function drawEcosystemHistory() {
   }, "#fff26b", chart, getHistoryRange(samples, function(sample) {
     return sample.food;
   }, CONFIG.STARTING_FOOD));
+
+  drawEcosystemHistoryLine(samples, function(sample) {
+    return sample.foodNetThisTick;
+  }, "#ff9c69", chart, getSymmetricHistoryRange(samples, function(sample) {
+    return sample.foodNetThisTick;
+  }, Math.ceil(CONFIG.STARTING_FOOD * 0.08)));
 }
 
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {

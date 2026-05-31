@@ -285,6 +285,63 @@ h1 {
   grid-template-columns: minmax(0, 2fr) minmax(260px, 0.85fr);
 }
 
+#ecosystem-history-wrap {
+  display: grid;
+  grid-template-rows: auto minmax(72px, 1fr);
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+}
+
+#ecosystem-history-legend {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  gap: 6px;
+  align-content: center;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(114, 215, 255, 0.22);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.ecosystem-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #dce5ff;
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ecosystem-key::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+.ecosystem-key.stability::before {
+  background: #70f0d0;
+}
+
+.ecosystem-key.population::before {
+  background: #72d7ff;
+}
+
+.ecosystem-key.food::before {
+  background: #fff26b;
+}
+
+.ecosystem-key.flow::before {
+  background: #ff9c69;
+}
+
 #event-panel {
   display: grid;
   grid-template-columns: 1fr;
