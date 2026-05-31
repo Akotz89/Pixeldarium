@@ -20,6 +20,10 @@ function clearWorld() {
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;
+  world.updateMs = 0;
+  world.drawMs = 0;
+  world.maxUpdateMs = 0;
+  world.maxDrawMs = 0;
 }
 
 function seedWorld() {
@@ -65,6 +69,12 @@ var lastFrameTime = performance.now();
 var statsTimer = performance.now();
 var framesSinceStatsUpdate = 0;
 var simTicksSinceStatsUpdate = 0;
+var updateMsSinceStatsUpdate = 0;
+var drawMsSinceStatsUpdate = 0;
+var measuredUpdateFrames = 0;
+var measuredDrawFrames = 0;
+var maxUpdateMsSinceStatsUpdate = 0;
+var maxDrawMsSinceStatsUpdate = 0;
 
 function gameLoop() {
   try {
@@ -77,9 +87,18 @@ function gameLoop() {
       frameCounter = 0;
 
       var updatesThisFrame = world.speed * CONFIG.SIM_SPEED_MULTIPLIER;
+      var updateStart = performance.now();
 
       for (var i = 0; i < updatesThisFrame; i++) {
         updateWorld();
+      }
+
+      var updateElapsed = performance.now() - updateStart;
+      updateMsSinceStatsUpdate += updateElapsed;
+      measuredUpdateFrames++;
+
+      if (updateElapsed > maxUpdateMsSinceStatsUpdate) {
+        maxUpdateMsSinceStatsUpdate = updateElapsed;
       }
 
       simTicksSinceStatsUpdate += updatesThisFrame;
@@ -91,17 +110,37 @@ function gameLoop() {
       world.interpolation = Math.min(frameCounter / CONFIG.TICKS_PER_SIM_UPDATE, 1);
     }
 
+    var drawStart = performance.now();
+    drawWorld();
+    var drawElapsed = performance.now() - drawStart;
+    drawMsSinceStatsUpdate += drawElapsed;
+    measuredDrawFrames++;
+
+    if (drawElapsed > maxDrawMsSinceStatsUpdate) {
+      maxDrawMsSinceStatsUpdate = drawElapsed;
+    }
+
     var statsElapsed = now - statsTimer;
 
     if (statsElapsed >= 500) {
       world.fps = framesSinceStatsUpdate / (statsElapsed / 1000);
       world.tps = simTicksSinceStatsUpdate / (statsElapsed / 1000);
+      world.updateMs = measuredUpdateFrames > 0 ? updateMsSinceStatsUpdate / measuredUpdateFrames : 0;
+      world.drawMs = measuredDrawFrames > 0 ? drawMsSinceStatsUpdate / measuredDrawFrames : 0;
+      world.maxUpdateMs = maxUpdateMsSinceStatsUpdate;
+      world.maxDrawMs = maxDrawMsSinceStatsUpdate;
+
       framesSinceStatsUpdate = 0;
       simTicksSinceStatsUpdate = 0;
+      updateMsSinceStatsUpdate = 0;
+      drawMsSinceStatsUpdate = 0;
+      measuredUpdateFrames = 0;
+      measuredDrawFrames = 0;
+      maxUpdateMsSinceStatsUpdate = 0;
+      maxDrawMsSinceStatsUpdate = 0;
       statsTimer = now;
     }
 
-    drawWorld();
     updateHud();
 
     requestAnimationFrame(gameLoop);
