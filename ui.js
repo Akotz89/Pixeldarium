@@ -84,6 +84,7 @@ function syncTuningControls() {
   setElementText(startingFoodValue, String(CONFIG.STARTING_FOOD));
   setInputValue(foodGrowthSlider, growthPercent);
   setElementText(foodGrowthValue, growthPercent + "%");
+  setInputValue(seedInput, world.seedText);
 }
 
 function setButtonPressed(button, isPressed) {
@@ -111,6 +112,7 @@ function applyTuningFromControls(redraw) {
   CONFIG.STARTING_FOOD = clamp(Math.round(getTuningInputNumber(startingFoodSlider, CONFIG.STARTING_FOOD)), 100, 1000);
   CONFIG.MAX_FOOD = Math.max(CONFIG.MAX_FOOD, CONFIG.STARTING_FOOD);
   CONFIG.FERTILE_FOOD_GROWTH_CHANCE = clamp(getTuningInputNumber(foodGrowthSlider, CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100) / 100, 0, 1);
+  world.seedText = normalizeSeedText(seedInput.value);
 
   if (redraw) {
     drawWorld();
@@ -612,6 +614,20 @@ window.setupControls = function() {
 
   foodGrowthSlider.addEventListener("input", function() {
     applyTuningFromControls(false);
+  });
+
+  seedInput.addEventListener("input", function() {
+    world.seedText = seedInput.value;
+  });
+
+  seedInput.addEventListener("change", function() {
+    world.seedText = normalizeSeedText(seedInput.value);
+    syncTuningControls();
+  });
+
+  seedRandomButton.addEventListener("click", function() {
+    world.seedText = "PIXEL-" + String(Date.now()).slice(-8);
+    syncTuningControls();
   });
 
   syncControlStates();

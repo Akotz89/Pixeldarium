@@ -35,6 +35,8 @@ const startingFoodSlider = document.getElementById("starting-food-slider");
 const startingFoodValue = document.getElementById("starting-food-value");
 const foodGrowthSlider = document.getElementById("food-growth-slider");
 const foodGrowthValue = document.getElementById("food-growth-value");
+const seedInput = document.getElementById("seed-input");
+const seedRandomButton = document.getElementById("seed-random-button");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;
@@ -56,6 +58,8 @@ const world = {
   isPaused: false,
   needsRender: true,
   speed: 1,
+  seedText: CONFIG.DEFAULT_SEED,
+  rngState: 1,
   interpolation: 0,
   fps: 0,
   tps: 0,

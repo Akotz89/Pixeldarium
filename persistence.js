@@ -368,6 +368,8 @@ function createWorldSaveData() {
     tick: world.tick,
     speed: world.speed,
     era: world.era,
+    seedText: normalizeSeedText(world.seedText),
+    rngState: Math.max(1, Math.round(Number(world.rngState) || 1)) >>> 0,
     nextLineageId: world.nextLineageId,
     nextSettlementId: world.nextSettlementId,
     nextSettlementRouteId: world.nextSettlementRouteId,
@@ -419,6 +421,7 @@ function createWorldSaveData() {
       startingFood: CONFIG.STARTING_FOOD,
       maxFood: CONFIG.MAX_FOOD,
       maxOrganisms: CONFIG.MAX_ORGANISMS,
+      defaultSeed: CONFIG.DEFAULT_SEED,
       organismDrawSize: CONFIG.ORGANISM_DRAW_SIZE,
       foodDrawSize: CONFIG.FOOD_DRAW_SIZE,
       fertileFoodGrowthChance: CONFIG.FERTILE_FOOD_GROWTH_CHANCE,
@@ -1097,6 +1100,10 @@ function applySaveConfig(saveConfig) {
     CONFIG.MAX_ORGANISMS = saveConfig.maxOrganisms;
   }
 
+  if (typeof saveConfig.defaultSeed === "string") {
+    CONFIG.DEFAULT_SEED = normalizeSeedText(saveConfig.defaultSeed);
+  }
+
   if (typeof saveConfig.organismDrawSize === "number") {
     CONFIG.ORGANISM_DRAW_SIZE = saveConfig.organismDrawSize;
   }
@@ -1617,6 +1624,8 @@ function applyWorldSaveData(saveData) {
   world.tick = Number(saveData.tick);
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
+  world.seedText = normalizeSeedText(saveData.seedText);
+  world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
