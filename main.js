@@ -676,16 +676,73 @@ function recordFoodHarvested(count) {
   recordFoodConsumed(foodCount);
 }
 
-function makeSimulationAlert(severity, label, detail) {
+function makeSimulationAlert(severity, label, detail, priority) {
   return {
     severity: String(severity || "info"),
     label: String(label || "Simulation"),
-    detail: String(detail || "")
+    detail: String(detail || ""),
+    priority: Math.max(0, Math.round(Number(priority) || 100))
   };
 }
 
-function addSimulationAlert(alerts, severity, label, detail) {
-  alerts.push(makeSimulationAlert(severity, label, detail));
+function getSimulationAlertSeverityRank(severity) {
+  if (severity === "danger") {
+    return 0;
+  }
+
+  if (severity === "warning") {
+    return 1;
+  }
+
+  if (severity === "ready") {
+    return 2;
+  }
+
+  return 3;
+}
+
+function compareSimulationAlerts(left, right) {
+  if (left.priority !== right.priority) {
+    return left.priority - right.priority;
+  }
+
+  var leftSeverity = getSimulationAlertSeverityRank(left.severity);
+  var rightSeverity = getSimulationAlertSeverityRank(right.severity);
+
+  if (leftSeverity !== rightSeverity) {
+    return leftSeverity - rightSeverity;
+  }
+
+  return left.order - right.order;
+}
+
+function addSimulationAlert(alerts, severity, label, detail, priority) {
+  var nextAlert = makeSimulationAlert(severity, label, detail, priority);
+  nextAlert.order = alerts.length;
+
+  for (var i = 0; i < alerts.length; i++) {
+    if (alerts[i].label === nextAlert.label) {
+      if (compareSimulationAlerts(nextAlert, alerts[i]) < 0) {
+        nextAlert.order = alerts[i].order;
+        alerts[i] = nextAlert;
+      }
+
+      return;
+    }
+  }
+
+  alerts.push(nextAlert);
+}
+
+function rankSimulationAlerts(alerts) {
+  return alerts.slice().sort(compareSimulationAlerts).map(function(alert) {
+    return {
+      severity: alert.severity,
+      label: alert.label,
+      detail: alert.detail,
+      priority: alert.priority
+    };
+  });
 }
 
 function refreshSimulationAlerts() {
@@ -699,48 +756,48 @@ function refreshSimulationAlerts() {
     : null;
 
   if (world.isExtinct) {
-    addSimulationAlert(alerts, "danger", "Extinction", "restart available");
+    addSimulationAlert(alerts, "danger", "Extinction", "restart available", 0);
   } else if (ecosystemSummary.pressure === "starving") {
-    addSimulationAlert(alerts, "danger", "Food stress", "energy " + ecosystemSummary.averageEnergy.toFixed(1));
+    addSimulationAlert(alerts, "danger", "Food stress", "energy " + ecosystemSummary.averageEnergy.toFixed(1), 10);
   } else if (ecosystemSummary.pressure === "crowded") {
-    addSimulationAlert(alerts, "warning", "Crowding", ecosystemSummary.population + "/" + CONFIG.MAX_ORGANISMS);
+    addSimulationAlert(alerts, "warning", "Crowding", ecosystemSummary.population + "/" + CONFIG.MAX_ORGANISMS, 35);
   } else if (ecosystemSummary.pressure === "strained") {
-    addSimulationAlert(alerts, "warning", "Strained", "food/org " + ecosystemSummary.foodPerOrganism.toFixed(2));
+    addSimulationAlert(alerts, "warning", "Strained", "food/org " + ecosystemSummary.foodPerOrganism.toFixed(2), 35);
   }
 
   if (!world.isExtinct && ecosystemSummary.populationBalance === "crashing") {
-    addSimulationAlert(alerts, "danger", "Population crash", String(world.populationDeltaThisTick));
+    addSimulationAlert(alerts, "danger", "Population crash", String(world.populationDeltaThisTick), 12);
   }
 
   if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
-    addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick));
+    addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick), 28);
   }
 
   if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
-    addSimulationAlert(alerts, "warning", "Low stability", ecosystemSummary.stabilityScore + "/100");
+    addSimulationAlert(alerts, "warning", "Low stability", ecosystemSummary.stabilityScore + "/100", 24);
   }
 
   if (earlySummary && earlySummary.settlementReady) {
-    addSimulationAlert(alerts, "ready", "Settlement ready", "top " + earlySummary.topActive + "/" + earlySummary.populationTarget);
+    addSimulationAlert(alerts, "ready", "Settlement ready", "top " + earlySummary.topActive + "/" + earlySummary.populationTarget, 60);
   }
 
   if (world.spaceProgramReady) {
-    addSimulationAlert(alerts, "ready", "Launch ready", world.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD);
+    addSimulationAlert(alerts, "ready", "Launch ready", world.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD, 62);
   }
 
   if (world.planetarySurveyReady) {
-    addSimulationAlert(alerts, "ready", "Survey ready", world.planetarySurveyProgress.toFixed(1));
+    addSimulationAlert(alerts, "ready", "Survey ready", world.planetarySurveyProgress.toFixed(1), 64);
   }
 
   if (world.probeMissionReady) {
-    addSimulationAlert(alerts, "ready", "Probe ready", world.probeMissionProgress.toFixed(1));
+    addSimulationAlert(alerts, "ready", "Probe ready", world.probeMissionProgress.toFixed(1), 66);
   }
 
   if (alerts.length === 0) {
-    addSimulationAlert(alerts, "info", "Nominal", ecosystemSummary.pressure + " stability " + ecosystemSummary.stabilityScore + "/100");
+    addSimulationAlert(alerts, "info", "Nominal", ecosystemSummary.pressure + " stability " + ecosystemSummary.stabilityScore + "/100", 90);
   }
 
-  world.simulationAlerts = alerts.slice(0, 5);
+  world.simulationAlerts = rankSimulationAlerts(alerts).slice(0, 5);
   return world.simulationAlerts;
 }
 
