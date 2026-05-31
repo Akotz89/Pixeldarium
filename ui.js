@@ -16,11 +16,51 @@ function updateHud() {
     "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
 
   speedLabel.textContent = "Speed: " + world.speed + "x";
+  syncTuningControls();
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
   updateInspectPanel();
   drawTraitHistory();
+}
+
+function getTuningInputNumber(input, fallbackValue) {
+  if (!input) {
+    return fallbackValue;
+  }
+
+  var value = Number(input.value);
+  return Number.isFinite(value) ? value : fallbackValue;
+}
+
+function syncTuningControls() {
+  var growthPercent = Math.round(CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100);
+
+  speedSlider.value = String(world.speed);
+  speedValue.textContent = world.speed + "x";
+  organismSizeSlider.value = String(CONFIG.ORGANISM_DRAW_SIZE);
+  organismSizeValue.textContent = CONFIG.ORGANISM_DRAW_SIZE + "px";
+  foodSizeSlider.value = String(CONFIG.FOOD_DRAW_SIZE);
+  foodSizeValue.textContent = CONFIG.FOOD_DRAW_SIZE + "px";
+  startingFoodSlider.value = String(CONFIG.STARTING_FOOD);
+  startingFoodValue.textContent = String(CONFIG.STARTING_FOOD);
+  foodGrowthSlider.value = String(growthPercent);
+  foodGrowthValue.textContent = growthPercent + "%";
+}
+
+function applyTuningFromControls(redraw) {
+  world.speed = clamp(Math.round(getTuningInputNumber(speedSlider, world.speed)), 1, 10);
+  CONFIG.ORGANISM_DRAW_SIZE = clamp(Math.round(getTuningInputNumber(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE)), 2, 14);
+  CONFIG.FOOD_DRAW_SIZE = clamp(Math.round(getTuningInputNumber(foodSizeSlider, CONFIG.FOOD_DRAW_SIZE)), 1, 8);
+  CONFIG.STARTING_FOOD = clamp(Math.round(getTuningInputNumber(startingFoodSlider, CONFIG.STARTING_FOOD)), 100, 1000);
+  CONFIG.MAX_FOOD = Math.max(CONFIG.MAX_FOOD, CONFIG.STARTING_FOOD);
+  CONFIG.FERTILE_FOOD_GROWTH_CHANCE = clamp(getTuningInputNumber(foodGrowthSlider, CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100) / 100, 0, 1);
+
+  if (redraw) {
+    drawWorld();
+  }
+
+  updateHud();
 }
 
 function getNearestOrganismToTile(tileX, tileY) {
@@ -684,7 +724,28 @@ window.setupControls = function() {
     updateHud();
   });
 
+  speedSlider.addEventListener("input", function() {
+    applyTuningFromControls(false);
+  });
+
+  organismSizeSlider.addEventListener("input", function() {
+    applyTuningFromControls(true);
+  });
+
+  foodSizeSlider.addEventListener("input", function() {
+    applyTuningFromControls(true);
+  });
+
+  startingFoodSlider.addEventListener("input", function() {
+    applyTuningFromControls(false);
+  });
+
+  foodGrowthSlider.addEventListener("input", function() {
+    applyTuningFromControls(false);
+  });
+
   restartButton.addEventListener("click", function() {
+    applyTuningFromControls(false);
     seedWorld();
     drawWorld();
     updateHud();

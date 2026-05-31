@@ -24,6 +24,16 @@ const importJsonButton = document.getElementById("import-json-button");
 const importJsonFile = document.getElementById("import-json-file");
 const speedLabel = document.getElementById("speed-label");
 const persistenceStatus = document.getElementById("persistence-status");
+const speedSlider = document.getElementById("speed-slider");
+const speedValue = document.getElementById("speed-value");
+const organismSizeSlider = document.getElementById("organism-size-slider");
+const organismSizeValue = document.getElementById("organism-size-value");
+const foodSizeSlider = document.getElementById("food-size-slider");
+const foodSizeValue = document.getElementById("food-size-value");
+const startingFoodSlider = document.getElementById("starting-food-slider");
+const startingFoodValue = document.getElementById("starting-food-value");
+const foodGrowthSlider = document.getElementById("food-growth-slider");
+const foodGrowthValue = document.getElementById("food-growth-value");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;

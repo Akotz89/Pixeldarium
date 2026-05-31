@@ -27,6 +27,34 @@
       <span id="speed-label" class="speed-label">Speed: 1x</span>
     </section>
 
+    <section id="tuning-panel" aria-label="Simulation tuning">
+      <label class="tuning-control">
+        <span>Speed</span>
+        <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
+        <output id="speed-value">1x</output>
+      </label>
+      <label class="tuning-control">
+        <span>Organism</span>
+        <input id="organism-size-slider" type="range" min="2" max="14" step="1" value="7">
+        <output id="organism-size-value">7px</output>
+      </label>
+      <label class="tuning-control">
+        <span>Food</span>
+        <input id="food-size-slider" type="range" min="1" max="8" step="1" value="2">
+        <output id="food-size-value">2px</output>
+      </label>
+      <label class="tuning-control">
+        <span>Start Food</span>
+        <input id="starting-food-slider" type="range" min="100" max="1000" step="20" value="420">
+        <output id="starting-food-value">420</output>
+      </label>
+      <label class="tuning-control">
+        <span>Growth</span>
+        <input id="food-growth-slider" type="range" min="0" max="100" step="1" value="95">
+        <output id="food-growth-value">95%</output>
+      </label>
+    </section>
+
     <section id="hud" aria-label="Simulation status">
       <span id="era">ERA: Organisms</span>
       <span id="population">POPULATION: 0</span>

@@ -19,7 +19,7 @@ body {
   margin: 0;
   padding: 12px 18px 10px;
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto;
+  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto;
   gap: 10px;
   text-align: center;
   background: rgba(4, 6, 12, 0.42);
@@ -87,6 +87,42 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   font-weight: 800;
+}
+
+#tuning-panel {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tuning-control {
+  display: grid;
+  grid-template-columns: minmax(70px, auto) minmax(70px, 1fr) minmax(42px, auto);
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  color: #dce5ff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(112, 240, 208, 0.22);
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.tuning-control span,
+.tuning-control output {
+  white-space: nowrap;
+}
+
+.tuning-control input {
+  width: 100%;
+  min-width: 0;
+  accent-color: #70f0d0;
 }
 
 #hud {
