@@ -116,35 +116,14 @@ function getNearestSettlementToTile(tileX, tileY) {
 }
 
 function getRouteSummaryForSettlement(settlementId) {
-  var routeCount = 0;
-  var activeRoutes = 0;
-  var foodTransferred = 0;
-
-  if (!Array.isArray(world.settlementRoutes)) {
-    return {
-      routeCount: 0,
-      activeRoutes: 0,
-      foodTransferred: 0
-    };
-  }
-
-  for (var i = 0; i < world.settlementRoutes.length; i++) {
-    var route = world.settlementRoutes[i];
-
-    if (route.parentSettlementId === settlementId || route.childSettlementId === settlementId) {
-      routeCount++;
-      foodTransferred += Math.max(0, Number(route.foodTransferred) || 0);
-
-      if (route.isActive) {
-        activeRoutes++;
-      }
-    }
+  if (typeof getSettlementRouteStats === "function") {
+    return getSettlementRouteStats(settlementId);
   }
 
   return {
-    routeCount: routeCount,
-    activeRoutes: activeRoutes,
-    foodTransferred: foodTransferred
+    routeCount: 0,
+    activeRoutes: 0,
+    foodTransferred: 0
   };
 }
 

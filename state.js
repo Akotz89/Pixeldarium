@@ -77,6 +77,7 @@ const world = {
   nextSettlementRouteId: 1,
   settlementRoutes: [],
   settlementRoutesByKey: {},
+  settlementRouteStatsById: {},
   colonyNetworkScore: 0,
   colonyNetworkColonies: 0,
   colonyNetworkActiveRoutes: 0,
