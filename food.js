@@ -234,7 +234,34 @@ function collectFoodInRadius(x, y, radius, limit) {
 }
 
 function countFoodInRadius(x, y, radius) {
-  return collectFoodInRadius(x, y, radius).length;
+  var buckets = ensureFoodBuckets();
+  var bucketSize = getFoodBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var count = 0;
+
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = buckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var food = bucket[i];
+
+        if (Math.abs(food.x - x) + Math.abs(food.y - y) <= normalizedRadius) {
+          count++;
+        }
+      }
+    }
+  }
+
+  return count;
 }
 
 function removeFoodInRadius(x, y, radius, limit) {

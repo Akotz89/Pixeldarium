@@ -404,21 +404,70 @@ function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
 }
 
 function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
-  return collectOrganismsInRadius(x, y, radius, lineageId).length;
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var count = 0;
+
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+
+        if (
+          (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
+          Math.abs(organism.x - x) + Math.abs(organism.y - y) <= normalizedRadius
+        ) {
+          count++;
+        }
+      }
+    }
+  }
+
+  return count;
 }
 
 function getNearestOrganismInRadius(x, y, radius) {
-  var organisms = collectOrganismsInRadius(x, y, radius);
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
   var nearestOrganism = null;
   var nearestDistance = Infinity;
 
-  for (var i = 0; i < organisms.length; i++) {
-    var organism = organisms[i];
-    var distance = Math.abs(organism.x - x) + Math.abs(organism.y - y);
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
 
-    if (distance < nearestDistance) {
-      nearestOrganism = organism;
-      nearestDistance = distance;
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+        var distance = Math.abs(organism.x - x) + Math.abs(organism.y - y);
+
+        if (distance < nearestDistance && distance <= normalizedRadius) {
+          nearestOrganism = organism;
+          nearestDistance = distance;
+        }
+      }
     }
   }
 
