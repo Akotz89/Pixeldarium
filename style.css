@@ -36,14 +36,15 @@ h1 {
 
 #game {
   position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 50%;
+  left: 50%;
+  width: max(100vw, 188.235294vh);
+  height: max(100vh, 53.125vw);
   aspect-ratio: auto;
   max-width: none;
   display: block;
   margin: 0;
-  object-fit: fill;
+  transform: translate(-50%, -50%);
   background: #05060a;
   border: 0;
   border-radius: 0;
@@ -58,24 +59,80 @@ h1 {
   top: 14px;
   right: 14px;
   z-index: 30;
-  min-width: 74px;
-  padding: 10px 13px;
-  color: #051016;
-  background: rgba(112, 240, 208, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.46);
-  border-radius: 10px;
+  display: inline-grid;
+  grid-template-columns: 18px auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 86px;
+  min-height: 40px;
+  padding: 9px 12px;
+  color: #f4f7ff;
+  background: rgba(8, 10, 18, 0.72);
+  border: 1px solid rgba(112, 240, 208, 0.44);
+  border-radius: 999px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+.menu-toggle-lines,
+.menu-toggle-lines::before,
+.menu-toggle-lines::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+.menu-toggle-lines {
+  position: relative;
+}
+
+.menu-toggle-lines::before,
+.menu-toggle-lines::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.menu-toggle-lines::before {
+  top: -6px;
+}
+
+.menu-toggle-lines::after {
+  top: 6px;
 }
 
 .menu-toggle:hover,
 .menu-toggle:focus-visible {
-  background: #fff26b;
+  color: #051016;
+  background: #70f0d0;
   outline: 2px solid rgba(114, 215, 255, 0.72);
   outline-offset: 3px;
+}
+
+.menu-open .menu-toggle {
+  color: #051016;
+  background: #fff26b;
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+.menu-open .menu-toggle-lines {
+  background: transparent;
+}
+
+.menu-open .menu-toggle-lines::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.menu-open .menu-toggle-lines::after {
+  top: 0;
+  transform: rotate(-45deg);
 }
 
 #ui-menu {
@@ -1304,11 +1361,12 @@ body {
 
 #game {
   position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+  top: 50%;
+  left: 50%;
+  width: max(100vw, 188.235294vh);
+  height: max(100vh, 53.125vw);
   min-height: 0;
-  object-fit: fill;
+  transform: translate(-50%, -50%);
 }
 
 #ui-menu #controls,

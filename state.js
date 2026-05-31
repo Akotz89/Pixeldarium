@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const gameWrap = document.getElementById("game-wrap");
 const uiMenu = document.getElementById("ui-menu");
 const menuToggleButton = document.getElementById("menu-toggle-button");
+const menuToggleText = menuToggleButton.querySelector(".menu-toggle-text");
 const menuTabs = document.getElementById("menu-tabs");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
