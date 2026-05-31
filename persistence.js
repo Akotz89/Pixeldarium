@@ -97,6 +97,9 @@ function copyEcosystemHistorySampleForSave(sample) {
     food: Math.max(0, Math.round(Number(sample.food) || 0)),
     averageEnergy: Math.max(0, Number(sample.averageEnergy) || 0),
     foodPerOrganism: Math.max(0, Number(sample.foodPerOrganism) || 0),
+    populationBalance: String(sample.populationBalance || "steady"),
+    resourceBalance: String(sample.resourceBalance || "steady"),
+    foodNetThisTick: Math.round(Number(sample.foodNetThisTick) || 0),
     pressure: String(sample.pressure || "balanced"),
     stabilityScore: clamp(Math.round(Number(sample.stabilityScore) || 0), 0, 100)
   };
@@ -1102,6 +1105,9 @@ function restoreEcosystemHistorySample(sample) {
     food: Math.max(0, Math.round(restoreNumber(sample.food, 0))),
     averageEnergy: Math.max(0, restoreNumber(sample.averageEnergy, 0)),
     foodPerOrganism: Math.max(0, restoreNumber(sample.foodPerOrganism, 0)),
+    populationBalance: String(sample.populationBalance || "steady"),
+    resourceBalance: String(sample.resourceBalance || "steady"),
+    foodNetThisTick: Math.round(restoreNumber(sample.foodNetThisTick, 0)),
     pressure: String(sample.pressure || "balanced"),
     stabilityScore: clamp(Math.round(restoreNumber(sample.stabilityScore, 0)), 0, 100)
   };

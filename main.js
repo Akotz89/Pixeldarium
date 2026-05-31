@@ -397,6 +397,55 @@ function getEcosystemStabilityScore(population, averageEnergy, foodPerOrganism, 
   );
 }
 
+function getPopulationBalance(populationDelta, population) {
+  if (population <= 0) {
+    return "extinct";
+  }
+
+  var magnitude = Math.abs(populationDelta);
+  var largeSwing = Math.max(4, Math.ceil(population * 0.08));
+
+  if (populationDelta >= largeSwing) {
+    return "surging";
+  }
+
+  if (populationDelta > 0) {
+    return "growing";
+  }
+
+  if (populationDelta <= -largeSwing) {
+    return "crashing";
+  }
+
+  if (populationDelta < 0) {
+    return "declining";
+  }
+
+  return magnitude === 0 ? "steady" : "shifting";
+}
+
+function getResourceBalance(foodNet, foodStock) {
+  var largeSwing = Math.max(3, Math.ceil(Math.max(1, foodStock) * 0.025));
+
+  if (foodNet >= largeSwing) {
+    return "replenishing";
+  }
+
+  if (foodNet > 0) {
+    return "gaining";
+  }
+
+  if (foodNet <= -largeSwing) {
+    return "draining";
+  }
+
+  if (foodNet < 0) {
+    return "spending";
+  }
+
+  return "steady";
+}
+
 function refreshEcosystemSummary() {
   var population = world.organisms.length;
   var totalEnergy = 0;
@@ -421,6 +470,8 @@ function refreshEcosystemSummary() {
   var fertilePercent = (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100;
   var activeLineages = getActiveLineageCount();
   var matureRatio = population > 0 ? matureOrganisms / population : 0;
+  var foodNetThisTick = Math.max(0, Math.round(Number(world.foodSpawnedThisTick) || 0)) -
+    Math.max(0, Math.round(Number(world.foodConsumedThisTick) || 0));
   var pressure = getEcosystemPressure(population, averageEnergy, foodPerOrganism);
   var stabilityScore = getEcosystemStabilityScore(
     population,
@@ -440,6 +491,9 @@ function refreshEcosystemSummary() {
     matureRatio: matureRatio,
     activeLineages: activeLineages,
     fertilePercent: fertilePercent,
+    populationBalance: getPopulationBalance(Math.round(Number(world.populationDeltaThisTick) || 0), population),
+    resourceBalance: getResourceBalance(foodNetThisTick, world.food.length),
+    foodNetThisTick: foodNetThisTick,
     pressure: pressure,
     stabilityScore: stabilityScore
   };
@@ -457,6 +511,9 @@ function makeEcosystemHistorySample(summary) {
     food: summary.food,
     averageEnergy: summary.averageEnergy,
     foodPerOrganism: summary.foodPerOrganism,
+    populationBalance: summary.populationBalance,
+    resourceBalance: summary.resourceBalance,
+    foodNetThisTick: summary.foodNetThisTick,
     pressure: summary.pressure,
     stabilityScore: summary.stabilityScore
   };
@@ -582,6 +639,14 @@ function refreshSimulationAlerts() {
     addSimulationAlert(alerts, "warning", "Crowding", ecosystemSummary.population + "/" + CONFIG.MAX_ORGANISMS);
   } else if (ecosystemSummary.pressure === "strained") {
     addSimulationAlert(alerts, "warning", "Strained", "food/org " + ecosystemSummary.foodPerOrganism.toFixed(2));
+  }
+
+  if (!world.isExtinct && ecosystemSummary.populationBalance === "crashing") {
+    addSimulationAlert(alerts, "danger", "Population crash", String(world.populationDeltaThisTick));
+  }
+
+  if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
+    addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick));
   }
 
   if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
