@@ -412,6 +412,7 @@ function updateEcosystemSummary() {
     makeSummaryChip("Lifetime", world.totalBirths + " / " + world.totalDeaths),
     makeSummaryChip("Food Flow", "+" + world.foodSpawnedThisTick + " / -" + world.foodConsumedThisTick),
     makeSummaryChip("Food Net", formatSignedNumber(summary.foodNetThisTick || 0, 0)),
+    makeSummaryChip("Food Runway", typeof formatFoodRunway === "function" ? formatFoodRunway(summary.foodRunwayTicks) : "-"),
     makeSummaryChip("Harvest", world.foodHarvestedThisTick),
     makeSummaryChip("Food Life", world.totalFoodSpawned + " / " + world.totalFoodConsumed),
     makeSummaryChip("Pop Trend", formatSignedNumber(trend.populationDelta || 0, 0)),

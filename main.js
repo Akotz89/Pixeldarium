@@ -716,6 +716,29 @@ function getResourceBalance(foodNet, foodStock) {
   return "steady";
 }
 
+function getFoodRunwayTicks(foodStock, foodNet) {
+  var stock = Math.max(0, Math.round(Number(foodStock) || 0));
+  var net = Math.round(Number(foodNet) || 0);
+
+  if (stock <= 0) {
+    return 0;
+  }
+
+  if (net >= 0) {
+    return -1;
+  }
+
+  return Math.max(1, Math.ceil(stock / Math.abs(net)));
+}
+
+function formatFoodRunway(runwayTicks) {
+  if (runwayTicks < 0) {
+    return "stable";
+  }
+
+  return Math.max(0, Math.round(Number(runwayTicks) || 0)) + " ticks";
+}
+
 function refreshEcosystemSummary() {
   var population = world.organisms.length;
   var totalEnergy = 0;
@@ -764,6 +787,7 @@ function refreshEcosystemSummary() {
     populationBalance: getPopulationBalance(Math.round(Number(world.populationDeltaThisTick) || 0), population),
     resourceBalance: getResourceBalance(foodNetThisTick, world.food.length),
     foodNetThisTick: foodNetThisTick,
+    foodRunwayTicks: getFoodRunwayTicks(world.food.length, foodNetThisTick),
     pressure: pressure,
     stabilityScore: stabilityProfile.stabilityScore,
     stabilityProfile: stabilityProfile,
@@ -978,6 +1002,20 @@ function refreshSimulationAlerts() {
 
   if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
     addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick), 28);
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRunwayTicks >= 0 &&
+    ecosystemSummary.foodRunwayTicks <= 20
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Food runway",
+      formatFoodRunway(ecosystemSummary.foodRunwayTicks),
+      22
+    );
   }
 
   if (!world.isExtinct && ecosystemSummary.momentum === "draining") {
