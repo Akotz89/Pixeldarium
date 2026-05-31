@@ -31,7 +31,18 @@ function openPixelSimDatabase() {
   });
 }
 
+function copyOrganismTraitsForSave(traits) {
+  return {
+    vision: traits.vision,
+    metabolism: traits.metabolism,
+    reproductionEnergy: traits.reproductionEnergy,
+    movementTendency: traits.movementTendency
+  };
+}
+
 function copyOrganismForSave(organism) {
+  var traits = ensureOrganismTraits(organism);
+
   return {
     x: organism.x,
     y: organism.y,
@@ -40,7 +51,8 @@ function copyOrganismForSave(organism) {
     energy: organism.energy,
     age: organism.age,
     directionX: organism.directionX,
-    directionY: organism.directionY
+    directionY: organism.directionY,
+    traits: copyOrganismTraitsForSave(traits)
   };
 }
 
@@ -70,7 +82,24 @@ function createWorldSaveData() {
       organismDrawSize: CONFIG.ORGANISM_DRAW_SIZE,
       foodDrawSize: CONFIG.FOOD_DRAW_SIZE,
       ticksPerSimUpdate: CONFIG.TICKS_PER_SIM_UPDATE,
-      simSpeedMultiplier: CONFIG.SIM_SPEED_MULTIPLIER
+      simSpeedMultiplier: CONFIG.SIM_SPEED_MULTIPLIER,
+      traitMutationChance: CONFIG.TRAIT_MUTATION_CHANCE,
+      traitVisionMin: CONFIG.TRAIT_VISION_MIN,
+      traitVisionMax: CONFIG.TRAIT_VISION_MAX,
+      traitVisionDefault: CONFIG.TRAIT_VISION_DEFAULT,
+      traitVisionMutationStep: CONFIG.TRAIT_VISION_MUTATION_STEP,
+      traitMetabolismMin: CONFIG.TRAIT_METABOLISM_MIN,
+      traitMetabolismMax: CONFIG.TRAIT_METABOLISM_MAX,
+      traitMetabolismDefault: CONFIG.TRAIT_METABOLISM_DEFAULT,
+      traitMetabolismMutationStep: CONFIG.TRAIT_METABOLISM_MUTATION_STEP,
+      traitReproductionEnergyMin: CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+      traitReproductionEnergyMax: CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX,
+      traitReproductionEnergyDefault: CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT,
+      traitReproductionEnergyMutationStep: CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP,
+      traitMovementTendencyMin: CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+      traitMovementTendencyMax: CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
+      traitMovementTendencyDefault: CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
+      traitMovementTendencyMutationStep: CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -125,6 +154,46 @@ function restoreFood(food) {
   };
 }
 
+function restoreNumber(value, fallback) {
+  var numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function restoreClampedNumber(value, fallback, minValue, maxValue) {
+  return clamp(restoreNumber(value, fallback), minValue, maxValue);
+}
+
+function restoreOrganismTraits(traits) {
+  traits = traits || {};
+
+  return {
+    vision: restoreClampedNumber(
+      traits.vision,
+      CONFIG.TRAIT_VISION_DEFAULT,
+      CONFIG.TRAIT_VISION_MIN,
+      CONFIG.TRAIT_VISION_MAX
+    ),
+    metabolism: restoreClampedNumber(
+      traits.metabolism,
+      CONFIG.TRAIT_METABOLISM_DEFAULT,
+      CONFIG.TRAIT_METABOLISM_MIN,
+      CONFIG.TRAIT_METABOLISM_MAX
+    ),
+    reproductionEnergy: restoreClampedNumber(
+      traits.reproductionEnergy,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX
+    ),
+    movementTendency: restoreClampedNumber(
+      traits.movementTendency,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
+    )
+  };
+}
+
 function restoreOrganism(organism) {
   return {
     x: clamp(Math.round(Number(organism.x)), 0, WORLD_WIDTH - 1),
@@ -134,7 +203,8 @@ function restoreOrganism(organism) {
     energy: Number(organism.energy),
     age: Number(organism.age),
     directionX: clamp(Math.round(Number(organism.directionX)), -1, 1),
-    directionY: clamp(Math.round(Number(organism.directionY)), -1, 1)
+    directionY: clamp(Math.round(Number(organism.directionY)), -1, 1),
+    traits: restoreOrganismTraits(organism.traits)
   };
 }
 
@@ -173,6 +243,74 @@ function applySaveConfig(saveConfig) {
 
   if (typeof saveConfig.foodDrawSize === "number") {
     CONFIG.FOOD_DRAW_SIZE = saveConfig.foodDrawSize;
+  }
+
+  if (typeof saveConfig.traitMutationChance === "number") {
+    CONFIG.TRAIT_MUTATION_CHANCE = saveConfig.traitMutationChance;
+  }
+
+  if (typeof saveConfig.traitVisionMin === "number") {
+    CONFIG.TRAIT_VISION_MIN = saveConfig.traitVisionMin;
+  }
+
+  if (typeof saveConfig.traitVisionMax === "number") {
+    CONFIG.TRAIT_VISION_MAX = saveConfig.traitVisionMax;
+  }
+
+  if (typeof saveConfig.traitVisionDefault === "number") {
+    CONFIG.TRAIT_VISION_DEFAULT = saveConfig.traitVisionDefault;
+  }
+
+  if (typeof saveConfig.traitVisionMutationStep === "number") {
+    CONFIG.TRAIT_VISION_MUTATION_STEP = saveConfig.traitVisionMutationStep;
+  }
+
+  if (typeof saveConfig.traitMetabolismMin === "number") {
+    CONFIG.TRAIT_METABOLISM_MIN = saveConfig.traitMetabolismMin;
+  }
+
+  if (typeof saveConfig.traitMetabolismMax === "number") {
+    CONFIG.TRAIT_METABOLISM_MAX = saveConfig.traitMetabolismMax;
+  }
+
+  if (typeof saveConfig.traitMetabolismDefault === "number") {
+    CONFIG.TRAIT_METABOLISM_DEFAULT = saveConfig.traitMetabolismDefault;
+  }
+
+  if (typeof saveConfig.traitMetabolismMutationStep === "number") {
+    CONFIG.TRAIT_METABOLISM_MUTATION_STEP = saveConfig.traitMetabolismMutationStep;
+  }
+
+  if (typeof saveConfig.traitReproductionEnergyMin === "number") {
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN = saveConfig.traitReproductionEnergyMin;
+  }
+
+  if (typeof saveConfig.traitReproductionEnergyMax === "number") {
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX = saveConfig.traitReproductionEnergyMax;
+  }
+
+  if (typeof saveConfig.traitReproductionEnergyDefault === "number") {
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT = saveConfig.traitReproductionEnergyDefault;
+  }
+
+  if (typeof saveConfig.traitReproductionEnergyMutationStep === "number") {
+    CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP = saveConfig.traitReproductionEnergyMutationStep;
+  }
+
+  if (typeof saveConfig.traitMovementTendencyMin === "number") {
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN = saveConfig.traitMovementTendencyMin;
+  }
+
+  if (typeof saveConfig.traitMovementTendencyMax === "number") {
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX = saveConfig.traitMovementTendencyMax;
+  }
+
+  if (typeof saveConfig.traitMovementTendencyDefault === "number") {
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT = saveConfig.traitMovementTendencyDefault;
+  }
+
+  if (typeof saveConfig.traitMovementTendencyMutationStep === "number") {
+    CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP = saveConfig.traitMovementTendencyMutationStep;
   }
 }
 
