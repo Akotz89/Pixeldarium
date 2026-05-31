@@ -249,21 +249,51 @@ function updateTraitSummary() {
   var summary = getPopulationTraitSummary();
 
   if (!summary) {
+    setElementClass(traitSummaryText, "");
     setElementText(traitSummaryText, "TRAITS AVG: vision -   metabolism -   reproduce -   roam -   habitat -");
     return;
   }
 
-  setElementText(traitSummaryText,
-    "TRAITS AVG: vision " + summary.vision.toFixed(1) +
-    "   metabolism " + summary.metabolism.toFixed(2) +
-    "   reproduce " + summary.reproductionEnergy.toFixed(1) +
-    "   roam " + summary.movementTendency.toFixed(2) +
-    "   habitat " + summary.terrainAffinity.toFixed(2)
-  );
+  var chips = [
+    makeSummaryChip("Vision", summary.vision.toFixed(1)),
+    makeSummaryChip("Metabolism", summary.metabolism.toFixed(2)),
+    makeSummaryChip("Reproduce", summary.reproductionEnergy.toFixed(1)),
+    makeSummaryChip("Roam", summary.movementTendency.toFixed(2)),
+    makeSummaryChip("Habitat", summary.terrainAffinity.toFixed(2))
+  ];
+
+  setElementClass(traitSummaryText, "summary-grid trait-summary-grid");
+  setElementHtml(traitSummaryText, chips.join(""));
 }
 
 function updateLineageSummary() {
-  setElementText(lineageSummaryText, world.lineageSummaryText || "LINEAGES: -");
+  var summary = world.lineageSummary || null;
+
+  if (!summary) {
+    setElementClass(lineageSummaryText, "");
+    setElementText(lineageSummaryText, world.lineageSummaryText || "LINEAGES: -");
+    return;
+  }
+
+  var newestLabel = summary.newestParentId > 0
+    ? "L" + summary.newestId + " <- L" + summary.newestParentId
+    : "L" + summary.newestId + " founder";
+  var chips = [
+    makeSummaryChip("Active", summary.activeCount),
+    makeSummaryChip("Extinct", summary.extinctCount),
+    makeSummaryChip("Newest", newestLabel)
+  ];
+
+  for (var i = 0; i < summary.topLineages.length; i++) {
+    var lineage = summary.topLineages[i];
+    chips.push(makeSummaryChip(
+      "Top L" + lineage.id,
+      lineage.activeCount + " / peak " + lineage.peakPopulation
+    ));
+  }
+
+  setElementClass(lineageSummaryText, "summary-grid lineage-summary-grid");
+  setElementHtml(lineageSummaryText, chips.join(""));
 }
 
 function getSettlementSummary() {

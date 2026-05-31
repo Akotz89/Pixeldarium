@@ -458,6 +458,16 @@ h1 {
   white-space: normal;
 }
 
+#trait-summary.summary-grid,
+#lineage-summary.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  text-align: left;
+  white-space: normal;
+}
+
 .inspect-chip {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);

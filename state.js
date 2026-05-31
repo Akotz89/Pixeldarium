@@ -92,6 +92,7 @@ const world = {
   ecosystemHistory: [],
   simulationAlerts: [],
   populationTraitSummary: null,
+  lineageSummary: null,
   lineageSummaryText: "LINEAGES: -",
   traitHistory: [],
   eventLog: [],
