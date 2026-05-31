@@ -20,6 +20,7 @@ function updateHud() {
   setElementText(speedLabel, "Speed: " + world.speed + "x");
   syncTuningControls();
   syncControlStates();
+  updateEcosystemSummary();
   updateTraitSummary();
   updateLineageSummary();
   updateSettlementSummary();
@@ -217,6 +218,37 @@ function makeInspectChip(label, value) {
     "<span>" + escapeSummaryText(value) + "</span>" +
     "</span>"
   );
+}
+
+function getEcosystemSummary() {
+  if (!world.ecosystemSummary && typeof refreshEcosystemSummary === "function") {
+    return refreshEcosystemSummary();
+  }
+
+  return world.ecosystemSummary;
+}
+
+function updateEcosystemSummary() {
+  var summary = getEcosystemSummary();
+
+  if (!summary) {
+    setElementClass(ecosystemSummaryText, "");
+    setElementText(ecosystemSummaryText, "ECOSYSTEM: -");
+    return;
+  }
+
+  var chips = [
+    makeSummaryChip("Pressure", summary.pressure),
+    makeSummaryChip("Energy", summary.averageEnergy.toFixed(1)),
+    makeSummaryChip("Food/Org", summary.foodPerOrganism.toFixed(2)),
+    makeSummaryChip("Mature", summary.matureOrganisms + "/" + summary.population),
+    makeSummaryChip("Age", summary.averageAge.toFixed(0)),
+    makeSummaryChip("Lineages", summary.activeLineages),
+    makeSummaryChip("Fertile", Math.round(summary.fertilePercent) + "%")
+  ];
+
+  setElementClass(ecosystemSummaryText, "ecosystem-grid ecosystem-" + summary.pressure);
+  setElementHtml(ecosystemSummaryText, chips.join(""));
 }
 
 function makeEventChip(event) {

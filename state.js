@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const eraText = document.getElementById("era");
 const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
+const ecosystemSummaryText = document.getElementById("ecosystem-summary");
 const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
 const traitSummaryText = document.getElementById("trait-summary");
@@ -68,6 +69,7 @@ const world = {
   maxUpdateMs: 0,
   maxDrawMs: 0,
   inspectedTile: null,
+  ecosystemSummary: null,
   populationTraitSummary: null,
   lineageSummaryText: "LINEAGES: -",
   traitHistory: [],

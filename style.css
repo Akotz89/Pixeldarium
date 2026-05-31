@@ -19,7 +19,7 @@ body {
   margin: 0;
   padding: 12px 18px 10px;
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto;
+  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto auto;
   gap: 10px;
   text-align: center;
   background: rgba(4, 6, 12, 0.42);
@@ -259,6 +259,7 @@ h1 {
   box-sizing: border-box;
 }
 
+#ecosystem-panel,
 #settlement-panel {
   display: grid;
   grid-template-columns: 1fr;
@@ -351,6 +352,7 @@ h1 {
 #inspect-details,
 #trait-panel span,
 #lineage-panel span,
+#ecosystem-summary,
 #settlement-summary,
 #event-log {
   background: rgba(255, 255, 255, 0.06);
@@ -419,6 +421,33 @@ h1 {
   max-height: 112px;
   overflow: auto;
   text-align: left;
+}
+
+#ecosystem-summary.ecosystem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  text-align: left;
+  white-space: normal;
+}
+
+#ecosystem-summary.ecosystem-growing {
+  border-color: rgba(112, 240, 208, 0.42);
+}
+
+#ecosystem-summary.ecosystem-balanced {
+  border-color: rgba(114, 215, 255, 0.36);
+}
+
+#ecosystem-summary.ecosystem-strained,
+#ecosystem-summary.ecosystem-crowded {
+  border-color: rgba(255, 242, 107, 0.42);
+}
+
+#ecosystem-summary.ecosystem-starving,
+#ecosystem-summary.ecosystem-extinct {
+  border-color: rgba(255, 120, 120, 0.54);
 }
 
 #event-log.event-grid {
@@ -572,7 +601,7 @@ h1 {
   #game-wrap {
     padding: 10px;
     gap: 8px;
-    grid-template-rows: 36px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto;
+    grid-template-rows: 36px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto auto;
   }
 
   h1 {
@@ -611,6 +640,10 @@ h1 {
     max-height: 96px;
   }
 
+  #ecosystem-summary.ecosystem-grid {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  }
+
   #event-log.event-grid {
     grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   }
@@ -626,7 +659,7 @@ h1 {
   #game-wrap {
     min-height: 100vh;
     height: auto;
-    grid-template-rows: 34px auto auto auto auto auto auto auto auto auto auto auto auto;
+    grid-template-rows: 34px auto auto auto auto auto auto auto auto auto auto auto auto auto;
   }
 
   #game {
@@ -651,6 +684,7 @@ h1 {
   #inspect-panel,
   #trait-panel,
   #lineage-panel,
+  #ecosystem-panel,
   #settlement-panel,
   #event-panel,
   #trait-history-panel {
