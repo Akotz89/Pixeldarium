@@ -2,8 +2,8 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow: auto;
 }
 
 body {
@@ -14,30 +14,46 @@ body {
 
 #game-wrap {
   box-sizing: border-box;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100vh;
   margin: 0;
-  padding: 12px 18px 10px;
+  padding: 10px 14px 12px;
   display: grid;
-  grid-template-rows: 44px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto auto;
+  grid-template-columns: minmax(560px, 1.25fr) minmax(520px, 0.95fr);
+  grid-template-rows: 42px auto auto auto auto auto auto auto auto auto auto;
+  grid-template-areas:
+    "title title"
+    "game ecosystem"
+    "controls ecosystem"
+    "tuning alerts"
+    "hud inspect"
+    "traits lineages"
+    "settlements settlements"
+    "history history"
+    "events events"
+    "save save"
+    "help help";
   gap: 10px;
   text-align: center;
   background: rgba(4, 6, 12, 0.42);
 }
 
 h1 {
+  grid-area: title;
   margin: 0;
-  line-height: 44px;
+  line-height: 42px;
   letter-spacing: 5px;
   font-size: clamp(22px, 2.4vw, 38px);
   text-shadow: 0 0 18px rgba(114, 215, 255, 0.38);
 }
 
 #game {
-  width: 100%;
-  height: 100%;
+  grid-area: game;
+  width: min(100%, 960px);
+  height: auto;
+  aspect-ratio: 32 / 17;
   max-width: none;
-  max-height: none;
+  justify-self: center;
   display: block;
   margin: 0 auto;
   object-fit: contain;
@@ -53,6 +69,7 @@ h1 {
 }
 
 #controls {
+  grid-area: controls;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -123,8 +140,9 @@ h1 {
 }
 
 #tuning-panel {
+  grid-area: tuning;
   display: grid;
-  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 8px;
   margin: 0;
   width: 100%;
@@ -185,8 +203,9 @@ h1 {
 }
 
 #hud {
+  grid-area: hud;
   display: grid;
-  grid-template-columns: 1fr 1fr 1.45fr;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(140px, 0.8fr) minmax(260px, 1.6fr);
   gap: 10px;
   margin: 0;
   width: 100%;
@@ -245,8 +264,9 @@ h1 {
 }
 
 #inspect-panel {
+  grid-area: inspect;
   display: grid;
-  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 2fr);
+  grid-template-columns: minmax(160px, 0.65fr) minmax(0, 2fr);
   gap: 10px;
   margin: 0;
   width: 100%;
@@ -254,6 +274,7 @@ h1 {
 }
 
 #trait-panel {
+  grid-area: traits;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -263,6 +284,7 @@ h1 {
 }
 
 #lineage-panel {
+  grid-area: lineages;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -282,7 +304,13 @@ h1 {
 }
 
 #ecosystem-panel {
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.85fr);
+  grid-area: ecosystem;
+  grid-template-columns: 1fr;
+  align-content: start;
+}
+
+#settlement-panel {
+  grid-area: settlements;
 }
 
 #ecosystem-history-wrap {
@@ -347,6 +375,7 @@ h1 {
 }
 
 #event-panel {
+  grid-area: events;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -356,12 +385,25 @@ h1 {
 }
 
 #trait-history-panel {
+  grid-area: history;
   display: grid;
   grid-template-columns: minmax(220px, 0.75fr) minmax(0, 2.25fr);
   gap: 10px;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+#alert-panel {
+  grid-area: alerts;
+}
+
+#persistence-status {
+  grid-area: save;
+}
+
+.help {
+  grid-area: help;
 }
 
 #trait-history-legend {
@@ -427,8 +469,8 @@ h1 {
 
 #inspect-summary,
 #inspect-details,
-#trait-panel span,
-#lineage-panel span,
+#trait-summary,
+#lineage-summary,
 #ecosystem-summary,
 #simulation-alerts,
 #settlement-summary,
@@ -765,7 +807,24 @@ h1 {
   #game-wrap {
     padding: 10px;
     gap: 8px;
-    grid-template-rows: 36px minmax(0, 1fr) auto auto auto auto auto auto auto auto auto auto auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: 36px repeat(14, auto);
+    grid-template-areas:
+      "title"
+      "game"
+      "controls"
+      "tuning"
+      "hud"
+      "ecosystem"
+      "alerts"
+      "inspect"
+      "traits"
+      "lineages"
+      "settlements"
+      "history"
+      "events"
+      "save"
+      "help";
   }
 
   h1 {
@@ -823,8 +882,7 @@ h1 {
 
   #game-wrap {
     min-height: 100vh;
-    height: auto;
-    grid-template-rows: 34px auto auto auto auto auto auto auto auto auto auto auto auto auto;
+    grid-template-rows: 34px repeat(14, auto);
   }
 
   #game {
