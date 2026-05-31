@@ -62,6 +62,16 @@ function createWorldSaveData() {
     tick: world.tick,
     speed: world.speed,
     era: world.era,
+    config: {
+      startingOrganisms: CONFIG.STARTING_ORGANISMS,
+      startingFood: CONFIG.STARTING_FOOD,
+      maxFood: CONFIG.MAX_FOOD,
+      maxOrganisms: CONFIG.MAX_ORGANISMS,
+      organismDrawSize: CONFIG.ORGANISM_DRAW_SIZE,
+      foodDrawSize: CONFIG.FOOD_DRAW_SIZE,
+      ticksPerSimUpdate: CONFIG.TICKS_PER_SIM_UPDATE,
+      simSpeedMultiplier: CONFIG.SIM_SPEED_MULTIPLIER
+    },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave)
@@ -140,8 +150,35 @@ function countFertileTiles() {
   return fertileTiles;
 }
 
+function applySaveConfig(saveConfig) {
+  if (!saveConfig) {
+    return;
+  }
+
+  if (typeof saveConfig.startingFood === "number") {
+    CONFIG.STARTING_FOOD = saveConfig.startingFood;
+  }
+
+  if (typeof saveConfig.maxFood === "number") {
+    CONFIG.MAX_FOOD = saveConfig.maxFood;
+  }
+
+  if (typeof saveConfig.maxOrganisms === "number") {
+    CONFIG.MAX_ORGANISMS = saveConfig.maxOrganisms;
+  }
+
+  if (typeof saveConfig.organismDrawSize === "number") {
+    CONFIG.ORGANISM_DRAW_SIZE = saveConfig.organismDrawSize;
+  }
+
+  if (typeof saveConfig.foodDrawSize === "number") {
+    CONFIG.FOOD_DRAW_SIZE = saveConfig.foodDrawSize;
+  }
+}
+
 function applyWorldSaveData(saveData) {
   validateWorldSaveData(saveData);
+  applySaveConfig(saveData.config);
 
   world.tick = Number(saveData.tick);
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
@@ -190,5 +227,52 @@ function loadWorldFromIndexedDB() {
         reject(new Error(request.error ? request.error.message : "Could not load world"));
       };
     });
+  });
+}
+
+function exportWorldToJsonFile() {
+  var saveData = createWorldSaveData();
+  var json = JSON.stringify(saveData, null, 2);
+  var blob = new Blob([json], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+
+  link.href = url;
+  link.download = "pixelsim-world-tick-" + world.tick + ".json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 0);
+
+  return saveData;
+}
+
+function importWorldFromJsonFile(file) {
+  return new Promise(function(resolve, reject) {
+    if (!file) {
+      reject(new Error("No JSON file selected"));
+      return;
+    }
+
+    var reader = new FileReader();
+
+    reader.onload = function(event) {
+      try {
+        var saveData = JSON.parse(event.target.result);
+        applyWorldSaveData(saveData);
+        resolve(saveData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error(reader.error ? reader.error.message : "Could not read JSON file"));
+    };
+
+    reader.readAsText(file);
   });
 }

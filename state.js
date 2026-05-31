@@ -15,6 +15,9 @@ const speedUpButton = document.getElementById("speed-up-button");
 const restartButton = document.getElementById("restart-button");
 const saveButton = document.getElementById("save-button");
 const loadButton = document.getElementById("load-button");
+const exportJsonButton = document.getElementById("export-json-button");
+const importJsonButton = document.getElementById("import-json-button");
+const importJsonFile = document.getElementById("import-json-file");
 const speedLabel = document.getElementById("speed-label");
 const persistenceStatus = document.getElementById("persistence-status");
 
