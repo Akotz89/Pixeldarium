@@ -533,7 +533,7 @@ function getFoodRunwayHistoryValue(sample, range) {
     return runwayTicks;
   }
 
-  return range.max;
+  return null;
 }
 
 function drawEcosystemHistoryGuide(chart, ratio, color) {
@@ -556,6 +556,9 @@ function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
   ecosystemHistoryCtx.fillStyle = color;
   ecosystemHistoryCtx.lineWidth = 2;
   ecosystemHistoryCtx.beginPath();
+  var hasActiveSegment = false;
+  var finitePointCount = 0;
+  var lastFinitePoint = null;
 
   for (var i = 0; i < samples.length; i++) {
     var x = chart.x;
@@ -564,10 +567,30 @@ function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
       x += (i / (samples.length - 1)) * chart.width;
     }
 
-    var y = chart.y + scaleHistoryValue(getValue(samples[i]), range.min, range.max, chart.height);
+    var rawValue = getValue(samples[i]);
 
-    if (i === 0) {
+    if (rawValue === null || typeof rawValue === "undefined") {
+      hasActiveSegment = false;
+      continue;
+    }
+
+    var value = Number(rawValue);
+
+    if (!Number.isFinite(value)) {
+      hasActiveSegment = false;
+      continue;
+    }
+
+    var y = chart.y + scaleHistoryValue(value, range.min, range.max, chart.height);
+    finitePointCount++;
+    lastFinitePoint = {
+      x: x,
+      y: y
+    };
+
+    if (!hasActiveSegment) {
       ecosystemHistoryCtx.moveTo(x, y);
+      hasActiveSegment = true;
     } else {
       ecosystemHistoryCtx.lineTo(x, y);
     }
@@ -575,11 +598,11 @@ function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
 
   ecosystemHistoryCtx.stroke();
 
-  if (samples.length === 1) {
+  if (finitePointCount === 1 && lastFinitePoint) {
     ecosystemHistoryCtx.beginPath();
     ecosystemHistoryCtx.arc(
-      chart.x,
-      chart.y + scaleHistoryValue(getValue(samples[0]), range.min, range.max, chart.height),
+      lastFinitePoint.x,
+      lastFinitePoint.y,
       3,
       0,
       Math.PI * 2
