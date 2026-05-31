@@ -5,16 +5,17 @@ function updateHud() {
 
   setElementText(eraText, "ERA: " + world.era);
   setElementText(populationText, "POPULATION: " + world.organisms.length);
-  setElementText(foodText,
-    "TICK: " + world.tick +
-    "   FOOD: " + world.food.length +
-    "   FERTILE: " + fertilePercent + "%" +
-    "   FPS: " + world.fps.toFixed(1) +
-    "   TPS: " + world.tps.toFixed(1) +
-    "   UPDATE: " + world.updateMs.toFixed(2) + "ms" +
-    "   DRAW: " + world.drawMs.toFixed(2) + "ms" +
-    "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms"
-  );
+  setElementClass(foodText, "hud-metrics");
+  setElementHtml(foodText, [
+    makeHudMetric("Tick", world.tick),
+    makeHudMetric("Food", world.food.length),
+    makeHudMetric("Fertile", fertilePercent + "%"),
+    makeHudMetric("FPS", world.fps.toFixed(1)),
+    makeHudMetric("TPS", world.tps.toFixed(1)),
+    makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
+    makeHudMetric("Draw", world.drawMs.toFixed(2) + "ms"),
+    makeHudMetric("Max", world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms")
+  ].join(""));
 
   setElementText(speedLabel, "Speed: " + world.speed + "x");
   syncTuningControls();
@@ -48,6 +49,15 @@ function setInputValue(input, value) {
   if (input.value !== stringValue) {
     input.value = stringValue;
   }
+}
+
+function makeHudMetric(label, value) {
+  return (
+    "<span class=\"hud-metric\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span>" + escapeSummaryText(value) + "</span>" +
+    "</span>"
+  );
 }
 
 function getTuningInputNumber(input, fallbackValue) {
