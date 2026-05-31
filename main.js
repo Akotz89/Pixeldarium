@@ -148,6 +148,7 @@ function updateWorld() {
 var lastFrameTime = performance.now();
 var simAccumulatorMs = 0;
 var statsTimer = performance.now();
+var hudTimer = performance.now();
 var framesSinceStatsUpdate = 0;
 var simTicksSinceStatsUpdate = 0;
 var updateMsSinceStatsUpdate = 0;
@@ -235,7 +236,10 @@ function gameLoop() {
       statsTimer = now;
     }
 
-    updateHud();
+    if (now - hudTimer >= CONFIG.HUD_UPDATE_INTERVAL_MS) {
+      updateHud();
+      hudTimer = now;
+    }
 
     requestAnimationFrame(gameLoop);
   } catch (error) {
