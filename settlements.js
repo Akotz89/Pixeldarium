@@ -997,6 +997,10 @@ function ensureStarMapState() {
     world.starSystems = [];
   }
 
+  if (!world.starSystemsById) {
+    rebuildStarSystemIndexes();
+  }
+
   if (typeof world.nextStarSystemId !== "number" || world.nextStarSystemId < 1) {
     world.nextStarSystemId = 1;
   }
@@ -1054,11 +1058,39 @@ function makeStarSystem() {
   };
 }
 
+function registerStarSystemInIndex(system) {
+  if (!system) {
+    return;
+  }
+
+  if (!world.starSystemsById) {
+    world.starSystemsById = {};
+  }
+
+  world.starSystemsById[String(system.id)] = system;
+}
+
+function rebuildStarSystemIndexes() {
+  world.starSystemsById = {};
+
+  if (!Array.isArray(world.starSystems)) {
+    return world.starSystemsById;
+  }
+
+  for (var i = 0; i < world.starSystems.length; i++) {
+    registerStarSystemInIndex(world.starSystems[i]);
+  }
+
+  return world.starSystemsById;
+}
+
 function normalizeStarSystems() {
   ensureStarMapState();
+  world.starSystemsById = {};
 
   for (var i = 0; i < world.starSystems.length; i++) {
     normalizeStarSystem(world.starSystems[i]);
+    registerStarSystemInIndex(world.starSystems[i]);
   }
 }
 
@@ -1160,7 +1192,9 @@ function updateStarMapState() {
     world.starMapProgress >= discoveryThreshold &&
     world.starSystems.length < CONFIG.STAR_MAP_MAX_SYSTEMS
   ) {
-    world.starSystems.push(makeStarSystem());
+    var starSystem = makeStarSystem();
+    world.starSystems.push(starSystem);
+    registerStarSystemInIndex(starSystem);
     world.starMapProgress -= discoveryThreshold;
   }
 
@@ -1318,15 +1352,8 @@ function getClaimedStarSystems() {
 }
 
 function getStarSystemById(systemId) {
-  normalizeStarSystems();
-
-  for (var i = 0; i < world.starSystems.length; i++) {
-    if (world.starSystems[i].id === systemId) {
-      return world.starSystems[i];
-    }
-  }
-
-  return null;
+  ensureStarMapState();
+  return world.starSystemsById[String(systemId)] || null;
 }
 
 function getInterstellarFleetEndpoints() {

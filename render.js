@@ -134,6 +134,10 @@ function getSettlementDrawSize(settlement) {
 }
 
 function getRenderedSettlementById(settlementId) {
+  if (typeof getSettlementById === "function") {
+    return getSettlementById(settlementId);
+  }
+
   if (!Array.isArray(world.settlements)) {
     return null;
   }
@@ -391,6 +395,10 @@ function drawStarSystems() {
 }
 
 function getRenderedStarSystemById(systemId) {
+  if (typeof getStarSystemById === "function") {
+    return getStarSystemById(systemId);
+  }
+
   if (!Array.isArray(world.starSystems)) {
     return null;
   }
