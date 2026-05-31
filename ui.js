@@ -201,6 +201,14 @@ function getSettlementSummary() {
   return world.settlementSummary;
 }
 
+function getEarlyProgressionSummary() {
+  if (typeof refreshEarlyProgressionSummaryCache === "function") {
+    return refreshEarlyProgressionSummaryCache();
+  }
+
+  return null;
+}
+
 function escapeSummaryText(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -445,8 +453,41 @@ function updateSettlementSummary() {
   var summary = getSettlementSummary();
 
   if (!summary) {
-    setElementClass(settlementSummaryText, "");
-    setElementText(settlementSummaryText, "SETTLEMENTS: -");
+    var earlySummary = getEarlyProgressionSummary();
+
+    if (!earlySummary) {
+      setElementClass(settlementSummaryText, "");
+      setElementText(settlementSummaryText, "SETTLEMENTS: -");
+      return;
+    }
+
+    var topLineageText = earlySummary.topLineage ? "L" + earlySummary.topLineage.id : "-";
+    var nextStep = earlySummary.settlementReady ? "founding" : "lineage growth";
+    var earlyChips = [
+      makeSummaryChip("Stage", earlySummary.status),
+      makeSummaryProgressChip(
+        "Population",
+        earlySummary.topActive,
+        earlySummary.populationTarget,
+        earlySummary.topActive + "/" + earlySummary.populationTarget,
+        earlySummary.topActive >= earlySummary.populationTarget,
+        earlySummary.settlementReady
+      ),
+      makeSummaryProgressChip(
+        "Peak",
+        earlySummary.topPeak,
+        earlySummary.peakTarget,
+        earlySummary.topPeak + "/" + earlySummary.peakTarget,
+        earlySummary.topPeak >= earlySummary.peakTarget,
+        earlySummary.settlementReady
+      ),
+      makeSummaryChip("Lineages", earlySummary.activeLineages + "/" + earlySummary.totalLineages),
+      makeSummaryChip("Top", topLineageText),
+      makeSummaryChip("Next", nextStep)
+    ];
+
+    setElementClass(settlementSummaryText, "summary-grid early-summary");
+    setElementHtml(settlementSummaryText, earlyChips.join(""));
     return;
   }
 

@@ -89,6 +89,7 @@ const world = {
   rootSettlementByLineage: {},
   settlementChildOutpostCountByParentId: {},
   settlementSummary: null,
+  earlyProgressionSummary: null,
   nextSettlementRouteId: 1,
   settlementRoutes: [],
   settlementRoutesByKey: {},

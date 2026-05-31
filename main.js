@@ -50,6 +50,7 @@ function clearWorld() {
   world.rootSettlementByLineage = {};
   world.settlementChildOutpostCountByParentId = {};
   world.settlementSummary = null;
+  world.earlyProgressionSummary = null;
   world.nextSettlementRouteId = 1;
   world.settlementRoutes = [];
   world.settlementRoutesByKey = {};

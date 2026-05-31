@@ -2240,6 +2240,8 @@ function refreshSettlementSummaryCache() {
     return world.settlementSummary;
   }
 
+  world.earlyProgressionSummary = null;
+
   var activeSettlements = 0;
   var totalPopulation = 0;
   var totalFoodStock = 0;
@@ -2351,6 +2353,90 @@ function refreshSettlementSummaryCache() {
   };
 
   return world.settlementSummary;
+}
+
+function refreshEarlyProgressionSummaryCache() {
+  if (Array.isArray(world.settlements) && world.settlements.length > 0) {
+    world.earlyProgressionSummary = null;
+    return world.earlyProgressionSummary;
+  }
+
+  var lineages = world.lineages || {};
+  var activeLineages = 0;
+  var totalLineages = 0;
+  var extinctLineages = 0;
+  var topLineage = null;
+
+  for (var lineageKey in lineages) {
+    if (!Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
+      continue;
+    }
+
+    var lineage = lineages[lineageKey];
+    var activeCount = Math.max(0, Math.round(Number(lineage.activeCount) || 0));
+    var peakPopulation = Math.max(0, Math.round(Number(lineage.peakPopulation) || 0));
+
+    totalLineages++;
+
+    if (activeCount > 0) {
+      activeLineages++;
+    } else {
+      extinctLineages++;
+    }
+
+    if (
+      !topLineage ||
+      activeCount > topLineage.activeCount ||
+      (activeCount === topLineage.activeCount && peakPopulation > topLineage.peakPopulation) ||
+      (activeCount === topLineage.activeCount && peakPopulation === topLineage.peakPopulation && lineage.id < topLineage.id)
+    ) {
+      topLineage = {
+        id: Math.max(1, Math.round(Number(lineage.id) || 1)),
+        activeCount: activeCount,
+        peakPopulation: peakPopulation,
+        isExtinct: Boolean(lineage.isExtinct)
+      };
+    }
+  }
+
+  var populationTarget = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_MIN_LINEAGE_POPULATION) || 1));
+  var peakTarget = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION) || 1));
+  var topActive = topLineage ? topLineage.activeCount : 0;
+  var topPeak = topLineage ? topLineage.peakPopulation : 0;
+  var settlementReady = Boolean(
+    topLineage &&
+    !topLineage.isExtinct &&
+    topActive >= populationTarget &&
+    topPeak >= peakTarget &&
+    !world.isExtinct
+  );
+  var status = "growing";
+
+  if (world.isExtinct) {
+    status = "extinct";
+  } else if (settlementReady) {
+    status = "ready";
+  } else if (activeLineages > 1) {
+    status = "diversifying";
+  } else if (topActive >= populationTarget || topPeak >= peakTarget) {
+    status = "consolidating";
+  }
+
+  world.earlyProgressionSummary = {
+    status: status,
+    population: Array.isArray(world.organisms) ? world.organisms.length : 0,
+    activeLineages: activeLineages,
+    totalLineages: totalLineages,
+    extinctLineages: extinctLineages,
+    topLineage: topLineage,
+    topActive: topActive,
+    topPeak: topPeak,
+    populationTarget: populationTarget,
+    peakTarget: peakTarget,
+    settlementReady: settlementReady
+  };
+
+  return world.earlyProgressionSummary;
 }
 
 function updateSettlements() {
