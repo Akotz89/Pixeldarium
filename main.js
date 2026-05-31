@@ -15,6 +15,8 @@ function clearWorld() {
   world.tick = 0;
   world.era = "Organisms";
   world.organisms = [];
+  world.organismBuckets = {};
+  world.organismsByLineage = {};
   world.food = [];
   world.foodPositions = {};
   world.foodBuckets = {};

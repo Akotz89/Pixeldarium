@@ -300,9 +300,137 @@ function makeOrganism(x, y, lineageId) {
   return organism;
 }
 
+function getOrganismBucketSize() {
+  return Math.max(1, Math.round(Number(CONFIG.ORGANISM_SPATIAL_BUCKET_SIZE) || 16));
+}
+
+function getOrganismBucketKey(x, y) {
+  var bucketSize = getOrganismBucketSize();
+  return Math.floor(x / bucketSize) + ":" + Math.floor(y / bucketSize);
+}
+
+function ensureOrganismIndexState() {
+  if (!world.organismBuckets) {
+    world.organismBuckets = {};
+  }
+
+  if (!world.organismsByLineage) {
+    world.organismsByLineage = {};
+  }
+}
+
+function registerOrganismInIndexes(organism) {
+  ensureOrganismIndexState();
+
+  var lineageId = ensureOrganismLineage(organism);
+  var lineageKey = String(lineageId);
+  var bucketKey = getOrganismBucketKey(organism.x, organism.y);
+
+  if (!world.organismBuckets[bucketKey]) {
+    world.organismBuckets[bucketKey] = [];
+  }
+
+  if (!world.organismsByLineage[lineageKey]) {
+    world.organismsByLineage[lineageKey] = [];
+  }
+
+  world.organismBuckets[bucketKey].push(organism);
+  world.organismsByLineage[lineageKey].push(organism);
+}
+
+function rebuildOrganismIndexes() {
+  world.organismBuckets = {};
+  world.organismsByLineage = {};
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    registerOrganismInIndexes(world.organisms[i]);
+  }
+}
+
+function ensureOrganismIndexes() {
+  if (!world.organismBuckets || !world.organismsByLineage) {
+    rebuildOrganismIndexes();
+  }
+}
+
+function getIndexedOrganismsForLineage(lineageId) {
+  ensureOrganismIndexes();
+  return world.organismsByLineage[String(lineageId)] || [];
+}
+
+function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
+  var normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.round(Number(limit))) : Infinity;
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var organisms = [];
+
+  if (normalizedLimit <= 0) {
+    return organisms;
+  }
+
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+
+        if (
+          (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
+          Math.abs(organism.x - x) + Math.abs(organism.y - y) <= normalizedRadius
+        ) {
+          organisms.push(organism);
+
+          if (organisms.length >= normalizedLimit) {
+            return organisms;
+          }
+        }
+      }
+    }
+  }
+
+  return organisms;
+}
+
+function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
+  return collectOrganismsInRadius(x, y, radius, lineageId).length;
+}
+
+function getNearestOrganismInRadius(x, y, radius) {
+  var organisms = collectOrganismsInRadius(x, y, radius);
+  var nearestOrganism = null;
+  var nearestDistance = Infinity;
+
+  for (var i = 0; i < organisms.length; i++) {
+    var organism = organisms[i];
+    var distance = Math.abs(organism.x - x) + Math.abs(organism.y - y);
+
+    if (distance < nearestDistance) {
+      nearestOrganism = organism;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearestOrganism;
+}
+
 function refreshLineageRegistry() {
   var lineages = ensureLineageRegistry();
   var lineageKey;
+
+  world.organismBuckets = {};
+  world.organismsByLineage = {};
 
   for (lineageKey in lineages) {
     if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
@@ -327,6 +455,8 @@ function refreshLineageRegistry() {
     if (record.activeCount > record.peakPopulation) {
       record.peakPopulation = record.activeCount;
     }
+
+    registerOrganismInIndexes(organism);
   }
 
   for (lineageKey in lineages) {

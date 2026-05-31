@@ -69,15 +69,7 @@ function getRootSettlementForLineage(lineageId) {
 }
 
 function getOrganismsForLineage(lineageId) {
-  var organisms = [];
-
-  for (var i = 0; i < world.organisms.length; i++) {
-    if (ensureOrganismLineage(world.organisms[i]) === lineageId) {
-      organisms.push(world.organisms[i]);
-    }
-  }
-
-  return organisms;
+  return getIndexedOrganismsForLineage(lineageId);
 }
 
 function getLineageCenter(organisms) {
@@ -138,16 +130,8 @@ function countSettlementClaimedTiles(settlement) {
 }
 
 function countSettlementClaimedFood(settlement) {
-  var claimedFood = 0;
   var radius = Math.max(1, Math.round(settlement.influenceRadius || getSettlementInfluenceRadius(settlement)));
-
-  for (var i = 0; i < world.food.length; i++) {
-    if (getDistanceToSettlement(settlement, world.food[i].x, world.food[i].y) <= radius) {
-      claimedFood++;
-    }
-  }
-
-  return claimedFood;
+  return countFoodInRadius(settlement.x, settlement.y, radius);
 }
 
 function updateSettlementInfluence(settlement) {
@@ -201,20 +185,7 @@ function countSettlementFoodStock(settlement) {
 }
 
 function countSettlementPopulation(settlement) {
-  var population = 0;
-
-  for (var i = 0; i < world.organisms.length; i++) {
-    var organism = world.organisms[i];
-
-    if (
-      ensureOrganismLineage(organism) === settlement.lineageId &&
-      getDistanceToSettlement(settlement, organism.x, organism.y) <= settlement.radius
-    ) {
-      population++;
-    }
-  }
-
-  return population;
+  return countOrganismsInRadiusForLineage(settlement.x, settlement.y, settlement.radius, settlement.lineageId);
 }
 
 function updateSettlementMetrics(settlement) {
@@ -1700,15 +1671,7 @@ function getDistanceToNearestSettlement(x, y) {
 }
 
 function countFoodNearTile(x, y, radius) {
-  var foodCount = 0;
-
-  for (var i = 0; i < world.food.length; i++) {
-    if (Math.abs(world.food[i].x - x) + Math.abs(world.food[i].y - y) <= radius) {
-      foodCount++;
-    }
-  }
-
-  return foodCount;
+  return countFoodInRadius(x, y, radius);
 }
 
 function getOutpostPlacement(parentSettlement) {
