@@ -702,10 +702,45 @@ function eatFoodOnCurrentTile(organism) {
   return true;
 }
 
+function getReproductionScarcityPressure() {
+  var population = Array.isArray(world.organisms) ? world.organisms.length : 0;
+
+  if (population < CONFIG.FOOD_RECOVERY_MIN_POPULATION) {
+    return 0;
+  }
+
+  var targetFood = Math.max(
+    CONFIG.STARTING_FOOD * 0.08,
+    population * CONFIG.REPRODUCTION_RESOURCE_TARGET_PER_ORGANISM
+  );
+  var deficit = targetFood - world.food.length;
+
+  if (deficit <= 0) {
+    return 0;
+  }
+
+  return clamp(deficit / Math.max(1, targetFood), 0, 1);
+}
+
+function getResourceAdjustedReproductionEnergy(traits, scarcityPressure) {
+  var multiplier = 1 + clamp(scarcityPressure, 0, 1) * (
+    CONFIG.REPRODUCTION_SCARCITY_MAX_ENERGY_MULTIPLIER - 1
+  );
+
+  return traits.reproductionEnergy * multiplier;
+}
+
 function reproduceIfReady(organism) {
   var traits = ensureOrganismTraits(organism);
+  var scarcityPressure = getReproductionScarcityPressure();
+  var reproductionEnergy = getResourceAdjustedReproductionEnergy(traits, scarcityPressure);
 
-  if (organism.energy < traits.reproductionEnergy) {
+  world.reproductionScarcityPressure = Math.max(
+    Number(world.reproductionScarcityPressure) || 0,
+    scarcityPressure
+  );
+
+  if (organism.energy < reproductionEnergy) {
     return;
   }
 
