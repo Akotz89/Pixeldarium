@@ -21,7 +21,6 @@ function updateHud() {
   updateLineageSummary();
   updateSettlementSummary();
   updateInspectPanel();
-  drawTraitHistory();
 }
 
 function getTuningInputNumber(input, fallbackValue) {
@@ -397,61 +396,51 @@ function updateSettlementSummary() {
   var summary = getSettlementSummary();
 
   if (!summary) {
+    settlementSummaryText.className = "";
     settlementSummaryText.textContent = "SETTLEMENTS: -";
     return;
   }
 
-  settlementSummaryText.textContent =
-    "SETTLEMENTS: " + summary.active + "/" + summary.total +
-    " active   outposts " + summary.totalOutposts +
-    " colonies " + summary.totalColonies +
-    " routes " + summary.activeRoutes + "/" + summary.totalRoutes +
-    " moved " + summary.totalRouteFoodTransferred +
-    "   network score " + summary.colonyNetworkScore +
-    " colonies " + summary.colonyNetworkColonies +
-    " routes " + summary.colonyNetworkActiveRoutes +
-    " claimed " + summary.colonyNetworkClaimedTiles +
-    "   space " + summary.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD +
-    " launches " + summary.orbitalLaunches +
-    " " + (summary.spaceProgramReady ? "ready" : "building") +
-    "   orbit assets " + summary.orbitalAssets +
-    " infra " + summary.orbitalInfrastructureScore +
-    " " + (summary.orbitalPlatformReady ? "platform" : "orbital") +
-    "   planets " + summary.planetaryBodies +
-    " survey " + summary.planetarySurveyProgress.toFixed(1) + "/" + CONFIG.PLANETARY_DISCOVERY_THRESHOLD +
-    " " + (summary.planetarySurveyReady ? "surveying" : "waiting") +
-    "   probes " + summary.completedProbeMissions + "/" + summary.probeMissions +
-    " build " + summary.probeMissionProgress.toFixed(1) + "/" + CONFIG.PROBE_MISSION_THRESHOLD +
-    " " + (summary.probeMissionReady ? "ready" : "waiting") +
-    "   stars " + summary.starSystems +
-    " map " + summary.starMapProgress.toFixed(1) + "/" + CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD +
-    " " + (summary.starMapReady ? "mapping" : "waiting") +
-    "   galactic claims " + summary.galacticClaimedSystems +
-    " influence " + summary.galacticInfluenceProgress.toFixed(1) + "/" + CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD +
-    " " + (summary.galacticInfluenceReady ? "claiming" : "waiting") +
-    "   fleets " + summary.interstellarFleetCompleted + "/" + summary.interstellarFleets +
-    " build " + summary.interstellarFleetProgress.toFixed(1) + "/" + CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD +
-    " " + (summary.interstellarFleetReady ? "ready" : "waiting") +
-    "   sectors " + summary.empireSectors +
-    " build " + summary.empireSectorProgress.toFixed(1) + "/" + CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD +
-    " " + (summary.empireSectorReady ? "forming" : "waiting") +
-    "   legacy lvl " + summary.empireLegacyLevel +
-    " " + summary.empireLegacyProgress.toFixed(1) + "/" + CONFIG.EMPIRE_LEGACY_THRESHOLD +
-    " " + (summary.empireLegacyComplete ? "complete" : (summary.empireLegacyReady ? "ascending" : "waiting")) +
-    "   camp pop " + summary.totalPopulation +
-    "   nearby " + summary.totalFoodStock +
-    "   stored " + summary.totalStoredFood +
-    "   dev " + summary.totalDevelopment.toFixed(1) +
-    "   claimed " + summary.totalClaimedTiles +
-    " food " + summary.totalClaimedFood +
-    "   top S" + summary.topSettlement.id +
-    " L" + summary.topSettlement.lineageId +
-    " lvl " + summary.topSettlement.level +
-    " influence " + summary.topSettlement.influenceRadius +
-    (summary.topSettlement.isColony ? " colony of S" + summary.topSettlement.parentSettlementId : (summary.topSettlement.isOutpost ? " outpost of S" + summary.topSettlement.parentSettlementId : " root camp")) +
-    " pop " + summary.topSettlement.population +
-    " stored " + summary.topSettlement.storedFood +
-    " dev " + summary.topSettlement.development.toFixed(1);
+  var topType = "Root";
+
+  if (summary.topSettlement.isColony) {
+    topType = "Colony S" + summary.topSettlement.parentSettlementId;
+  } else if (summary.topSettlement.isOutpost) {
+    topType = "Outpost S" + summary.topSettlement.parentSettlementId;
+  }
+
+  var legacyState = summary.empireLegacyComplete ? "complete" : (summary.empireLegacyReady ? "ascending" : "waiting");
+  var chips = [
+    ["Settlements", summary.active + "/" + summary.total],
+    ["Outposts", summary.totalOutposts],
+    ["Colonies", summary.totalColonies],
+    ["Routes", summary.activeRoutes + "/" + summary.totalRoutes],
+    ["Moved", summary.totalRouteFoodTransferred],
+    ["Network", summary.colonyNetworkScore],
+    ["Space", summary.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD],
+    ["Launches", summary.orbitalLaunches],
+    ["Orbit", summary.orbitalAssets + " / " + summary.orbitalInfrastructureScore],
+    ["Planets", summary.planetaryBodies + " / " + summary.planetarySurveyProgress.toFixed(1)],
+    ["Probes", summary.completedProbeMissions + "/" + summary.probeMissions],
+    ["Stars", summary.starSystems],
+    ["Claims", summary.galacticClaimedSystems],
+    ["Fleets", summary.interstellarFleetCompleted + "/" + summary.interstellarFleets],
+    ["Sectors", summary.empireSectors],
+    ["Legacy", "L" + summary.empireLegacyLevel + " " + legacyState],
+    ["Camp Pop", summary.totalPopulation],
+    ["Stored", summary.totalStoredFood],
+    ["Claimed", summary.totalClaimedTiles],
+    ["Top", "S" + summary.topSettlement.id + " L" + summary.topSettlement.lineageId],
+    ["Top Level", summary.topSettlement.level + " / " + summary.topSettlement.influenceRadius],
+    ["Top Type", topType],
+    ["Top Pop", summary.topSettlement.population],
+    ["Top Dev", summary.topSettlement.development.toFixed(1)]
+  ];
+
+  settlementSummaryText.className = "summary-grid";
+  settlementSummaryText.innerHTML = chips.map(function(chip) {
+    return "<span class=\"summary-chip\"><b>" + chip[0] + "</b><span>" + chip[1] + "</span></span>";
+  }).join("");
 }
 
 function makeTraitHistorySample(summary) {

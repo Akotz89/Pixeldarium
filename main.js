@@ -145,8 +145,8 @@ function updateWorld() {
   }
 }
 
-var frameCounter = 0;
 var lastFrameTime = performance.now();
+var simAccumulatorMs = 0;
 var statsTimer = performance.now();
 var framesSinceStatsUpdate = 0;
 var simTicksSinceStatsUpdate = 0;
@@ -160,35 +160,48 @@ var maxDrawMsSinceStatsUpdate = 0;
 function gameLoop() {
   try {
     var now = performance.now();
+    var frameElapsed = Math.min(250, Math.max(0, now - lastFrameTime));
     lastFrameTime = now;
     framesSinceStatsUpdate++;
-    frameCounter++;
 
-    if (!world.isPaused && frameCounter >= CONFIG.TICKS_PER_SIM_UPDATE) {
-      frameCounter = 0;
-
-      var updatesThisFrame = world.speed * CONFIG.SIM_SPEED_MULTIPLIER;
+    if (!world.isPaused) {
+      var updateInterval = Math.max(
+        1,
+        CONFIG.SIM_UPDATE_INTERVAL_MS / Math.max(1, world.speed * CONFIG.SIM_SPEED_MULTIPLIER)
+      );
+      var updatesThisFrame = 0;
       var updateStart = performance.now();
+      simAccumulatorMs += frameElapsed;
 
-      for (var i = 0; i < updatesThisFrame; i++) {
+      while (
+        simAccumulatorMs >= updateInterval &&
+        updatesThisFrame < CONFIG.MAX_SIM_UPDATES_PER_FRAME
+      ) {
         updateWorld();
+        simAccumulatorMs -= updateInterval;
+        updatesThisFrame++;
       }
 
-      var updateElapsed = performance.now() - updateStart;
-      updateMsSinceStatsUpdate += updateElapsed;
-      measuredUpdateFrames++;
-
-      if (updateElapsed > maxUpdateMsSinceStatsUpdate) {
-        maxUpdateMsSinceStatsUpdate = updateElapsed;
+      if (updatesThisFrame >= CONFIG.MAX_SIM_UPDATES_PER_FRAME) {
+        simAccumulatorMs = Math.min(simAccumulatorMs, updateInterval);
       }
 
-      simTicksSinceStatsUpdate += updatesThisFrame;
-    }
+      if (updatesThisFrame > 0) {
+        var updateElapsed = performance.now() - updateStart;
+        updateMsSinceStatsUpdate += updateElapsed;
+        measuredUpdateFrames++;
 
-    if (world.isPaused) {
-      world.interpolation = 0;
+        if (updateElapsed > maxUpdateMsSinceStatsUpdate) {
+          maxUpdateMsSinceStatsUpdate = updateElapsed;
+        }
+
+        simTicksSinceStatsUpdate += updatesThisFrame;
+      }
+
+      world.interpolation = Math.min(simAccumulatorMs / updateInterval, 1);
     } else {
-      world.interpolation = Math.min(frameCounter / CONFIG.TICKS_PER_SIM_UPDATE, 1);
+      simAccumulatorMs = 0;
+      world.interpolation = 0;
     }
 
     var drawStart = performance.now();
