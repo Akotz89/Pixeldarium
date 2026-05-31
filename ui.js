@@ -713,6 +713,7 @@ window.setupControls = function() {
 
   pauseButton.addEventListener("click", function() {
     world.isPaused = !world.isPaused;
+    world.needsRender = true;
     setElementText(pauseButton, world.isPaused ? "Resume" : "Pause");
   });
 

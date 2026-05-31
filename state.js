@@ -49,6 +49,7 @@ const world = {
   terrain: [],
   fertileTiles: 0,
   isPaused: false,
+  needsRender: true,
   speed: 1,
   interpolation: 0,
   fps: 0,
