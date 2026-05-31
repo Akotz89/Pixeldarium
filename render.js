@@ -67,6 +67,10 @@ function drawFood() {
 
 function getLineageColor(organism) {
   var lineageId = typeof organism.lineageId === "number" ? organism.lineageId : 1;
+  return getLineageColorById(lineageId);
+}
+
+function getLineageColorById(lineageId) {
   var colorIndex = (lineageId - 1) % CONFIG.LINEAGE_COLORS.length;
   return CONFIG.LINEAGE_COLORS[colorIndex];
 }
@@ -110,6 +114,27 @@ function drawOrganisms() {
   }
 }
 
+function drawSettlements() {
+  if (!Array.isArray(world.settlements)) {
+    return;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var canvasX = settlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var canvasY = settlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var size = CONFIG.ORGANISM_DRAW_SIZE * 2.2;
+
+    ctx.fillStyle = "rgba(5, 6, 10, 0.72)";
+    ctx.fillRect(canvasX - size / 2, canvasY - size / 2, size, size);
+    ctx.strokeStyle = settlement.isActive ? getLineageColorById(settlement.lineageId) : "rgba(255, 255, 255, 0.42)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(canvasX - size / 2, canvasY - size / 2, size, size);
+    ctx.fillStyle = "#f2b85b";
+    ctx.fillRect(canvasX - 1.5, canvasY - 1.5, 3, 3);
+  }
+}
+
 function drawScanlines() {
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
@@ -138,6 +163,7 @@ window.buildTerrainCache = buildTerrainCache;
 window.drawWorld = function() {
   drawTerrain();
   drawFood();
+  drawSettlements();
   drawOrganisms();
   drawInspectSelection();
   drawScanlines();

@@ -18,6 +18,7 @@ function updateHud() {
   speedLabel.textContent = "Speed: " + world.speed + "x";
   updateTraitSummary();
   updateLineageSummary();
+  updateSettlementSummary();
   updateInspectPanel();
   drawTraitHistory();
 }
@@ -37,6 +38,27 @@ function getNearestOrganismToTile(tileX, tileY) {
   }
 
   return nearestOrganism;
+}
+
+function getNearestSettlementToTile(tileX, tileY) {
+  if (!Array.isArray(world.settlements)) {
+    return null;
+  }
+
+  var nearestSettlement = null;
+  var nearestDistance = Infinity;
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var distance = Math.abs(settlement.x - tileX) + Math.abs(settlement.y - tileY);
+
+    if (distance < nearestDistance && distance <= 2) {
+      nearestSettlement = settlement;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearestSettlement;
 }
 
 function formatOrganismTraits(organism) {
@@ -184,6 +206,57 @@ function updateLineageSummary() {
     "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
 }
 
+function getSettlementSummary() {
+  if (!Array.isArray(world.settlements) || world.settlements.length === 0) {
+    return null;
+  }
+
+  var activeSettlements = 0;
+  var totalPopulation = 0;
+  var totalFoodStock = 0;
+  var topSettlement = null;
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+
+    if (settlement.isActive) {
+      activeSettlements++;
+    }
+
+    totalPopulation += settlement.population;
+    totalFoodStock += settlement.foodStock;
+
+    if (!topSettlement || settlement.population > topSettlement.population) {
+      topSettlement = settlement;
+    }
+  }
+
+  return {
+    total: world.settlements.length,
+    active: activeSettlements,
+    totalPopulation: totalPopulation,
+    totalFoodStock: totalFoodStock,
+    topSettlement: topSettlement
+  };
+}
+
+function updateSettlementSummary() {
+  var summary = getSettlementSummary();
+
+  if (!summary) {
+    settlementSummaryText.textContent = "SETTLEMENTS: -";
+    return;
+  }
+
+  settlementSummaryText.textContent =
+    "SETTLEMENTS: " + summary.active + "/" + summary.total +
+    " active   camp pop " + summary.totalPopulation +
+    "   stock " + summary.totalFoodStock +
+    "   top S" + summary.topSettlement.id +
+    " L" + summary.topSettlement.lineageId +
+    " pop " + summary.topSettlement.population;
+}
+
 function makeTraitHistorySample(summary) {
   return {
     tick: world.tick,
@@ -329,7 +402,9 @@ function updateInspectPanel() {
   var terrainName = isFertile(tileX, tileY) ? "fertile" : "barren";
   var hasFood = foodExistsAt(tileX, tileY);
   var organism = getNearestOrganismToTile(tileX, tileY);
+  var settlement = getNearestSettlementToTile(tileX, tileY);
   var organismText = "none";
+  var settlementText = "none";
 
   if (organism) {
     var lineageRecord = world.lineages ? world.lineages[String(ensureOrganismLineage(organism))] : null;
@@ -346,11 +421,22 @@ function updateInspectPanel() {
       "   " + formatOrganismTraits(organism);
   }
 
+  if (settlement) {
+    settlementText =
+      "S" + settlement.id +
+      " lineage L" + settlement.lineageId +
+      " pop " + settlement.population +
+      " stock " + settlement.foodStock +
+      " founded " + settlement.foundedTick +
+      " " + (settlement.isActive ? "active" : "stale");
+  }
+
   inspectSummaryText.textContent = "INSPECT: Tile " + tileX + "," + tileY;
   inspectDetailsText.textContent =
     "TERRAIN: " + terrainName +
     "   FOOD: " + (hasFood ? "yes" : "no") +
-    "   ORGANISM: " + organismText;
+    "   ORGANISM: " + organismText +
+    "   SETTLEMENT: " + settlementText;
 }
 
 function getTileFromCanvasEvent(event) {

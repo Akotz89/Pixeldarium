@@ -95,6 +95,21 @@ function copyLineageForSave(lineage) {
   };
 }
 
+function copySettlementForSave(settlement) {
+  return {
+    id: settlement.id,
+    lineageId: settlement.lineageId,
+    x: settlement.x,
+    y: settlement.y,
+    foundedTick: settlement.foundedTick,
+    radius: settlement.radius,
+    population: settlement.population,
+    foodStock: settlement.foodStock,
+    isActive: settlement.isActive,
+    lastActiveTick: settlement.lastActiveTick
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -116,6 +131,14 @@ function getLineagesForSave() {
   return lineages;
 }
 
+function getSettlementsForSave() {
+  if (!Array.isArray(world.settlements)) {
+    return [];
+  }
+
+  return world.settlements.map(copySettlementForSave);
+}
+
 function createWorldSaveData() {
   return {
     id: PIXELSIM_SAVE_ID,
@@ -128,6 +151,7 @@ function createWorldSaveData() {
     speed: world.speed,
     era: world.era,
     nextLineageId: world.nextLineageId,
+    nextSettlementId: world.nextSettlementId,
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -163,13 +187,17 @@ function createWorldSaveData() {
       traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
       lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
       lineageRegistryVersion: 1,
-      lineageColors: CONFIG.LINEAGE_COLORS.slice()
+      lineageColors: CONFIG.LINEAGE_COLORS.slice(),
+      settlementMinLineagePopulation: CONFIG.SETTLEMENT_MIN_LINEAGE_POPULATION,
+      settlementMinLineagePeakPopulation: CONFIG.SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION,
+      settlementRadius: CONFIG.SETTLEMENT_RADIUS
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave),
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
-    lineages: getLineagesForSave()
+    lineages: getLineagesForSave(),
+    settlements: getSettlementsForSave()
   };
 }
 
@@ -310,6 +338,37 @@ function restoreLineages(lineages) {
   }
 
   return restoredLineages;
+}
+
+function restoreSettlement(settlement) {
+  settlement = settlement || {};
+
+  var restoredSettlement = {
+    id: Math.max(1, Math.round(restoreNumber(settlement.id, world.nextSettlementId))),
+    lineageId: Math.max(1, Math.round(restoreNumber(settlement.lineageId, 1))),
+    x: clamp(Math.round(restoreNumber(settlement.x, 0)), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.round(restoreNumber(settlement.y, 0)), 0, WORLD_HEIGHT - 1),
+    foundedTick: Math.max(0, Math.round(restoreNumber(settlement.foundedTick, 0))),
+    radius: Math.max(1, Math.round(restoreNumber(settlement.radius, CONFIG.SETTLEMENT_RADIUS))),
+    population: Math.max(0, Math.round(restoreNumber(settlement.population, 0))),
+    foodStock: Math.max(0, Math.round(restoreNumber(settlement.foodStock, 0))),
+    isActive: Boolean(settlement.isActive),
+    lastActiveTick: Math.max(0, Math.round(restoreNumber(settlement.lastActiveTick, 0)))
+  };
+
+  if (restoredSettlement.id >= world.nextSettlementId) {
+    world.nextSettlementId = restoredSettlement.id + 1;
+  }
+
+  return restoredSettlement;
+}
+
+function restoreSettlements(settlements) {
+  if (!Array.isArray(settlements)) {
+    return [];
+  }
+
+  return settlements.map(restoreSettlement);
 }
 
 function restoreOrganism(organism) {
@@ -519,6 +578,18 @@ function applySaveConfig(saveConfig) {
   if (Array.isArray(saveConfig.lineageColors) && saveConfig.lineageColors.length > 0) {
     CONFIG.LINEAGE_COLORS = saveConfig.lineageColors.slice();
   }
+
+  if (typeof saveConfig.settlementMinLineagePopulation === "number") {
+    CONFIG.SETTLEMENT_MIN_LINEAGE_POPULATION = saveConfig.settlementMinLineagePopulation;
+  }
+
+  if (typeof saveConfig.settlementMinLineagePeakPopulation === "number") {
+    CONFIG.SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION = saveConfig.settlementMinLineagePeakPopulation;
+  }
+
+  if (typeof saveConfig.settlementRadius === "number") {
+    CONFIG.SETTLEMENT_RADIUS = saveConfig.settlementRadius;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -529,7 +600,9 @@ function applyWorldSaveData(saveData) {
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
+  world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.lineages = restoreLineages(saveData.lineages);
+  world.settlements = restoreSettlements(saveData.settlements);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);

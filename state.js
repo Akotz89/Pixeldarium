@@ -8,6 +8,7 @@ const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
 const traitSummaryText = document.getElementById("trait-summary");
 const lineageSummaryText = document.getElementById("lineage-summary");
+const settlementSummaryText = document.getElementById("settlement-summary");
 const traitHistoryCanvas = document.getElementById("trait-history");
 const traitHistoryCtx = traitHistoryCanvas.getContext("2d", { willReadFrequently: true });
 
@@ -49,5 +50,7 @@ const world = {
   inspectedTile: null,
   traitHistory: [],
   nextLineageId: 1,
-  lineages: {}
+  lineages: {},
+  nextSettlementId: 1,
+  settlements: []
 };

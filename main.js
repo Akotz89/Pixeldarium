@@ -27,6 +27,8 @@ function clearWorld() {
   world.inspectedTile = null;
   world.nextLineageId = 1;
   world.lineages = {};
+  world.nextSettlementId = 1;
+  world.settlements = [];
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
@@ -80,6 +82,10 @@ function updateWorld() {
 
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
+  }
+
+  if (typeof updateSettlements === "function") {
+    updateSettlements();
   }
 
   if (typeof recordTraitHistorySample === "function") {
