@@ -149,6 +149,7 @@ function countItems(array, predicate) {
 
 function getSimulationMilestoneSnapshot() {
   var ecosystemSummary = world.ecosystemSummary || null;
+  var stabilityProfile = ecosystemSummary ? ecosystemSummary.stabilityProfile : null;
   var foodNetThisTick = ecosystemSummary
     ? ecosystemSummary.foodNetThisTick
     : (Number(world.foodSpawnedThisTick) || 0) - (Number(world.foodConsumedThisTick) || 0);
@@ -163,6 +164,8 @@ function getSimulationMilestoneSnapshot() {
     resourceBalance: ecosystemSummary ? ecosystemSummary.resourceBalance : "unknown",
     ecosystemPressure: ecosystemSummary ? ecosystemSummary.pressure : "unknown",
     ecosystemStabilityBand: ecosystemSummary ? getEcosystemStabilityBand(ecosystemSummary.stabilityScore) : -1,
+    ecosystemLimitingFactor: stabilityProfile ? stabilityProfile.limitingFactor : "unknown",
+    ecosystemLimitingFactorDetail: stabilityProfile ? formatEcosystemStabilityFactorScore(stabilityProfile) : "unknown",
     settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
     outposts: countItems(world.settlements, function(settlement) {
       return settlement && settlement.isOutpost;
@@ -283,6 +286,20 @@ function recordEcosystemMilestones(previousSnapshot, currentSnapshot) {
       getEcosystemStabilityBandLabel(previousSnapshot.ecosystemStabilityBand) +
         " -> " +
         getEcosystemStabilityBandLabel(currentSnapshot.ecosystemStabilityBand)
+    );
+  }
+
+  if (
+    previousSnapshot.ecosystemLimitingFactor !== "unknown" &&
+    currentSnapshot.ecosystemLimitingFactor !== "unknown" &&
+    currentSnapshot.ecosystemLimitingFactor !== previousSnapshot.ecosystemLimitingFactor
+  ) {
+    recordSimulationEvent(
+      "ecosystem",
+      "Limiter " + formatEcosystemStabilityFactor(currentSnapshot.ecosystemLimitingFactor),
+      formatEcosystemStabilityFactor(previousSnapshot.ecosystemLimitingFactor) +
+        " -> " +
+        currentSnapshot.ecosystemLimitingFactorDetail
     );
   }
 }
