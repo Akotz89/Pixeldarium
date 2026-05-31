@@ -338,6 +338,9 @@ function refreshPlanetSummary() {
   var waterTiles = 0;
   var fertileTiles = 0;
   var totalAreaKm2 = 0;
+  var landAreaKm2 = 0;
+  var waterAreaKm2 = 0;
+  var fertileAreaKm2 = 0;
 
   if (Array.isArray(world.planetTiles)) {
     for (var i = 0; i < world.planetTiles.length; i++) {
@@ -351,8 +354,14 @@ function refreshPlanetSummary() {
 
       if (tile.biome === "ocean") {
         waterTiles++;
+        waterAreaKm2 += Math.max(0, Number(tile.areaKm2) || 0);
       } else {
         landTiles++;
+        landAreaKm2 += Math.max(0, Number(tile.areaKm2) || 0);
+      }
+
+      if (tile.biome === "forest" || tile.biome === "grassland") {
+        fertileAreaKm2 += Math.max(0, Number(tile.areaKm2) || 0);
       }
     }
   }
@@ -366,13 +375,18 @@ function refreshPlanetSummary() {
     equatorKmPerTile: getPlanetEquatorKmPerTile(),
     meridianKmPerTile: getPlanetMeridianKmPerTile(),
     totalAreaKm2: totalAreaKm2,
+    landAreaKm2: landAreaKm2,
+    waterAreaKm2: waterAreaKm2,
+    fertileAreaKm2: fertileAreaKm2,
     landTiles: landTiles,
     waterTiles: waterTiles,
     fertileTiles: fertileTiles,
-    waterPercent: world.planetTiles && world.planetTiles.length > 0
+    waterTilePercent: world.planetTiles && world.planetTiles.length > 0
       ? (waterTiles / world.planetTiles.length) * 100
       : 0,
-    fertileLandPercent: landTiles > 0 ? (fertileTiles / landTiles) * 100 : 0
+    waterPercent: totalAreaKm2 > 0 ? (waterAreaKm2 / totalAreaKm2) * 100 : 0,
+    fertileLandPercent: landAreaKm2 > 0 ? (fertileAreaKm2 / landAreaKm2) * 100 : 0,
+    fertileTileLandPercent: landTiles > 0 ? (fertileTiles / landTiles) * 100 : 0
   };
 
   return world.planetSummary;

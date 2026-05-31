@@ -1,7 +1,10 @@
 function updateHud() {
-  var fertilePercent = Math.round(
-    (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100
-  );
+  var fertilePercent = world.planetSummary
+    ? Math.round(world.planetSummary.fertileLandPercent)
+    : Math.round((world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100);
+  var waterPercent = world.planetSummary
+    ? Math.round(world.planetSummary.waterPercent)
+    : 0;
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
 
   setElementClass(eraText, "hud-card hud-era");
@@ -15,7 +18,8 @@ function updateHud() {
   setElementHtml(foodText, [
     makeHudMetric("Tick", world.tick),
     makeHudMetric("Food", world.food.length),
-    makeHudMetric("Fertile", fertilePercent + "%"),
+    makeHudMetric("Water", waterPercent + "%"),
+    makeHudMetric("Fertile Land", fertilePercent + "%"),
     makeHudMetric("Scale", world.planetSummary ? world.planetSummary.equatorKmPerTile.toFixed(0) + " km/tile" : "-"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
