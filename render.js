@@ -117,6 +117,53 @@ function buildGlobeTerrainCache(tctx) {
   tctx.globalAlpha = 1;
 }
 
+function buildLocalTerrainCache(tctx) {
+  var footprint = getPlanetLocalViewFootprint();
+
+  tctx.fillStyle = "#01030a";
+  tctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (var y = 0; y < WORLD_HEIGHT; y++) {
+    for (var x = 0; x < WORLD_WIDTH; x++) {
+      var sample = getPlanetLocalSample(x, y);
+      var screenX = x * CONFIG.TILE_SIZE;
+      var screenY = y * CONFIG.TILE_SIZE;
+
+      tctx.fillStyle = getPlanetBiomeColor(sample.biome);
+      tctx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    }
+  }
+
+  tctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
+  tctx.lineWidth = 1;
+
+  for (var gridX = 0; gridX <= WORLD_WIDTH; gridX += 16) {
+    tctx.beginPath();
+    tctx.moveTo(gridX * CONFIG.TILE_SIZE, 0);
+    tctx.lineTo(gridX * CONFIG.TILE_SIZE, canvas.height);
+    tctx.stroke();
+  }
+
+  for (var gridY = 0; gridY <= WORLD_HEIGHT; gridY += 16) {
+    tctx.beginPath();
+    tctx.moveTo(0, gridY * CONFIG.TILE_SIZE);
+    tctx.lineTo(canvas.width, gridY * CONFIG.TILE_SIZE);
+    tctx.stroke();
+  }
+
+  tctx.fillStyle = "rgba(3, 4, 9, 0.54)";
+  tctx.fillRect(18, canvas.height - 70, 510, 26);
+  tctx.fillStyle = "rgba(220, 229, 255, 0.88)";
+  tctx.font = "14px Arial, Helvetica, sans-serif";
+  tctx.fillText(
+    getPlanetScaleLabel() + " | view " +
+      footprint.widthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " x " +
+      footprint.heightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km",
+    28,
+    canvas.height - 52
+  );
+}
+
 function buildTerrainCache() {
   terrainCache = document.createElement("canvas");
   terrainCache.width = canvas.width;
@@ -124,7 +171,9 @@ function buildTerrainCache() {
 
   var tctx = terrainCache.getContext("2d");
 
-  if (isGlobeRenderMode()) {
+  if (isGlobeRenderMode() && isPlanetLocalView()) {
+    buildLocalTerrainCache(tctx);
+  } else if (isGlobeRenderMode()) {
     buildGlobeTerrainCache(tctx);
   } else {
     buildFlatTerrainCache(tctx);
@@ -142,6 +191,34 @@ function drawTerrain() {
 function drawPlanetReferenceGrid() {
   var lonStep = Math.max(10, Math.round(Number(CONFIG.PLANET_GRID_DEGREES) || 30));
   var latStep = lonStep;
+
+  if (isGlobeRenderMode() && isPlanetLocalView()) {
+    var view = getPlanetView();
+    var footprint = getPlanetLocalViewFootprint();
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(
+      canvas.width / 2 - 12,
+      canvas.height / 2 - 12,
+      24,
+      24
+    );
+    ctx.fillStyle = "rgba(3, 4, 9, 0.54)";
+    ctx.fillRect(18, canvas.height - 38, 610, 24);
+    ctx.fillStyle = "rgba(220, 229, 255, 0.88)";
+    ctx.font = "14px Arial, Helvetica, sans-serif";
+    ctx.fillText(
+      "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
+        " | footprint " + footprint.widthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
+        " x " + footprint.heightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km",
+      28,
+      canvas.height - 21
+    );
+    ctx.restore();
+    return;
+  }
 
   ctx.save();
   ctx.lineWidth = 1;

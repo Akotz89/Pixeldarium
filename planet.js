@@ -159,6 +159,106 @@ function getPlanetViewFootprintKm() {
   return (scale.metersPerSample * sampleCount) / 1000;
 }
 
+function isPlanetLocalView() {
+  return getPlanetView().zoomLevel > 0;
+}
+
+function getPlanetLocalViewFootprint() {
+  var scale = getPlanetViewScale();
+
+  return {
+    widthKm: WORLD_WIDTH * scale.metersPerSample / 1000,
+    heightKm: WORLD_HEIGHT * scale.metersPerSample / 1000,
+    metersPerSample: scale.metersPerSample
+  };
+}
+
+function getLongitudeDistanceKmPerDegree(latitude) {
+  return Math.max(0.001, (getPlanetCircumferenceKm() / 360) * getPlanetLatitudeScale(latitude));
+}
+
+function getLatitudeDistanceKmPerDegree() {
+  return getPlanetPoleToPoleKm() / 180;
+}
+
+function normalizeLongitude(longitude) {
+  return ((Number(longitude) || 0) + 540) % 360 - 180;
+}
+
+function getLatLonFromLocalOffset(eastKm, northKm) {
+  var view = getPlanetView();
+  var latitude = clamp(
+    view.latitude + (Number(northKm) || 0) / getLatitudeDistanceKmPerDegree(),
+    -90,
+    90
+  );
+  var longitude = normalizeLongitude(
+    view.longitude + (Number(eastKm) || 0) / getLongitudeDistanceKmPerDegree(latitude)
+  );
+
+  return {
+    latitude: latitude,
+    longitude: longitude
+  };
+}
+
+function getTileFromLatLon(latitude, longitude) {
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+
+  return {
+    x: getWrappedWorldX(Math.floor(((normalizedLongitude + 180) / 360) * WORLD_WIDTH)),
+    y: getClampedWorldY(Math.floor(((90 - normalizedLatitude) / 180) * WORLD_HEIGHT))
+  };
+}
+
+function getPlanetLocalSample(gridX, gridY) {
+  var scale = getPlanetViewScale();
+  var eastKm = (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample / 1000;
+  var northKm = -(gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample / 1000;
+  var latLon = getLatLonFromLocalOffset(eastKm, northKm);
+  var tilePosition = getTileFromLatLon(latLon.latitude, latLon.longitude);
+  var tile = getPlanetTile(tilePosition.x, tilePosition.y);
+
+  return {
+    x: tilePosition.x,
+    y: tilePosition.y,
+    latitude: latLon.latitude,
+    longitude: latLon.longitude,
+    tile: tile,
+    biome: tile ? tile.biome : "unknown",
+    eastKm: eastKm,
+    northKm: northKm
+  };
+}
+
+function projectPlanetLocalPoint(longitude, latitude) {
+  var view = getPlanetView();
+  var scale = getPlanetViewScale();
+  var eastKm = wrapPlanetLongitudeDelta((Number(longitude) || 0) - view.longitude) *
+    getLongitudeDistanceKmPerDegree(view.latitude);
+  var northKm = ((Number(latitude) || 0) - view.latitude) * getLatitudeDistanceKmPerDegree();
+  var x = canvas.width / 2 + (eastKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE;
+  var y = canvas.height / 2 - (northKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE;
+
+  if (
+    x < -CONFIG.TILE_SIZE ||
+    x > canvas.width + CONFIG.TILE_SIZE ||
+    y < -CONFIG.TILE_SIZE ||
+    y > canvas.height + CONFIG.TILE_SIZE
+  ) {
+    return null;
+  }
+
+  return {
+    x: x,
+    y: y,
+    scale: 1,
+    visibility: 1,
+    visible: true
+  };
+}
+
 function getPlanetChunkKeyForTile(x, y, zoomLevelIndex) {
   var tile = getPlanetTile(x, y);
   var scale = getPlanetZoomLevel(
@@ -383,6 +483,15 @@ function getPlanetTileProjection(x, y) {
 }
 
 function getPlanetInterpolatedProjection(x, y) {
+  if (isPlanetLocalView()) {
+    var localTileX = getWrappedWorldCoordinateX(x);
+    var localTileY = clamp(Number(y) || 0, 0, WORLD_HEIGHT - 1);
+    var localLongitude = ((localTileX + 0.5) / Math.max(1, WORLD_WIDTH)) * 360 - 180;
+    var localLatitude = 90 - ((localTileY + 0.5) / Math.max(1, WORLD_HEIGHT)) * 180;
+
+    return projectPlanetLocalPoint(localLongitude, localLatitude);
+  }
+
   var tileX = getWrappedWorldCoordinateX(x);
   var tileY = clamp(Number(y) || 0, 0, WORLD_HEIGHT - 1);
   var longitude = ((tileX + 0.5) / Math.max(1, WORLD_WIDTH)) * 360 - 180;
