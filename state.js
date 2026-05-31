@@ -69,6 +69,7 @@ const world = {
   lineages: {},
   nextSettlementId: 1,
   settlements: [],
+  settlementSummary: null,
   nextSettlementRouteId: 1,
   settlementRoutes: [],
   colonyNetworkScore: 0,
