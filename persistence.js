@@ -384,6 +384,9 @@ function createWorldSaveData() {
     extinctionTick: Math.max(0, Math.round(Number(world.extinctionTick) || 0)),
     totalBirths: Math.max(0, Math.round(Number(world.totalBirths) || 0)),
     totalDeaths: Math.max(0, Math.round(Number(world.totalDeaths) || 0)),
+    totalFoodSpawned: Math.max(0, Math.round(Number(world.totalFoodSpawned) || 0)),
+    totalFoodConsumed: Math.max(0, Math.round(Number(world.totalFoodConsumed) || 0)),
+    totalFoodHarvested: Math.max(0, Math.round(Number(world.totalFoodHarvested) || 0)),
     seedText: normalizeSeedText(world.seedText),
     rngState: Math.max(1, Math.round(Number(world.rngState) || 1)) >>> 0,
     nextLineageId: world.nextLineageId,
@@ -1682,6 +1685,12 @@ function applyWorldSaveData(saveData) {
   world.populationDeltaThisTick = 0;
   world.totalBirths = Math.max(0, Math.round(restoreNumber(saveData.totalBirths, 0)));
   world.totalDeaths = Math.max(0, Math.round(restoreNumber(saveData.totalDeaths, 0)));
+  world.foodSpawnedThisTick = 0;
+  world.foodConsumedThisTick = 0;
+  world.foodHarvestedThisTick = 0;
+  world.totalFoodSpawned = Math.max(0, Math.round(restoreNumber(saveData.totalFoodSpawned, 0)));
+  world.totalFoodConsumed = Math.max(0, Math.round(restoreNumber(saveData.totalFoodConsumed, 0)));
+  world.totalFoodHarvested = Math.max(0, Math.round(restoreNumber(saveData.totalFoodHarvested, 0)));
   world.seedText = normalizeSeedText(saveData.seedText);
   world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));

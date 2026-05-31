@@ -367,6 +367,11 @@ function harvestSettlementFood(settlement) {
 
   settlement.storedFood += harvestedFood;
   settlement.foodStock = countSettlementFoodStock(settlement);
+
+  if (typeof recordFoodHarvested === "function") {
+    recordFoodHarvested(harvestedFood);
+  }
+
   return harvestedFood;
 }
 

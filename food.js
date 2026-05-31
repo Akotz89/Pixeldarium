@@ -299,6 +299,10 @@ function growFood() {
 
     if (!foodExistsAt(fertilePosition.x, fertilePosition.y)) {
       addFoodAt(fertilePosition.x, fertilePosition.y);
+
+      if (typeof recordFoodSpawned === "function") {
+        recordFoodSpawned(1);
+      }
     }
   }
 
@@ -308,6 +312,10 @@ function growFood() {
 
     if (!foodExistsAt(x, y)) {
       addFoodAt(x, y);
+
+      if (typeof recordFoodSpawned === "function") {
+        recordFoodSpawned(1);
+      }
     }
   }
 }
