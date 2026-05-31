@@ -17,6 +17,7 @@ function clearWorld() {
   world.organisms = [];
   world.food = [];
   world.foodPositions = {};
+  world.foodBuckets = {};
   world.terrain = [];
   world.fertileTiles = 0;
   world.needsRender = true;
