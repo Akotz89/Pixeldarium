@@ -441,26 +441,114 @@ function getEcosystemTrend(summary) {
   };
 }
 
-function getEcosystemStabilityScore(population, averageEnergy, foodPerOrganism, activeLineages, matureRatio) {
-  if (population <= 0) {
-    return 0;
+function getLowestStabilityFactor(componentScores) {
+  var lowestKey = "population";
+  var lowestScore = componentScores.population;
+
+  for (var key in componentScores) {
+    if (
+      Object.prototype.hasOwnProperty.call(componentScores, key) &&
+      componentScores[key] < lowestScore
+    ) {
+      lowestKey = key;
+      lowestScore = componentScores[key];
+    }
   }
 
-  var populationScore = clamp(population / Math.max(1, CONFIG.MAX_ORGANISMS * 0.45), 0, 1);
-  var energyScore = clamp(averageEnergy / Math.max(1, CONFIG.STARTING_ORGANISM_ENERGY), 0, 1);
-  var foodScore = clamp(foodPerOrganism / 1.2, 0, 1);
-  var lineageScore = clamp(activeLineages / 5, 0, 1);
-  var maturityScore = clamp(matureRatio / 0.25, 0, 1);
-  var crowdPenalty = population > CONFIG.MAX_ORGANISMS * 0.9 ? 0.72 : 1;
+  return lowestKey;
+}
 
-  return Math.round(
-    (
-      populationScore * 24 +
-      energyScore * 26 +
-      foodScore * 22 +
-      lineageScore * 14 +
-      maturityScore * 14
-    ) * crowdPenalty
+function getEcosystemStabilityProfile(population, averageEnergy, foodPerOrganism, activeLineages, matureRatio) {
+  if (population <= 0) {
+    return {
+      stabilityScore: 0,
+      limitingFactor: "population",
+      population: 0,
+      energy: 0,
+      food: 0,
+      diversity: 0,
+      maturity: 0,
+      crowdPenalty: 1
+    };
+  }
+
+  var componentRatios = {
+    population: clamp(population / Math.max(1, CONFIG.MAX_ORGANISMS * 0.45), 0, 1),
+    energy: clamp(averageEnergy / Math.max(1, CONFIG.STARTING_ORGANISM_ENERGY), 0, 1),
+    food: clamp(foodPerOrganism / 1.2, 0, 1),
+    diversity: clamp(activeLineages / 5, 0, 1),
+    maturity: clamp(matureRatio / 0.25, 0, 1)
+  };
+  var componentScores = {
+    population: Math.round(componentRatios.population * 100),
+    energy: Math.round(componentRatios.energy * 100),
+    food: Math.round(componentRatios.food * 100),
+    diversity: Math.round(componentRatios.diversity * 100),
+    maturity: Math.round(componentRatios.maturity * 100)
+  };
+  var crowdPenalty = population > CONFIG.MAX_ORGANISMS * 0.9 ? 0.72 : 1;
+  var limitingFactor = getLowestStabilityFactor(componentScores);
+
+  if (crowdPenalty < 1 && componentScores.population >= 90) {
+    limitingFactor = "crowding";
+  }
+
+  return {
+    stabilityScore: Math.round(
+      (
+        componentRatios.population * 24 +
+        componentRatios.energy * 26 +
+        componentRatios.food * 22 +
+        componentRatios.diversity * 14 +
+        componentRatios.maturity * 14
+      ) * crowdPenalty
+    ),
+    limitingFactor: limitingFactor,
+    population: componentScores.population,
+    energy: componentScores.energy,
+    food: componentScores.food,
+    diversity: componentScores.diversity,
+    maturity: componentScores.maturity,
+    crowdPenalty: crowdPenalty
+  };
+}
+
+function getEcosystemStabilityScore(population, averageEnergy, foodPerOrganism, activeLineages, matureRatio) {
+  return getEcosystemStabilityProfile(
+    population,
+    averageEnergy,
+    foodPerOrganism,
+    activeLineages,
+    matureRatio
+  ).stabilityScore;
+}
+
+function formatEcosystemStabilityFactor(factor) {
+  if (factor === "crowding") {
+    return "crowding";
+  }
+
+  if (factor === "diversity") {
+    return "lineage diversity";
+  }
+
+  return String(factor || "stability");
+}
+
+function formatEcosystemStabilityFactorScore(profile) {
+  if (!profile) {
+    return "stability";
+  }
+
+  if (profile.limitingFactor === "crowding") {
+    return "crowding penalty " + Math.round((1 - profile.crowdPenalty) * 100) + "%";
+  }
+
+  return (
+    formatEcosystemStabilityFactor(profile.limitingFactor) +
+    " " +
+    Math.max(0, Math.round(Number(profile[profile.limitingFactor]) || 0)) +
+    "/100"
   );
 }
 
@@ -540,7 +628,7 @@ function refreshEcosystemSummary() {
   var foodNetThisTick = Math.max(0, Math.round(Number(world.foodSpawnedThisTick) || 0)) -
     Math.max(0, Math.round(Number(world.foodConsumedThisTick) || 0));
   var pressure = getEcosystemPressure(population, averageEnergy, foodPerOrganism);
-  var stabilityScore = getEcosystemStabilityScore(
+  var stabilityProfile = getEcosystemStabilityProfile(
     population,
     averageEnergy,
     foodPerOrganism,
@@ -562,7 +650,8 @@ function refreshEcosystemSummary() {
     resourceBalance: getResourceBalance(foodNetThisTick, world.food.length),
     foodNetThisTick: foodNetThisTick,
     pressure: pressure,
-    stabilityScore: stabilityScore
+    stabilityScore: stabilityProfile.stabilityScore,
+    stabilityProfile: stabilityProfile
   };
 
   world.ecosystemSummary.trend = getEcosystemTrend(world.ecosystemSummary);
@@ -774,7 +863,13 @@ function refreshSimulationAlerts() {
   }
 
   if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
-    addSimulationAlert(alerts, "warning", "Low stability", ecosystemSummary.stabilityScore + "/100", 24);
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Low stability",
+      formatEcosystemStabilityFactorScore(ecosystemSummary.stabilityProfile),
+      24
+    );
   }
 
   if (earlySummary && earlySummary.settlementReady) {

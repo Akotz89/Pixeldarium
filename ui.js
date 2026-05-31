@@ -357,6 +357,32 @@ function updateSimulationAlerts() {
   setElementHtml(simulationAlertsText, chips.join(""));
 }
 
+function formatStabilityProfileMix(profile) {
+  if (!profile) {
+    return "-";
+  }
+
+  return (
+    "P" + Math.max(0, Math.round(Number(profile.population) || 0)) +
+    " E" + Math.max(0, Math.round(Number(profile.energy) || 0)) +
+    " F" + Math.max(0, Math.round(Number(profile.food) || 0)) +
+    " D" + Math.max(0, Math.round(Number(profile.diversity) || 0)) +
+    " M" + Math.max(0, Math.round(Number(profile.maturity) || 0))
+  );
+}
+
+function formatStabilityLimiter(profile) {
+  if (!profile || !profile.limitingFactor) {
+    return "-";
+  }
+
+  if (typeof formatEcosystemStabilityFactorScore === "function") {
+    return formatEcosystemStabilityFactorScore(profile);
+  }
+
+  return String(profile.limitingFactor);
+}
+
 function updateEcosystemSummary() {
   var summary = getEcosystemSummary();
 
@@ -375,6 +401,8 @@ function updateEcosystemSummary() {
     makeSummaryChip("Lifecycle", lifecycleLabel),
     makeSummaryChip("Pressure", summary.pressure),
     makeSummaryChip("Stability", summary.stabilityScore + "/100"),
+    makeSummaryChip("Limiter", formatStabilityLimiter(summary.stabilityProfile)),
+    makeSummaryChip("Health Mix", formatStabilityProfileMix(summary.stabilityProfile)),
     makeSummaryChip("Pop State", summary.populationBalance),
     makeSummaryChip("Resource", summary.resourceBalance),
     makeSummaryChip("Flow", "+" + world.birthsThisTick + " / -" + world.deathsThisTick),
