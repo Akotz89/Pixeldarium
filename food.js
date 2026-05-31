@@ -192,6 +192,61 @@ function findNearestFoodInBuckets(x, y, searchRadius) {
   return nearest;
 }
 
+function collectFoodInRadius(x, y, radius, limit) {
+  var buckets = ensureFoodBuckets();
+  var bucketSize = getFoodBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.round(Number(limit))) : Infinity;
+  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
+  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
+  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
+  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var foods = [];
+
+  if (normalizedLimit <= 0) {
+    return foods;
+  }
+
+  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
+    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+      var bucket = buckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var food = bucket[i];
+        var distance = Math.abs(food.x - x) + Math.abs(food.y - y);
+
+        if (distance <= normalizedRadius) {
+          foods.push(food);
+
+          if (foods.length >= normalizedLimit) {
+            return foods;
+          }
+        }
+      }
+    }
+  }
+
+  return foods;
+}
+
+function countFoodInRadius(x, y, radius) {
+  return collectFoodInRadius(x, y, radius).length;
+}
+
+function removeFoodInRadius(x, y, radius, limit) {
+  var foods = collectFoodInRadius(x, y, radius, limit);
+
+  for (var i = 0; i < foods.length; i++) {
+    removeFood(foods[i]);
+  }
+
+  return foods.length;
+}
+
 function randomFoodPosition() {
   if (chance(CONFIG.INITIAL_FOOD_FERTILE_CHANCE)) {
     return randomFertilePosition();
