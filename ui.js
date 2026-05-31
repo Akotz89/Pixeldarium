@@ -36,6 +36,17 @@ function getNearestOrganismToTile(tileX, tileY) {
   return nearestOrganism;
 }
 
+function formatOrganismTraits(organism) {
+  var traits = ensureOrganismTraits(organism);
+
+  return (
+    "traits vision " + traits.vision +
+    " metabolism " + traits.metabolism +
+    " reproduce " + traits.reproductionEnergy +
+    " roam " + traits.movementTendency.toFixed(2)
+  );
+}
+
 function updateInspectPanel() {
   if (!world.inspectedTile) {
     inspectSummaryText.textContent = "INSPECT: None";
@@ -55,7 +66,8 @@ function updateInspectPanel() {
       "energy " + organism.energy +
       " age " + organism.age +
       " pos " + organism.x + "," + organism.y +
-      " dir " + organism.directionX + "," + organism.directionY;
+      " dir " + organism.directionX + "," + organism.directionY +
+      "   " + formatOrganismTraits(organism);
   }
 
   inspectSummaryText.textContent = "INSPECT: Tile " + tileX + "," + tileY;

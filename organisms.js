@@ -1,3 +1,83 @@
+function varyTraitValue(defaultValue, minValue, maxValue, stepValue) {
+  return clamp(defaultValue + (randomInt(3) - 1) * stepValue, minValue, maxValue);
+}
+
+function inheritTraitValue(parentValue, minValue, maxValue, stepValue) {
+  var nextValue = parentValue;
+
+  if (chance(CONFIG.TRAIT_MUTATION_CHANCE)) {
+    nextValue += (randomInt(3) - 1) * stepValue;
+  }
+
+  return clamp(nextValue, minValue, maxValue);
+}
+
+function makeInitialOrganismTraits() {
+  return {
+    vision: varyTraitValue(
+      CONFIG.TRAIT_VISION_DEFAULT,
+      CONFIG.TRAIT_VISION_MIN,
+      CONFIG.TRAIT_VISION_MAX,
+      CONFIG.TRAIT_VISION_MUTATION_STEP
+    ),
+    metabolism: varyTraitValue(
+      CONFIG.TRAIT_METABOLISM_DEFAULT,
+      CONFIG.TRAIT_METABOLISM_MIN,
+      CONFIG.TRAIT_METABOLISM_MAX,
+      CONFIG.TRAIT_METABOLISM_MUTATION_STEP
+    ),
+    reproductionEnergy: varyTraitValue(
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP
+    ),
+    movementTendency: varyTraitValue(
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+    )
+  };
+}
+
+function inheritOrganismTraits(parentTraits) {
+  return {
+    vision: inheritTraitValue(
+      parentTraits.vision,
+      CONFIG.TRAIT_VISION_MIN,
+      CONFIG.TRAIT_VISION_MAX,
+      CONFIG.TRAIT_VISION_MUTATION_STEP
+    ),
+    metabolism: inheritTraitValue(
+      parentTraits.metabolism,
+      CONFIG.TRAIT_METABOLISM_MIN,
+      CONFIG.TRAIT_METABOLISM_MAX,
+      CONFIG.TRAIT_METABOLISM_MUTATION_STEP
+    ),
+    reproductionEnergy: inheritTraitValue(
+      parentTraits.reproductionEnergy,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MUTATION_STEP
+    ),
+    movementTendency: inheritTraitValue(
+      parentTraits.movementTendency,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+    )
+  };
+}
+
+function ensureOrganismTraits(organism) {
+  if (!organism.traits) {
+    organism.traits = makeInitialOrganismTraits();
+  }
+
+  return organism.traits;
+}
+
 function makeOrganism(x, y) {
   return {
     x: x,
@@ -7,7 +87,8 @@ function makeOrganism(x, y) {
     energy: CONFIG.STARTING_ORGANISM_ENERGY,
     age: 0,
     directionX: randomInt(3) - 1,
-    directionY: randomInt(3) - 1
+    directionY: randomInt(3) - 1,
+    traits: makeInitialOrganismTraits()
   };
 }
 
@@ -63,7 +144,9 @@ function eatFoodOnCurrentTile(organism) {
 }
 
 function reproduceIfReady(organism) {
-  if (organism.energy < CONFIG.REPRODUCTION_ENERGY) {
+  var traits = ensureOrganismTraits(organism);
+
+  if (organism.energy < traits.reproductionEnergy) {
     return;
   }
 
@@ -75,6 +158,7 @@ function reproduceIfReady(organism) {
   );
 
   child.energy = CONFIG.CHILD_ORGANISM_ENERGY;
+  child.traits = inheritOrganismTraits(traits);
   clampToWorld(child);
   child.prevX = child.x;
   child.prevY = child.y;
@@ -82,19 +166,21 @@ function reproduceIfReady(organism) {
 }
 
 function updateOrganism(organism) {
+  var traits = ensureOrganismTraits(organism);
+
   organism.prevX = organism.x;
   organism.prevY = organism.y;
   organism.age++;
 
   if (world.tick % 3 === 0) {
-    organism.energy--;
+    organism.energy -= traits.metabolism;
   }
 
-  var nearestFood = findNearestFood(organism, CONFIG.ORGANISM_FOOD_SEARCH_RADIUS);
+  var nearestFood = findNearestFood(organism, traits.vision);
 
   if (nearestFood) {
     moveTowardFood(organism, nearestFood);
-  } else if (chance(CONFIG.RANDOM_DIRECTION_CHANGE_CHANCE)) {
+  } else if (chance(traits.movementTendency)) {
     organism.directionX = randomInt(3) - 1;
     organism.directionY = randomInt(3) - 1;
   }
