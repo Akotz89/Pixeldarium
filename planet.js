@@ -90,14 +90,21 @@ function getPlanetView() {
 
 function focusPlanetViewOnTile(x, y) {
   var tile = getPlanetTile(x, y);
+
+  if (!tile) {
+    return getPlanetView();
+  }
+
+  return focusPlanetViewOnLatLon(tile.latitude, tile.longitude);
+}
+
+function focusPlanetViewOnLatLon(latitude, longitude) {
   var view = getPlanetView();
   var previousLatitude = view.latitude;
   var previousLongitude = view.longitude;
 
-  if (tile) {
-    view.latitude = tile.latitude;
-    view.longitude = tile.longitude;
-  }
+  view.latitude = clamp(Number(latitude) || 0, -90, 90);
+  view.longitude = normalizeLongitude(longitude);
 
   if (
     previousLatitude !== view.latitude ||
@@ -200,6 +207,101 @@ function getLatLonFromLocalOffset(eastKm, northKm) {
     latitude: latitude,
     longitude: longitude
   };
+}
+
+function getPlanetLocalLatLonFromCanvasPoint(canvasX, canvasY) {
+  var scale = getPlanetViewScale();
+  var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
+  var sampleY = (Number(canvasY) || 0) / CONFIG.TILE_SIZE;
+  var eastKm = (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample / 1000;
+  var northKm = -(sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample / 1000;
+
+  return getLatLonFromLocalOffset(eastKm, northKm);
+}
+
+function getPlanetLatLonFromCanvasPoint(canvasX, canvasY) {
+  if (isGlobeRenderMode() && isPlanetLocalView()) {
+    return getPlanetLocalLatLonFromCanvasPoint(canvasX, canvasY);
+  }
+
+  if (!isGlobeRenderMode()) {
+    var flatTileX = clamp(Math.floor((Number(canvasX) || 0) / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1);
+    var flatTileY = clamp(Math.floor((Number(canvasY) || 0) / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1);
+
+    return {
+      latitude: getPlanetLatitudeForTile(flatTileY),
+      longitude: getPlanetLongitudeForTile(flatTileX)
+    };
+  }
+
+  var projection = getPlanetProjection();
+  var normalizedX = ((Number(canvasX) || 0) - projection.centerX) / projection.radius;
+  var normalizedYNorth = -((Number(canvasY) || 0) - projection.centerY) / projection.radius;
+  var rho = Math.sqrt(normalizedX * normalizedX + normalizedYNorth * normalizedYNorth);
+
+  if (rho > 1) {
+    return null;
+  }
+
+  if (rho === 0) {
+    return {
+      latitude: projection.viewLatitudeDeg,
+      longitude: projection.viewLongitudeDeg
+    };
+  }
+
+  var centerLatitude = projection.viewLatitudeDeg * Math.PI / 180;
+  var centerLongitude = projection.viewLongitudeDeg * Math.PI / 180;
+  var angularDistance = Math.asin(rho);
+  var latitude = Math.asin(
+    Math.cos(angularDistance) * Math.sin(centerLatitude) +
+    (normalizedYNorth * Math.sin(angularDistance) * Math.cos(centerLatitude)) / rho
+  );
+  var longitude = centerLongitude + Math.atan2(
+    normalizedX * Math.sin(angularDistance),
+    rho * Math.cos(centerLatitude) * Math.cos(angularDistance) -
+      normalizedYNorth * Math.sin(centerLatitude) * Math.sin(angularDistance)
+  );
+
+  return {
+    latitude: clamp(latitude * 180 / Math.PI, -90, 90),
+    longitude: normalizeLongitude(longitude * 180 / Math.PI)
+  };
+}
+
+function focusPlanetViewOnCanvasPoint(canvasX, canvasY) {
+  var latLon = getPlanetLatLonFromCanvasPoint(canvasX, canvasY);
+
+  if (!latLon) {
+    return false;
+  }
+
+  focusPlanetViewOnLatLon(latLon.latitude, latLon.longitude);
+  return true;
+}
+
+function panPlanetViewByKm(eastKm, northKm) {
+  var target = getLatLonFromLocalOffset(eastKm, northKm);
+
+  focusPlanetViewOnLatLon(target.latitude, target.longitude);
+  return getPlanetView();
+}
+
+function panPlanetViewByScreenDelta(deltaX, deltaY) {
+  var scale = getPlanetViewScale();
+  var eastKm = -(Number(deltaX) || 0) * scale.metersPerSample / CONFIG.TILE_SIZE / 1000;
+  var northKm = (Number(deltaY) || 0) * scale.metersPerSample / CONFIG.TILE_SIZE / 1000;
+
+  return panPlanetViewByKm(eastKm, northKm);
+}
+
+function panPlanetViewBySamples(eastSamples, northSamples) {
+  var scale = getPlanetViewScale();
+
+  return panPlanetViewByKm(
+    (Number(eastSamples) || 0) * scale.metersPerSample / 1000,
+    (Number(northSamples) || 0) * scale.metersPerSample / 1000
+  );
 }
 
 function getTileFromLatLon(latitude, longitude) {
@@ -550,48 +652,13 @@ function getPlanetInterpolatedProjection(x, y) {
 }
 
 function getPlanetTileFromCanvasPoint(canvasX, canvasY) {
-  if (!isGlobeRenderMode()) {
-    return {
-      x: clamp(Math.floor(canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
-      y: clamp(Math.floor(canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
-    };
-  }
+  var latLon = getPlanetLatLonFromCanvasPoint(canvasX, canvasY);
 
-  var projection = getPlanetProjection();
-  var normalizedX = (canvasX - projection.centerX) / projection.radius;
-  var normalizedYNorth = -(canvasY - projection.centerY) / projection.radius;
-  var rho = Math.sqrt(normalizedX * normalizedX + normalizedYNorth * normalizedYNorth);
-
-  if (rho > 1) {
+  if (!latLon) {
     return null;
   }
 
-  if (rho === 0) {
-    return {
-      x: clamp(Math.floor(((projection.viewLongitudeDeg + 180) / 360) * WORLD_WIDTH), 0, WORLD_WIDTH - 1),
-      y: clamp(Math.floor(((90 - projection.viewLatitudeDeg) / 180) * WORLD_HEIGHT), 0, WORLD_HEIGHT - 1)
-    };
-  }
-
-  var centerLatitude = projection.viewLatitudeDeg * Math.PI / 180;
-  var centerLongitude = projection.viewLongitudeDeg * Math.PI / 180;
-  var angularDistance = Math.asin(rho);
-  var latitude = Math.asin(
-    Math.cos(angularDistance) * Math.sin(centerLatitude) +
-    (normalizedYNorth * Math.sin(angularDistance) * Math.cos(centerLatitude)) / rho
-  );
-  var longitude = centerLongitude + Math.atan2(
-    normalizedX * Math.sin(angularDistance),
-    rho * Math.cos(centerLatitude) * Math.cos(angularDistance) -
-      normalizedYNorth * Math.sin(centerLatitude) * Math.sin(angularDistance)
-  );
-  var longitudeDeg = ((longitude * 180 / Math.PI + 540) % 360) - 180;
-  var latitudeDeg = clamp(latitude * 180 / Math.PI, -90, 90);
-
-  return {
-    x: clamp(Math.floor(((longitudeDeg + 180) / 360) * WORLD_WIDTH), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.floor(((90 - latitudeDeg) / 180) * WORLD_HEIGHT), 0, WORLD_HEIGHT - 1)
-  };
+  return getTileFromLatLon(latLon.latitude, latLon.longitude);
 }
 
 function getPlanetTileAreaKm2(latitude) {

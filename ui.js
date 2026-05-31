@@ -1204,12 +1204,27 @@ function getInspectSurfaceLabel(tileX, tileY) {
   return detail.surface + " " + Math.round(detail.shade * 100) + "%";
 }
 
-function getTileFromCanvasEvent(event) {
+var planetDragState = {
+  active: false,
+  moved: false,
+  skipNextClick: false,
+  lastClientX: 0,
+  lastClientY: 0
+};
+
+function getCanvasPointFromEvent(event) {
   var rect = canvas.getBoundingClientRect();
-  var canvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
-  var canvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+  return {
+    canvasX: (event.clientX - rect.left) * (canvas.width / rect.width),
+    canvasY: (event.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function getTileFromCanvasEvent(event) {
+  var point = getCanvasPointFromEvent(event);
   var planetTile = typeof getPlanetTileFromCanvasPoint === "function"
-    ? getPlanetTileFromCanvasPoint(canvasX, canvasY)
+    ? getPlanetTileFromCanvasPoint(point.canvasX, point.canvasY)
     : null;
 
   if (planetTile) {
@@ -1217,17 +1232,20 @@ function getTileFromCanvasEvent(event) {
   }
 
   return {
-    x: clamp(Math.floor(canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.floor(canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
+    x: clamp(Math.floor(point.canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.floor(point.canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
   };
 }
 
-function inspectTile(tileX, tileY) {
+function inspectTile(tileX, tileY, shouldFocus) {
   world.inspectedTile = {
     x: clamp(tileX, 0, WORLD_WIDTH - 1),
     y: clamp(tileY, 0, WORLD_HEIGHT - 1)
   };
-  focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
+
+  if (shouldFocus !== false && !isPlanetLocalView()) {
+    focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
+  }
 
   drawWorld();
   updateHud();
@@ -1240,6 +1258,82 @@ function zoomPlanetView(delta) {
 
   drawWorld();
   updateHud();
+  return true;
+}
+
+function redrawPlanetView() {
+  drawWorld();
+  updateHud();
+}
+
+function beginPlanetDrag(event) {
+  if (typeof event.button === "number" && event.button !== 0) {
+    return;
+  }
+
+  planetDragState.active = true;
+  planetDragState.moved = false;
+  planetDragState.lastClientX = Number(event.clientX) || 0;
+  planetDragState.lastClientY = Number(event.clientY) || 0;
+  canvas.classList.add("dragging");
+
+  if (typeof canvas.setPointerCapture === "function" && typeof event.pointerId !== "undefined") {
+    canvas.setPointerCapture(event.pointerId);
+  }
+}
+
+function updatePlanetDrag(event) {
+  if (!planetDragState.active) {
+    return;
+  }
+
+  var clientX = Number(event.clientX) || 0;
+  var clientY = Number(event.clientY) || 0;
+  var deltaX = clientX - planetDragState.lastClientX;
+  var deltaY = clientY - planetDragState.lastClientY;
+
+  if (deltaX === 0 && deltaY === 0) {
+    return;
+  }
+
+  planetDragState.lastClientX = clientX;
+  planetDragState.lastClientY = clientY;
+
+  if (Math.abs(deltaX) + Math.abs(deltaY) > 2) {
+    planetDragState.moved = true;
+  }
+
+  if (typeof panPlanetViewByScreenDelta === "function") {
+    panPlanetViewByScreenDelta(deltaX, deltaY);
+    redrawPlanetView();
+  }
+
+  if (typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
+}
+
+function endPlanetDrag(event) {
+  if (!planetDragState.active) {
+    return;
+  }
+
+  planetDragState.active = false;
+  planetDragState.skipNextClick = planetDragState.moved;
+  canvas.classList.remove("dragging");
+
+  if (typeof canvas.releasePointerCapture === "function" && event && typeof event.pointerId !== "undefined") {
+    canvas.releasePointerCapture(event.pointerId);
+  }
+}
+
+function panPlanetViewFromKeyboard(eastSamples, northSamples) {
+  if (typeof panPlanetViewBySamples !== "function") {
+    return false;
+  }
+
+  panPlanetViewBySamples(eastSamples, northSamples);
+  redrawPlanetView();
   return true;
 }
 
@@ -1296,6 +1390,14 @@ function handleSimulationShortcut(event) {
   } else if (code === "BracketLeft" || key === "[") {
     handled = true;
     zoomPlanetView(-1);
+  } else if (code === "ArrowUp") {
+    handled = panPlanetViewFromKeyboard(0, 24);
+  } else if (code === "ArrowDown") {
+    handled = panPlanetViewFromKeyboard(0, -24);
+  } else if (code === "ArrowLeft") {
+    handled = panPlanetViewFromKeyboard(-24, 0);
+  } else if (code === "ArrowRight") {
+    handled = panPlanetViewFromKeyboard(24, 0);
   } else if (code === "Equal" || code === "NumpadAdd" || key === "+" || key === "=") {
     handled = true;
 
@@ -1347,9 +1449,19 @@ window.setupControls = function() {
     setMenuOpen(false);
   });
 
+  canvas.addEventListener("pointerdown", beginPlanetDrag);
+  window.addEventListener("pointermove", updatePlanetDrag);
+  window.addEventListener("pointerup", endPlanetDrag);
+  window.addEventListener("pointercancel", endPlanetDrag);
+
   canvas.addEventListener("click", function(event) {
+    if (planetDragState.skipNextClick) {
+      planetDragState.skipNextClick = false;
+      return;
+    }
+
     var tile = getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y);
+    inspectTile(tile.x, tile.y, !isPlanetLocalView());
   });
 
   canvas.addEventListener("wheel", function(event) {
@@ -1357,8 +1469,14 @@ window.setupControls = function() {
       event.preventDefault();
     }
 
+    var point = getCanvasPointFromEvent(event);
+
+    if (typeof focusPlanetViewOnCanvasPoint === "function") {
+      focusPlanetViewOnCanvasPoint(point.canvasX, point.canvasY);
+    }
+
     var tile = getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y);
+    inspectTile(tile.x, tile.y, false);
     zoomPlanetView(event.deltaY < 0 ? 1 : -1);
   }, { passive: false });
 
