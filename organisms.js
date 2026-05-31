@@ -477,6 +477,13 @@ function getNearestOrganismInRadius(x, y, radius) {
 function refreshLineageRegistry() {
   var lineages = ensureLineageRegistry();
   var lineageKey;
+  var traitTotals = {
+    vision: 0,
+    metabolism: 0,
+    reproductionEnergy: 0,
+    movementTendency: 0,
+    terrainAffinity: 0
+  };
 
   world.organismBuckets = {};
   world.organismsByLineage = {};
@@ -489,14 +496,21 @@ function refreshLineageRegistry() {
 
   for (var i = 0; i < world.organisms.length; i++) {
     var organism = world.organisms[i];
+    var traits = ensureOrganismTraits(organism);
     var lineageId = ensureOrganismLineage(organism);
     var record = registerLineage(
       lineageId,
       organism.lineageParentId,
       organism.generation,
-      ensureOrganismTraits(organism),
+      traits,
       world.tick
     );
+
+    traitTotals.vision += traits.vision;
+    traitTotals.metabolism += traits.metabolism;
+    traitTotals.reproductionEnergy += traits.reproductionEnergy;
+    traitTotals.movementTendency += traits.movementTendency;
+    traitTotals.terrainAffinity += traits.terrainAffinity;
 
     record.activeCount++;
     record.lastSeenTick = world.tick;
@@ -513,6 +527,19 @@ function refreshLineageRegistry() {
       var lineage = lineages[lineageKey];
       lineage.isExtinct = lineage.activeCount === 0;
     }
+  }
+
+  if (world.organisms.length === 0) {
+    world.populationTraitSummary = null;
+  } else {
+    world.populationTraitSummary = {
+      population: world.organisms.length,
+      vision: traitTotals.vision / world.organisms.length,
+      metabolism: traitTotals.metabolism / world.organisms.length,
+      reproductionEnergy: traitTotals.reproductionEnergy / world.organisms.length,
+      movementTendency: traitTotals.movementTendency / world.organisms.length,
+      terrainAffinity: traitTotals.terrainAffinity / world.organisms.length
+    };
   }
 }
 

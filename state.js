@@ -63,6 +63,7 @@ const world = {
   maxUpdateMs: 0,
   maxDrawMs: 0,
   inspectedTile: null,
+  populationTraitSummary: null,
   traitHistory: [],
   nextLineageId: 1,
   lineages: {},

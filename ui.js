@@ -161,34 +161,7 @@ function formatOrganismTraits(organism) {
 }
 
 function getPopulationTraitSummary() {
-  if (world.organisms.length === 0) {
-    return null;
-  }
-
-  var totals = {
-    vision: 0,
-    metabolism: 0,
-    reproductionEnergy: 0,
-    movementTendency: 0,
-    terrainAffinity: 0
-  };
-
-  for (var i = 0; i < world.organisms.length; i++) {
-    var traits = ensureOrganismTraits(world.organisms[i]);
-    totals.vision += traits.vision;
-    totals.metabolism += traits.metabolism;
-    totals.reproductionEnergy += traits.reproductionEnergy;
-    totals.movementTendency += traits.movementTendency;
-    totals.terrainAffinity += traits.terrainAffinity;
-  }
-
-  return {
-    vision: totals.vision / world.organisms.length,
-    metabolism: totals.metabolism / world.organisms.length,
-    reproductionEnergy: totals.reproductionEnergy / world.organisms.length,
-    movementTendency: totals.movementTendency / world.organisms.length,
-    terrainAffinity: totals.terrainAffinity / world.organisms.length
-  };
+  return world.populationTraitSummary;
 }
 
 function updateTraitSummary() {
