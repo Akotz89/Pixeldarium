@@ -474,6 +474,77 @@ function getNearestOrganismInRadius(x, y, radius) {
   return nearestOrganism;
 }
 
+function updateLineageSummaryCache() {
+  var lineages = [];
+  var activeCount = 0;
+  var extinctCount = 0;
+  var newestLineage = null;
+  var topLineages = [];
+  var lineageRecords = world.lineages || {};
+
+  for (var lineageKey in lineageRecords) {
+    if (Object.prototype.hasOwnProperty.call(lineageRecords, lineageKey)) {
+      lineages.push(lineageRecords[lineageKey]);
+    }
+  }
+
+  if (lineages.length === 0) {
+    world.lineageSummaryText = "LINEAGES: -";
+    return world.lineageSummaryText;
+  }
+
+  for (var i = 0; i < lineages.length; i++) {
+    var lineage = lineages[i];
+
+    if (lineage.activeCount > 0) {
+      activeCount++;
+      topLineages.push(lineage);
+    } else {
+      extinctCount++;
+    }
+
+    if (
+      !newestLineage ||
+      lineage.createdTick > newestLineage.createdTick ||
+      (lineage.createdTick === newestLineage.createdTick && lineage.id > newestLineage.id)
+    ) {
+      newestLineage = lineage;
+    }
+  }
+
+  topLineages.sort(function(a, b) {
+    if (b.activeCount !== a.activeCount) {
+      return b.activeCount - a.activeCount;
+    }
+
+    return a.id - b.id;
+  });
+
+  var visibleLineages = [];
+
+  for (var topIndex = 0; topIndex < Math.min(5, topLineages.length); topIndex++) {
+    visibleLineages.push(
+      "L" + topLineages[topIndex].id +
+      " " + topLineages[topIndex].activeCount +
+      " peak " + topLineages[topIndex].peakPopulation
+    );
+  }
+
+  var newestText = "newest L" + newestLineage.id + " founder";
+
+  if (newestLineage.parentId > 0) {
+    newestText = "newest L" + newestLineage.id + " parent L" + newestLineage.parentId;
+  }
+
+  world.lineageSummaryText =
+    "LINEAGES: " + activeCount +
+    " active / " + extinctCount + " extinct   " +
+    newestText +
+    "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
+
+  return world.lineageSummaryText;
+}
+
 function refreshLineageRegistry() {
   var lineages = ensureLineageRegistry();
   var lineageKey;
@@ -541,6 +612,8 @@ function refreshLineageRegistry() {
       terrainAffinity: traitTotals.terrainAffinity / world.organisms.length
     };
   }
+
+  updateLineageSummaryCache();
 }
 
 function findNearestFood(organism, searchRadius) {

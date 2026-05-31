@@ -32,6 +32,7 @@ function clearWorld() {
   world.maxDrawMs = 0;
   world.inspectedTile = null;
   world.populationTraitSummary = null;
+  world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
   world.lineages = {};
   world.nextSettlementId = 1;
