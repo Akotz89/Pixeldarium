@@ -140,6 +140,24 @@ h1 {
   box-sizing: border-box;
 }
 
+#persistence-status {
+  padding: 8px 12px;
+  color: #dce5ff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+#persistence-status.error {
+  color: #ffd2d2;
+  border-color: rgba(255, 120, 120, 0.65);
+  background: rgba(120, 0, 0, 0.28);
+}
+
 .help {
   color: #aeb7d9;
   font-size: 12px;

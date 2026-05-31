@@ -13,7 +13,10 @@ const stepButton = document.getElementById("step-button");
 const speedDownButton = document.getElementById("speed-down-button");
 const speedUpButton = document.getElementById("speed-up-button");
 const restartButton = document.getElementById("restart-button");
+const saveButton = document.getElementById("save-button");
+const loadButton = document.getElementById("load-button");
 const speedLabel = document.getElementById("speed-label");
+const persistenceStatus = document.getElementById("persistence-status");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;

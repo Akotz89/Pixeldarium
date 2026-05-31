@@ -142,6 +142,11 @@ function inspectTile(tileX, tileY) {
   updateHud();
 }
 
+function setPersistenceStatus(message, isError) {
+  persistenceStatus.textContent = message;
+  persistenceStatus.classList.toggle("error", Boolean(isError));
+}
+
 window.setupControls = function() {
   canvas.addEventListener("click", function(event) {
     var tile = getTileFromCanvasEvent(event);
@@ -184,5 +189,28 @@ window.setupControls = function() {
     seedWorld();
     drawWorld();
     updateHud();
+    setPersistenceStatus("SAVE: Ready", false);
+  });
+
+  saveButton.addEventListener("click", function() {
+    setPersistenceStatus("SAVE: Saving...", false);
+    saveWorldToIndexedDB()
+      .then(function(saveData) {
+        setPersistenceStatus("SAVE: Saved tick " + saveData.tick, false);
+      })
+      .catch(function(error) {
+        setPersistenceStatus("SAVE ERROR: " + error.message, true);
+      });
+  });
+
+  loadButton.addEventListener("click", function() {
+    setPersistenceStatus("SAVE: Loading...", false);
+    loadWorldFromIndexedDB()
+      .then(function(saveData) {
+        setPersistenceStatus("SAVE: Loaded tick " + saveData.tick, false);
+      })
+      .catch(function(error) {
+        setPersistenceStatus("LOAD ERROR: " + error.message, true);
+      });
   });
 };
