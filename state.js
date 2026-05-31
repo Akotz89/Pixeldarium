@@ -94,6 +94,7 @@ const world = {
   orbitalPlatformReady: false,
   nextPlanetaryBodyId: 1,
   planetaryBodies: [],
+  planetaryBodiesById: {},
   planetarySurveyProgress: 0,
   planetarySurveyReady: false,
   lastPlanetarySurveyTick: 0,

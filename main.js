@@ -61,6 +61,7 @@ function clearWorld() {
   world.orbitalPlatformReady = false;
   world.nextPlanetaryBodyId = 1;
   world.planetaryBodies = [];
+  world.planetaryBodiesById = {};
   world.planetarySurveyProgress = 0;
   world.planetarySurveyReady = false;
   world.lastPlanetarySurveyTick = 0;
