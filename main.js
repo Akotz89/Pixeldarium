@@ -33,6 +33,7 @@ function clearWorld() {
   world.maxDrawMs = 0;
   world.inspectedTile = null;
   world.ecosystemSummary = null;
+  world.ecosystemHistory = [];
   world.populationTraitSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
@@ -255,6 +256,55 @@ function getEcosystemPressure(population, averageEnergy, foodPerOrganism) {
   return "balanced";
 }
 
+function getLatestEcosystemHistorySample() {
+  if (!Array.isArray(world.ecosystemHistory) || world.ecosystemHistory.length === 0) {
+    return null;
+  }
+
+  return world.ecosystemHistory[world.ecosystemHistory.length - 1];
+}
+
+function getEcosystemTrend(summary) {
+  var sample = getLatestEcosystemHistorySample();
+
+  if (!sample || sample.tick === world.tick) {
+    return {
+      populationDelta: 0,
+      energyDelta: 0,
+      foodDelta: 0
+    };
+  }
+
+  return {
+    populationDelta: summary.population - sample.population,
+    energyDelta: summary.averageEnergy - sample.averageEnergy,
+    foodDelta: summary.food - sample.food
+  };
+}
+
+function getEcosystemStabilityScore(population, averageEnergy, foodPerOrganism, activeLineages, matureRatio) {
+  if (population <= 0) {
+    return 0;
+  }
+
+  var populationScore = clamp(population / Math.max(1, CONFIG.MAX_ORGANISMS * 0.45), 0, 1);
+  var energyScore = clamp(averageEnergy / Math.max(1, CONFIG.STARTING_ORGANISM_ENERGY), 0, 1);
+  var foodScore = clamp(foodPerOrganism / 1.2, 0, 1);
+  var lineageScore = clamp(activeLineages / 5, 0, 1);
+  var maturityScore = clamp(matureRatio / 0.25, 0, 1);
+  var crowdPenalty = population > CONFIG.MAX_ORGANISMS * 0.9 ? 0.72 : 1;
+
+  return Math.round(
+    (
+      populationScore * 24 +
+      energyScore * 26 +
+      foodScore * 22 +
+      lineageScore * 14 +
+      maturityScore * 14
+    ) * crowdPenalty
+  );
+}
+
 function refreshEcosystemSummary() {
   var population = world.organisms.length;
   var totalEnergy = 0;
@@ -277,6 +327,16 @@ function refreshEcosystemSummary() {
   var averageAge = population > 0 ? totalAge / population : 0;
   var foodPerOrganism = population > 0 ? world.food.length / population : world.food.length;
   var fertilePercent = (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100;
+  var activeLineages = getActiveLineageCount();
+  var matureRatio = population > 0 ? matureOrganisms / population : 0;
+  var pressure = getEcosystemPressure(population, averageEnergy, foodPerOrganism);
+  var stabilityScore = getEcosystemStabilityScore(
+    population,
+    averageEnergy,
+    foodPerOrganism,
+    activeLineages,
+    matureRatio
+  );
 
   world.ecosystemSummary = {
     population: population,
@@ -285,12 +345,51 @@ function refreshEcosystemSummary() {
     averageEnergy: averageEnergy,
     averageAge: averageAge,
     matureOrganisms: matureOrganisms,
-    activeLineages: getActiveLineageCount(),
+    matureRatio: matureRatio,
+    activeLineages: activeLineages,
     fertilePercent: fertilePercent,
-    pressure: getEcosystemPressure(population, averageEnergy, foodPerOrganism)
+    pressure: pressure,
+    stabilityScore: stabilityScore
   };
 
+  world.ecosystemSummary.trend = getEcosystemTrend(world.ecosystemSummary);
   return world.ecosystemSummary;
+}
+
+function makeEcosystemHistorySample(summary) {
+  summary = summary || refreshEcosystemSummary();
+
+  return {
+    tick: world.tick,
+    population: summary.population,
+    food: summary.food,
+    averageEnergy: summary.averageEnergy,
+    foodPerOrganism: summary.foodPerOrganism,
+    pressure: summary.pressure,
+    stabilityScore: summary.stabilityScore
+  };
+}
+
+function recordEcosystemHistorySample(force) {
+  if (!Array.isArray(world.ecosystemHistory)) {
+    world.ecosystemHistory = [];
+  }
+
+  if (!force && world.tick % CONFIG.ECOSYSTEM_HISTORY_SAMPLE_INTERVAL !== 0) {
+    return;
+  }
+
+  var lastSample = getLatestEcosystemHistorySample();
+
+  if (lastSample && lastSample.tick === world.tick) {
+    return;
+  }
+
+  world.ecosystemHistory.push(makeEcosystemHistorySample(world.ecosystemSummary));
+
+  while (world.ecosystemHistory.length > CONFIG.ECOSYSTEM_HISTORY_MAX_SAMPLES) {
+    world.ecosystemHistory.shift();
+  }
 }
 
 function seedWorld() {
@@ -321,6 +420,7 @@ function seedWorld() {
   }
 
   refreshEcosystemSummary();
+  recordEcosystemHistorySample(true);
 
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(true);
@@ -349,6 +449,7 @@ function updateWorld() {
   }
 
   refreshEcosystemSummary();
+  recordEcosystemHistorySample(false);
 
   if (typeof updateSettlements === "function") {
     updateSettlements();

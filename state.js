@@ -70,6 +70,7 @@ const world = {
   maxDrawMs: 0,
   inspectedTile: null,
   ecosystemSummary: null,
+  ecosystemHistory: [],
   populationTraitSummary: null,
   lineageSummaryText: "LINEAGES: -",
   traitHistory: [],
