@@ -18,6 +18,7 @@ function updateHud() {
   speedLabel.textContent = "Speed: " + world.speed + "x";
   updateTraitSummary();
   updateInspectPanel();
+  drawTraitHistory();
 }
 
 function getNearestOrganismToTile(tileX, tileY) {
@@ -89,6 +90,134 @@ function updateTraitSummary() {
     "   metabolism " + summary.metabolism.toFixed(2) +
     "   reproduce " + summary.reproductionEnergy.toFixed(1) +
     "   roam " + summary.movementTendency.toFixed(2);
+}
+
+function makeTraitHistorySample(summary) {
+  return {
+    tick: world.tick,
+    population: world.organisms.length,
+    vision: summary.vision,
+    metabolism: summary.metabolism,
+    reproductionEnergy: summary.reproductionEnergy,
+    movementTendency: summary.movementTendency
+  };
+}
+
+function resetTraitHistory() {
+  world.traitHistory = [];
+  drawTraitHistory();
+}
+
+function recordTraitHistorySample(force) {
+  var summary = getPopulationTraitSummary();
+
+  if (!summary) {
+    return;
+  }
+
+  if (!force && world.tick % CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL !== 0) {
+    return;
+  }
+
+  var lastSample = world.traitHistory[world.traitHistory.length - 1];
+
+  if (lastSample && lastSample.tick === world.tick) {
+    return;
+  }
+
+  world.traitHistory.push(makeTraitHistorySample(summary));
+
+  while (world.traitHistory.length > CONFIG.TRAIT_HISTORY_MAX_SAMPLES) {
+    world.traitHistory.shift();
+  }
+
+  drawTraitHistory();
+}
+
+function scaleTraitValue(value, minValue, maxValue, height) {
+  if (maxValue <= minValue) {
+    return height / 2;
+  }
+
+  var normalized = (value - minValue) / (maxValue - minValue);
+  normalized = clamp(normalized, 0, 1);
+  return height - normalized * height;
+}
+
+function drawTraitHistoryLine(samples, getValue, minValue, maxValue, color, chart) {
+  if (samples.length === 0) {
+    return;
+  }
+
+  traitHistoryCtx.strokeStyle = color;
+  traitHistoryCtx.fillStyle = color;
+  traitHistoryCtx.lineWidth = 2;
+  traitHistoryCtx.beginPath();
+
+  for (var i = 0; i < samples.length; i++) {
+    var x = chart.x;
+
+    if (samples.length > 1) {
+      x += (i / (samples.length - 1)) * chart.width;
+    }
+
+    var y = chart.y + scaleTraitValue(getValue(samples[i]), minValue, maxValue, chart.height);
+
+    if (i === 0) {
+      traitHistoryCtx.moveTo(x, y);
+    } else {
+      traitHistoryCtx.lineTo(x, y);
+    }
+  }
+
+  traitHistoryCtx.stroke();
+
+  if (samples.length === 1) {
+    traitHistoryCtx.beginPath();
+    traitHistoryCtx.arc(chart.x, chart.y + scaleTraitValue(getValue(samples[0]), minValue, maxValue, chart.height), 3, 0, Math.PI * 2);
+    traitHistoryCtx.fill();
+  }
+}
+
+function drawTraitHistory() {
+  var width = traitHistoryCanvas.width;
+  var height = traitHistoryCanvas.height;
+  var chart = {
+    x: 10,
+    y: 8,
+    width: width - 20,
+    height: height - 16
+  };
+
+  traitHistoryCtx.clearRect(0, 0, width, height);
+  traitHistoryCtx.fillStyle = "rgba(5, 6, 10, 0.86)";
+  traitHistoryCtx.fillRect(0, 0, width, height);
+  traitHistoryCtx.strokeStyle = "rgba(255, 255, 255, 0.10)";
+  traitHistoryCtx.lineWidth = 1;
+
+  for (var i = 0; i <= 3; i++) {
+    var y = chart.y + (i / 3) * chart.height;
+    traitHistoryCtx.beginPath();
+    traitHistoryCtx.moveTo(chart.x, y);
+    traitHistoryCtx.lineTo(chart.x + chart.width, y);
+    traitHistoryCtx.stroke();
+  }
+
+  drawTraitHistoryLine(world.traitHistory, function(sample) {
+    return sample.vision;
+  }, CONFIG.TRAIT_VISION_MIN, CONFIG.TRAIT_VISION_MAX, "#72d7ff", chart);
+
+  drawTraitHistoryLine(world.traitHistory, function(sample) {
+    return sample.metabolism;
+  }, CONFIG.TRAIT_METABOLISM_MIN, CONFIG.TRAIT_METABOLISM_MAX, "#ff9c69", chart);
+
+  drawTraitHistoryLine(world.traitHistory, function(sample) {
+    return sample.reproductionEnergy;
+  }, CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN, CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX, "#fff26b", chart);
+
+  drawTraitHistoryLine(world.traitHistory, function(sample) {
+    return sample.movementTendency;
+  }, CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN, CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX, "#c884ff", chart);
 }
 
 function updateInspectPanel() {

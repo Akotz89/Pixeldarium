@@ -63,6 +63,17 @@ function copyFoodForSave(food) {
   };
 }
 
+function copyTraitHistorySampleForSave(sample) {
+  return {
+    tick: sample.tick,
+    population: sample.population,
+    vision: sample.vision,
+    metabolism: sample.metabolism,
+    reproductionEnergy: sample.reproductionEnergy,
+    movementTendency: sample.movementTendency
+  };
+}
+
 function createWorldSaveData() {
   return {
     id: PIXELSIM_SAVE_ID,
@@ -99,11 +110,14 @@ function createWorldSaveData() {
       traitMovementTendencyMin: CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
       traitMovementTendencyMax: CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX,
       traitMovementTendencyDefault: CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
-      traitMovementTendencyMutationStep: CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP
+      traitMovementTendencyMutationStep: CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP,
+      traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
+      traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
-    organisms: world.organisms.map(copyOrganismForSave)
+    organisms: world.organisms.map(copyOrganismForSave),
+    traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave)
   };
 }
 
@@ -206,6 +220,47 @@ function restoreOrganism(organism) {
     directionY: clamp(Math.round(Number(organism.directionY)), -1, 1),
     traits: restoreOrganismTraits(organism.traits)
   };
+}
+
+function restoreTraitHistorySample(sample) {
+  return {
+    tick: Math.max(0, Math.round(restoreNumber(sample.tick, 0))),
+    population: Math.max(0, Math.round(restoreNumber(sample.population, 0))),
+    vision: restoreClampedNumber(
+      sample.vision,
+      CONFIG.TRAIT_VISION_DEFAULT,
+      CONFIG.TRAIT_VISION_MIN,
+      CONFIG.TRAIT_VISION_MAX
+    ),
+    metabolism: restoreClampedNumber(
+      sample.metabolism,
+      CONFIG.TRAIT_METABOLISM_DEFAULT,
+      CONFIG.TRAIT_METABOLISM_MIN,
+      CONFIG.TRAIT_METABOLISM_MAX
+    ),
+    reproductionEnergy: restoreClampedNumber(
+      sample.reproductionEnergy,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_DEFAULT,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN,
+      CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX
+    ),
+    movementTendency: restoreClampedNumber(
+      sample.movementTendency,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_DEFAULT,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN,
+      CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
+    )
+  };
+}
+
+function restoreTraitHistory(traitHistory) {
+  if (!Array.isArray(traitHistory)) {
+    return [];
+  }
+
+  return traitHistory
+    .slice(-CONFIG.TRAIT_HISTORY_MAX_SAMPLES)
+    .map(restoreTraitHistorySample);
 }
 
 function countFertileTiles() {
@@ -312,6 +367,14 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.traitMovementTendencyMutationStep === "number") {
     CONFIG.TRAIT_MOVEMENT_TENDENCY_MUTATION_STEP = saveConfig.traitMovementTendencyMutationStep;
   }
+
+  if (typeof saveConfig.traitHistorySampleInterval === "number") {
+    CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL = saveConfig.traitHistorySampleInterval;
+  }
+
+  if (typeof saveConfig.traitHistoryMaxSamples === "number") {
+    CONFIG.TRAIT_HISTORY_MAX_SAMPLES = saveConfig.traitHistoryMaxSamples;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -325,6 +388,7 @@ function applyWorldSaveData(saveData) {
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
   world.organisms = saveData.organisms.map(restoreOrganism);
+  world.traitHistory = restoreTraitHistory(saveData.traitHistory);
   world.interpolation = 0;
   world.fps = 0;
   world.tps = 0;

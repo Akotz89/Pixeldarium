@@ -25,6 +25,10 @@ function clearWorld() {
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
   world.inspectedTile = null;
+
+  if (typeof resetTraitHistory === "function") {
+    resetTraitHistory();
+  }
 }
 
 function seedWorld() {
@@ -49,6 +53,10 @@ function seedWorld() {
     var position = randomFoodPosition();
     world.food.push(makeFood(position.x, position.y));
   }
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(true);
+  }
 }
 
 function updateWorld() {
@@ -63,6 +71,10 @@ function updateWorld() {
 
   removeDeadOrganisms();
   trimOrganismPopulation();
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(false);
+  }
 }
 
 var frameCounter = 0;

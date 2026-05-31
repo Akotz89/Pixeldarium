@@ -7,6 +7,8 @@ const foodText = document.getElementById("food");
 const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
 const traitSummaryText = document.getElementById("trait-summary");
+const traitHistoryCanvas = document.getElementById("trait-history");
+const traitHistoryCtx = traitHistoryCanvas.getContext("2d", { willReadFrequently: true });
 
 const pauseButton = document.getElementById("pause-button");
 const stepButton = document.getElementById("step-button");
@@ -43,5 +45,6 @@ const world = {
   drawMs: 0,
   maxUpdateMs: 0,
   maxDrawMs: 0,
-  inspectedTile: null
+  inspectedTile: null,
+  traitHistory: []
 };
