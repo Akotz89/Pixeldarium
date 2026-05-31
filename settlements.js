@@ -1907,6 +1907,122 @@ function updateSuppliedOutpostGrowth() {
   }
 }
 
+function refreshSettlementSummaryCache() {
+  if (!Array.isArray(world.settlements) || world.settlements.length === 0) {
+    world.settlementSummary = null;
+    return world.settlementSummary;
+  }
+
+  var activeSettlements = 0;
+  var totalPopulation = 0;
+  var totalFoodStock = 0;
+  var totalStoredFood = 0;
+  var totalDevelopment = 0;
+  var totalClaimedTiles = 0;
+  var totalClaimedFood = 0;
+  var totalOutposts = 0;
+  var totalColonies = 0;
+  var totalRoutes = Array.isArray(world.settlementRoutes) ? world.settlementRoutes.length : 0;
+  var activeRoutes = 0;
+  var totalRouteFoodTransferred = 0;
+  var topSettlement = null;
+
+  if (Array.isArray(world.settlementRoutes)) {
+    for (var routeIndex = 0; routeIndex < world.settlementRoutes.length; routeIndex++) {
+      totalRouteFoodTransferred += Math.max(0, Number(world.settlementRoutes[routeIndex].foodTransferred) || 0);
+
+      if (world.settlementRoutes[routeIndex].isActive) {
+        activeRoutes++;
+      }
+    }
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+
+    if (settlement.isOutpost) {
+      totalOutposts++;
+    }
+
+    if (settlement.isColony) {
+      totalColonies++;
+    }
+
+    if (settlement.isActive) {
+      activeSettlements++;
+    }
+
+    totalPopulation += settlement.population;
+    totalFoodStock += settlement.foodStock;
+    totalStoredFood += Math.max(0, Number(settlement.storedFood) || 0);
+    totalDevelopment += Math.max(0, Number(settlement.development) || 0);
+    totalClaimedTiles += Math.max(0, Number(settlement.claimedTiles) || 0);
+    totalClaimedFood += Math.max(0, Number(settlement.claimedFood) || 0);
+
+    if (
+      !topSettlement ||
+      settlement.level > topSettlement.level ||
+      (settlement.level === topSettlement.level && settlement.influenceRadius > topSettlement.influenceRadius) ||
+      (settlement.level === topSettlement.level && settlement.influenceRadius === topSettlement.influenceRadius && settlement.population > topSettlement.population)
+    ) {
+      topSettlement = settlement;
+    }
+  }
+
+  world.settlementSummary = {
+    total: world.settlements.length,
+    active: activeSettlements,
+    totalPopulation: totalPopulation,
+    totalFoodStock: totalFoodStock,
+    totalStoredFood: totalStoredFood,
+    totalDevelopment: totalDevelopment,
+    totalClaimedTiles: totalClaimedTiles,
+    totalClaimedFood: totalClaimedFood,
+    totalOutposts: totalOutposts,
+    totalColonies: totalColonies,
+    totalRoutes: totalRoutes,
+    activeRoutes: activeRoutes,
+    totalRouteFoodTransferred: totalRouteFoodTransferred,
+    colonyNetworkScore: Math.max(0, Math.round(Number(world.colonyNetworkScore) || 0)),
+    colonyNetworkColonies: Math.max(0, Math.round(Number(world.colonyNetworkColonies) || 0)),
+    colonyNetworkActiveRoutes: Math.max(0, Math.round(Number(world.colonyNetworkActiveRoutes) || 0)),
+    colonyNetworkClaimedTiles: Math.max(0, Math.round(Number(world.colonyNetworkClaimedTiles) || 0)),
+    spaceProgramProgress: Math.max(0, Number(world.spaceProgramProgress) || 0),
+    orbitalLaunches: Math.max(0, Math.round(Number(world.orbitalLaunches) || 0)),
+    spaceProgramReady: Boolean(world.spaceProgramReady),
+    orbitalAssets: Array.isArray(world.orbitalAssets) ? world.orbitalAssets.length : 0,
+    orbitalInfrastructureScore: Math.max(0, Math.round(Number(world.orbitalInfrastructureScore) || 0)),
+    orbitalPlatformReady: Boolean(world.orbitalPlatformReady),
+    planetaryBodies: Array.isArray(world.planetaryBodies) ? world.planetaryBodies.length : 0,
+    planetarySurveyProgress: Math.max(0, Number(world.planetarySurveyProgress) || 0),
+    planetarySurveyReady: Boolean(world.planetarySurveyReady),
+    probeMissions: Array.isArray(world.probeMissions) ? world.probeMissions.length : 0,
+    completedProbeMissions: typeof getCompletedProbeMissionCount === "function" ? getCompletedProbeMissionCount() : 0,
+    probeMissionProgress: Math.max(0, Number(world.probeMissionProgress) || 0),
+    probeMissionReady: Boolean(world.probeMissionReady),
+    starSystems: Array.isArray(world.starSystems) ? world.starSystems.length : 0,
+    starMapProgress: Math.max(0, Number(world.starMapProgress) || 0),
+    starMapReady: Boolean(world.starMapReady),
+    galacticClaimedSystems: Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)),
+    galacticInfluenceProgress: Math.max(0, Number(world.galacticInfluenceProgress) || 0),
+    galacticInfluenceReady: Boolean(world.galacticInfluenceReady),
+    interstellarFleets: Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0,
+    interstellarFleetCompleted: Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)),
+    interstellarFleetProgress: Math.max(0, Number(world.interstellarFleetProgress) || 0),
+    interstellarFleetReady: Boolean(world.interstellarFleetReady),
+    empireSectors: Array.isArray(world.empireSectors) ? world.empireSectors.length : 0,
+    empireSectorProgress: Math.max(0, Number(world.empireSectorProgress) || 0),
+    empireSectorReady: Boolean(world.empireSectorReady),
+    empireLegacyLevel: Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)),
+    empireLegacyProgress: Math.max(0, Number(world.empireLegacyProgress) || 0),
+    empireLegacyReady: Boolean(world.empireLegacyReady),
+    empireLegacyComplete: Boolean(world.empireLegacyComplete),
+    topSettlement: topSettlement
+  };
+
+  return world.settlementSummary;
+}
+
 function updateSettlements() {
   ensureSettlementState();
 
@@ -1940,4 +2056,5 @@ function updateSettlements() {
   updateInterstellarFleetState();
   updateEmpireSectorState();
   updateEmpireLegacyState();
+  refreshSettlementSummaryCache();
 }
