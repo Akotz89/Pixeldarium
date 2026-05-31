@@ -94,25 +94,9 @@ function getNearestOrganismToTile(tileX, tileY) {
 }
 
 function getNearestSettlementToTile(tileX, tileY) {
-  if (!Array.isArray(world.settlements)) {
-    return null;
-  }
-
-  var nearestSettlement = null;
-  var nearestDistance = Infinity;
-
-  for (var i = 0; i < world.settlements.length; i++) {
-    var settlement = world.settlements[i];
-    var distance = Math.abs(settlement.x - tileX) + Math.abs(settlement.y - tileY);
-    var inspectDistance = Math.max(2, Math.round(Number(settlement.influenceRadius) || 0));
-
-    if (distance < nearestDistance && distance <= inspectDistance) {
-      nearestSettlement = settlement;
-      nearestDistance = distance;
-    }
-  }
-
-  return nearestSettlement;
+  return typeof getNearestInfluencingSettlement === "function"
+    ? getNearestInfluencingSettlement(tileX, tileY)
+    : null;
 }
 
 function getRouteSummaryForSettlement(settlementId) {
