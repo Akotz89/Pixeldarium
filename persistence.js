@@ -77,6 +77,41 @@ function copyTraitHistorySampleForSave(sample) {
   };
 }
 
+function copyLineageForSave(lineage) {
+  return {
+    id: lineage.id,
+    parentId: lineage.parentId,
+    createdTick: lineage.createdTick,
+    founderGeneration: lineage.founderGeneration,
+    founderTraits: copyOrganismTraitsForSave(lineage.founderTraits),
+    activeCount: lineage.activeCount,
+    lastSeenTick: lineage.lastSeenTick,
+    peakPopulation: lineage.peakPopulation,
+    isExtinct: lineage.isExtinct
+  };
+}
+
+function getLineagesForSave() {
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
+  var lineages = [];
+  var lineageRecords = world.lineages || {};
+
+  for (var lineageKey in lineageRecords) {
+    if (Object.prototype.hasOwnProperty.call(lineageRecords, lineageKey)) {
+      lineages.push(copyLineageForSave(lineageRecords[lineageKey]));
+    }
+  }
+
+  lineages.sort(function(a, b) {
+    return a.id - b.id;
+  });
+
+  return lineages;
+}
+
 function createWorldSaveData() {
   return {
     id: PIXELSIM_SAVE_ID,
@@ -118,12 +153,14 @@ function createWorldSaveData() {
       traitHistorySampleInterval: CONFIG.TRAIT_HISTORY_SAMPLE_INTERVAL,
       traitHistoryMaxSamples: CONFIG.TRAIT_HISTORY_MAX_SAMPLES,
       lineageDivergenceScoreForNewLineage: CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE,
+      lineageRegistryVersion: 1,
       lineageColors: CONFIG.LINEAGE_COLORS.slice()
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave),
-    traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave)
+    traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
+    lineages: getLineagesForSave()
   };
 }
 
@@ -212,6 +249,52 @@ function restoreOrganismTraits(traits) {
       CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX
     )
   };
+}
+
+function restoreLineageRecord(lineage) {
+  lineage = lineage || {};
+
+  var id = Math.max(1, Math.round(restoreNumber(lineage.id, 1)));
+  var record = {
+    id: id,
+    parentId: Math.max(0, Math.round(restoreNumber(lineage.parentId, 0))),
+    createdTick: Math.max(0, Math.round(restoreNumber(lineage.createdTick, 0))),
+    founderGeneration: Math.max(0, Math.round(restoreNumber(lineage.founderGeneration, 0))),
+    founderTraits: restoreOrganismTraits(lineage.founderTraits),
+    activeCount: Math.max(0, Math.round(restoreNumber(lineage.activeCount, 0))),
+    lastSeenTick: Math.max(0, Math.round(restoreNumber(lineage.lastSeenTick, 0))),
+    peakPopulation: Math.max(0, Math.round(restoreNumber(lineage.peakPopulation, 0))),
+    isExtinct: Boolean(lineage.isExtinct)
+  };
+
+  if (record.lastSeenTick < record.createdTick) {
+    record.lastSeenTick = record.createdTick;
+  }
+
+  if (record.peakPopulation < record.activeCount) {
+    record.peakPopulation = record.activeCount;
+  }
+
+  return record;
+}
+
+function restoreLineages(lineages) {
+  var restoredLineages = {};
+
+  if (!Array.isArray(lineages)) {
+    return restoredLineages;
+  }
+
+  for (var i = 0; i < lineages.length; i++) {
+    var record = restoreLineageRecord(lineages[i]);
+    restoredLineages[String(record.id)] = record;
+
+    if (record.id >= world.nextLineageId) {
+      world.nextLineageId = record.id + 1;
+    }
+  }
+
+  return restoredLineages;
 }
 
 function restoreOrganism(organism) {
@@ -405,10 +488,12 @@ function applyWorldSaveData(saveData) {
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
+  world.lineages = restoreLineages(saveData.lineages);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
   world.organisms = saveData.organisms.map(restoreOrganism);
+  refreshLineageRegistry();
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
   world.interpolation = 0;
   world.fps = 0;

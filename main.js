@@ -26,6 +26,7 @@ function clearWorld() {
   world.maxDrawMs = 0;
   world.inspectedTile = null;
   world.nextLineageId = 1;
+  world.lineages = {};
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
@@ -50,6 +51,10 @@ function seedWorld() {
     ));
   }
 
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
   for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
     var position = randomFoodPosition();
     world.food.push(makeFood(position.x, position.y));
@@ -72,6 +77,10 @@ function updateWorld() {
 
   removeDeadOrganisms();
   trimOrganismPopulation();
+
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
 
   if (typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(false);

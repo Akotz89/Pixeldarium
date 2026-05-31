@@ -94,32 +94,62 @@ function updateTraitSummary() {
 }
 
 function getLineageSummary() {
-  var lineageCounts = {};
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
   var lineages = [];
+  var lineageRecords = world.lineages || {};
 
-  for (var i = 0; i < world.organisms.length; i++) {
-    var lineageId = ensureOrganismLineage(world.organisms[i]);
-
-    if (!lineageCounts[lineageId]) {
-      lineageCounts[lineageId] = {
-        lineageId: lineageId,
-        count: 0
-      };
-      lineages.push(lineageCounts[lineageId]);
+  for (var lineageKey in lineageRecords) {
+    if (Object.prototype.hasOwnProperty.call(lineageRecords, lineageKey)) {
+      lineages.push(lineageRecords[lineageKey]);
     }
-
-    lineageCounts[lineageId].count++;
   }
 
   lineages.sort(function(a, b) {
-    if (b.count !== a.count) {
-      return b.count - a.count;
-    }
-
-    return a.lineageId - b.lineageId;
+    return a.id - b.id;
   });
 
   return lineages;
+}
+
+function getNewestLineage(lineages) {
+  var newest = null;
+
+  for (var i = 0; i < lineages.length; i++) {
+    if (
+      !newest ||
+      lineages[i].createdTick > newest.createdTick ||
+      (lineages[i].createdTick === newest.createdTick && lineages[i].id > newest.id)
+    ) {
+      newest = lineages[i];
+    }
+  }
+
+  return newest;
+}
+
+function getActiveLineages(lineages) {
+  return lineages.filter(function(lineage) {
+    return lineage.activeCount > 0;
+  });
+}
+
+function getExtinctLineages(lineages) {
+  return lineages.filter(function(lineage) {
+    return lineage.activeCount === 0;
+  });
+}
+
+function getTopActiveLineages(activeLineages) {
+  return activeLineages.slice().sort(function(a, b) {
+    if (b.activeCount !== a.activeCount) {
+      return b.activeCount - a.activeCount;
+    }
+
+    return a.id - b.id;
+  });
 }
 
 function updateLineageSummary() {
@@ -130,13 +160,23 @@ function updateLineageSummary() {
     return;
   }
 
-  var visibleLineages = lineages.slice(0, 5).map(function(lineage) {
-    return "L" + lineage.lineageId + " " + lineage.count;
+  var activeLineages = getActiveLineages(lineages);
+  var extinctLineages = getExtinctLineages(lineages);
+  var newestLineage = getNewestLineage(lineages);
+  var visibleLineages = getTopActiveLineages(activeLineages).slice(0, 5).map(function(lineage) {
+    return "L" + lineage.id + " " + lineage.activeCount + " peak " + lineage.peakPopulation;
   });
+  var newestText = "newest L" + newestLineage.id + " founder";
+
+  if (newestLineage.parentId > 0) {
+    newestText = "newest L" + newestLineage.id + " parent L" + newestLineage.parentId;
+  }
 
   lineageSummaryText.textContent =
-    "LINEAGES: " + lineages.length +
-    " active   top " + visibleLineages.join(" | ");
+    "LINEAGES: " + activeLineages.length +
+    " active / " + extinctLineages.length + " extinct   " +
+    newestText +
+    "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
 }
 
 function makeTraitHistorySample(summary) {
@@ -282,10 +322,14 @@ function updateInspectPanel() {
   var organismText = "none";
 
   if (organism) {
+    var lineageRecord = world.lineages ? world.lineages[String(ensureOrganismLineage(organism))] : null;
+    var parentText = lineageRecord && lineageRecord.parentId > 0 ? " parent L" + lineageRecord.parentId : " founder";
+
     organismText =
       "energy " + organism.energy +
       " age " + organism.age +
       " lineage L" + ensureOrganismLineage(organism) +
+      parentText +
       " gen " + organism.generation +
       " pos " + organism.x + "," + organism.y +
       " dir " + organism.directionX + "," + organism.directionY +

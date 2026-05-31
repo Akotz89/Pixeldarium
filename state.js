@@ -48,5 +48,6 @@ const world = {
   maxDrawMs: 0,
   inspectedTile: null,
   traitHistory: [],
-  nextLineageId: 1
+  nextLineageId: 1,
+  lineages: {}
 };

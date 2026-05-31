@@ -70,10 +70,85 @@ function inheritOrganismTraits(parentTraits) {
   };
 }
 
+function copyTraitsForLineage(traits) {
+  return {
+    vision: traits.vision,
+    metabolism: traits.metabolism,
+    reproductionEnergy: traits.reproductionEnergy,
+    movementTendency: traits.movementTendency
+  };
+}
+
 function allocateLineageId() {
   var lineageId = world.nextLineageId;
   world.nextLineageId++;
   return lineageId;
+}
+
+function ensureLineageRegistry() {
+  if (!world.lineages) {
+    world.lineages = {};
+  }
+
+  return world.lineages;
+}
+
+function makeLineageRecord(lineageId, parentId, founderGeneration, founderTraits, createdTick) {
+  return {
+    id: lineageId,
+    parentId: Math.max(0, Math.round(parentId || 0)),
+    createdTick: Math.max(0, Math.round(createdTick || 0)),
+    founderGeneration: Math.max(0, Math.round(founderGeneration || 0)),
+    founderTraits: copyTraitsForLineage(founderTraits || makeInitialOrganismTraits()),
+    activeCount: 0,
+    lastSeenTick: Math.max(0, Math.round(createdTick || 0)),
+    peakPopulation: 0,
+    isExtinct: true
+  };
+}
+
+function registerLineage(lineageId, parentId, founderGeneration, founderTraits, createdTick) {
+  var lineages = ensureLineageRegistry();
+  var lineageKey = String(lineageId);
+  var record = lineages[lineageKey];
+
+  if (!record) {
+    record = makeLineageRecord(
+      lineageId,
+      parentId,
+      founderGeneration,
+      founderTraits,
+      createdTick
+    );
+    lineages[lineageKey] = record;
+  } else {
+    if (typeof record.parentId !== "number") {
+      record.parentId = Math.max(0, Math.round(parentId || 0));
+    }
+
+    if (typeof record.createdTick !== "number") {
+      record.createdTick = Math.max(0, Math.round(createdTick || 0));
+    }
+
+    if (typeof record.founderGeneration !== "number") {
+      record.founderGeneration = Math.max(0, Math.round(founderGeneration || 0));
+    }
+
+    if (!record.founderTraits) {
+      record.founderTraits = copyTraitsForLineage(founderTraits || makeInitialOrganismTraits());
+    }
+
+    record.activeCount = Math.max(0, Math.round(record.activeCount || 0));
+    record.lastSeenTick = Math.max(0, Math.round(record.lastSeenTick || record.createdTick || 0));
+    record.peakPopulation = Math.max(0, Math.round(record.peakPopulation || 0));
+    record.isExtinct = Boolean(record.isExtinct);
+  }
+
+  if (lineageId >= world.nextLineageId) {
+    world.nextLineageId = lineageId + 1;
+  }
+
+  return record;
 }
 
 function ensureOrganismLineage(organism) {
@@ -92,6 +167,14 @@ function ensureOrganismLineage(organism) {
   if (organism.lineageId >= world.nextLineageId) {
     world.nextLineageId = organism.lineageId + 1;
   }
+
+  registerLineage(
+    organism.lineageId,
+    organism.lineageParentId,
+    organism.generation,
+    ensureOrganismTraits(organism),
+    world.tick
+  );
 
   return organism.lineageId;
 }
@@ -115,6 +198,7 @@ function assignChildLineage(child, parent, parentTraits) {
   if (divergenceScore >= CONFIG.LINEAGE_DIVERGENCE_SCORE_FOR_NEW_LINEAGE) {
     child.lineageId = allocateLineageId();
     child.lineageParentId = parentLineageId;
+    registerLineage(child.lineageId, parentLineageId, child.generation, childTraits, world.tick);
   } else {
     child.lineageId = parentLineageId;
     child.lineageParentId = parent.lineageParentId;
@@ -130,7 +214,7 @@ function ensureOrganismTraits(organism) {
 }
 
 function makeOrganism(x, y, lineageId) {
-  return {
+  var organism = {
     x: x,
     y: y,
     prevX: x,
@@ -144,6 +228,46 @@ function makeOrganism(x, y, lineageId) {
     lineageParentId: 0,
     generation: 0
   };
+
+  registerLineage(organism.lineageId, 0, 0, organism.traits, world.tick);
+  return organism;
+}
+
+function refreshLineageRegistry() {
+  var lineages = ensureLineageRegistry();
+  var lineageKey;
+
+  for (lineageKey in lineages) {
+    if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
+      lineages[lineageKey].activeCount = 0;
+    }
+  }
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var lineageId = ensureOrganismLineage(organism);
+    var record = registerLineage(
+      lineageId,
+      organism.lineageParentId,
+      organism.generation,
+      ensureOrganismTraits(organism),
+      world.tick
+    );
+
+    record.activeCount++;
+    record.lastSeenTick = world.tick;
+
+    if (record.activeCount > record.peakPopulation) {
+      record.peakPopulation = record.activeCount;
+    }
+  }
+
+  for (lineageKey in lineages) {
+    if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
+      var lineage = lineages[lineageKey];
+      lineage.isExtinct = lineage.activeCount === 0;
+    }
+  }
 }
 
 function findNearestFood(organism, searchRadius) {
