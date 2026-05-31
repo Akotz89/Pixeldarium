@@ -59,6 +59,8 @@ const world = {
   terrain: [],
   fertileTiles: 0,
   isPaused: false,
+  isExtinct: false,
+  extinctionTick: 0,
   needsRender: true,
   speed: 1,
   seedText: CONFIG.DEFAULT_SEED,

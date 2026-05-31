@@ -22,6 +22,9 @@ function clearWorld() {
   world.foodBuckets = {};
   world.terrain = [];
   world.fertileTiles = 0;
+  world.isPaused = false;
+  world.isExtinct = false;
+  world.extinctionTick = 0;
   world.needsRender = true;
   setWorldSeed(world.seedText);
   world.interpolation = 0;
@@ -136,6 +139,8 @@ function getSimulationMilestoneSnapshot() {
 
   return {
     era: world.era,
+    population: Array.isArray(world.organisms) ? world.organisms.length : 0,
+    isExtinct: Boolean(world.isExtinct),
     ecosystemPressure: ecosystemSummary ? ecosystemSummary.pressure : "unknown",
     ecosystemStabilityBand: ecosystemSummary ? getEcosystemStabilityBand(ecosystemSummary.stabilityScore) : -1,
     settlements: Array.isArray(world.settlements) ? world.settlements.length : 0,
@@ -252,6 +257,16 @@ function recordEcosystemMilestones(previousSnapshot, currentSnapshot) {
   }
 }
 
+function recordLifecycleMilestones(previousSnapshot, currentSnapshot) {
+  if (!previousSnapshot.isExtinct && currentSnapshot.isExtinct) {
+    recordSimulationEvent("lifecycle", "Extinction", "population 0");
+  }
+
+  if (previousSnapshot.isExtinct && !currentSnapshot.isExtinct && currentSnapshot.population > 0) {
+    recordSimulationEvent("lifecycle", "Population recovered", "population " + currentSnapshot.population);
+  }
+}
+
 function recordSimulationMilestones(previousSnapshot) {
   var currentSnapshot = getSimulationMilestoneSnapshot();
 
@@ -259,6 +274,7 @@ function recordSimulationMilestones(previousSnapshot) {
     recordSimulationEvent("era", currentSnapshot.era, previousSnapshot.era + " -> " + currentSnapshot.era);
   }
 
+  recordLifecycleMilestones(previousSnapshot, currentSnapshot);
   recordEcosystemMilestones(previousSnapshot, currentSnapshot);
   recordCountMilestone(previousSnapshot, currentSnapshot, "settlements", "settlement", "Settlement founded", "total");
   recordCountMilestone(previousSnapshot, currentSnapshot, "outposts", "settlement", "Outpost founded", "total");
@@ -455,6 +471,27 @@ function recordEcosystemHistorySample(force) {
   }
 }
 
+function syncLifecycleState() {
+  var population = Array.isArray(world.organisms) ? world.organisms.length : 0;
+
+  if (population <= 0) {
+    if (!world.isExtinct) {
+      world.isExtinct = true;
+      world.extinctionTick = world.tick;
+    }
+
+    world.isPaused = true;
+    world.needsRender = true;
+    return;
+  }
+
+  if (world.isExtinct) {
+    world.isExtinct = false;
+    world.extinctionTick = 0;
+    world.needsRender = true;
+  }
+}
+
 function seedWorld() {
   clearWorld();
   seedTerrain();
@@ -483,6 +520,7 @@ function seedWorld() {
   }
 
   refreshEcosystemSummary();
+  syncLifecycleState();
   recordEcosystemHistorySample(true);
 
   if (typeof recordTraitHistorySample === "function") {
@@ -512,9 +550,10 @@ function updateWorld() {
   }
 
   refreshEcosystemSummary();
-  recordEcosystemHistorySample(false);
+  syncLifecycleState();
+  recordEcosystemHistorySample(!milestoneSnapshot.isExtinct && world.isExtinct);
 
-  if (typeof updateSettlements === "function") {
+  if (!world.isExtinct && typeof updateSettlements === "function") {
     updateSettlements();
   }
 
