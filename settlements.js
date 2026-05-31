@@ -840,7 +840,9 @@ function updateProbeMissionTravel() {
 }
 
 function updateProbeMissionEra() {
-  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+  if (getEmpireLegacyLevel() >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.era = "Ascendant Empire";
+  } else if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
     world.era = "Galactic Empire";
   } else if (getEmpireSectorCount() > 0) {
     world.era = "Empire Sectors";
@@ -1015,7 +1017,9 @@ function getClaimedStarSystemCount() {
 }
 
 function updateStarMapEra() {
-  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+  if (getEmpireLegacyLevel() >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.era = "Ascendant Empire";
+  } else if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
     world.era = "Galactic Empire";
   } else if (getEmpireSectorCount() > 0) {
     world.era = "Empire Sectors";
@@ -1111,7 +1115,9 @@ function getNextClaimableStarSystem() {
 function updateGalacticInfluenceEra() {
   world.galacticClaimedSystems = getClaimedStarSystemCount();
 
-  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+  if (getEmpireLegacyLevel() >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.era = "Ascendant Empire";
+  } else if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
     world.era = "Galactic Empire";
   } else if (getEmpireSectorCount() > 0) {
     world.era = "Empire Sectors";
@@ -1342,7 +1348,9 @@ function getCompletedInterstellarFleetCount() {
 function updateInterstellarFleetEra() {
   updateInterstellarFleetTravel();
 
-  if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+  if (getEmpireLegacyLevel() >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.era = "Ascendant Empire";
+  } else if (getEmpireSectorCount() >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
     world.era = "Galactic Empire";
   } else if (getEmpireSectorCount() > 0) {
     world.era = "Empire Sectors";
@@ -1502,7 +1510,9 @@ function makeEmpireSector(system) {
 function updateEmpireSectorEra() {
   normalizeEmpireSectors();
 
-  if (world.empireSectorCount >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
+  if (getEmpireLegacyLevel() >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.era = "Ascendant Empire";
+  } else if (world.empireSectorCount >= CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT) {
     world.era = "Galactic Empire";
   } else if (world.empireSectorCount > 0) {
     world.era = "Empire Sectors";
@@ -1557,6 +1567,77 @@ function updateEmpireSectorState() {
   }
 
   updateEmpireSectorReadiness();
+}
+
+function ensureEmpireLegacyState() {
+  world.empireLegacyProgress = Math.max(0, restoreSettlementGrowthNumber(world.empireLegacyProgress, 0));
+  world.empireLegacyLevel = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.empireLegacyLevel, 0)));
+  world.empireLegacyReady = Boolean(world.empireLegacyReady);
+  world.empireLegacyComplete = Boolean(world.empireLegacyComplete);
+  world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(world.lastEmpireLegacyTick, 0)));
+
+  if (world.empireLegacyLevel >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.empireLegacyComplete = true;
+    world.era = "Ascendant Empire";
+  }
+}
+
+function getEmpireLegacyLevel() {
+  ensureEmpireLegacyState();
+  return world.empireLegacyLevel;
+}
+
+function updateEmpireLegacyEra() {
+  ensureEmpireLegacyState();
+
+  if (world.empireLegacyLevel >= CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL) {
+    world.empireLegacyComplete = true;
+    world.era = "Ascendant Empire";
+  } else {
+    updateEmpireSectorEra();
+  }
+}
+
+function updateEmpireLegacyReadiness() {
+  ensureEmpireLegacyState();
+
+  world.empireLegacyReady = Boolean(
+    getEmpireSectorCount() >= CONFIG.EMPIRE_LEGACY_MIN_SECTORS &&
+    !world.empireLegacyComplete
+  );
+
+  updateEmpireLegacyEra();
+  return world.empireLegacyReady;
+}
+
+function updateEmpireLegacyState() {
+  if (!updateEmpireLegacyReadiness()) {
+    return;
+  }
+
+  var legacyInterval = Math.max(1, Math.round(Number(CONFIG.EMPIRE_LEGACY_INTERVAL) || 1));
+
+  if (world.tick - world.lastEmpireLegacyTick < legacyInterval) {
+    return;
+  }
+
+  world.lastEmpireLegacyTick = world.tick;
+  world.empireLegacyProgress +=
+    getEmpireSectorCount() * CONFIG.EMPIRE_LEGACY_PROGRESS_PER_SECTOR +
+    getCompletedInterstellarFleetCount() * CONFIG.EMPIRE_LEGACY_PROGRESS_PER_COMPLETED_FLEET +
+    getClaimedStarSystemCount() * CONFIG.EMPIRE_LEGACY_PROGRESS_PER_CLAIMED_SYSTEM;
+
+  var legacyThreshold = Math.max(1, Number(CONFIG.EMPIRE_LEGACY_THRESHOLD) || 1);
+
+  while (
+    world.empireLegacyProgress >= legacyThreshold &&
+    world.empireLegacyLevel < CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL
+  ) {
+    world.empireLegacyLevel++;
+    world.empireLegacyProgress -= legacyThreshold;
+  }
+
+  updateEmpireLegacyReadiness();
 }
 
 function makeSettlement(lineage, organisms) {
@@ -1910,4 +1991,5 @@ function updateSettlements() {
   updateGalacticInfluenceState();
   updateInterstellarFleetState();
   updateEmpireSectorState();
+  updateEmpireLegacyState();
 }

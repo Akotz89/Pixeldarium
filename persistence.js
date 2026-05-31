@@ -345,6 +345,10 @@ function createWorldSaveData() {
     updateEmpireSectorReadiness();
   }
 
+  if (typeof updateEmpireLegacyReadiness === "function") {
+    updateEmpireLegacyReadiness();
+  }
+
   return {
     id: PIXELSIM_SAVE_ID,
     version: PIXELSIM_SAVE_VERSION,
@@ -396,6 +400,11 @@ function createWorldSaveData() {
     empireSectorReady: Boolean(world.empireSectorReady),
     empireSectorCount: Math.max(0, Math.round(Number(world.empireSectorCount) || 0)),
     lastEmpireSectorTick: Math.max(0, Math.round(Number(world.lastEmpireSectorTick) || 0)),
+    empireLegacyProgress: Math.max(0, Number(world.empireLegacyProgress) || 0),
+    empireLegacyLevel: Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)),
+    empireLegacyReady: Boolean(world.empireLegacyReady),
+    empireLegacyComplete: Boolean(world.empireLegacyComplete),
+    lastEmpireLegacyTick: Math.max(0, Math.round(Number(world.lastEmpireLegacyTick) || 0)),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -517,7 +526,14 @@ function createWorldSaveData() {
       empireSectorProgressPerInfrastructure: CONFIG.EMPIRE_SECTOR_PROGRESS_PER_INFRASTRUCTURE,
       empireSectorBuildThreshold: CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD,
       empireSectorMaxSectors: CONFIG.EMPIRE_SECTOR_MAX_SECTORS,
-      galacticEmpireSectorCount: CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT
+      galacticEmpireSectorCount: CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT,
+      empireLegacyMinSectors: CONFIG.EMPIRE_LEGACY_MIN_SECTORS,
+      empireLegacyInterval: CONFIG.EMPIRE_LEGACY_INTERVAL,
+      empireLegacyProgressPerSector: CONFIG.EMPIRE_LEGACY_PROGRESS_PER_SECTOR,
+      empireLegacyProgressPerCompletedFleet: CONFIG.EMPIRE_LEGACY_PROGRESS_PER_COMPLETED_FLEET,
+      empireLegacyProgressPerClaimedSystem: CONFIG.EMPIRE_LEGACY_PROGRESS_PER_CLAIMED_SYSTEM,
+      empireLegacyThreshold: CONFIG.EMPIRE_LEGACY_THRESHOLD,
+      ascendantEmpireLegacyLevel: CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
@@ -1498,6 +1514,34 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.galacticEmpireSectorCount === "number") {
     CONFIG.GALACTIC_EMPIRE_SECTOR_COUNT = saveConfig.galacticEmpireSectorCount;
   }
+
+  if (typeof saveConfig.empireLegacyMinSectors === "number") {
+    CONFIG.EMPIRE_LEGACY_MIN_SECTORS = saveConfig.empireLegacyMinSectors;
+  }
+
+  if (typeof saveConfig.empireLegacyInterval === "number") {
+    CONFIG.EMPIRE_LEGACY_INTERVAL = saveConfig.empireLegacyInterval;
+  }
+
+  if (typeof saveConfig.empireLegacyProgressPerSector === "number") {
+    CONFIG.EMPIRE_LEGACY_PROGRESS_PER_SECTOR = saveConfig.empireLegacyProgressPerSector;
+  }
+
+  if (typeof saveConfig.empireLegacyProgressPerCompletedFleet === "number") {
+    CONFIG.EMPIRE_LEGACY_PROGRESS_PER_COMPLETED_FLEET = saveConfig.empireLegacyProgressPerCompletedFleet;
+  }
+
+  if (typeof saveConfig.empireLegacyProgressPerClaimedSystem === "number") {
+    CONFIG.EMPIRE_LEGACY_PROGRESS_PER_CLAIMED_SYSTEM = saveConfig.empireLegacyProgressPerClaimedSystem;
+  }
+
+  if (typeof saveConfig.empireLegacyThreshold === "number") {
+    CONFIG.EMPIRE_LEGACY_THRESHOLD = saveConfig.empireLegacyThreshold;
+  }
+
+  if (typeof saveConfig.ascendantEmpireLegacyLevel === "number") {
+    CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL = saveConfig.ascendantEmpireLegacyLevel;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -1548,6 +1592,11 @@ function applyWorldSaveData(saveData) {
   world.empireSectorReady = Boolean(saveData.empireSectorReady);
   world.empireSectorCount = Math.max(0, Math.round(restoreNumber(saveData.empireSectorCount, 0)));
   world.lastEmpireSectorTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireSectorTick, 0)));
+  world.empireLegacyProgress = Math.max(0, restoreNumber(saveData.empireLegacyProgress, 0));
+  world.empireLegacyLevel = Math.max(0, Math.round(restoreNumber(saveData.empireLegacyLevel, 0)));
+  world.empireLegacyReady = Boolean(saveData.empireLegacyReady);
+  world.empireLegacyComplete = Boolean(saveData.empireLegacyComplete);
+  world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
@@ -1601,6 +1650,10 @@ function applyWorldSaveData(saveData) {
 
   if (typeof updateEmpireSectorReadiness === "function") {
     updateEmpireSectorReadiness();
+  }
+
+  if (typeof updateEmpireLegacyReadiness === "function") {
+    updateEmpireLegacyReadiness();
   }
 
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);

@@ -76,6 +76,11 @@ function clearWorld() {
   world.empireSectorReady = false;
   world.empireSectorCount = 0;
   world.lastEmpireSectorTick = 0;
+  world.empireLegacyProgress = 0;
+  world.empireLegacyLevel = 0;
+  world.empireLegacyReady = false;
+  world.empireLegacyComplete = false;
+  world.lastEmpireLegacyTick = 0;
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

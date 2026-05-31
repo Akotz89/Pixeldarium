@@ -345,6 +345,10 @@ function getSettlementSummary() {
     empireSectors: Array.isArray(world.empireSectors) ? world.empireSectors.length : 0,
     empireSectorProgress: Math.max(0, Number(world.empireSectorProgress) || 0),
     empireSectorReady: Boolean(world.empireSectorReady),
+    empireLegacyLevel: Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)),
+    empireLegacyProgress: Math.max(0, Number(world.empireLegacyProgress) || 0),
+    empireLegacyReady: Boolean(world.empireLegacyReady),
+    empireLegacyComplete: Boolean(world.empireLegacyComplete),
     topSettlement: topSettlement
   };
 }
@@ -391,6 +395,9 @@ function updateSettlementSummary() {
     "   sectors " + summary.empireSectors +
     " build " + summary.empireSectorProgress.toFixed(1) + "/" + CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD +
     " " + (summary.empireSectorReady ? "forming" : "waiting") +
+    "   legacy lvl " + summary.empireLegacyLevel +
+    " " + summary.empireLegacyProgress.toFixed(1) + "/" + CONFIG.EMPIRE_LEGACY_THRESHOLD +
+    " " + (summary.empireLegacyComplete ? "complete" : (summary.empireLegacyReady ? "ascending" : "waiting")) +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -589,6 +596,7 @@ function updateInspectPanel() {
       (settlement.isColony ? " galactic claims " + Math.max(0, Math.round(Number(world.galacticClaimedSystems) || 0)) + " influence " + Math.max(0, Number(world.galacticInfluenceProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " fleets " + Math.max(0, Math.round(Number(world.interstellarFleetCompleted) || 0)) + "/" + (Array.isArray(world.interstellarFleets) ? world.interstellarFleets.length : 0) + " build " + Math.max(0, Number(world.interstellarFleetProgress) || 0).toFixed(1) : "") +
       (settlement.isColony ? " sectors " + (Array.isArray(world.empireSectors) ? world.empireSectors.length : 0) + " build " + Math.max(0, Number(world.empireSectorProgress) || 0).toFixed(1) : "") +
+      (settlement.isColony ? " legacy lvl " + Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)) + " progress " + Math.max(0, Number(world.empireLegacyProgress) || 0).toFixed(1) : "") +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

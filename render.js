@@ -412,7 +412,7 @@ function drawEmpireSectors() {
   var centerX = canvas.width - 92;
   var centerY = 84;
   var mapRadius = 88;
-  var galacticEmpire = world.era === "Galactic Empire";
+  var galacticEmpire = world.era === "Galactic Empire" || world.era === "Ascendant Empire";
 
   for (var i = 0; i < world.empireSectors.length; i++) {
     var sector = world.empireSectors[i];
@@ -434,6 +434,31 @@ function drawEmpireSectors() {
     ctx.lineWidth = galacticEmpire ? 2 : 1;
     ctx.stroke();
   }
+}
+
+function drawEmpireLegacy() {
+  if (Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0)) <= 0) {
+    return;
+  }
+
+  var centerX = canvas.width - 92;
+  var centerY = 84;
+  var legacyLevel = Math.max(0, Math.round(Number(world.empireLegacyLevel) || 0));
+  var legacyComplete = Boolean(world.empireLegacyComplete) || world.era === "Ascendant Empire";
+  var ringCount = Math.min(4, legacyLevel + 1);
+
+  for (var i = 0; i < ringCount; i++) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 20 + i * 14, 0, Math.PI * 2);
+    ctx.strokeStyle = legacyComplete ? "rgba(255, 242, 107, 0.42)" : "rgba(112, 240, 208, 0.28)";
+    ctx.lineWidth = legacyComplete ? 2 : 1;
+    ctx.setLineDash(i % 2 === 0 ? [] : [3, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle = legacyComplete ? "#fff26b" : "#70f0d0";
+  ctx.fillRect(centerX - 4, centerY - 4, 8, 8);
 }
 
 function drawInterstellarFleets() {
@@ -515,6 +540,7 @@ window.drawWorld = function() {
   drawProbeMissions();
   drawEmpireSectors();
   drawInterstellarFleets();
+  drawEmpireLegacy();
   drawStarSystems();
   drawInspectSelection();
   drawScanlines();

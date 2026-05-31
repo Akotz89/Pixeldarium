@@ -98,5 +98,10 @@ const world = {
   empireSectorProgress: 0,
   empireSectorReady: false,
   empireSectorCount: 0,
-  lastEmpireSectorTick: 0
+  lastEmpireSectorTick: 0,
+  empireLegacyProgress: 0,
+  empireLegacyLevel: 0,
+  empireLegacyReady: false,
+  empireLegacyComplete: false,
+  lastEmpireLegacyTick: 0
 };
