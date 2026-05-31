@@ -16,6 +16,7 @@ function updateHud() {
     "   MAX U/D: " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
 
   speedLabel.textContent = "Speed: " + world.speed + "x";
+  updateTraitSummary();
   updateInspectPanel();
 }
 
@@ -45,6 +46,49 @@ function formatOrganismTraits(organism) {
     " reproduce " + traits.reproductionEnergy +
     " roam " + traits.movementTendency.toFixed(2)
   );
+}
+
+function getPopulationTraitSummary() {
+  if (world.organisms.length === 0) {
+    return null;
+  }
+
+  var totals = {
+    vision: 0,
+    metabolism: 0,
+    reproductionEnergy: 0,
+    movementTendency: 0
+  };
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var traits = ensureOrganismTraits(world.organisms[i]);
+    totals.vision += traits.vision;
+    totals.metabolism += traits.metabolism;
+    totals.reproductionEnergy += traits.reproductionEnergy;
+    totals.movementTendency += traits.movementTendency;
+  }
+
+  return {
+    vision: totals.vision / world.organisms.length,
+    metabolism: totals.metabolism / world.organisms.length,
+    reproductionEnergy: totals.reproductionEnergy / world.organisms.length,
+    movementTendency: totals.movementTendency / world.organisms.length
+  };
+}
+
+function updateTraitSummary() {
+  var summary = getPopulationTraitSummary();
+
+  if (!summary) {
+    traitSummaryText.textContent = "TRAITS AVG: vision -   metabolism -   reproduce -   roam -";
+    return;
+  }
+
+  traitSummaryText.textContent =
+    "TRAITS AVG: vision " + summary.vision.toFixed(1) +
+    "   metabolism " + summary.metabolism.toFixed(2) +
+    "   reproduce " + summary.reproductionEnergy.toFixed(1) +
+    "   roam " + summary.movementTendency.toFixed(2);
 }
 
 function updateInspectPanel() {

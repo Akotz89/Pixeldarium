@@ -6,6 +6,7 @@ const populationText = document.getElementById("population");
 const foodText = document.getElementById("food");
 const inspectSummaryText = document.getElementById("inspect-summary");
 const inspectDetailsText = document.getElementById("inspect-details");
+const traitSummaryText = document.getElementById("trait-summary");
 
 const pauseButton = document.getElementById("pause-button");
 const stepButton = document.getElementById("step-button");
