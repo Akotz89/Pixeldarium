@@ -1630,6 +1630,7 @@ function applyWorldSaveData(saveData) {
   world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
   world.probeMissions = restoreProbeMissions(saveData.probeMissions);
   world.starSystems = restoreStarSystems(saveData.starSystems);
+  rebuildStarSystemIndexes();
   world.interstellarFleets = restoreInterstellarFleets(saveData.interstellarFleets);
   world.empireSectors = restoreEmpireSectors(saveData.empireSectors);
   world.terrain = saveData.terrain.slice();

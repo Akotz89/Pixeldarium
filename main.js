@@ -71,6 +71,7 @@ function clearWorld() {
   world.lastProbeMissionTick = 0;
   world.nextStarSystemId = 1;
   world.starSystems = [];
+  world.starSystemsById = {};
   world.starMapProgress = 0;
   world.starMapReady = false;
   world.lastStarMapTick = 0;

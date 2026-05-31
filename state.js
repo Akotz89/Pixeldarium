@@ -104,6 +104,7 @@ const world = {
   lastProbeMissionTick: 0,
   nextStarSystemId: 1,
   starSystems: [],
+  starSystemsById: {},
   starMapProgress: 0,
   starMapReady: false,
   lastStarMapTick: 0,
