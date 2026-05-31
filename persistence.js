@@ -120,6 +120,20 @@ function copySettlementForSave(settlement) {
   };
 }
 
+function copySettlementRouteForSave(route) {
+  return {
+    id: route.id,
+    parentSettlementId: route.parentSettlementId,
+    childSettlementId: route.childSettlementId,
+    lineageId: route.lineageId,
+    foundedTick: route.foundedTick,
+    distance: route.distance,
+    foodTransferred: route.foodTransferred,
+    lastTransferTick: route.lastTransferTick,
+    isActive: route.isActive
+  };
+}
+
 function getLineagesForSave() {
   if (typeof refreshLineageRegistry === "function") {
     refreshLineageRegistry();
@@ -149,6 +163,14 @@ function getSettlementsForSave() {
   return world.settlements.map(copySettlementForSave);
 }
 
+function getSettlementRoutesForSave() {
+  if (!Array.isArray(world.settlementRoutes)) {
+    return [];
+  }
+
+  return world.settlementRoutes.map(copySettlementRouteForSave);
+}
+
 function createWorldSaveData() {
   return {
     id: PIXELSIM_SAVE_ID,
@@ -162,6 +184,7 @@ function createWorldSaveData() {
     era: world.era,
     nextLineageId: world.nextLineageId,
     nextSettlementId: world.nextSettlementId,
+    nextSettlementRouteId: world.nextSettlementRouteId,
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,
@@ -216,14 +239,18 @@ function createWorldSaveData() {
       settlementOutpostCooldown: CONFIG.SETTLEMENT_OUTPOST_COOLDOWN,
       settlementOutpostSearchRadius: CONFIG.SETTLEMENT_OUTPOST_SEARCH_RADIUS,
       settlementOutpostMinDistance: CONFIG.SETTLEMENT_OUTPOST_MIN_DISTANCE,
-      settlementOutpostMaxChildren: CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN
+      settlementOutpostMaxChildren: CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN,
+      settlementRouteTransferInterval: CONFIG.SETTLEMENT_ROUTE_TRANSFER_INTERVAL,
+      settlementRouteFoodTransfer: CONFIG.SETTLEMENT_ROUTE_FOOD_TRANSFER,
+      settlementRouteMinParentStoredFood: CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
     organisms: world.organisms.map(copyOrganismForSave),
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
     lineages: getLineagesForSave(),
-    settlements: getSettlementsForSave()
+    settlements: getSettlementsForSave(),
+    settlementRoutes: getSettlementRoutesForSave()
   };
 }
 
@@ -419,6 +446,36 @@ function restoreSettlements(settlements) {
   }
 
   return settlements.map(restoreSettlement);
+}
+
+function restoreSettlementRoute(route) {
+  route = route || {};
+
+  var restoredRoute = {
+    id: Math.max(1, Math.round(restoreNumber(route.id, world.nextSettlementRouteId))),
+    parentSettlementId: Math.max(1, Math.round(restoreNumber(route.parentSettlementId, 1))),
+    childSettlementId: Math.max(1, Math.round(restoreNumber(route.childSettlementId, 1))),
+    lineageId: Math.max(1, Math.round(restoreNumber(route.lineageId, 1))),
+    foundedTick: Math.max(0, Math.round(restoreNumber(route.foundedTick, 0))),
+    distance: Math.max(0, Math.round(restoreNumber(route.distance, 0))),
+    foodTransferred: Math.max(0, Math.round(restoreNumber(route.foodTransferred, 0))),
+    lastTransferTick: Math.max(0, Math.round(restoreNumber(route.lastTransferTick, restoreNumber(route.foundedTick, 0)))),
+    isActive: Boolean(route.isActive)
+  };
+
+  if (restoredRoute.id >= world.nextSettlementRouteId) {
+    world.nextSettlementRouteId = restoredRoute.id + 1;
+  }
+
+  return restoredRoute;
+}
+
+function restoreSettlementRoutes(routes) {
+  if (!Array.isArray(routes)) {
+    return [];
+  }
+
+  return routes.map(restoreSettlementRoute);
 }
 
 function restoreOrganism(organism) {
@@ -704,6 +761,18 @@ function applySaveConfig(saveConfig) {
   if (typeof saveConfig.settlementOutpostMaxChildren === "number") {
     CONFIG.SETTLEMENT_OUTPOST_MAX_CHILDREN = saveConfig.settlementOutpostMaxChildren;
   }
+
+  if (typeof saveConfig.settlementRouteTransferInterval === "number") {
+    CONFIG.SETTLEMENT_ROUTE_TRANSFER_INTERVAL = saveConfig.settlementRouteTransferInterval;
+  }
+
+  if (typeof saveConfig.settlementRouteFoodTransfer === "number") {
+    CONFIG.SETTLEMENT_ROUTE_FOOD_TRANSFER = saveConfig.settlementRouteFoodTransfer;
+  }
+
+  if (typeof saveConfig.settlementRouteMinParentStoredFood === "number") {
+    CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD = saveConfig.settlementRouteMinParentStoredFood;
+  }
 }
 
 function applyWorldSaveData(saveData) {
@@ -715,13 +784,20 @@ function applyWorldSaveData(saveData) {
   world.era = String(saveData.era || "Organisms");
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
+  world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
+  world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
   world.food = saveData.food.map(restoreFood);
   world.organisms = saveData.organisms.map(restoreOrganism);
   refreshLineageRegistry();
+
+  if (typeof ensureOutpostRoutes === "function") {
+    ensureOutpostRoutes();
+  }
+
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
   world.interpolation = 0;
   world.fps = 0;

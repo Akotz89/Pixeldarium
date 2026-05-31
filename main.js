@@ -29,6 +29,8 @@ function clearWorld() {
   world.lineages = {};
   world.nextSettlementId = 1;
   world.settlements = [];
+  world.nextSettlementRouteId = 1;
+  world.settlementRoutes = [];
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

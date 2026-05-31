@@ -52,5 +52,7 @@ const world = {
   nextLineageId: 1,
   lineages: {},
   nextSettlementId: 1,
-  settlements: []
+  settlements: [],
+  nextSettlementRouteId: 1,
+  settlementRoutes: []
 };

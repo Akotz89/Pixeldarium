@@ -133,6 +133,51 @@ function getSettlementDrawSize(settlement) {
   return CONFIG.ORGANISM_DRAW_SIZE * growthScale;
 }
 
+function getRenderedSettlementById(settlementId) {
+  if (!Array.isArray(world.settlements)) {
+    return null;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    if (world.settlements[i].id === settlementId) {
+      return world.settlements[i];
+    }
+  }
+
+  return null;
+}
+
+function drawSettlementRoutes() {
+  if (!Array.isArray(world.settlementRoutes)) {
+    return;
+  }
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    var route = world.settlementRoutes[i];
+    var parentSettlement = getRenderedSettlementById(route.parentSettlementId);
+    var childSettlement = getRenderedSettlementById(route.childSettlementId);
+
+    if (!parentSettlement || !childSettlement) {
+      continue;
+    }
+
+    var parentX = parentSettlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var parentY = parentSettlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var childX = childSettlement.x * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var childY = childSettlement.y * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
+    var lineageColor = getLineageColorById(route.lineageId || parentSettlement.lineageId);
+
+    ctx.beginPath();
+    ctx.moveTo(parentX, parentY);
+    ctx.lineTo(childX, childY);
+    ctx.strokeStyle = getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
+    ctx.lineWidth = route.isActive ? 2 : 1;
+    ctx.setLineDash(route.isActive ? [6, 4] : [2, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
 function drawSettlementInfluence() {
   if (!Array.isArray(world.settlements)) {
     return;
@@ -212,6 +257,7 @@ window.buildTerrainCache = buildTerrainCache;
 window.drawWorld = function() {
   drawTerrain();
   drawSettlementInfluence();
+  drawSettlementRoutes();
   drawFood();
   drawSettlements();
   drawOrganisms();

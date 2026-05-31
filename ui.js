@@ -62,6 +62,39 @@ function getNearestSettlementToTile(tileX, tileY) {
   return nearestSettlement;
 }
 
+function getRouteSummaryForSettlement(settlementId) {
+  var routeCount = 0;
+  var activeRoutes = 0;
+  var foodTransferred = 0;
+
+  if (!Array.isArray(world.settlementRoutes)) {
+    return {
+      routeCount: 0,
+      activeRoutes: 0,
+      foodTransferred: 0
+    };
+  }
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    var route = world.settlementRoutes[i];
+
+    if (route.parentSettlementId === settlementId || route.childSettlementId === settlementId) {
+      routeCount++;
+      foodTransferred += Math.max(0, Number(route.foodTransferred) || 0);
+
+      if (route.isActive) {
+        activeRoutes++;
+      }
+    }
+  }
+
+  return {
+    routeCount: routeCount,
+    activeRoutes: activeRoutes,
+    foodTransferred: foodTransferred
+  };
+}
+
 function formatOrganismTraits(organism) {
   var traits = ensureOrganismTraits(organism);
 
@@ -220,7 +253,20 @@ function getSettlementSummary() {
   var totalClaimedTiles = 0;
   var totalClaimedFood = 0;
   var totalOutposts = 0;
+  var totalRoutes = Array.isArray(world.settlementRoutes) ? world.settlementRoutes.length : 0;
+  var activeRoutes = 0;
+  var totalRouteFoodTransferred = 0;
   var topSettlement = null;
+
+  if (Array.isArray(world.settlementRoutes)) {
+    for (var routeIndex = 0; routeIndex < world.settlementRoutes.length; routeIndex++) {
+      totalRouteFoodTransferred += Math.max(0, Number(world.settlementRoutes[routeIndex].foodTransferred) || 0);
+
+      if (world.settlementRoutes[routeIndex].isActive) {
+        activeRoutes++;
+      }
+    }
+  }
 
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
@@ -260,6 +306,9 @@ function getSettlementSummary() {
     totalClaimedTiles: totalClaimedTiles,
     totalClaimedFood: totalClaimedFood,
     totalOutposts: totalOutposts,
+    totalRoutes: totalRoutes,
+    activeRoutes: activeRoutes,
+    totalRouteFoodTransferred: totalRouteFoodTransferred,
     topSettlement: topSettlement
   };
 }
@@ -275,6 +324,8 @@ function updateSettlementSummary() {
   settlementSummaryText.textContent =
     "SETTLEMENTS: " + summary.active + "/" + summary.total +
     " active   outposts " + summary.totalOutposts +
+    " routes " + summary.activeRoutes + "/" + summary.totalRoutes +
+    " moved " + summary.totalRouteFoodTransferred +
     "   camp pop " + summary.totalPopulation +
     "   nearby " + summary.totalFoodStock +
     "   stored " + summary.totalStoredFood +
@@ -456,10 +507,14 @@ function updateInspectPanel() {
   }
 
   if (settlement) {
+    var settlementRouteSummary = getRouteSummaryForSettlement(settlement.id);
+
     settlementText =
       "S" + settlement.id +
       " lineage L" + settlement.lineageId +
       (settlement.isOutpost ? " outpost parent S" + settlement.parentSettlementId : " root camp") +
+      " routes " + settlementRouteSummary.activeRoutes + "/" + settlementRouteSummary.routeCount +
+      " route food " + settlementRouteSummary.foodTransferred +
       " lvl " + settlement.level +
       " influence " + settlement.influenceRadius +
       " claimed " + settlement.claimedTiles +

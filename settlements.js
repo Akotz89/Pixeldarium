@@ -6,6 +6,14 @@ function ensureSettlementState() {
   if (typeof world.nextSettlementId !== "number" || world.nextSettlementId < 1) {
     world.nextSettlementId = 1;
   }
+
+  if (!Array.isArray(world.settlementRoutes)) {
+    world.settlementRoutes = [];
+  }
+
+  if (typeof world.nextSettlementRouteId !== "number" || world.nextSettlementRouteId < 1) {
+    world.nextSettlementRouteId = 1;
+  }
 }
 
 function allocateSettlementId() {
@@ -14,6 +22,26 @@ function allocateSettlementId() {
   var settlementId = world.nextSettlementId;
   world.nextSettlementId++;
   return settlementId;
+}
+
+function allocateSettlementRouteId() {
+  ensureSettlementState();
+
+  var routeId = world.nextSettlementRouteId;
+  world.nextSettlementRouteId++;
+  return routeId;
+}
+
+function getSettlementById(settlementId) {
+  ensureSettlementState();
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    if (world.settlements[i].id === settlementId) {
+      return world.settlements[i];
+    }
+  }
+
+  return null;
 }
 
 function getSettlementForLineage(lineageId) {
@@ -69,6 +97,10 @@ function getLineageCenter(organisms) {
 
 function getDistanceToSettlement(settlement, x, y) {
   return Math.abs(settlement.x - x) + Math.abs(settlement.y - y);
+}
+
+function getDistanceBetweenSettlements(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 
 function restoreSettlementGrowthNumber(value, fallback) {
@@ -246,6 +278,23 @@ function countChildOutposts(settlement) {
   return childOutposts;
 }
 
+function countRoutesForSettlement(settlementId) {
+  ensureSettlementState();
+
+  var routeCount = 0;
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    if (
+      world.settlementRoutes[i].parentSettlementId === settlementId ||
+      world.settlementRoutes[i].childSettlementId === settlementId
+    ) {
+      routeCount++;
+    }
+  }
+
+  return routeCount;
+}
+
 function makeSettlement(lineage, organisms) {
   var center = getLineageCenter(organisms);
   return makeSettlementAt(lineage.id, center.x, center.y, {
@@ -414,6 +463,123 @@ function updateSettlementOutposts() {
   }
 }
 
+function getSettlementRoute(parentSettlementId, childSettlementId) {
+  ensureSettlementState();
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    var route = world.settlementRoutes[i];
+
+    if (route.parentSettlementId === parentSettlementId && route.childSettlementId === childSettlementId) {
+      return route;
+    }
+  }
+
+  return null;
+}
+
+function makeSettlementRoute(parentSettlement, childSettlement) {
+  return {
+    id: allocateSettlementRouteId(),
+    parentSettlementId: parentSettlement.id,
+    childSettlementId: childSettlement.id,
+    lineageId: parentSettlement.lineageId,
+    foundedTick: world.tick,
+    distance: getDistanceBetweenSettlements(parentSettlement, childSettlement),
+    foodTransferred: 0,
+    lastTransferTick: world.tick,
+    isActive: true
+  };
+}
+
+function ensureSettlementRoute(parentSettlement, childSettlement) {
+  var route = getSettlementRoute(parentSettlement.id, childSettlement.id);
+
+  if (!route) {
+    route = makeSettlementRoute(parentSettlement, childSettlement);
+    world.settlementRoutes.push(route);
+  }
+
+  return route;
+}
+
+function normalizeSettlementRoute(route) {
+  route.parentSettlementId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.parentSettlementId, 1)));
+  route.childSettlementId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.childSettlementId, 1)));
+  route.lineageId = Math.max(1, Math.round(restoreSettlementGrowthNumber(route.lineageId, 1)));
+  route.foundedTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.foundedTick, 0)));
+  route.distance = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.distance, 0)));
+  route.foodTransferred = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.foodTransferred, 0)));
+  route.lastTransferTick = Math.max(0, Math.round(restoreSettlementGrowthNumber(route.lastTransferTick, route.foundedTick)));
+  route.isActive = Boolean(route.isActive);
+}
+
+function transferSettlementRouteFood(route, parentSettlement, childSettlement) {
+  var transferInterval = Math.max(1, Math.round(Number(CONFIG.SETTLEMENT_ROUTE_TRANSFER_INTERVAL) || 1));
+
+  if (world.tick - route.lastTransferTick < transferInterval) {
+    return 0;
+  }
+
+  var minStoredFood = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_ROUTE_MIN_PARENT_STORED_FOOD) || 0));
+  var transferLimit = Math.max(0, Math.round(Number(CONFIG.SETTLEMENT_ROUTE_FOOD_TRANSFER) || 0));
+  var transferableFood = Math.max(0, parentSettlement.storedFood - minStoredFood);
+  var transferAmount = Math.min(transferLimit, transferableFood);
+
+  route.lastTransferTick = world.tick;
+
+  if (transferAmount <= 0) {
+    return 0;
+  }
+
+  parentSettlement.storedFood -= transferAmount;
+  childSettlement.storedFood += transferAmount;
+  route.foodTransferred += transferAmount;
+  return transferAmount;
+}
+
+function updateSettlementRoute(route) {
+  normalizeSettlementRoute(route);
+
+  var parentSettlement = getSettlementById(route.parentSettlementId);
+  var childSettlement = getSettlementById(route.childSettlementId);
+
+  route.isActive = Boolean(parentSettlement && childSettlement);
+
+  if (!route.isActive) {
+    return;
+  }
+
+  route.lineageId = parentSettlement.lineageId;
+  route.distance = getDistanceBetweenSettlements(parentSettlement, childSettlement);
+  transferSettlementRouteFood(route, parentSettlement, childSettlement);
+}
+
+function ensureOutpostRoutes() {
+  ensureSettlementState();
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+
+    if (!settlement.isOutpost || settlement.parentSettlementId <= 0) {
+      continue;
+    }
+
+    var parentSettlement = getSettlementById(settlement.parentSettlementId);
+
+    if (parentSettlement) {
+      ensureSettlementRoute(parentSettlement, settlement);
+    }
+  }
+}
+
+function updateSettlementRoutes() {
+  ensureOutpostRoutes();
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    updateSettlementRoute(world.settlementRoutes[i]);
+  }
+}
+
 function updateSettlements() {
   ensureSettlementState();
 
@@ -424,6 +590,7 @@ function updateSettlements() {
   }
 
   updateSettlementOutposts();
+  updateSettlementRoutes();
 
   var lineages = world.lineages || {};
 
