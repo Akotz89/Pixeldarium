@@ -475,16 +475,24 @@ function getEcosystemTrend(summary) {
       energyDelta: 0,
       foodDelta: 0,
       stabilityDelta: 0,
-      foodNetDelta: 0
+      foodNetDelta: 0,
+      foodRunwayDelta: 0
     };
   }
+
+  var currentRunway = Number(summary.foodRunwayTicks);
+  var sampleRunway = Number(sample.foodRunwayTicks);
+  var foodRunwayDelta = currentRunway >= 0 && sampleRunway >= 0
+    ? currentRunway - sampleRunway
+    : 0;
 
   return {
     populationDelta: summary.population - sample.population,
     energyDelta: summary.averageEnergy - sample.averageEnergy,
     foodDelta: summary.food - sample.food,
     stabilityDelta: summary.stabilityScore - (Number(sample.stabilityScore) || 0),
-    foodNetDelta: summary.foodNetThisTick - (Number(sample.foodNetThisTick) || 0)
+    foodNetDelta: summary.foodNetThisTick - (Number(sample.foodNetThisTick) || 0),
+    foodRunwayDelta: foodRunwayDelta
   };
 }
 
@@ -812,6 +820,7 @@ function makeEcosystemHistorySample(summary) {
     populationBalance: summary.populationBalance,
     resourceBalance: summary.resourceBalance,
     foodNetThisTick: summary.foodNetThisTick,
+    foodRunwayTicks: summary.foodRunwayTicks,
     pressure: summary.pressure,
     stabilityScore: summary.stabilityScore
   };
@@ -1025,6 +1034,22 @@ function refreshSimulationAlerts() {
       "Flow worsening",
       formatEcosystemTrendDelta(ecosystemSummary.trend, "foodNetDelta") + " food net",
       27
+    );
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRunwayTicks >= 0 &&
+    ecosystemSummary.foodRunwayTicks <= 40 &&
+    ecosystemSummary.trend &&
+    ecosystemSummary.trend.foodRunwayDelta <= -8
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Runway shrinking",
+      formatEcosystemTrendDelta(ecosystemSummary.trend, "foodRunwayDelta") + " ticks",
+      25
     );
   }
 
