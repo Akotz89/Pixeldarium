@@ -156,6 +156,52 @@ function getSettlementSummary() {
   return world.settlementSummary;
 }
 
+function escapeSummaryText(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function getProgressRatio(currentValue, targetValue) {
+  var target = Math.max(1, Number(targetValue) || 1);
+  return clamp((Number(currentValue) || 0) / target, 0, 1);
+}
+
+function makeSummaryChip(label, value) {
+  return (
+    "<span class=\"summary-chip\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span class=\"summary-chip-value\">" + escapeSummaryText(value) + "</span>" +
+    "</span>"
+  );
+}
+
+function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {
+  var ratio = getProgressRatio(currentValue, targetValue);
+  var percent = Math.round(ratio * 100);
+  var className = "summary-chip summary-progress-chip";
+
+  if (isReady) {
+    className += " ready";
+  }
+
+  if (isComplete) {
+    className += " complete";
+  }
+
+  return (
+    "<span class=\"" + className + "\">" +
+    "<span class=\"summary-chip-top\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span class=\"summary-chip-value\">" + escapeSummaryText(value) + "</span>" +
+    "</span>" +
+    "<span class=\"summary-progress-track\"><span style=\"width: " + percent + "%\"></span></span>" +
+    "</span>"
+  );
+}
+
 function updateSettlementSummary() {
   var summary = getSettlementSummary();
 
@@ -175,36 +221,34 @@ function updateSettlementSummary() {
 
   var legacyState = summary.empireLegacyComplete ? "complete" : (summary.empireLegacyReady ? "ascending" : "waiting");
   var chips = [
-    ["Settlements", summary.active + "/" + summary.total],
-    ["Outposts", summary.totalOutposts],
-    ["Colonies", summary.totalColonies],
-    ["Routes", summary.activeRoutes + "/" + summary.totalRoutes],
-    ["Moved", summary.totalRouteFoodTransferred],
-    ["Network", summary.colonyNetworkScore],
-    ["Space", summary.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD],
-    ["Launches", summary.orbitalLaunches],
-    ["Orbit", summary.orbitalAssets + " / " + summary.orbitalInfrastructureScore],
-    ["Planets", summary.planetaryBodies + " / " + summary.planetarySurveyProgress.toFixed(1)],
-    ["Probes", summary.completedProbeMissions + "/" + summary.probeMissions],
-    ["Stars", summary.starSystems],
-    ["Claims", summary.galacticClaimedSystems],
-    ["Fleets", summary.interstellarFleetCompleted + "/" + summary.interstellarFleets],
-    ["Sectors", summary.empireSectors],
-    ["Legacy", "L" + summary.empireLegacyLevel + " " + legacyState],
-    ["Camp Pop", summary.totalPopulation],
-    ["Stored", summary.totalStoredFood],
-    ["Claimed", summary.totalClaimedTiles],
-    ["Top", "S" + summary.topSettlement.id + " L" + summary.topSettlement.lineageId],
-    ["Top Level", summary.topSettlement.level + " / " + summary.topSettlement.influenceRadius],
-    ["Top Type", topType],
-    ["Top Pop", summary.topSettlement.population],
-    ["Top Dev", summary.topSettlement.development.toFixed(1)]
+    makeSummaryChip("Settlements", summary.active + "/" + summary.total),
+    makeSummaryChip("Outposts", summary.totalOutposts),
+    makeSummaryChip("Colonies", summary.totalColonies),
+    makeSummaryChip("Routes", summary.activeRoutes + "/" + summary.totalRoutes),
+    makeSummaryChip("Moved", summary.totalRouteFoodTransferred),
+    makeSummaryChip("Network", summary.colonyNetworkScore),
+    makeSummaryProgressChip("Space", summary.spaceProgramProgress, CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD, summary.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD, summary.spaceProgramReady, summary.orbitalLaunches > 0),
+    makeSummaryChip("Launches", summary.orbitalLaunches),
+    makeSummaryChip("Orbit", summary.orbitalAssets + " / " + summary.orbitalInfrastructureScore),
+    makeSummaryProgressChip("Planets", summary.planetarySurveyProgress, CONFIG.PLANETARY_DISCOVERY_THRESHOLD, summary.planetaryBodies + " / " + summary.planetarySurveyProgress.toFixed(1), summary.planetarySurveyReady, summary.planetaryBodies > 0),
+    makeSummaryProgressChip("Probes", summary.probeMissionProgress, CONFIG.PROBE_MISSION_THRESHOLD, summary.completedProbeMissions + "/" + summary.probeMissions, summary.probeMissionReady, summary.completedProbeMissions > 0),
+    makeSummaryProgressChip("Stars", summary.starMapProgress, CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD, summary.starSystems + " / " + summary.starMapProgress.toFixed(1), summary.starMapReady, summary.starSystems > 0),
+    makeSummaryProgressChip("Claims", summary.galacticInfluenceProgress, CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD, summary.galacticClaimedSystems + " / " + summary.galacticInfluenceProgress.toFixed(1), summary.galacticInfluenceReady, summary.galacticClaimedSystems > 0),
+    makeSummaryProgressChip("Fleets", summary.interstellarFleetProgress, CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD, summary.interstellarFleetCompleted + "/" + summary.interstellarFleets, summary.interstellarFleetReady, summary.interstellarFleetCompleted > 0),
+    makeSummaryProgressChip("Sectors", summary.empireSectorProgress, CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD, summary.empireSectors + " / " + summary.empireSectorProgress.toFixed(1), summary.empireSectorReady, summary.empireSectors > 0),
+    makeSummaryProgressChip("Legacy", summary.empireLegacyProgress, CONFIG.EMPIRE_LEGACY_THRESHOLD, "L" + summary.empireLegacyLevel + " " + legacyState, summary.empireLegacyReady, summary.empireLegacyComplete),
+    makeSummaryChip("Camp Pop", summary.totalPopulation),
+    makeSummaryChip("Stored", summary.totalStoredFood),
+    makeSummaryChip("Claimed", summary.totalClaimedTiles),
+    makeSummaryChip("Top", "S" + summary.topSettlement.id + " L" + summary.topSettlement.lineageId),
+    makeSummaryChip("Top Level", summary.topSettlement.level + " / " + summary.topSettlement.influenceRadius),
+    makeSummaryChip("Top Type", topType),
+    makeSummaryChip("Top Pop", summary.topSettlement.population),
+    makeSummaryChip("Top Dev", summary.topSettlement.development.toFixed(1))
   ];
 
   setElementClass(settlementSummaryText, "summary-grid");
-  setElementHtml(settlementSummaryText, chips.map(function(chip) {
-    return "<span class=\"summary-chip\"><b>" + chip[0] + "</b><span>" + chip[1] + "</span></span>";
-  }).join(""));
+  setElementHtml(settlementSummaryText, chips.join(""));
 }
 
 function makeTraitHistorySample(summary) {
