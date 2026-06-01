@@ -656,6 +656,46 @@ assert.ok(ridgeAdjustedMaterial.signals.surfaceRoughness > baseGrassMaterial.sig
 assert.strictEqual(reefAdjustedMaterial.surface, "open water", "reef influence should keep ocean sample shallow/open");
 assert.ok(reefAdjustedMaterial.signals.shallowWater > deepOceanMaterial.signals.shallowWater, "reef influence should increase shallow-water signal");
 
+var streamReliefDelta = getPlanetGroundFeatureReliefDeltaMeters({
+  type: "stream",
+  influence: 1
+}, "grassland");
+var ridgeReliefDelta = getPlanetGroundFeatureReliefDeltaMeters({
+  type: "ridge",
+  influence: 1
+}, "grassland");
+var wetlandReliefDelta = getPlanetGroundFeatureReliefDeltaMeters({
+  type: "wetland",
+  influence: 1
+}, "grassland");
+var reefReliefDelta = getPlanetGroundFeatureReliefDeltaMeters({
+  type: "reef",
+  influence: 1
+}, "ocean");
+var noReliefDelta = getPlanetGroundFeatureReliefDeltaMeters(null, "grassland");
+var broadReliefAdjustment = getPlanetSurfaceFeatureReliefAdjustment(34.2117, -77.7265, 100, "grassland", {
+  type: "stream",
+  influence: 1
+});
+var nearReliefAdjustment = getPlanetSurfaceFeatureReliefAdjustment(34.2117, -77.7265, 1, "grassland", {
+  type: "stream",
+  influence: 1
+});
+var weakRidgeReliefDelta = getPlanetGroundFeatureReliefDeltaMeters({
+  type: "ridge",
+  influence: 0.25
+}, "grassland");
+
+assert.ok(streamReliefDelta.heightDeltaMeters < -2, "stream relief should carve local terrain down");
+assert.ok(ridgeReliefDelta.heightDeltaMeters > 5, "ridge relief should lift local terrain");
+assert.ok(ridgeReliefDelta.roughnessBoost > streamReliefDelta.roughnessBoost, "ridge relief should add more roughness than stream relief");
+assert.ok(wetlandReliefDelta.flattenAmount > ridgeReliefDelta.flattenAmount, "wetlands should flatten local relief");
+assert.ok(reefReliefDelta.heightDeltaMeters > 7, "reef relief should make ocean floor shallower");
+assert.strictEqual(noReliefDelta.heightDeltaMeters, 0, "missing feature should not change relief");
+assert.strictEqual(broadReliefAdjustment.heightDeltaMeters, 0, "feature relief should be gated off outside close zoom");
+assert.ok(nearReliefAdjustment.heightDeltaMeters < 0, "feature relief should apply at meter scale");
+assert.ok(weakRidgeReliefDelta.heightDeltaMeters < ridgeReliefDelta.heightDeltaMeters, "feature relief should scale with influence");
+
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
   latitude: 34.2117,
@@ -988,6 +1028,31 @@ assert.ok(
   (outerFeatureInfluence ? outerFeatureInfluence.influence : 0) < centerFeatureInfluence.influence,
   "feature influence should fall off with distance"
 );
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex,
+  latitude: lineMidpoint.latitude,
+  longitude: lineMidpoint.longitude
+};
+
+var lineReliefTile = Object.assign({}, getPlanetTile(getTileFromLatLon(lineMidpoint.latitude, lineMidpoint.longitude).x, getTileFromLatLon(lineMidpoint.latitude, lineMidpoint.longitude).y), {
+  biome: lineFeature.type === "reef" || lineFeature.type === "shoal" ? "ocean" : "grassland",
+  elevation: 0.6,
+  moisture: 1.5,
+  riverStrength: lineFeature.type === "stream" ? 1 : 0,
+  roughness: lineFeature.type === "ridge" || lineFeature.type === "rockfield" ? 1 : 0.3,
+  ridgeStrength: lineFeature.type === "ridge" || lineFeature.type === "rockfield" ? 1 : 0.2,
+  highlandLift: lineFeature.type === "ridge" || lineFeature.type === "rockfield" ? 1.1 : 0
+});
+var lineBaseHeight = getPlanetSurfaceHeightMeters(lineMidpoint.latitude, lineMidpoint.longitude, lineReliefTile, 100);
+var lineFeatureHeight = getPlanetSurfaceHeightMeters(lineMidpoint.latitude, lineMidpoint.longitude, lineReliefTile, 1);
+var lineFeatureRelief = getPlanetSurfaceRelief(lineMidpoint.latitude, lineMidpoint.longitude, lineReliefTile);
+
+assert.ok(lineFeatureRelief.featureRelief, "surface relief should expose feature relief adjustment");
+assert.strictEqual(lineFeatureRelief.featureRelief.groundFeature.id, lineFeature.id, "surface relief should use nearest feature");
+assert.ok(Math.abs(lineFeatureHeight - lineBaseHeight) > 0.1, "feature relief should change local height");
+assertNear(lineFeatureRelief.heightMeters, lineFeatureHeight, 1e-9, "surface relief center height should use feature-aware height");
+assert.ok(Number.isFinite(lineFeatureRelief.hillshade), "feature-aware relief should keep hillshade finite");
 
 var rectFeature = groundFeatures.filter(function(feature) { return feature.shape === "rect"; })[0];
 var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);

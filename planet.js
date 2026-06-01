@@ -1844,41 +1844,170 @@ function getBiomeBaseHeightMeters(biome, tile) {
   return 260 + tileElevation * 950;
 }
 
-function getPlanetSurfaceHeightMeters(latitude, longitude, tile) {
+function getPlanetGroundFeatureReliefDeltaMeters(groundFeature, biome) {
+  var type = groundFeature && groundFeature.type ? groundFeature.type : "";
+  var influence = groundFeature ? clamp(Number(groundFeature.influence) || 0, 0, 1) : 0;
+  var isOcean = biome === "ocean";
+
+  if (!groundFeature || influence <= 0) {
+    return {
+      heightDeltaMeters: 0,
+      roughnessBoost: 0,
+      flattenAmount: 0,
+      influence: 0,
+      type: ""
+    };
+  }
+
+  if (type === "stream") {
+    return {
+      heightDeltaMeters: isOcean ? 0 : -clamp(0.75 + influence * 2.35, 0, 3.1),
+      roughnessBoost: clamp(influence * 0.08, 0, 0.12),
+      flattenAmount: clamp(0.18 + influence * 0.32, 0, 0.56),
+      influence: influence,
+      type: type
+    };
+  }
+
+  if (type === "wetland" || type === "meadow" || type === "clearing") {
+    return {
+      heightDeltaMeters: isOcean ? 0 : -clamp(0.18 + influence * 0.62, 0, 0.9),
+      roughnessBoost: 0,
+      flattenAmount: clamp(0.28 + influence * 0.38, 0, 0.72),
+      influence: influence,
+      type: type
+    };
+  }
+
+  if (type === "swale") {
+    return {
+      heightDeltaMeters: isOcean ? 0 : -clamp(0.35 + influence * 1.05, 0, 1.55),
+      roughnessBoost: clamp(influence * 0.04, 0, 0.08),
+      flattenAmount: clamp(0.18 + influence * 0.28, 0, 0.50),
+      influence: influence,
+      type: type
+    };
+  }
+
+  if (type === "ridge") {
+    return {
+      heightDeltaMeters: clamp(1.2 + influence * 4.8, 0, 6.2),
+      roughnessBoost: clamp(0.22 + influence * 0.48, 0, 0.74),
+      flattenAmount: 0,
+      influence: influence,
+      type: type
+    };
+  }
+
+  if (type === "rockfield") {
+    return {
+      heightDeltaMeters: clamp(0.55 + influence * 2.25, 0, 3.0),
+      roughnessBoost: clamp(0.28 + influence * 0.42, 0, 0.76),
+      flattenAmount: 0,
+      influence: influence,
+      type: type
+    };
+  }
+
+  if (type === "reef" || type === "shoal") {
+    return {
+      heightDeltaMeters: isOcean
+        ? clamp(2.0 + influence * (type === "reef" ? 7.0 : 4.5), 0, type === "reef" ? 9.4 : 6.8)
+        : 0,
+      roughnessBoost: type === "reef" ? clamp(0.18 + influence * 0.32, 0, 0.54) : clamp(influence * 0.12, 0, 0.18),
+      flattenAmount: type === "shoal" ? clamp(0.24 + influence * 0.30, 0, 0.58) : 0,
+      influence: influence,
+      type: type
+    };
+  }
+
+  return {
+    heightDeltaMeters: 0,
+    roughnessBoost: 0,
+    flattenAmount: 0,
+    influence: influence,
+    type: type
+  };
+}
+
+function getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, sampleMeters, biome, groundFeature) {
+  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || getPlanetViewScale().metersPerSample);
+  var feature = groundFeature || null;
+  var delta;
+
+  if (normalizedSampleMeters > 25) {
+    return {
+      heightDeltaMeters: 0,
+      roughnessBoost: 0,
+      flattenAmount: 0,
+      influence: 0,
+      type: "",
+      groundFeature: null
+    };
+  }
+
+  if (!feature) {
+    feature = getPlanetSurfaceGroundFeatureInfluence(latitude, longitude, normalizedSampleMeters);
+  }
+
+  delta = getPlanetGroundFeatureReliefDeltaMeters(feature, biome);
+
+  return {
+    heightDeltaMeters: delta.heightDeltaMeters,
+    roughnessBoost: delta.roughnessBoost,
+    flattenAmount: delta.flattenAmount,
+    influence: delta.influence,
+    type: delta.type,
+    groundFeature: feature || null
+  };
+}
+
+function getPlanetSurfaceHeightMeters(latitude, longitude, tile, sampleMeters, featureReliefOverride) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
+  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || lod.sampleMeters);
+  var featureRelief = featureReliefOverride ||
+    getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, normalizedSampleMeters, biome);
   var tileRidge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var tileHighlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) : 0, 0, 1.4);
-  var reliefRangeMeters = getBiomeReliefRangeMeters(biome) * (1 + tileRidge * 0.44 + tileRoughness * 0.16);
+  var featureRoughnessBoost = clamp(Number(featureRelief.roughnessBoost) || 0, 0, 1);
+  var featureFlattenAmount = clamp(Number(featureRelief.flattenAmount) || 0, 0, 1);
+  var reliefRangeMeters = getBiomeReliefRangeMeters(biome) *
+    (1 + tileRidge * 0.44 + tileRoughness * 0.16 + featureRoughnessBoost * 0.22) *
+    (1 - featureFlattenAmount * 0.36);
   var landformMeters = (lod.elevation - 0.5) * reliefRangeMeters;
   var roughMeters = (lod.ground - 0.5) * reliefRangeMeters * 0.22;
   var microMeters = (lod.micro - 0.5) * reliefRangeMeters * 0.06;
   var highlandMeters = biome === "ocean" ? 0 : tileHighlandLift * 240;
+  var featureHeightDeltaMeters = Number(featureRelief.heightDeltaMeters) || 0;
 
   if (biome === "ocean") {
     return getBiomeBaseHeightMeters(biome, tile) +
       (lod.landform - 0.5) * 520 +
       roughMeters * 0.34 +
-      microMeters * 0.18;
+      microMeters * 0.18 +
+      featureHeightDeltaMeters;
   }
 
-  return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + landformMeters + roughMeters + microMeters;
+  return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + landformMeters + roughMeters + microMeters + featureHeightDeltaMeters;
 }
 
 function getPlanetSurfaceRelief(latitude, longitude, tile) {
   var scale = getPlanetViewScale();
   var sampleMeters = Math.max(1, scale.metersPerSample);
   var sampleKm = sampleMeters / 1000;
-  var centerHeight = getPlanetSurfaceHeightMeters(latitude, longitude, tile);
+  var biome = tile ? tile.biome : "unknown";
+  var centerFeatureRelief = getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, sampleMeters, biome);
+  var centerHeight = getPlanetSurfaceHeightMeters(latitude, longitude, tile, sampleMeters, centerFeatureRelief);
   var east = getLatLonOffsetFromPoint(latitude, longitude, sampleKm, 0);
   var west = getLatLonOffsetFromPoint(latitude, longitude, -sampleKm, 0);
   var north = getLatLonOffsetFromPoint(latitude, longitude, 0, sampleKm);
   var south = getLatLonOffsetFromPoint(latitude, longitude, 0, -sampleKm);
-  var heightEast = getPlanetSurfaceHeightMeters(east.latitude, east.longitude, tile);
-  var heightWest = getPlanetSurfaceHeightMeters(west.latitude, west.longitude, tile);
-  var heightNorth = getPlanetSurfaceHeightMeters(north.latitude, north.longitude, tile);
-  var heightSouth = getPlanetSurfaceHeightMeters(south.latitude, south.longitude, tile);
+  var heightEast = getPlanetSurfaceHeightMeters(east.latitude, east.longitude, tile, sampleMeters);
+  var heightWest = getPlanetSurfaceHeightMeters(west.latitude, west.longitude, tile, sampleMeters);
+  var heightNorth = getPlanetSurfaceHeightMeters(north.latitude, north.longitude, tile, sampleMeters);
+  var heightSouth = getPlanetSurfaceHeightMeters(south.latitude, south.longitude, tile, sampleMeters);
   var dzdx = (heightEast - heightWest) / Math.max(1, sampleMeters * 2);
   var dzdy = (heightNorth - heightSouth) / Math.max(1, sampleMeters * 2);
   var normalX = -dzdx;
@@ -1903,7 +2032,8 @@ function getPlanetSurfaceRelief(latitude, longitude, tile) {
     aspect: aspect,
     hillshade: hillshade,
     dzdx: dzdx,
-    dzdy: dzdy
+    dzdy: dzdy,
+    featureRelief: centerFeatureRelief
   };
 }
 
@@ -2161,6 +2291,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile) {
     slope: relief.slope,
     aspect: relief.aspect,
     hillshade: relief.hillshade,
+    featureRelief: relief.featureRelief,
     marker: marker,
     meterNoise: lod.meter,
     microNoise: lod.micro,
