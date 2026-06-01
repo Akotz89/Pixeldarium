@@ -83,6 +83,16 @@ function colorLuminance(hexColor) {
   return rgb.red * 0.2126 + rgb.green * 0.7152 + rgb.blue * 0.0722;
 }
 
+function rgbDistance(from, to) {
+  return Math.abs(from.red - to.red) + Math.abs(from.green - to.green) + Math.abs(from.blue - to.blue);
+}
+
+function assertRgbBounds(rgb, label) {
+  assert.ok(rgb.red >= 0 && rgb.red <= 255, label + " red should be bounded");
+  assert.ok(rgb.green >= 0 && rgb.green <= 255, label + " green should be bounded");
+  assert.ok(rgb.blue >= 0 && rgb.blue <= 255, label + " blue should be bounded");
+}
+
 CONFIG.PLANET_RENDER_MODE = "globe";
 
 var zoomLevels = getPlanetZoomLevels();
@@ -271,6 +281,24 @@ var globeSurfaceRgb = getPlanetSurfaceRgbAtLatLon(0, 0);
 assert.ok(globeSurfaceRgb.red >= 0 && globeSurfaceRgb.red <= 255, "globe surface red should be bounded");
 assert.ok(globeSurfaceRgb.green >= 0 && globeSurfaceRgb.green <= 255, "globe surface green should be bounded");
 assert.ok(globeSurfaceRgb.blue >= 0 && globeSurfaceRgb.blue <= 255, "globe surface blue should be bounded");
+
+fillPlanetTiles("grassland");
+var subTileA = getPlanetImageryRgbAtLatLon(12.1, 20.1);
+var repeatedSubTileA = getPlanetImageryRgbAtLatLon(12.1, 20.1);
+var subTileB = getPlanetImageryRgbAtLatLon(12.2, 20.2);
+var subTileTileA = getTileFromLatLon(12.1, 20.1);
+var subTileTileB = getTileFromLatLon(12.2, 20.2);
+
+assert.deepStrictEqual(subTileTileB, subTileTileA, "sub-tile imagery sample points should share a coarse tile");
+assert.deepStrictEqual(repeatedSubTileA, subTileA, "sub-tile imagery should be deterministic");
+assertRgbBounds(subTileA, "sub-tile imagery");
+assertRgbBounds(getPlanetImageryRgbAtLatLon(0, 0), "equator imagery");
+assert.ok(rgbDistance(subTileA, subTileB) > 1, "sub-tile imagery should vary within a coarse tile");
+
+["ocean", "forest", "desert", "tundra", "ice"].forEach(function(biome) {
+  fillPlanetTiles(biome);
+  assertRgbBounds(getPlanetImageryRgbAtLatLon(20, 20), biome + " imagery");
+});
 
 var deepWaterSurfaceColor = getPlanetSurfaceColor({
   biome: "ocean",

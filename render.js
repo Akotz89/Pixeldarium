@@ -264,6 +264,46 @@ function mixRgb(from, to, amount) {
   };
 }
 
+function clampRgb(rgb) {
+  return {
+    red: clamp(rgb && Number.isFinite(Number(rgb.red)) ? Number(rgb.red) : 0, 0, 255),
+    green: clamp(rgb && Number.isFinite(Number(rgb.green)) ? Number(rgb.green) : 0, 0, 255),
+    blue: clamp(rgb && Number.isFinite(Number(rgb.blue)) ? Number(rgb.blue) : 0, 0, 255)
+  };
+}
+
+function blendRgbWithHex(rgb, hexColor, amount) {
+  return mixRgb(clampRgb(rgb), getRgbFromHex(hexColor), amount);
+}
+
+function shadeRgb(rgb, shade) {
+  var color = clampRgb(rgb);
+  var normalizedShade = clamp(Number(shade) || 0, 0, 1);
+  var target = normalizedShade > 0.5 ? 255 : 0;
+  var amount = Math.abs(normalizedShade - 0.5) * 0.30;
+
+  return {
+    red: mixChannel(color.red, target, amount),
+    green: mixChannel(color.green, target, amount),
+    blue: mixChannel(color.blue, target, amount)
+  };
+}
+
+function getPlanetVisualSeedOffset() {
+  return typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
+}
+
+function getPlanetMeterNoise(eastMeters, northMeters, patchMeters, seedOffset) {
+  var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
+  var normalizedSeed = Math.round(Number(seedOffset) || 0) + getPlanetVisualSeedOffset();
+
+  return getDeterministicUnitNoise(
+    Math.floor((Number(eastMeters) || 0) / normalizedPatchMeters),
+    Math.floor((Number(northMeters) || 0) / normalizedPatchMeters),
+    Math.round(normalizedPatchMeters) + normalizedSeed
+  );
+}
+
 function getPlanetTileRgb(tileX, tileY, tileRgbCache) {
   var x = getWrappedWorldX(tileX);
   var y = getClampedWorldY(tileY);
@@ -297,6 +337,60 @@ function getPlanetSurfaceRgbAtLatLon(latitude, longitude, tileRgbCache) {
   );
 
   return mixRgb(top, bottom, yAmount);
+}
+
+function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var tilePosition = getTileFromLatLon(normalizedLatitude, normalizedLongitude);
+  var tile = getPlanetTile(tilePosition.x, tilePosition.y) || {};
+  var biome = tile.biome || "unknown";
+  var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
+  var broad = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 280000, 17);
+  var regional = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 90000, 31);
+  var local = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 28000, 47);
+  var fine = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 9000, 59);
+  var color = clampRgb(getPlanetSurfaceRgbAtLatLon(normalizedLatitude, normalizedLongitude, tileRgbCache));
+  var elevationValue = Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
+  var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
+  var moisture = clamp(Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 1.8 : 0.45, 0, 1);
+  var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
+  var polar = clamp((Math.abs(normalizedLatitude) - 54) / 32, 0, 1);
+  var coast = clamp(Number(tile.coastFactor) || 0, 0, 1);
+  var shallowWater = clamp(Number(tile.shallowWater) || 0, 0, 1);
+  var river = clamp(Number(tile.riverStrength) || 0, 0, 1);
+  var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.035;
+
+  if (biome === "ocean") {
+    var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
+    color = blendRgbWithHex(color, "#02132c", clamp((1 - shallowWater) * 0.10 + (1 - elevation) * 0.06, 0, 0.18));
+    color = blendRgbWithHex(color, "#14708d", clamp(shallowWater * 0.22 + coast * 0.10, 0, 0.28));
+    color = blendRgbWithHex(color, "#a5d9c7", clamp(coast * 0.10, 0, 0.16));
+    return clampRgb(shadeRgb(color, clamp(0.50 + texture * 0.72 + current * 0.035, 0, 1)));
+  }
+
+  if (biome === "forest") {
+    color = blendRgbWithHex(color, "#092717", clamp(0.06 + moisture * 0.10 + local * 0.05, 0, 0.18));
+    color = blendRgbWithHex(color, "#2d6532", clamp(regional * moisture * 0.08, 0, 0.12));
+  } else if (biome === "grassland") {
+    color = blendRgbWithHex(color, "#789144", clamp(0.05 + moisture * 0.08 + regional * 0.04, 0, 0.14));
+    color = blendRgbWithHex(color, "#9a843f", clamp((1 - moisture) * 0.08 + broad * 0.04, 0, 0.14));
+  } else if (biome === "desert") {
+    var dune = Math.sin((surfaceMeters.eastMeters + surfaceMeters.northMeters * 0.48) / 85000) * 0.5 + 0.5;
+    color = blendRgbWithHex(color, "#c9ab5d", clamp(0.08 + dune * 0.10 + fine * 0.04, 0, 0.20));
+    color = blendRgbWithHex(color, "#836b35", clamp((1 - dune) * 0.06 + regional * 0.04, 0, 0.14));
+  } else if (biome === "tundra") {
+    color = blendRgbWithHex(color, "#7e8b7a", clamp(0.05 + polar * 0.08 + local * 0.05, 0, 0.16));
+    color = blendRgbWithHex(color, "#dce5df", clamp(polar * 0.08 + highland * 0.08, 0, 0.16));
+  } else if (biome === "ice") {
+    color = blendRgbWithHex(color, "#f2fbff", clamp(0.10 + polar * 0.14 + broad * 0.06, 0, 0.28));
+    color = blendRgbWithHex(color, "#8fc6dc", clamp(local * 0.05 + (1 - fine) * 0.04, 0, 0.10));
+  }
+
+  color = blendRgbWithHex(color, "#244f63", river * 0.18);
+  color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
+  color = blendRgbWithHex(color, "#e8f4f3", clamp(highland * 0.12 + polar * 0.08, 0, 0.18));
+  return clampRgb(shadeRgb(color, clamp(0.50 + texture + highland * 0.035 - (1 - moisture) * 0.02, 0, 1)));
 }
 
 function getPlanetTileCompositedColor(tile) {
@@ -883,7 +977,7 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
         continue;
       }
 
-      var rgb = getPlanetSurfaceRgbAtLatLon(latLon.latitude, latLon.longitude, tileRgbCache);
+      var rgb = getPlanetImageryRgbAtLatLon(latLon.latitude, latLon.longitude, tileRgbCache);
       var visibility = clamp(Number(latLon.visibility) || 0, 0, 1);
       var nx = (screenX - projection.centerX) / Math.max(1, projection.radius);
       var ny = (projection.centerY - screenY) / Math.max(1, projection.radius);
