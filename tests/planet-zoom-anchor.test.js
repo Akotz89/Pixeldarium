@@ -151,6 +151,18 @@ assert.ok(gridInfo.distanceMeters > 0, "local grid should pick a real-world dist
 assert.ok(gridInfo.pixelSpacing >= 72 && gridInfo.pixelSpacing <= 230, "local grid should stay glanceable");
 assert.ok(gridInfo.opacity > 0 && gridInfo.opacity <= 0.105, "local grid opacity should stay subdued");
 
+world.planetView = {
+  zoomLevel: 0,
+  latitude: 8,
+  longitude: -20
+};
+
+var projectedPoint = projectPlanetPoint(10, 20);
+var recoveredPoint = getPlanetLatLonFromProjectedPoint(getPlanetProjection(), projectedPoint.x, projectedPoint.y);
+assert.ok(recoveredPoint, "projected globe point should reverse to lat/lon");
+assertNear(recoveredPoint.latitude, 20, 1e-9, "inverse projected latitude");
+assertNear(recoveredPoint.longitude, 10, 1e-9, "inverse projected longitude");
+
 var deepOceanColor = getPlanetTileCompositedColor({
   biome: "ocean",
   latitude: 0,
@@ -227,6 +239,28 @@ assert.ok(colorLuminance(highIceColor) > colorLuminance(lushLandColor), "ice/hig
 assert.ok(colorDistance(riverLandColor, plainLandColor) > 20, "river corridors should alter land color");
 assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
+
+var cloudSample = getPlanetCloudOpacity(0, -30, 0);
+var repeatedCloudSample = getPlanetCloudOpacity(0, -30, 0);
+var shiftedCloudSample = getPlanetCloudOpacity(15, -120, 0);
+var seededCloudSample = getPlanetCloudOpacity(0, -30, 8);
+var polarCloudSample = getPlanetCloudOpacity(78, 10, 0);
+
+assertNear(repeatedCloudSample, cloudSample, 1e-12, "cloud opacity should be deterministic");
+assert.ok(cloudSample >= 0 && cloudSample <= 0.68, "cloud opacity should stay bounded");
+assert.ok(seededCloudSample >= 0 && seededCloudSample <= 0.68, "seeded cloud opacity should stay bounded");
+assert.ok(polarCloudSample >= 0 && polarCloudSample <= 0.68, "polar cloud opacity should stay bounded");
+assert.ok(Math.abs(shiftedCloudSample - cloudSample) > 0.01, "cloud opacity should vary across the globe");
+assert.ok(Math.abs(seededCloudSample - cloudSample) > 0.01, "cloud opacity should support slow deterministic drift");
+
+var sampleProjection = { radius: 610 };
+var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
+assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
+
+var globeSurfaceRgb = getPlanetSurfaceRgbAtLatLon(0, 0);
+assert.ok(globeSurfaceRgb.red >= 0 && globeSurfaceRgb.red <= 255, "globe surface red should be bounded");
+assert.ok(globeSurfaceRgb.green >= 0 && globeSurfaceRgb.green <= 255, "globe surface green should be bounded");
+assert.ok(globeSurfaceRgb.blue >= 0 && globeSurfaceRgb.blue <= 255, "globe surface blue should be bounded");
 
 var deepWaterSurfaceColor = getPlanetSurfaceColor({
   biome: "ocean",
