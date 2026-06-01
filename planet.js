@@ -585,6 +585,80 @@ function getTileFromLatLon(latitude, longitude) {
   };
 }
 
+function getPlanetSurfaceTileBlend(latitude, longitude) {
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var xFloat = ((normalizedLongitude + 180) / 360) * Math.max(1, WORLD_WIDTH) - 0.5;
+  var yFloat = ((90 - normalizedLatitude) / 180) * Math.max(1, WORLD_HEIGHT) - 0.5;
+  var x0 = Math.floor(xFloat);
+  var y0 = Math.floor(yFloat);
+  var xAmount = smoothSurfaceNoiseAmount(xFloat - x0);
+  var yAmount = smoothSurfaceNoiseAmount(yFloat - y0);
+  var rawTiles = [
+    { x: x0, y: y0, weight: (1 - xAmount) * (1 - yAmount) },
+    { x: x0 + 1, y: y0, weight: xAmount * (1 - yAmount) },
+    { x: x0, y: y0 + 1, weight: (1 - xAmount) * yAmount },
+    { x: x0 + 1, y: y0 + 1, weight: xAmount * yAmount }
+  ];
+  var tiles = [];
+  var biomeWeights = {};
+  var totalWeight = 0;
+  var dominantBiome = "unknown";
+  var dominantWeight = 0;
+
+  for (var i = 0; i < rawTiles.length; i++) {
+    var raw = rawTiles[i];
+    var tileX = getWrappedWorldX(raw.x);
+    var tileY = getClampedWorldY(raw.y);
+    var tile = getPlanetTile(tileX, tileY);
+    var weight = clamp(Number(raw.weight) || 0, 0, 1);
+    var biome = tile && tile.biome ? tile.biome : "unknown";
+
+    if (weight <= 0) {
+      continue;
+    }
+
+    tiles.push({
+      x: tileX,
+      y: tileY,
+      weight: weight,
+      biome: biome,
+      tile: tile
+    });
+    biomeWeights[biome] = (biomeWeights[biome] || 0) + weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight > 0 && Math.abs(totalWeight - 1) > 0.000001) {
+    tiles.forEach(function(item) {
+      item.weight = item.weight / totalWeight;
+    });
+
+    Object.keys(biomeWeights).forEach(function(biome) {
+      biomeWeights[biome] = biomeWeights[biome] / totalWeight;
+    });
+    totalWeight = 1;
+  }
+
+  Object.keys(biomeWeights).forEach(function(biome) {
+    if (biomeWeights[biome] > dominantWeight) {
+      dominantWeight = biomeWeights[biome];
+      dominantBiome = biome;
+    }
+  });
+
+  return {
+    tiles: tiles,
+    biomeWeights: biomeWeights,
+    dominantBiome: dominantBiome,
+    dominantWeight: dominantWeight,
+    transitionStrength: clamp(1 - dominantWeight, 0, 1),
+    xAmount: xAmount,
+    yAmount: yAmount,
+    totalWeight: totalWeight
+  };
+}
+
 function getPlanetTileCenterLatLon(x, y) {
   return {
     latitude: getPlanetLatitudeForTile(getClampedWorldY(y)),
@@ -1452,6 +1526,7 @@ function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
     ? { x: tile.x, y: tile.y }
     : getTileFromLatLon(latitude, longitude);
   var resolvedTile = tile || getPlanetTile(tilePosition.x, tilePosition.y);
+  var tileBlend = getPlanetSurfaceTileBlend(latitude, longitude);
 
   planetSurfaceChunkCache.stats.misses++;
   cachedSample = {
@@ -1461,6 +1536,7 @@ function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
     longitude: longitude,
     tile: resolvedTile,
     biome: resolvedTile ? resolvedTile.biome : "unknown",
+    tileBlend: tileBlend,
     detail: getPlanetSurfaceDetail(latitude, longitude, resolvedTile),
     surfaceChunkKey: address.chunkKey,
     surfaceSampleKey: address.sampleKey,

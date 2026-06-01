@@ -634,6 +634,97 @@ assert.deepStrictEqual(repeatedClassifiedDetail, classifiedDetail, "surface mate
 assert.notStrictEqual(alternateClassifiedDetail.microNoise, classifiedDetail.microNoise, "surface material detail should vary by seed");
 assert.ok(["meadow", "brush", "grass", "snow"].indexOf(classifiedDetail.surface) >= 0, "grassland detail should classify as a grassland material");
 
+fillPlanetTiles("grassland");
+var blendY = Math.floor(WORLD_HEIGHT / 2);
+var blendWestX = Math.floor(WORLD_WIDTH / 2);
+var blendEastX = blendWestX + 1;
+var blendWestTile = getPlanetTile(blendWestX, blendY);
+var blendEastTile = getPlanetTile(blendEastX, blendY);
+
+blendWestTile.biome = "desert";
+blendWestTile.moisture = 0.1;
+blendWestTile.elevation = 0.5;
+blendWestTile.roughness = 0.8;
+blendWestTile.ridgeStrength = 0.7;
+blendEastTile.biome = "forest";
+blendEastTile.moisture = 1.8;
+blendEastTile.elevation = 0.2;
+blendEastTile.roughness = 0.3;
+blendEastTile.ridgeStrength = 0.1;
+
+var boundaryLatitude = getPlanetLatitudeForTile(blendY);
+var boundaryLongitude = ((blendEastX) / WORLD_WIDTH) * 360 - 180;
+var tileBlend = getPlanetSurfaceTileBlend(boundaryLatitude, boundaryLongitude);
+var repeatedTileBlend = getPlanetSurfaceTileBlend(boundaryLatitude, boundaryLongitude);
+var tileBlendWeightSum = tileBlend.tiles.reduce(function(total, item) {
+  return total + item.weight;
+}, 0);
+
+assert.deepStrictEqual(repeatedTileBlend, tileBlend, "surface tile blend should be deterministic");
+assertNear(tileBlendWeightSum, 1, 1e-9, "surface tile blend weights");
+assert.ok(tileBlend.transitionStrength > 0.45, "surface tile blend should detect tile-boundary transition");
+assert.ok(tileBlend.biomeWeights.desert > 0.20, "surface tile blend should include west biome");
+assert.ok(tileBlend.biomeWeights.forest > 0.20, "surface tile blend should include east biome");
+tileBlend.tiles.forEach(function(item) {
+  assert.ok(item.weight >= 0 && item.weight <= 1, "surface tile blend item weight should be bounded");
+});
+
+var boundarySample = {
+  biome: "forest",
+  tile: blendEastTile,
+  tileBlend: tileBlend,
+  detail: {
+    surface: "woodland",
+    shade: 0.55,
+    elevation: 0.5,
+    roughness: 0.2,
+    hillshade: 0.72,
+    heightMeters: 300,
+    slope: 0.08,
+    materialSignals: {
+      snow: 0
+    }
+  }
+};
+var unblendedBoundarySample = {
+  biome: boundarySample.biome,
+  tile: boundarySample.tile,
+  detail: boundarySample.detail
+};
+var blendedBoundaryColor = getPlanetSurfaceColor(boundarySample);
+var unblendedBoundaryColor = getPlanetSurfaceColor(unblendedBoundarySample);
+var blendTargetRgb = getPlanetSurfaceTileBlendRgb(tileBlend);
+
+assert.ok(colorDistance(blendedBoundaryColor, unblendedBoundaryColor) > 2, "biome transition should alter local surface color");
+assert.ok(
+  rgbDistance(getRgbFromHex(blendedBoundaryColor), blendTargetRgb) < rgbDistance(getRgbFromHex(unblendedBoundaryColor), blendTargetRgb),
+  "biome transition should move local color toward neighboring tile blend"
+);
+
+var whitecapBoundarySample = {
+  biome: "ocean",
+  tile: Object.assign({}, blendEastTile, { biome: "ocean", shallowWater: 1, coastFactor: 0.5 }),
+  tileBlend: tileBlend,
+  detail: Object.assign({}, boundarySample.detail, {
+    surface: "whitecap",
+    heightMeters: -80,
+    materialSignals: {
+      snow: 0
+    }
+  })
+};
+var whitecapUnblendedSample = {
+  biome: whitecapBoundarySample.biome,
+  tile: whitecapBoundarySample.tile,
+  detail: whitecapBoundarySample.detail
+};
+
+assert.ok(
+  colorDistance(getPlanetSurfaceColor(whitecapBoundarySample), getPlanetSurfaceColor(whitecapUnblendedSample)) <
+    colorDistance(blendedBoundaryColor, unblendedBoundaryColor),
+  "strong local surfaces should be protected from full biome blending"
+);
+
 var texturedGrassSample = {
   biome: "grassland",
   surfaceSampleX: 12045,
