@@ -412,6 +412,50 @@ var snowySurfaceColor = getPlanetSurfaceColor({
 assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
 assert.ok(colorDistance(snowySurfaceColor, dryLandColor) > 40, "high local terrain should receive snow tint");
 
+var texturedGrassSample = {
+  biome: "grassland",
+  surfaceSampleX: 12045,
+  surfaceSampleY: 8091,
+  surfaceSampleMeters: 1,
+  detail: {
+    surface: "grass",
+    roughness: 0.62,
+    slope: 0.34,
+    sampleMeters: 1
+  }
+};
+var texturedWaterSample = {
+  biome: "ocean",
+  surfaceSampleX: 12045,
+  surfaceSampleY: 8091,
+  surfaceSampleMeters: 1,
+  detail: {
+    surface: "open water",
+    roughness: 0.62,
+    slope: 0.34,
+    sampleMeters: 1
+  }
+};
+
+setWorldSeed("PIXEL-2026");
+var grassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
+var waterMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedWaterSample, "#08365f");
+setWorldSeed("PIXEL-2027");
+var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
+setWorldSeed("PIXEL-2026");
+
+assert.ok(grassMicrotexture.length > 0, "local surface microtexture should add sub-sample swatches");
+assert.deepStrictEqual(repeatedGrassMicrotexture, grassMicrotexture, "local surface microtexture should be deterministic");
+assert.notDeepStrictEqual(alternateSeedMicrotexture, grassMicrotexture, "local surface microtexture should vary by seed");
+assert.notStrictEqual(waterMicrotexture[0].color, grassMicrotexture[0].color, "microtexture color should vary by surface");
+grassMicrotexture.concat(waterMicrotexture).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "microtexture swatch");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "microtexture x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "microtexture y should fit inside cell");
+  assert.ok(swatch.size >= 1 && swatch.size <= CONFIG.TILE_SIZE, "microtexture size should fit inside cell");
+});
+
 setWorldSeed("PIXEL-2026");
 var smoothNoiseA = getSurfaceLayerNoise({ eastMeters: 12351.8, northMeters: 67891.2 }, 64, 11);
 var smoothNoiseB = getSurfaceLayerNoise({ eastMeters: 12352.2, northMeters: 67891.2 }, 64, 11);

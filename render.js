@@ -553,6 +553,74 @@ function getPlanetSurfaceColor(sample) {
   return shadeHexColor(color, reliefShade);
 }
 
+function getPlanetSurfaceMicrotextureAccent(sample, baseColor, amount) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var surface = detail.surface || "ground";
+  var normalizedAmount = clamp(Number(amount) || 0, 0, 1);
+  var accent = "#ffffff";
+
+  if (biome === "ocean" || surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    accent = surface === "whitecap" ? "#e9fbff" : "#86c8df";
+  } else if (surface === "dense canopy" || surface === "woodland") {
+    accent = normalizedAmount > 0.58 ? "#1b5630" : "#071f12";
+  } else if (surface === "grass" || surface === "brush" || surface === "meadow" || surface === "clearing") {
+    accent = normalizedAmount > 0.55 ? "#80a84b" : "#244c28";
+  } else if (surface === "rock" || surface === "stone") {
+    accent = normalizedAmount > 0.50 ? "#9b998a" : "#343632";
+  } else if (surface === "sand" || surface === "dune") {
+    accent = normalizedAmount > 0.50 ? "#d0b36c" : "#6a572a";
+  } else if (surface === "snow" || surface === "ice" || surface === "ridge ice") {
+    accent = normalizedAmount > 0.50 ? "#f5fdff" : "#8bbfd1";
+  } else if (surface === "scrub" || surface === "moss") {
+    accent = normalizedAmount > 0.50 ? "#708764" : "#26352c";
+  } else {
+    accent = normalizedAmount > 0.50 ? "#d7e4d8" : "#1f2b24";
+  }
+
+  return blendHexColors(baseColor, accent, clamp(0.14 + normalizedAmount * 0.22, 0, 0.42));
+}
+
+function getPlanetSurfaceMicrotextureSwatches(sample, baseColor) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var strength = clamp(
+    0.12 +
+      (Number(detail.roughness) || 0) * 0.28 +
+      (Number(detail.slope) || 0) * 0.18 +
+      (sampleMeters <= 5 ? 0.24 : sampleMeters <= 25 ? 0.12 : 0),
+    0,
+    0.64
+  );
+  var swatches = [];
+  var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+
+  if (strength <= 0.14 || CONFIG.TILE_SIZE < 4) {
+    return swatches;
+  }
+
+  for (var i = 0; i < 3; i++) {
+    var noise = getDeterministicUnitNoise(seedEast + i * 13, seedNorth - i * 17, getPlanetVisualSeedOffset() + i * 29 + sampleMeters);
+
+    if (noise > strength + 0.30) {
+      continue;
+    }
+
+    var size = clamp(Math.round(CONFIG.TILE_SIZE * (0.22 + noise * 0.22)), 1, Math.max(1, CONFIG.TILE_SIZE - 2));
+
+    swatches.push({
+      x: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 701 + i) * Math.max(1, CONFIG.TILE_SIZE - size + 1)),
+      y: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 811 + i) * Math.max(1, CONFIG.TILE_SIZE - size + 1)),
+      size: size,
+      color: getPlanetSurfaceMicrotextureAccent(sample, baseColor, noise),
+      alpha: clamp(0.18 + strength * 0.48 + noise * 0.18, 0.18, 0.72)
+    });
+  }
+
+  return swatches;
+}
+
 function shouldDrawSurfaceMarker(sample) {
   var detail = sample && sample.detail ? sample.detail : null;
   var marker = detail && detail.marker ? detail.marker : null;
@@ -582,6 +650,20 @@ function drawSurfaceMarker(tctx, sample, screenX, screenY) {
   tctx.globalAlpha = clamp(0.18 + marker.intensity * 0.58, 0.18, 0.76);
   tctx.fillStyle = marker.color;
   tctx.fillRect(screenX + offsetX, screenY + offsetY, size, size);
+  tctx.globalAlpha = 1;
+}
+
+function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
+  var swatches = getPlanetSurfaceMicrotextureSwatches(sample, baseColor);
+
+  for (var i = 0; i < swatches.length; i++) {
+    var swatch = swatches[i];
+
+    tctx.globalAlpha = clamp(Number(swatch.alpha) || 0.24, 0, 0.82);
+    tctx.fillStyle = swatch.color;
+    tctx.fillRect(screenX + swatch.x, screenY + swatch.y, swatch.size, swatch.size);
+  }
+
   tctx.globalAlpha = 1;
 }
 
@@ -623,9 +705,11 @@ function buildLocalSurfaceRenderChunk(address) {
       var sample = getPlanetSurfaceChunkSampleAtAddress(address, x, y);
       var screenX = x * CONFIG.TILE_SIZE;
       var screenY = (address.chunkSamples - 1 - y) * CONFIG.TILE_SIZE;
+      var baseColor = getPlanetSurfaceColor(sample);
 
-      chunkCtx.fillStyle = getPlanetSurfaceColor(sample);
+      chunkCtx.fillStyle = baseColor;
       chunkCtx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+      drawSurfaceMicrotexture(chunkCtx, sample, baseColor, screenX, screenY);
       drawSurfaceMarker(chunkCtx, sample, screenX, screenY);
     }
   }
