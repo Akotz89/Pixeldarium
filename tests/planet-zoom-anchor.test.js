@@ -328,6 +328,70 @@ assert.ok(colorDistance(ridgeLandColor, plainLandColor) > 25, "ridge signals sho
 assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
 
+var lowLatitudeHighlandTile = {
+  biome: "grassland",
+  latitude: 18,
+  moisture: 1,
+  elevation: 1.8,
+  ridgeStrength: 1,
+  roughness: 1,
+  highlandLift: 1.2,
+  terrainHillshade: 0.72
+};
+var polarHighlandTile = {
+  biome: "tundra",
+  latitude: 76,
+  moisture: 0.8,
+  elevation: 1.2,
+  ridgeStrength: 0.9,
+  roughness: 0.7,
+  highlandLift: 0.8,
+  terrainHillshade: 0.72
+};
+var permanentIceTile = {
+  biome: "ice",
+  latitude: 82,
+  moisture: 0.7,
+  elevation: 0.8,
+  ridgeStrength: 0.3,
+  roughness: 0.2,
+  highlandLift: 0.2,
+  terrainHillshade: 0.72
+};
+var lowLatitudeSnowSignal = getPlanetSurfaceSnowSignal(lowLatitudeHighlandTile, lowLatitudeHighlandTile.latitude);
+var polarSnowSignal = getPlanetSurfaceSnowSignal(polarHighlandTile, polarHighlandTile.latitude);
+var iceSnowSignal = getPlanetSurfaceSnowSignal(permanentIceTile, permanentIceTile.latitude);
+var lowLatitudeHighlandColor = getPlanetTileCompositedColor(lowLatitudeHighlandTile);
+var permanentIceColor = getPlanetTileCompositedColor(permanentIceTile);
+var materialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
+var repeatedMaterialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
+var shiftedMaterialPixelNoise = getPlanetMaterialPixelNoise(12.3, 20.3, 6200, 607);
+var forestMaterialAccent = applyPlanetMaterialPixelAccents({ red: 60, green: 90, blue: 65 }, 12.1, 20.1, {
+  biome: "forest",
+  moisture: 1.4,
+  elevation: 0.2,
+  ridgeStrength: 0.1,
+  roughness: 0.4
+});
+var desertMaterialAccent = applyPlanetMaterialPixelAccents({ red: 60, green: 90, blue: 65 }, 12.1, 20.1, {
+  biome: "desert",
+  moisture: 0.2,
+  elevation: 0.2,
+  ridgeStrength: 0.1,
+  roughness: 0.4
+});
+
+assert.ok(lowLatitudeSnowSignal < 0.35, "low-latitude non-ice highlands should not become broad snow/cloud cover");
+assert.ok(polarSnowSignal > lowLatitudeSnowSignal + 0.15, "polar highlands should carry more snow signal than low-latitude highlands");
+assert.ok(iceSnowSignal > polarSnowSignal, "ice biome should remain the brightest permanent snow/ice signal");
+assert.ok(colorLuminance(permanentIceColor) > colorLuminance(lowLatitudeHighlandColor) + 15, "non-ice highlands should stay darker than permanent ice");
+assertNear(repeatedMaterialPixelNoise, materialPixelNoise, 1e-12, "material pixel noise should be deterministic");
+assert.ok(materialPixelNoise >= 0 && materialPixelNoise <= 1, "material pixel noise should be bounded");
+assert.ok(Math.abs(shiftedMaterialPixelNoise - materialPixelNoise) > 0.001, "material pixel noise should vary across the surface");
+assertRgbBounds(forestMaterialAccent, "forest material accent");
+assertRgbBounds(desertMaterialAccent, "desert material accent");
+assert.ok(rgbDistance(forestMaterialAccent, desertMaterialAccent) > 4, "material accents should vary by biome");
+
 var cloudSample = getPlanetCloudOpacity(0, -30, 0);
 var repeatedCloudSample = getPlanetCloudOpacity(0, -30, 0);
 var shiftedCloudSample = getPlanetCloudOpacity(15, -120, 0);
