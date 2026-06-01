@@ -1701,7 +1701,7 @@ function getPlanetSurfaceLatLonFromChunkAddress(address, localSampleX, localSamp
 function getPlanetSurfaceChunkSampleAtAddress(address, localSampleX, localSampleY) {
   var latLon = getPlanetSurfaceLatLonFromChunkAddress(address, localSampleX, localSampleY);
 
-  return getPlanetSurfaceChunkSample(latLon.latitude, latLon.longitude);
+  return getPlanetSurfaceChunkSample(latLon.latitude, latLon.longitude, null, address.zoomLevel);
 }
 
 function getPlanetSurfaceChunk(address) {
@@ -1735,8 +1735,8 @@ function getPlanetSurfaceChunk(address) {
   return chunk;
 }
 
-function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
-  var address = getPlanetSurfaceSampleAddress(latitude, longitude);
+function getPlanetSurfaceChunkSample(latitude, longitude, tile, zoomLevelIndex) {
+  var address = getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex);
   var chunk = getPlanetSurfaceChunk(address);
   var cachedSample = chunk.samples[address.sampleKey];
 
@@ -1763,7 +1763,7 @@ function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
     tile: resolvedTile,
     biome: resolvedTile ? resolvedTile.biome : "unknown",
     tileBlend: tileBlend,
-    detail: getPlanetSurfaceDetail(latitude, longitude, resolvedTile),
+    detail: getPlanetSurfaceDetail(latitude, longitude, resolvedTile, address.sampleMeters),
     surfaceChunkKey: address.chunkKey,
     surfaceSampleKey: address.sampleKey,
     surfaceChunkX: address.chunkX,
@@ -1851,10 +1851,12 @@ function getPlanetSurfaceSnowSignal(tile, latitude) {
   return clamp(Math.max(polarSnow, mountainSnow), 0, 0.86);
 }
 
-function getPlanetGroundLod(latitude, longitude) {
-  var scale = getPlanetViewScale();
+function getPlanetGroundLod(latitude, longitude, sampleMetersOverride) {
   var meters = getSurfaceMeterCoordinate(latitude, longitude);
-  var sampleMeters = Math.max(1, scale.metersPerSample);
+  var sampleMeters = Math.max(
+    1,
+    Number(sampleMetersOverride) || getPlanetViewScale().metersPerSample
+  );
   var continental = getSurfaceLayerNoise(meters, Math.max(1000, sampleMeters * 48), 1);
   var landform = getSurfaceLayerNoise(meters, Math.max(160, sampleMeters * 24), 2);
   var canopy = getSurfaceLayerNoise(meters, Math.max(30, sampleMeters * 10), 3);
@@ -2072,8 +2074,8 @@ function getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, sampleMete
 
 function getPlanetSurfaceHeightMeters(latitude, longitude, tile, sampleMeters, featureReliefOverride) {
   var biome = tile ? tile.biome : "unknown";
-  var lod = getPlanetGroundLod(latitude, longitude);
-  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || lod.sampleMeters);
+  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || getPlanetViewScale().metersPerSample);
+  var lod = getPlanetGroundLod(latitude, longitude, normalizedSampleMeters);
   var featureRelief = featureReliefOverride ||
     getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, normalizedSampleMeters, biome);
   var tileRidge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
@@ -2101,9 +2103,8 @@ function getPlanetSurfaceHeightMeters(latitude, longitude, tile, sampleMeters, f
   return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + landformMeters + roughMeters + microMeters + featureHeightDeltaMeters;
 }
 
-function getPlanetSurfaceRelief(latitude, longitude, tile) {
-  var scale = getPlanetViewScale();
-  var sampleMeters = Math.max(1, scale.metersPerSample);
+function getPlanetSurfaceRelief(latitude, longitude, tile, sampleMetersOverride) {
+  var sampleMeters = Math.max(1, Number(sampleMetersOverride) || getPlanetViewScale().metersPerSample);
   var sampleKm = sampleMeters / 1000;
   var biome = tile ? tile.biome : "unknown";
   var centerFeatureRelief = getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, sampleMeters, biome);
@@ -2369,10 +2370,10 @@ function applyPlanetGroundFeatureInfluenceToMaterial(material, groundFeature, bi
   return result;
 }
 
-function getPlanetSurfaceDetail(latitude, longitude, tile) {
+function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride) {
   var biome = tile ? tile.biome : "unknown";
-  var lod = getPlanetGroundLod(latitude, longitude);
-  var relief = getPlanetSurfaceRelief(latitude, longitude, tile);
+  var lod = getPlanetGroundLod(latitude, longitude, sampleMetersOverride);
+  var relief = getPlanetSurfaceRelief(latitude, longitude, tile, lod.sampleMeters);
   var marker = getPlanetSurfaceFeatureMarker(biome, lod, relief);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
   var groundFeature = getPlanetSurfaceGroundFeatureInfluence(latitude, longitude, lod.sampleMeters);

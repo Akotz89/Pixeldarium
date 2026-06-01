@@ -1217,6 +1217,31 @@ world.planetView = {
   longitude: -77.7265
 };
 
+var detailAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, detailZoomIndex);
+var detailChunkAddress = makePlanetSurfaceChunkAddress(detailZoomIndex, detailAddress.chunkX, detailAddress.chunkY);
+var detailChunkSample = getPlanetSurfaceChunkSampleAtAddress(
+  detailChunkAddress,
+  detailAddress.localSampleX,
+  detailAddress.localSampleY
+);
+var meterChunkSample = getPlanetSurfaceChunkSampleAtAddress(
+  meterChunkAddress,
+  meterAddress.localSampleX,
+  meterAddress.localSampleY
+);
+var explicitDetailSample = getPlanetSurfaceChunkSample(34.2117, -77.7265, null, detailZoomIndex);
+
+assert.strictEqual(detailChunkSample.surfaceSampleMeters, detailZoom.metersPerSample, "parent chunk sample should keep addressed sample scale");
+assert.strictEqual(detailChunkSample.detail.sampleMeters, detailZoom.metersPerSample, "parent chunk detail should use addressed sample scale");
+assert.strictEqual(detailChunkSample.surfaceChunkKey, detailChunkAddress.chunkKey, "parent chunk sample should keep addressed chunk identity");
+assert.strictEqual(meterChunkSample.surfaceSampleMeters, finalGroundZoom.metersPerSample, "meter chunk sample should keep meter scale");
+assert.strictEqual(meterChunkSample.detail.sampleMeters, finalGroundZoom.metersPerSample, "meter chunk detail should use meter scale");
+assert.strictEqual(meterChunkSample.surfaceChunkKey, meterChunkAddress.chunkKey, "meter chunk sample should keep addressed chunk identity");
+assert.notStrictEqual(detailChunkSample.surfaceChunkKey, meterChunkSample.surfaceChunkKey, "parent and meter chunks should cache separately");
+assert.notStrictEqual(detailChunkSample.surfaceSampleMeters, meterChunkSample.surfaceSampleMeters, "parent and meter chunk samples should keep separate scales");
+assert.strictEqual(explicitDetailSample.surfaceSampleMeters, detailZoom.metersPerSample, "explicit LOD sample should not inherit current view scale");
+assert.strictEqual(explicitDetailSample.detail.sampleMeters, detailZoom.metersPerSample, "explicit LOD detail should not inherit current view scale");
+
 var chunkRect = getPlanetSurfaceChunkScreenRect(meterChunkAddress);
 var eastNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
   finalGroundZoomIndex,
