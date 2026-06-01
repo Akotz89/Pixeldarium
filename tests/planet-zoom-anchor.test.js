@@ -920,8 +920,14 @@ var repeatedGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGra
 var waterMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedWaterSample, "#08365f");
 var coarseGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(coarseTexturedGrassSample, "#2f6531");
 var featureGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(featureTexturedGrassSample, "#2f6531");
+var grassFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
+var waterFinePixels = getPlanetSurfaceFinePixelSwatches(texturedWaterSample, "#08365f");
+var coarseGrassFinePixels = getPlanetSurfaceFinePixelSwatches(coarseTexturedGrassSample, "#2f6531");
+var featureGrassFinePixels = getPlanetSurfaceFinePixelSwatches(featureTexturedGrassSample, "#2f6531");
 setWorldSeed("PIXEL-2027");
 var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
 setWorldSeed("PIXEL-2026");
 
 assert.ok(grassMicrotexture.length > 0, "local surface microtexture should add sub-sample swatches");
@@ -939,6 +945,23 @@ grassMicrotexture.concat(waterMicrotexture).forEach(function(swatch) {
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "microtexture height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "microtexture width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "microtexture height should stay in cell");
+});
+assert.ok(grassFinePixels.length > 0, "close surface fine pixels should break up flat meter cells");
+assert.ok(grassFinePixels.length <= 11, "close surface fine pixel count should stay bounded");
+assert.deepStrictEqual(repeatedGrassFinePixels, grassFinePixels, "close surface fine pixels should be deterministic");
+assert.notDeepStrictEqual(alternateSeedFinePixels, grassFinePixels, "close surface fine pixels should vary by seed");
+assert.notStrictEqual(waterFinePixels[0].color, grassFinePixels[0].color, "fine pixel color should vary by surface");
+assert.deepStrictEqual(coarseGrassFinePixels, [], "broad local samples should skip fine pixel texture");
+assert.ok(featureGrassFinePixels.length >= grassFinePixels.length, "feature relief should strengthen fine pixel texture");
+grassFinePixels.concat(waterFinePixels).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "fine pixel swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.46, "fine pixel alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "fine pixel x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "fine pixel y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= 2, "fine pixel width should stay small");
+  assert.ok(swatch.height >= 1 && swatch.height <= 2, "fine pixel height should stay small");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "fine pixel width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "fine pixel height should stay in cell");
 });
 
 var edgeAccentSample = Object.assign({}, boundarySample, {
