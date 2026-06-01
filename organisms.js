@@ -281,15 +281,23 @@ function normalizeOrganismTraits(traits) {
 }
 
 function makeOrganism(x, y, lineageId) {
+  var tileX = getWrappedWorldX(x);
+  var tileY = getClampedWorldY(y);
+  var surfacePosition = getRandomLatLonInTile(tileX, tileY);
   var organism = {
-    x: x,
-    y: y,
-    prevX: x,
-    prevY: y,
+    x: tileX,
+    y: tileY,
+    prevX: tileX,
+    prevY: tileY,
+    latitude: surfacePosition.latitude,
+    longitude: surfacePosition.longitude,
+    prevLatitude: surfacePosition.latitude,
+    prevLongitude: surfacePosition.longitude,
     energy: CONFIG.STARTING_ORGANISM_ENERGY,
     age: 0,
     directionX: randomInt(3) - 1,
     directionY: randomInt(3) - 1,
+    travelKm: 0,
     traits: makeInitialOrganismTraits(),
     lineageId: lineageId || allocateLineageId(),
     lineageParentId: 0,
@@ -300,13 +308,18 @@ function makeOrganism(x, y, lineageId) {
   return organism;
 }
 
+function getOrganismTravelKmPerTick() {
+  return Math.max(0, Number(CONFIG.ORGANISM_TRAVEL_KM_PER_DAY) || 0) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
+}
+
 function getOrganismBucketSize() {
   return Math.max(1, Math.round(Number(CONFIG.ORGANISM_SPATIAL_BUCKET_SIZE) || 16));
 }
 
 function getOrganismBucketKey(x, y) {
   var bucketSize = getOrganismBucketSize();
-  return Math.floor(x / bucketSize) + ":" + Math.floor(y / bucketSize);
+  return Math.floor(getWrappedWorldX(x) / bucketSize) + ":" + Math.floor(getClampedWorldY(y) / bucketSize);
 }
 
 function ensureOrganismIndexState() {
@@ -365,18 +378,18 @@ function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
   var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
   var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
   var normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.round(Number(limit))) : Infinity;
-  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var organisms = [];
 
   if (normalizedLimit <= 0) {
     return organisms;
   }
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = world.organismBuckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -388,7 +401,7 @@ function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
 
         if (
           (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
-          Math.abs(organism.x - x) + Math.abs(organism.y - y) <= normalizedRadius
+          getTileManhattanDistance(x, y, organism.x, organism.y) <= normalizedRadius
         ) {
           organisms.push(organism);
 
@@ -409,14 +422,14 @@ function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
   var bucketSize = getOrganismBucketSize();
   var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
   var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
-  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var count = 0;
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = world.organismBuckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -428,7 +441,7 @@ function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
 
         if (
           (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
-          Math.abs(organism.x - x) + Math.abs(organism.y - y) <= normalizedRadius
+          getTileManhattanDistance(x, y, organism.x, organism.y) <= normalizedRadius
         ) {
           count++;
         }
@@ -444,15 +457,15 @@ function getNearestOrganismInRadius(x, y, radius) {
 
   var bucketSize = getOrganismBucketSize();
   var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
-  var minBucketX = Math.floor(Math.max(0, x - normalizedRadius) / bucketSize);
-  var maxBucketX = Math.floor(Math.min(WORLD_WIDTH - 1, x + normalizedRadius) / bucketSize);
-  var minBucketY = Math.floor(Math.max(0, y - normalizedRadius) / bucketSize);
-  var maxBucketY = Math.floor(Math.min(WORLD_HEIGHT - 1, y + normalizedRadius) / bucketSize);
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
   var nearestOrganism = null;
   var nearestDistance = Infinity;
 
-  for (var bucketY = minBucketY; bucketY <= maxBucketY; bucketY++) {
-    for (var bucketX = minBucketX; bucketX <= maxBucketX; bucketX++) {
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
       var bucket = world.organismBuckets[bucketX + ":" + bucketY];
 
       if (!bucket) {
@@ -461,7 +474,7 @@ function getNearestOrganismInRadius(x, y, radius) {
 
       for (var i = 0; i < bucket.length; i++) {
         var organism = bucket[i];
-        var distance = Math.abs(organism.x - x) + Math.abs(organism.y - y);
+        var distance = getTileManhattanDistance(x, y, organism.x, organism.y);
 
         if (distance < nearestDistance && distance <= normalizedRadius) {
           nearestOrganism = organism;
@@ -636,21 +649,8 @@ function findNearestFood(organism, searchRadius) {
 }
 
 function moveTowardFood(organism, food) {
-  if (food.x > organism.x) {
-    organism.directionX = 1;
-  } else if (food.x < organism.x) {
-    organism.directionX = -1;
-  } else {
-    organism.directionX = 0;
-  }
-
-  if (food.y > organism.y) {
-    organism.directionY = 1;
-  } else if (food.y < organism.y) {
-    organism.directionY = -1;
-  } else {
-    organism.directionY = 0;
-  }
+  organism.directionX = getDirectionXToTile(organism.x, food.x);
+  organism.directionY = getDirectionYToTile(organism.y, food.y);
 }
 
 function getTerrainAffinityTargetValue(x, y) {
@@ -679,8 +679,8 @@ function chooseRoamingDirection(organism, traits) {
         continue;
       }
 
-      var nextX = clamp(organism.x + dx, 0, WORLD_WIDTH - 1);
-      var nextY = clamp(organism.y + dy, 0, WORLD_HEIGHT - 1);
+      var nextX = getWrappedWorldX(organism.x + dx);
+      var nextY = getClampedWorldY(organism.y + dy);
       var mismatch = getTerrainMismatchForTraits(traits, nextX, nextY);
 
       if (mismatch < bestMismatch) {
@@ -782,10 +782,14 @@ function reproduceIfReady(organism) {
 
 function updateOrganism(organism) {
   var traits = ensureOrganismTraits(organism);
+  var surfacePosition = getEntitySurfacePosition(organism);
 
   organism.prevX = organism.x;
   organism.prevY = organism.y;
+  organism.prevLatitude = surfacePosition ? surfacePosition.latitude : getPlanetLatitudeForTile(organism.y);
+  organism.prevLongitude = surfacePosition ? surfacePosition.longitude : getPlanetLongitudeForTile(organism.x);
   organism.age++;
+  organism.travelKm = Math.max(0, Number(organism.travelKm) || 0) + getOrganismTravelKmPerTick();
 
   if (world.tick % 3 === 0) {
     organism.energy -= traits.metabolism;
@@ -800,12 +804,32 @@ function updateOrganism(organism) {
     chooseRoamingDirection(organism, traits);
   }
 
-  organism.x += organism.directionX;
-  organism.y += organism.directionY;
-  clampToWorld(organism);
+  moveOrganismByTravelBudget(organism);
 
   eatFoodOnCurrentTile(organism);
   reproduceIfReady(organism);
+}
+
+function moveOrganismByTravelBudget(organism) {
+  var nextX = getWrappedWorldX(organism.x + organism.directionX);
+  var nextY = getClampedWorldY(organism.y + organism.directionY);
+
+  if (nextX === organism.x && nextY === organism.y) {
+    return false;
+  }
+
+  var requiredTravelKm = getTileGreatCircleDistanceKm(organism.x, organism.y, nextX, nextY);
+
+  if (organism.travelKm < requiredTravelKm) {
+    return false;
+  }
+
+  organism.travelKm -= requiredTravelKm;
+  organism.x = nextX;
+  organism.y = nextY;
+  clampToWorld(organism);
+  assignRandomSurfacePositionInTile(organism);
+  return true;
 }
 
 function removeDeadOrganisms() {

@@ -53,10 +53,22 @@ function clamp(value, min, max) {
 }
 
 function getTileIndex(x, y) {
-  return y * WORLD_WIDTH + x;
+  var tileX = typeof getWrappedWorldX === "function"
+    ? getWrappedWorldX(x)
+    : clamp(Math.round(Number(x) || 0), 0, WORLD_WIDTH - 1);
+  var tileY = typeof getClampedWorldY === "function"
+    ? getClampedWorldY(y)
+    : clamp(Math.round(Number(y) || 0), 0, WORLD_HEIGHT - 1);
+
+  return tileY * WORLD_WIDTH + tileX;
 }
 
 function clampToWorld(entity) {
+  if (typeof normalizeWorldPosition === "function") {
+    normalizeWorldPosition(entity);
+    return;
+  }
+
   entity.x = clamp(entity.x, 0, WORLD_WIDTH - 1);
   entity.y = clamp(entity.y, 0, WORLD_HEIGHT - 1);
 }

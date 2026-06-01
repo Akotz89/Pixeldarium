@@ -51,10 +51,15 @@ function copyOrganismForSave(organism) {
     y: organism.y,
     prevX: organism.prevX,
     prevY: organism.prevY,
+    latitude: organism.latitude,
+    longitude: organism.longitude,
+    prevLatitude: organism.prevLatitude,
+    prevLongitude: organism.prevLongitude,
     energy: organism.energy,
     age: organism.age,
     directionX: organism.directionX,
     directionY: organism.directionY,
+    travelKm: Math.max(0, Number(organism.travelKm) || 0),
     traits: copyOrganismTraitsForSave(traits),
     lineageId: ensureOrganismLineage(organism),
     lineageParentId: organism.lineageParentId,
@@ -65,7 +70,9 @@ function copyOrganismForSave(organism) {
 function copyFoodForSave(food) {
   return {
     x: food.x,
-    y: food.y
+    y: food.y,
+    latitude: food.latitude,
+    longitude: food.longitude
   };
 }
 
@@ -640,15 +647,34 @@ function validateWorldSaveData(saveData) {
 }
 
 function restoreFood(food) {
-  return {
-    x: clamp(Math.round(Number(food.x)), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.round(Number(food.y)), 0, WORLD_HEIGHT - 1)
+  var restoredFood = {
+    x: clamp(Math.round(restoreNumber(food.x, 0)), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.round(restoreNumber(food.y, 0)), 0, WORLD_HEIGHT - 1)
   };
+  var surfacePosition = getRestoredSurfacePosition(food, restoredFood.x, restoredFood.y);
+
+  restoredFood.latitude = surfacePosition.latitude;
+  restoredFood.longitude = surfacePosition.longitude;
+  return restoredFood;
 }
 
 function restoreNumber(value, fallback) {
   var numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function getRestoredSurfacePosition(source, tileX, tileY) {
+  var latitude = Number(source && source.latitude);
+  var longitude = Number(source && source.longitude);
+
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    return {
+      latitude: clamp(latitude, -90, 90),
+      longitude: normalizeLongitude(longitude)
+    };
+  }
+
+  return getPlanetTileCenterLatLon(tileX, tileY);
 }
 
 function restoreClampedNumber(value, fallback, minValue, maxValue) {
@@ -1012,15 +1038,33 @@ function restoreEmpireSectors(sectors) {
 }
 
 function restoreOrganism(organism) {
+  var tileX = clamp(Math.round(restoreNumber(organism.x, 0)), 0, WORLD_WIDTH - 1);
+  var tileY = clamp(Math.round(restoreNumber(organism.y, 0)), 0, WORLD_HEIGHT - 1);
+  var previousTileX = clamp(Math.round(restoreNumber(organism.prevX, tileX)), 0, WORLD_WIDTH - 1);
+  var previousTileY = clamp(Math.round(restoreNumber(organism.prevY, tileY)), 0, WORLD_HEIGHT - 1);
+  var surfacePosition = getRestoredSurfacePosition(organism, tileX, tileY);
+  var previousSurfacePosition = {
+    latitude: Number.isFinite(Number(organism.prevLatitude))
+      ? clamp(Number(organism.prevLatitude), -90, 90)
+      : surfacePosition.latitude,
+    longitude: Number.isFinite(Number(organism.prevLongitude))
+      ? normalizeLongitude(organism.prevLongitude)
+      : surfacePosition.longitude
+  };
   var restoredOrganism = {
-    x: clamp(Math.round(Number(organism.x)), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.round(Number(organism.y)), 0, WORLD_HEIGHT - 1),
-    prevX: clamp(Math.round(Number(organism.prevX)), 0, WORLD_WIDTH - 1),
-    prevY: clamp(Math.round(Number(organism.prevY)), 0, WORLD_HEIGHT - 1),
+    x: tileX,
+    y: tileY,
+    prevX: previousTileX,
+    prevY: previousTileY,
+    latitude: surfacePosition.latitude,
+    longitude: surfacePosition.longitude,
+    prevLatitude: previousSurfacePosition.latitude,
+    prevLongitude: previousSurfacePosition.longitude,
     energy: Number(organism.energy),
     age: Number(organism.age),
     directionX: clamp(Math.round(Number(organism.directionX)), -1, 1),
     directionY: clamp(Math.round(Number(organism.directionY)), -1, 1),
+    travelKm: Math.max(0, restoreNumber(organism.travelKm, 0)),
     traits: restoreOrganismTraits(organism.traits),
     lineageId: Math.round(restoreNumber(organism.lineageId, 0)),
     lineageParentId: Math.max(0, Math.round(restoreNumber(organism.lineageParentId, 0))),

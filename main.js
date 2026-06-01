@@ -23,6 +23,7 @@ function clearWorld() {
   world.terrain = [];
   world.planetTiles = [];
   world.planetSummary = null;
+  world.planetView = null;
   world.fertileTiles = 0;
   world.birthsThisTick = 0;
   world.deathsThisTick = 0;
@@ -40,6 +41,7 @@ function clearWorld() {
   world.totalFoodHarvested = 0;
   world.isPaused = false;
   world.isExtinct = false;
+  world.isCameraInteracting = false;
   world.extinctionTick = 0;
   world.needsRender = true;
   setWorldSeed(world.seedText);
@@ -51,6 +53,7 @@ function clearWorld() {
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
   world.inspectedTile = null;
+  world.inspectedSurface = null;
   world.ecosystemSummary = null;
   world.ecosystemHistory = [];
   world.simulationAlerts = [];

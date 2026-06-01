@@ -1,22 +1,42 @@
 function updateHud() {
-  var fertilePercent = Math.round(
-    (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100
-  );
+  var fertilePercent = world.planetSummary
+    ? Math.round(world.planetSummary.fertileLandPercent)
+    : Math.round((world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100);
+  var waterPercent = world.planetSummary
+    ? Math.round(world.planetSummary.waterPercent)
+    : 0;
+  var estimatedIndividuals = world.organisms.length * Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1));
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
+  var planetScaleInfo = getPlanetCameraScaleInfo();
+  var planetCacheStats = getPlanetSurfaceCacheStats();
+  var renderCacheStats = getLocalSurfaceRenderCacheStats();
+  var centerPyramidLineage = getPlanetSurfaceChunkLineage(
+    getPlanetLocalSurfaceAddress(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2)).address
+  );
 
   setElementClass(eraText, "hud-card hud-era");
   setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
   setElementClass(populationText, "hud-card hud-population");
   setElementHtml(
     populationText,
-    makeHudPrimary("Population", world.organisms.length, formatSignedNumber(world.populationDeltaThisTick, 0) + " this tick")
+    makeHudPrimary("Population Bands", world.organisms.length, "~" + estimatedIndividuals.toLocaleString() + " individuals")
   );
   setElementClass(foodText, "hud-metrics");
   setElementHtml(foodText, [
     makeHudMetric("Tick", world.tick),
+    makeHudMetric("Day", getSimulationDayLabel()),
     makeHudMetric("Food", world.food.length),
-    makeHudMetric("Fertile", fertilePercent + "%"),
-    makeHudMetric("Scale", world.planetSummary ? world.planetSummary.equatorKmPerTile.toFixed(0) + " km/tile" : "-"),
+    makeHudMetric("Water", waterPercent + "%"),
+    makeHudMetric("Fertile Land", fertilePercent + "%"),
+    makeHudMetric("Zoom", getPlanetScaleLabel()),
+    makeHudMetric("Cache LOD", planetScaleInfo.anchorName + " " + planetScaleInfo.anchorLevel),
+    makeHudMetric("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
+    makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
+    makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
+    makeHudMetric("Surface Cache", planetCacheStats.chunks + "c/" + planetCacheStats.samples + "s"),
+    makeHudMetric("Render Chunks", renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.lastPendingChunks + "p/" + renderCacheStats.lastGeneratedThisPass + "g/" + renderCacheStats.lastFallbackChunks + "f"),
+    makeHudMetric("Pyramid", centerPyramidLineage.length + " parents"),
+    makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
     makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
@@ -34,6 +54,19 @@ function updateHud() {
   updateSettlementSummary();
   updateEventLog();
   updateInspectPanel();
+}
+
+function getSimulationDay() {
+  return Math.max(0, Math.round(Number(world.tick) || 0)) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
+}
+
+function getSimulationDayLabel() {
+  var day = getSimulationDay();
+  var year = Math.floor(day / 365);
+  var dayOfYear = Math.floor(day % 365);
+
+  return "Y" + year + " D" + dayOfYear;
 }
 
 function setElementText(element, text) {
@@ -242,7 +275,8 @@ function countFertileTilesInRadius(tileX, tileY, radius) {
   for (var y = Math.max(0, tileY - normalizedRadius); y <= Math.min(WORLD_HEIGHT - 1, tileY + normalizedRadius); y++) {
     var rowRadius = normalizedRadius - Math.abs(tileY - y);
 
-    for (var x = Math.max(0, tileX - rowRadius); x <= Math.min(WORLD_WIDTH - 1, tileX + rowRadius); x++) {
+    for (var dx = -rowRadius; dx <= rowRadius; dx++) {
+      var x = getWrappedWorldX(tileX + dx);
       sampledTiles++;
 
       if (isFertile(x, y)) {
@@ -258,8 +292,16 @@ function countFertileTilesInRadius(tileX, tileY, radius) {
   };
 }
 
-function getDistanceLabel(distance) {
-  return Number.isFinite(distance) ? String(distance) : "-";
+function getDistanceLabel(distance, distanceKm) {
+  if (!Number.isFinite(distance)) {
+    return "-";
+  }
+
+  if (Number.isFinite(distanceKm)) {
+    return String(distance) + " / " + Math.round(distanceKm).toLocaleString() + " km";
+  }
+
+  return String(distance);
 }
 
 function getLocalInspectContext(tileX, tileY) {
@@ -296,7 +338,8 @@ function getLocalInspectContext(tileX, tileY) {
     nearbyOrganisms: nearbyOrganisms.length,
     nearbyFood: nearbyFood,
     fertilePercent: fertileContext.fertilePercent,
-    nearestFoodDistance: nearestFood ? Math.abs(nearestFood.x - tileX) + Math.abs(nearestFood.y - tileY) : Infinity,
+    nearestFoodDistance: nearestFood ? getTileManhattanDistance(tileX, tileY, nearestFood.x, nearestFood.y) : Infinity,
+    nearestFoodDistanceKm: nearestFood ? getTileGreatCircleDistanceKm(tileX, tileY, nearestFood.x, nearestFood.y) : Infinity,
     nearestSettlementDistance: nearestSettlementDistance,
     localPressure: localPressure
   };
@@ -1085,16 +1128,35 @@ function updateInspectPanel() {
   var organism = getNearestOrganismToTile(tileX, tileY);
   var settlement = getNearestSettlementToTile(tileX, tileY);
   var localContext = getLocalInspectContext(tileX, tileY);
+  var planetScaleInfo = getPlanetCameraScaleInfo();
+  var planetCacheStats = getPlanetSurfaceCacheStats();
+  var renderCacheStats = getLocalSurfaceRenderCacheStats();
+  var inspectedPyramidLineage = isPlanetLocalView()
+    ? getPlanetSurfaceChunkLineage(getPlanetLocalSurfaceAddress(tileX, tileY).address)
+    : [];
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
     makeInspectChip("Lat/Lon", planetTile ? planetTile.latitude.toFixed(1) + " / " + planetTile.longitude.toFixed(1) : "-"),
+    makeInspectChip("Surface Lat/Lon", getInspectSurfacePositionLabel(tileX, tileY)),
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
+    makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
+    makeInspectChip("Cache LOD", planetScaleInfo.anchorName + " " + planetScaleInfo.anchorLevel),
+    makeInspectChip("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
+    makeInspectChip("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
+    makeInspectChip("Camera Alt", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
+    makeInspectChip("Surface Cache", planetCacheStats.chunks + " chunks / " + planetCacheStats.samples + " samples"),
+    makeInspectChip("Surface Chunk", planetCacheStats.lastChunkKey),
+    makeInspectChip("Render Chunks", renderCacheStats.lastVisibleChunks + " visible / " + renderCacheStats.chunks + " cached / " + renderCacheStats.lastPendingChunks + " pending / " + renderCacheStats.lastGeneratedThisPass + " generated / " + renderCacheStats.lastFallbackChunks + " fallback"),
+    makeInspectChip("Pyramid", getPlanetSurfaceChunkLineageLabel(inspectedPyramidLineage)),
+    makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
+    makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
+    makeInspectChip("Ground Features", getInspectGroundFeatureLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
     makeInspectChip("Local Fertile", Math.round(localContext.fertilePercent) + "%"),
-    makeInspectChip("Near Food", getDistanceLabel(localContext.nearestFoodDistance)),
+    makeInspectChip("Near Food", getDistanceLabel(localContext.nearestFoodDistance, localContext.nearestFoodDistanceKm)),
     makeInspectChip("Near Camp", getDistanceLabel(localContext.nearestSettlementDistance))
   ];
 
@@ -1102,12 +1164,16 @@ function updateInspectPanel() {
     var lineageRecord = world.lineages ? world.lineages[String(ensureOrganismLineage(organism))] : null;
     var parentText = lineageRecord && lineageRecord.parentId > 0 ? " parent L" + lineageRecord.parentId : " founder";
     var traits = ensureOrganismTraits(organism);
+    var organismSurfacePosition = getEntitySurfacePosition(organism);
 
     detailChips.push(makeInspectChip("Organism", "L" + ensureOrganismLineage(organism) + parentText));
+    detailChips.push(makeInspectChip("Org Unit", "~" + Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1)).toLocaleString()));
     detailChips.push(makeInspectChip("Org Energy", organism.energy));
-    detailChips.push(makeInspectChip("Org Age", organism.age));
+    detailChips.push(makeInspectChip("Org Age", Math.round(organism.age * Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0)).toLocaleString() + " days"));
+    detailChips.push(makeInspectChip("Travel Bank", Math.round(Math.max(0, Number(organism.travelKm) || 0)).toLocaleString() + " km"));
     detailChips.push(makeInspectChip("Org Gen", organism.generation));
     detailChips.push(makeInspectChip("Org Pos", organism.x + "," + organism.y));
+    detailChips.push(makeInspectChip("Org Lat/Lon", organismSurfacePosition ? organismSurfacePosition.latitude.toFixed(4) + " / " + organismSurfacePosition.longitude.toFixed(4) : "-"));
     detailChips.push(makeInspectChip("Org Dir", organism.directionX + "," + organism.directionY));
     detailChips.push(makeInspectChip("Org Traits", "V" + traits.vision + " M" + traits.metabolism + " R" + traits.reproductionEnergy + " roam " + traits.movementTendency.toFixed(2) + " hab " + traits.terrainAffinity.toFixed(2)));
   } else {
@@ -1155,12 +1221,132 @@ function updateInspectPanel() {
   setElementHtml(inspectDetailsText, detailChips.join(""));
 }
 
-function getTileFromCanvasEvent(event) {
+function getInspectSurfaceLabel(tileX, tileY) {
+  if (!isPlanetLocalView()) {
+    return "global";
+  }
+
+  var tile = getPlanetTile(tileX, tileY);
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+  var latitude = surfacePosition ? surfacePosition.latitude : (tile ? tile.latitude : getPlanetLatitudeForTile(tileY));
+  var longitude = surfacePosition ? surfacePosition.longitude : (tile ? tile.longitude : getPlanetLongitudeForTile(tileX));
+  var detail = getPlanetSurfaceDetail(latitude, longitude, tile);
+
+  return detail.surface + " / " + detail.feature +
+    " marker " + detail.marker.type +
+    " elev " + Math.round(detail.elevation * 100) +
+    " rough " + Math.round(detail.roughness * 100) +
+    " height " + Math.round(detail.heightMeters).toLocaleString() + "m" +
+    " shade " + Math.round(detail.hillshade * 100) +
+    " @ " + detail.sampleMeters + "m";
+}
+
+function getInspectGroundFeatureLabel(tileX, tileY) {
+  if (!isPlanetLocalView() || typeof getPlanetGroundFeatureSummary !== "function") {
+    return "-";
+  }
+
+  var tile = getPlanetTile(tileX, tileY);
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+  var latitude = surfacePosition ? surfacePosition.latitude : (tile ? tile.latitude : getPlanetLatitudeForTile(tileY));
+  var longitude = surfacePosition ? surfacePosition.longitude : (tile ? tile.longitude : getPlanetLongitudeForTile(tileX));
+  var scaleInfo = getPlanetCameraScaleInfo();
+
+  if (scaleInfo.metersPerSample > 25) {
+    return "available at Detail scale";
+  }
+
+  var summary = getPlanetGroundFeatureSummary(
+    latitude,
+    longitude,
+    Math.max(32, scaleInfo.metersPerCanvasPixel * 90)
+  );
+
+  if (summary.capped) {
+    return summary.label;
+  }
+
+  if (!summary.nearest) {
+    return summary.label;
+  }
+
+  return "nearest " + summary.nearest.type +
+    " " + summary.nearest.id +
+    " " + getPlanetDistanceLabel(summary.nearest.distanceMeters) +
+    " " + getPlanetGroundFeatureDimensionLabel(summary.nearest) +
+    " | nearby " + summary.label;
+}
+
+function getInspectSurfacePosition(tileX, tileY) {
+  var surfacePosition = world.inspectedSurface;
+
+  if (
+    surfacePosition &&
+    Number.isFinite(Number(surfacePosition.latitude)) &&
+    Number.isFinite(Number(surfacePosition.longitude))
+  ) {
+    var surfaceTile = getTileFromLatLon(surfacePosition.latitude, surfacePosition.longitude);
+
+    if (surfaceTile.x === tileX && surfaceTile.y === tileY) {
+      return {
+        latitude: clamp(Number(surfacePosition.latitude), -90, 90),
+        longitude: normalizeLongitude(surfacePosition.longitude)
+      };
+    }
+  }
+
+  return null;
+}
+
+function getInspectSurfacePositionLabel(tileX, tileY) {
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+
+  if (!surfacePosition) {
+    return "-";
+  }
+
+  return surfacePosition.latitude.toFixed(5) + " / " + surfacePosition.longitude.toFixed(5);
+}
+
+var planetDragState = {
+  active: false,
+  moved: false,
+  skipNextClick: false,
+  lastClientX: 0,
+  lastClientY: 0
+};
+var cameraInteractionTimer = null;
+
+function markCameraInteracting() {
+  world.isCameraInteracting = true;
+
+  if (cameraInteractionTimer !== null && typeof window.clearTimeout === "function") {
+    window.clearTimeout(cameraInteractionTimer);
+  }
+
+  if (typeof window.setTimeout === "function") {
+    cameraInteractionTimer = window.setTimeout(function() {
+      world.isCameraInteracting = false;
+      cameraInteractionTimer = null;
+      invalidateTerrainCache();
+      world.needsRender = true;
+    }, Math.max(40, Number(CONFIG.PLANET_CAMERA_INTERACTION_SETTLE_MS) || 140));
+  }
+}
+
+function getCanvasPointFromEvent(event) {
   var rect = canvas.getBoundingClientRect();
-  var canvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
-  var canvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+
+  return {
+    canvasX: (event.clientX - rect.left) * (canvas.width / rect.width),
+    canvasY: (event.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function getTileFromCanvasEvent(event) {
+  var point = getCanvasPointFromEvent(event);
   var planetTile = typeof getPlanetTileFromCanvasPoint === "function"
-    ? getPlanetTileFromCanvasPoint(canvasX, canvasY)
+    ? getPlanetTileFromCanvasPoint(point.canvasX, point.canvasY)
     : null;
 
   if (planetTile) {
@@ -1168,19 +1354,124 @@ function getTileFromCanvasEvent(event) {
   }
 
   return {
-    x: clamp(Math.floor(canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.floor(canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
+    x: clamp(Math.floor(point.canvasX / CONFIG.TILE_SIZE), 0, WORLD_WIDTH - 1),
+    y: clamp(Math.floor(point.canvasY / CONFIG.TILE_SIZE), 0, WORLD_HEIGHT - 1)
   };
 }
 
-function inspectTile(tileX, tileY) {
+function getSurfacePositionFromCanvasEvent(event) {
+  if (typeof getPlanetLatLonFromCanvasPoint !== "function") {
+    return null;
+  }
+
+  var point = getCanvasPointFromEvent(event);
+  return getPlanetLatLonFromCanvasPoint(point.canvasX, point.canvasY);
+}
+
+function inspectTile(tileX, tileY, shouldFocus, surfacePosition) {
   world.inspectedTile = {
     x: clamp(tileX, 0, WORLD_WIDTH - 1),
     y: clamp(tileY, 0, WORLD_HEIGHT - 1)
   };
+  world.inspectedSurface = surfacePosition || null;
 
-  drawWorld();
+  if (shouldFocus !== false && !isPlanetLocalView()) {
+    focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
+  }
+
+  world.needsRender = true;
   updateHud();
+}
+
+function zoomPlanetView(delta, anchorPoint) {
+  markCameraInteracting();
+
+  var didZoom = anchorPoint && typeof adjustPlanetZoomAtCanvasPoint === "function"
+    ? adjustPlanetZoomAtCanvasPoint(delta, anchorPoint.canvasX, anchorPoint.canvasY)
+    : adjustPlanetZoom(delta);
+
+  if (!didZoom) {
+    return false;
+  }
+
+  world.needsRender = true;
+  return true;
+}
+
+function redrawPlanetView() {
+  world.needsRender = true;
+}
+
+function beginPlanetDrag(event) {
+  if (typeof event.button === "number" && event.button !== 0) {
+    return;
+  }
+
+  planetDragState.active = true;
+  planetDragState.moved = false;
+  planetDragState.lastClientX = Number(event.clientX) || 0;
+  planetDragState.lastClientY = Number(event.clientY) || 0;
+  canvas.classList.add("dragging");
+
+  if (typeof canvas.setPointerCapture === "function" && typeof event.pointerId !== "undefined") {
+    canvas.setPointerCapture(event.pointerId);
+  }
+}
+
+function updatePlanetDrag(event) {
+  if (!planetDragState.active) {
+    return;
+  }
+
+  var clientX = Number(event.clientX) || 0;
+  var clientY = Number(event.clientY) || 0;
+  var deltaX = clientX - planetDragState.lastClientX;
+  var deltaY = clientY - planetDragState.lastClientY;
+
+  if (deltaX === 0 && deltaY === 0) {
+    return;
+  }
+
+  planetDragState.lastClientX = clientX;
+  planetDragState.lastClientY = clientY;
+
+  if (Math.abs(deltaX) + Math.abs(deltaY) > 2) {
+    planetDragState.moved = true;
+  }
+
+  if (typeof panPlanetViewByScreenDelta === "function") {
+    markCameraInteracting();
+    panPlanetViewByScreenDelta(deltaX, deltaY);
+    redrawPlanetView();
+  }
+
+  if (typeof event.preventDefault === "function") {
+    event.preventDefault();
+  }
+}
+
+function endPlanetDrag(event) {
+  if (!planetDragState.active) {
+    return;
+  }
+
+  planetDragState.active = false;
+  planetDragState.skipNextClick = planetDragState.moved;
+  canvas.classList.remove("dragging");
+
+  if (typeof canvas.releasePointerCapture === "function" && event && typeof event.pointerId !== "undefined") {
+    canvas.releasePointerCapture(event.pointerId);
+  }
+}
+
+function panPlanetViewFromKeyboard(eastSamples, northSamples) {
+  if (typeof panPlanetViewBySamples !== "function") {
+    return false;
+  }
+
+  panPlanetViewBySamples(eastSamples, northSamples);
+  redrawPlanetView();
+  return true;
 }
 
 function setPersistenceStatus(message, isError) {
@@ -1230,6 +1521,20 @@ function handleSimulationShortcut(event) {
   } else if (code === "KeyN" || key.toLowerCase() === "n") {
     handled = true;
     stepSimulationOnce();
+  } else if (code === "BracketRight" || key === "]") {
+    handled = true;
+    zoomPlanetView(1);
+  } else if (code === "BracketLeft" || key === "[") {
+    handled = true;
+    zoomPlanetView(-1);
+  } else if (code === "ArrowUp") {
+    handled = panPlanetViewFromKeyboard(0, 24);
+  } else if (code === "ArrowDown") {
+    handled = panPlanetViewFromKeyboard(0, -24);
+  } else if (code === "ArrowLeft") {
+    handled = panPlanetViewFromKeyboard(-24, 0);
+  } else if (code === "ArrowRight") {
+    handled = panPlanetViewFromKeyboard(24, 0);
   } else if (code === "Equal" || code === "NumpadAdd" || key === "+" || key === "=") {
     handled = true;
 
@@ -1281,10 +1586,30 @@ window.setupControls = function() {
     setMenuOpen(false);
   });
 
+  canvas.addEventListener("pointerdown", beginPlanetDrag);
+  window.addEventListener("pointermove", updatePlanetDrag);
+  window.addEventListener("pointerup", endPlanetDrag);
+  window.addEventListener("pointercancel", endPlanetDrag);
+
   canvas.addEventListener("click", function(event) {
+    if (planetDragState.skipNextClick) {
+      planetDragState.skipNextClick = false;
+      return;
+    }
+
+    var surfacePosition = getSurfacePositionFromCanvasEvent(event);
     var tile = getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y);
+    inspectTile(tile.x, tile.y, !isPlanetLocalView(), surfacePosition);
   });
+
+  canvas.addEventListener("wheel", function(event) {
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    var point = getCanvasPointFromEvent(event);
+    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25, point);
+  }, { passive: false });
 
   pauseButton.addEventListener("click", function() {
     toggleSimulationPaused();
