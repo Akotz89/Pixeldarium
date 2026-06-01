@@ -1845,18 +1845,67 @@ function getPlanetSurfaceSnowSignal(tile, latitude) {
   return clamp(Math.max(polarSnow, mountainSnow), 0, 0.86);
 }
 
-function getPlanetGroundLod(latitude, longitude, sampleMetersOverride) {
+function getPlanetSurfaceRegionalContext(tile) {
+  return {
+    continentShape: clamp(tile && Number.isFinite(Number(tile.continentShape)) ? Number(tile.continentShape) : 0, 0, 1.15),
+    plateInfluence: clamp(tile && Number.isFinite(Number(tile.plateInfluence)) ? Number(tile.plateInfluence) : 0, 0, 1),
+    islandArc: clamp(tile && Number.isFinite(Number(tile.islandArc)) ? Number(tile.islandArc) : 0, 0, 1),
+    shelfStrength: clamp(tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0, 0, 1),
+    seaLevelDelta: Number.isFinite(Number(tile && tile.seaLevelDelta)) ? Number(tile.seaLevelDelta) : 0,
+    highlandLift: clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) : 0, 0, 1.4),
+    coastFactor: clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1),
+    coastlineNoise: clamp(tile && Number.isFinite(Number(tile.coastlineNoise)) ? Number(tile.coastlineNoise) : 0, 0, 1)
+  };
+}
+
+function getPlanetGroundLod(latitude, longitude, sampleMetersOverride, tile) {
   var meters = getSurfaceMeterCoordinate(latitude, longitude);
   var sampleMeters = Math.max(
     1,
     Number(sampleMetersOverride) || getPlanetViewScale().metersPerSample
   );
-  var continental = getSurfaceLayerNoise(meters, Math.max(1000, sampleMeters * 48), 1);
-  var landform = getSurfaceLayerNoise(meters, Math.max(160, sampleMeters * 24), 2);
-  var canopy = getSurfaceLayerNoise(meters, Math.max(30, sampleMeters * 10), 3);
-  var ground = getSurfaceLayerNoise(meters, Math.max(6, sampleMeters * 3), 4);
+  var regional = getPlanetSurfaceRegionalContext(tile);
+  var continentalNoise = getSurfaceLayerNoise(meters, Math.max(1000, sampleMeters * 48), 1);
+  var landformNoise = getSurfaceLayerNoise(meters, Math.max(160, sampleMeters * 24), 2);
+  var canopyNoise = getSurfaceLayerNoise(meters, Math.max(30, sampleMeters * 10), 3);
+  var groundNoise = getSurfaceLayerNoise(meters, Math.max(6, sampleMeters * 3), 4);
   var meter = getSurfaceLayerNoise(meters, Math.max(1, sampleMeters), 5);
   var micro = getSurfacePixelNoise(meters, Math.max(1, sampleMeters), 6);
+  var continental = clamp(
+    continentalNoise * 0.56 +
+      regional.continentShape * 0.24 +
+      regional.plateInfluence * 0.12 +
+      regional.islandArc * 0.08,
+    0,
+    1
+  );
+  var landform = clamp(
+    landformNoise * 0.66 +
+      regional.highlandLift * 0.14 +
+      regional.islandArc * 0.10 +
+      regional.shelfStrength * 0.06 +
+      Math.max(0, regional.seaLevelDelta) * 0.04,
+    0,
+    1
+  );
+  var canopy = clamp(
+    canopyNoise * 0.78 +
+      regional.continentShape * 0.08 +
+      regional.coastFactor * 0.06 +
+      regional.coastlineNoise * 0.04 +
+      regional.islandArc * 0.04,
+    0,
+    1
+  );
+  var ground = clamp(
+    groundNoise * 0.76 +
+      regional.shelfStrength * 0.08 +
+      regional.coastlineNoise * 0.06 +
+      regional.islandArc * 0.06 +
+      regional.highlandLift * 0.04,
+    0,
+    1
+  );
   var elevation = clamp(
     continental * 0.34 +
       landform * 0.28 +
@@ -1869,7 +1918,11 @@ function getPlanetGroundLod(latitude, longitude, sampleMetersOverride) {
   var roughness = clamp(
     Math.abs(landform - ground) * 0.58 +
       Math.abs(ground - meter) * 0.30 +
-      Math.abs(meter - micro) * 0.12,
+      Math.abs(meter - micro) * 0.12 +
+      regional.islandArc * 0.08 +
+      regional.highlandLift * 0.07 +
+      regional.coastlineNoise * regional.coastFactor * 0.05 -
+      regional.shelfStrength * 0.04,
     0,
     1
   );
@@ -1885,7 +1938,16 @@ function getPlanetGroundLod(latitude, longitude, sampleMetersOverride) {
     meter: meter,
     micro: micro,
     elevation: elevation,
-    roughness: roughness
+    roughness: roughness,
+    regional: regional,
+    continentShape: regional.continentShape,
+    plateInfluence: regional.plateInfluence,
+    islandArc: regional.islandArc,
+    shelfStrength: regional.shelfStrength,
+    seaLevelDelta: regional.seaLevelDelta,
+    highlandLift: regional.highlandLift,
+    coastFactor: regional.coastFactor,
+    coastlineNoise: regional.coastlineNoise
   };
 }
 
@@ -2069,32 +2131,39 @@ function getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, sampleMete
 function getPlanetSurfaceHeightMeters(latitude, longitude, tile, sampleMeters, featureReliefOverride) {
   var biome = tile ? tile.biome : "unknown";
   var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || getPlanetViewScale().metersPerSample);
-  var lod = getPlanetGroundLod(latitude, longitude, normalizedSampleMeters);
+  var lod = getPlanetGroundLod(latitude, longitude, normalizedSampleMeters, tile);
   var featureRelief = featureReliefOverride ||
     getPlanetSurfaceFeatureReliefAdjustment(latitude, longitude, normalizedSampleMeters, biome);
   var tileRidge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
-  var tileHighlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) : 0, 0, 1.4);
+  var regional = lod.regional || getPlanetSurfaceRegionalContext(tile);
+  var tileHighlandLift = regional.highlandLift;
   var featureRoughnessBoost = clamp(Number(featureRelief.roughnessBoost) || 0, 0, 1);
   var featureFlattenAmount = clamp(Number(featureRelief.flattenAmount) || 0, 0, 1);
   var reliefRangeMeters = getBiomeReliefRangeMeters(biome) *
-    (1 + tileRidge * 0.44 + tileRoughness * 0.16 + featureRoughnessBoost * 0.22) *
+    (1 + tileRidge * 0.44 + tileRoughness * 0.16 + regional.islandArc * 0.18 + featureRoughnessBoost * 0.22) *
     (1 - featureFlattenAmount * 0.36);
   var landformMeters = (lod.elevation - 0.5) * reliefRangeMeters;
   var roughMeters = (lod.ground - 0.5) * reliefRangeMeters * 0.22;
   var microMeters = (lod.micro - 0.5) * reliefRangeMeters * 0.06;
-  var highlandMeters = biome === "ocean" ? 0 : tileHighlandLift * 240;
+  var highlandMeters = biome === "ocean" ? 0 : tileHighlandLift * 260;
+  var continentMeters = biome === "ocean" ? 0 : regional.continentShape * 70 + regional.plateInfluence * 45;
+  var islandArcMeters = biome === "ocean" ? regional.islandArc * 120 : regional.islandArc * 180;
+  var shelfMeters = regional.shelfStrength * 1750 + regional.coastFactor * 180;
+  var coastFlatten = regional.shelfStrength * featureFlattenAmount * 35;
   var featureHeightDeltaMeters = Number(featureRelief.heightDeltaMeters) || 0;
 
   if (biome === "ocean") {
     return getBiomeBaseHeightMeters(biome, tile) +
+      shelfMeters +
+      islandArcMeters +
       (lod.landform - 0.5) * 520 +
       roughMeters * 0.34 +
       microMeters * 0.18 +
       featureHeightDeltaMeters;
   }
 
-  return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + landformMeters + roughMeters + microMeters + featureHeightDeltaMeters;
+  return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + continentMeters + islandArcMeters - coastFlatten + landformMeters + roughMeters + microMeters + featureHeightDeltaMeters;
 }
 
 function getPlanetSurfaceRelief(latitude, longitude, tile, sampleMetersOverride) {
@@ -2258,6 +2327,7 @@ function getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod) {
 
 function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longitude) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
+  var regional = lod && lod.regional ? lod.regional : getPlanetSurfaceRegionalContext(tile);
   var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
   var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
@@ -2268,26 +2338,36 @@ function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longi
   var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var snow = getPlanetSurfaceSnowSignal(tile, latitude);
-  var surfaceRoughness = clamp(lod.roughness * 0.50 + relief.slope * 0.35 + tileRoughness * 0.15, 0, 1);
+  var surfaceRoughness = clamp(
+    lod.roughness * 0.46 +
+      relief.slope * 0.32 +
+      tileRoughness * 0.13 +
+      regional.islandArc * 0.06 +
+      regional.highlandLift * 0.05 -
+      regional.shelfStrength * 0.04,
+    0,
+    1
+  );
   var shoreline = getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod);
   var wetness = clamp(
     moisture * 0.44 +
       river * 0.34 +
       coast * 0.16 +
       (1 - lod.ground) * 0.06 +
+      regional.shelfStrength * 0.06 +
       shoreline.waterPocket * 0.18 +
       shoreline.beach * 0.04,
     0,
     1
   );
-  var canopyDensity = clamp(lod.canopy * 0.54 + moisture * 0.22 + lod.continental * 0.10 - relief.slope * 0.18 + (1 - ridge) * 0.08, 0, 1);
+  var canopyDensity = clamp(lod.canopy * 0.50 + moisture * 0.22 + lod.continental * 0.08 + regional.continentShape * 0.06 - relief.slope * 0.18 + (1 - ridge) * 0.08, 0, 1);
   var waterDepth = biome === "ocean"
-    ? clamp((-relief.heightMeters - 180) / 4200 - Math.max(shallowWater, shoreline.landPocket) * 0.32 + (1 - lod.landform) * 0.12, 0, 1)
+    ? clamp((-relief.heightMeters - 180) / 4200 - Math.max(shallowWater, shoreline.landPocket, regional.shelfStrength) * 0.38 + (1 - lod.landform) * 0.12, 0, 1)
     : clamp(shoreline.waterPocket * 0.18, 0, 1);
   var chop = biome === "ocean"
     ? clamp(lod.ground * 0.38 + lod.micro * 0.32 + relief.slope * 0.20 + (1 - waterDepth) * 0.10 + shoreline.waterPocket * 0.08, 0, 1)
     : 0;
-  var dryness = clamp(1 - moisture + (1 - wetness) * 0.22, 0, 1);
+  var dryness = clamp(1 - moisture + (1 - wetness) * 0.22 + regional.plateInfluence * 0.04 - regional.shelfStrength * 0.05, 0, 1);
 
   return {
     moisture: moisture,
@@ -2302,6 +2382,13 @@ function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longi
     coast: Math.max(coast, shoreline.strength),
     shallowWater: Math.max(shallowWater, shoreline.waterPocket, shoreline.landPocket * 0.45),
     ridge: ridge,
+    continentShape: regional.continentShape,
+    plateInfluence: regional.plateInfluence,
+    islandArc: regional.islandArc,
+    shelfStrength: regional.shelfStrength,
+    seaLevelDelta: regional.seaLevelDelta,
+    highlandLift: regional.highlandLift,
+    coastlineNoise: regional.coastlineNoise,
     shorelineStrength: shoreline.strength,
     shorelineNoise: shoreline.noise,
     shorelineBeach: shoreline.beach,
@@ -2477,7 +2564,7 @@ function applyPlanetGroundFeatureInfluenceToMaterial(material, groundFeature, bi
 
 function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride) {
   var biome = tile ? tile.biome : "unknown";
-  var lod = getPlanetGroundLod(latitude, longitude, sampleMetersOverride);
+  var lod = getPlanetGroundLod(latitude, longitude, sampleMetersOverride, tile);
   var relief = getPlanetSurfaceRelief(latitude, longitude, tile, lod.sampleMeters);
   var marker = getPlanetSurfaceFeatureMarker(biome, lod, relief);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
@@ -2506,6 +2593,13 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
     aspect: relief.aspect,
     hillshade: relief.hillshade,
     featureRelief: relief.featureRelief,
+    regionalContext: lod.regional,
+    continentShape: lod.continentShape,
+    plateInfluence: lod.plateInfluence,
+    islandArc: lod.islandArc,
+    shelfStrength: lod.shelfStrength,
+    seaLevelDelta: lod.seaLevelDelta,
+    highlandLift: lod.highlandLift,
     marker: marker,
     meterNoise: lod.meter,
     microNoise: lod.micro,

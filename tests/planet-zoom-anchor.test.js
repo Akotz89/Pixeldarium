@@ -923,6 +923,11 @@ var detailTile = {
   elevation: 0.7,
   riverStrength: 0.2,
   coastFactor: 0,
+  continentShape: 0.8,
+  plateInfluence: 0.65,
+  islandArc: 0.2,
+  shelfStrength: 0.1,
+  seaLevelDelta: 0.4,
   roughness: 0.4,
   ridgeStrength: 0.2,
   highlandLift: 0.2
@@ -935,6 +940,13 @@ var alternateClassifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detail
 setWorldSeed("PIXEL-2026");
 
 assert.ok(classifiedDetail.materialSignals, "surface detail should expose material signals");
+assert.ok(classifiedDetail.regionalContext, "surface detail should expose regional context");
+assertNear(classifiedDetail.continentShape, detailTile.continentShape, 1e-12, "surface detail should preserve continent signal");
+assertNear(classifiedDetail.plateInfluence, detailTile.plateInfluence, 1e-12, "surface detail should preserve plate signal");
+assertNear(classifiedDetail.islandArc, detailTile.islandArc, 1e-12, "surface detail should preserve island arc signal");
+assertNear(classifiedDetail.shelfStrength, detailTile.shelfStrength, 1e-12, "surface detail should preserve shelf signal");
+assertNear(classifiedDetail.materialSignals.continentShape, detailTile.continentShape, 1e-12, "material signals should preserve continent signal");
+assertNear(classifiedDetail.materialSignals.shelfStrength, detailTile.shelfStrength, 1e-12, "material signals should preserve shelf signal");
 assert.deepStrictEqual(repeatedClassifiedDetail, classifiedDetail, "surface material detail should be deterministic");
 assert.notStrictEqual(alternateClassifiedDetail.microNoise, classifiedDetail.microNoise, "surface material detail should vary by seed");
 assert.ok(["meadow", "brush", "grass", "snow"].indexOf(classifiedDetail.surface) >= 0, "grassland detail should classify as a grassland material");
@@ -1324,12 +1336,73 @@ var localHighlandHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
   roughness: 1,
   highlandLift: 1.2
 });
+var regionalLowlandLod = getPlanetGroundLod(34.2117, -77.7265, 1, {
+  biome: "grassland",
+  elevation: 0.6,
+  continentShape: 0.05,
+  plateInfluence: 0.04,
+  islandArc: 0,
+  shelfStrength: 0,
+  coastFactor: 0,
+  highlandLift: 0
+});
+var regionalHighlandLod = getPlanetGroundLod(34.2117, -77.7265, 1, {
+  biome: "grassland",
+  elevation: 0.6,
+  continentShape: 1,
+  plateInfluence: 0.9,
+  islandArc: 0.45,
+  shelfStrength: 0,
+  coastFactor: 0,
+  highlandLift: 1.1
+});
+var regionalDeepOceanHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "ocean",
+  elevation: -1.6,
+  shallowWater: 0,
+  shelfStrength: 0,
+  coastFactor: 0,
+  islandArc: 0
+}, 1);
+var regionalShelfOceanHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "ocean",
+  elevation: -1.6,
+  shallowWater: 0.9,
+  shelfStrength: 0.9,
+  coastFactor: 0.8,
+  islandArc: 0.35
+}, 1);
+var regionalIslandHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "grassland",
+  elevation: 0.15,
+  continentShape: 0.25,
+  plateInfluence: 0.12,
+  islandArc: 0.9,
+  shelfStrength: 0.35,
+  coastFactor: 0.6,
+  highlandLift: 0.15
+}, 1);
+var regionalPlainHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "grassland",
+  elevation: 0.15,
+  continentShape: 0.25,
+  plateInfluence: 0.12,
+  islandArc: 0,
+  shelfStrength: 0.35,
+  coastFactor: 0.6,
+  highlandLift: 0.15
+}, 1);
 
 assertNear(repeatedSmoothNoiseA, smoothNoiseA, 1e-12, "local smooth noise should be deterministic");
 assert.ok(Math.abs(smoothNoiseA - smoothNoiseB) < 0.04, "local smooth noise should avoid hard meter-cell discontinuities");
 assert.ok(Math.abs(smoothNoiseA - smoothNoiseC) > 0.00001, "local smooth noise should still vary across a patch");
 assert.ok(Math.abs(alternateSeedNoiseA - smoothNoiseA) > 0.00001, "local smooth noise should vary by seed");
 assert.ok(localHighlandHeight > localLowlandHeight + 100, "local relief should inherit planet-scale highland lift");
+assert.ok(regionalHighlandLod.elevation > regionalLowlandLod.elevation, "local LOD should preserve regional continent/highland elevation context");
+assert.ok(regionalHighlandLod.roughness > regionalLowlandLod.roughness, "local LOD should preserve island/highland roughness context");
+assert.ok(regionalHighlandLod.regional.continentShape > regionalLowlandLod.regional.continentShape, "local LOD should expose regional continent shape");
+assert.ok(regionalShelfOceanHeight > regionalDeepOceanHeight + 1200, "local ocean relief should preserve shallow shelf context");
+assert.ok(regionalIslandHeight > regionalPlainHeight + 80, "local land relief should preserve island arc context");
 
 fillPlanetTiles("grassland");
 
