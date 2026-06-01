@@ -1357,6 +1357,112 @@ function getPlanetSurfaceFinePixelSwatches(sample, baseColor) {
   return swatches;
 }
 
+function getPlanetSurfaceSilhouetteBreakupAccent(sample, baseColor, noise) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var surface = detail.surface || "ground";
+  var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
+  var target = normalizedNoise > 0.52 ? "#dfeadf" : "#101713";
+
+  if (surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    target = normalizedNoise > 0.52 ? "#8bd4e8" : "#021124";
+  } else if (surface === "dense canopy" || surface === "woodland") {
+    target = normalizedNoise > 0.52 ? "#2b6a38" : "#03140a";
+  } else if (surface === "grass" || surface === "brush" || surface === "meadow" || surface === "clearing") {
+    target = normalizedNoise > 0.52 ? "#83ad4e" : "#102819";
+  } else if (surface === "rock" || surface === "stone") {
+    target = normalizedNoise > 0.52 ? "#a9a592" : "#252722";
+  } else if (surface === "sand" || surface === "dune") {
+    target = normalizedNoise > 0.52 ? "#d2b66f" : "#5e4b22";
+  } else if (surface === "snow" || surface === "ice" || surface === "ridge ice") {
+    target = normalizedNoise > 0.52 ? "#ffffff" : "#88b9cb";
+  } else if (surface === "scrub" || surface === "moss") {
+    target = normalizedNoise > 0.52 ? "#738b66" : "#253428";
+  }
+
+  return blendHexColors(baseColor, target, clamp(0.16 + normalizedNoise * 0.24, 0.16, 0.46));
+}
+
+function getPlanetSurfaceSilhouetteBreakupStrength(sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var featureInfluence = detail.groundFeature ? clamp(Number(detail.groundFeature.influence) || 0, 0, 1) : 0;
+  var featureRelief = detail.featureRelief || {};
+  var surface = detail.surface || "ground";
+  var calmPenalty = surface === "deep water" || surface === "snow" || surface === "ice" ? 0.10 : 0;
+
+  if (sampleMeters > 5 || CONFIG.TILE_SIZE < 4) {
+    return 0;
+  }
+
+  return clamp(
+    0.10 +
+      (sampleMeters <= 1 ? 0.12 : 0.05) +
+      (Number(detail.roughness) || 0) * 0.16 +
+      (Number(detail.slope) || 0) * 0.12 +
+      getPlanetSurfaceBiomeTransitionStrength(sample) * 0.16 +
+      featureInfluence * 0.10 +
+      (Number(featureRelief.roughnessBoost) || 0) * 0.10 -
+      calmPenalty,
+    0,
+    0.64
+  );
+}
+
+function getPlanetSurfaceSilhouetteBreakupSwatches(sample, baseColor) {
+  var strength = getPlanetSurfaceSilhouetteBreakupStrength(sample);
+  var swatches = [];
+  var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+  var count = strength <= 0.14 ? 0 : clamp(Math.round(2 + strength * 7), 1, 6);
+  var maxSize = Math.max(1, CONFIG.TILE_SIZE - 1);
+  var edgeThickness = Math.max(1, Math.floor(CONFIG.TILE_SIZE * 0.20));
+
+  if (count <= 0) {
+    return swatches;
+  }
+
+  for (var i = 0; i < count; i++) {
+    var noise = getDeterministicUnitNoise(seedEast + i * 41, seedNorth - i * 43, getPlanetVisualSeedOffset() + 3203 + i * 29);
+    var sideNoise = getDeterministicUnitNoise(seedEast - i * 17, seedNorth + i * 19, getPlanetVisualSeedOffset() + 3511 + i * 31);
+    var offsetNoise = getDeterministicUnitNoise(seedEast + i * 23, seedNorth + i * 7, getPlanetVisualSeedOffset() + 3761 + i * 13);
+    var side = Math.floor(sideNoise * 4) % 4;
+    var runLength = clamp(Math.round(CONFIG.TILE_SIZE * (0.28 + noise * 0.34)), 1, maxSize);
+    var offset = Math.floor(offsetNoise * Math.max(1, CONFIG.TILE_SIZE - runLength + 1));
+    var swatch = {
+      x: 0,
+      y: 0,
+      width: edgeThickness,
+      height: runLength,
+      size: runLength,
+      color: getPlanetSurfaceSilhouetteBreakupAccent(sample, baseColor, noise),
+      alpha: clamp(0.08 + strength * 0.25 + noise * 0.10, 0.10, 0.42),
+      side: side
+    };
+
+    if (side === 0) {
+      swatch.x = offset;
+      swatch.y = 0;
+      swatch.width = runLength;
+      swatch.height = edgeThickness;
+    } else if (side === 1) {
+      swatch.x = CONFIG.TILE_SIZE - edgeThickness;
+      swatch.y = offset;
+    } else if (side === 2) {
+      swatch.x = offset;
+      swatch.y = CONFIG.TILE_SIZE - edgeThickness;
+      swatch.width = runLength;
+      swatch.height = edgeThickness;
+    } else {
+      swatch.x = 0;
+      swatch.y = offset;
+    }
+
+    swatches.push(swatch);
+  }
+
+  return swatches;
+}
+
 function getPlanetSurfaceReliefAccentStrength(sample) {
   var detail = sample && sample.detail ? sample.detail : {};
   var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
@@ -1575,6 +1681,7 @@ function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
   var swatches = getPlanetSurfaceFinePixelSwatches(sample, baseColor)
     .concat(getPlanetSurfaceReliefAccentSwatches(sample, baseColor))
     .concat(getPlanetSurfaceEdgeAccentSwatches(sample, baseColor))
+    .concat(getPlanetSurfaceSilhouetteBreakupSwatches(sample, baseColor))
     .concat(getPlanetSurfaceMicrotextureSwatches(sample, baseColor));
 
   for (var i = 0; i < swatches.length; i++) {

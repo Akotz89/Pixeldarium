@@ -1410,6 +1410,11 @@ var repeatedGrassFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSam
 var waterFinePixels = getPlanetSurfaceFinePixelSwatches(texturedWaterSample, "#08365f");
 var coarseGrassFinePixels = getPlanetSurfaceFinePixelSwatches(coarseTexturedGrassSample, "#2f6531");
 var featureGrassFinePixels = getPlanetSurfaceFinePixelSwatches(featureTexturedGrassSample, "#2f6531");
+var grassSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
+var waterSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedWaterSample, "#08365f");
+var coarseGrassSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(coarseTexturedGrassSample, "#2f6531");
+var featureGrassSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(featureTexturedGrassSample, "#2f6531");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
@@ -1418,6 +1423,7 @@ var coarseReliefAccents = getPlanetSurfaceReliefAccentSwatches(coarseReliefSampl
 setWorldSeed("PIXEL-2027");
 var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
@@ -1453,6 +1459,28 @@ grassFinePixels.concat(waterFinePixels).forEach(function(swatch) {
   assert.ok(swatch.height >= 1 && swatch.height <= 2, "fine pixel height should stay small");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "fine pixel width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "fine pixel height should stay in cell");
+});
+assert.ok(grassSilhouetteBreakup.length > 0, "close surface silhouette breakup should add edge swatches");
+assert.ok(grassSilhouetteBreakup.length <= 6, "silhouette breakup count should stay bounded");
+assert.deepStrictEqual(repeatedGrassSilhouetteBreakup, grassSilhouetteBreakup, "silhouette breakup should be deterministic");
+assert.notDeepStrictEqual(alternateSeedSilhouetteBreakup, grassSilhouetteBreakup, "silhouette breakup should vary by seed");
+assert.notStrictEqual(waterSilhouetteBreakup[0].color, grassSilhouetteBreakup[0].color, "silhouette breakup color should vary by surface");
+assert.deepStrictEqual(coarseGrassSilhouetteBreakup, [], "broad local samples should skip silhouette breakup");
+assert.ok(featureGrassSilhouetteBreakup.length >= grassSilhouetteBreakup.length, "feature relief should strengthen silhouette breakup");
+assert.ok(
+  grassSilhouetteBreakup.some(function(swatch) { return swatch.x === 0 || swatch.y === 0 || swatch.x + swatch.width === CONFIG.TILE_SIZE || swatch.y + swatch.height === CONFIG.TILE_SIZE; }),
+  "silhouette breakup should hug meter-cell edges"
+);
+grassSilhouetteBreakup.concat(waterSilhouetteBreakup).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "silhouette breakup swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.42, "silhouette breakup alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "silhouette breakup x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "silhouette breakup y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "silhouette breakup width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "silhouette breakup height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "silhouette breakup width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "silhouette breakup height should stay in cell");
+  assert.ok(swatch.side >= 0 && swatch.side <= 3, "silhouette breakup should expose source side");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
 assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");
