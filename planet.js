@@ -984,6 +984,40 @@ function appendPlanetGroundFeature(features, blockEast, blockNorth, feature) {
   return feature;
 }
 
+function getPlanetGroundFeatureLineBends(blockEast, blockNorth, seed, lengthMeters) {
+  var bends = [];
+  var normalizedLengthMeters = Math.max(1, Number(lengthMeters) || 1);
+  var bendScale = normalizedLengthMeters * 0.13;
+
+  for (var i = 1; i <= 3; i++) {
+    bends.push({
+      t: i / 4,
+      offsetMeters: (getDeterministicUnitNoise(blockEast, blockNorth, seed + 31 + i * 11) - 0.5) * bendScale
+    });
+  }
+
+  return bends;
+}
+
+function getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, seed, radiusX, radiusY) {
+  var points = [];
+  var normalizedRadiusX = Math.max(1, Number(radiusX) || 1);
+  var normalizedRadiusY = Math.max(1, Number(radiusY) || 1);
+  var pointCount = 8;
+
+  for (var i = 0; i < pointCount; i++) {
+    var angle = (Math.PI * 2 * i) / pointCount;
+    var jitter = 0.74 + getDeterministicUnitNoise(blockEast, blockNorth, seed + 41 + i * 17) * 0.34;
+
+    points.push({
+      x: Math.cos(angle) * normalizedRadiusX * jitter,
+      y: Math.sin(angle) * normalizedRadiusY * jitter
+    });
+  }
+
+  return points;
+}
+
 function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
   var centerEast = (Number(blockEast) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
@@ -1032,6 +1066,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       east2: centerLineEast + dx,
       north2: centerLineNorth + dy,
       widthMeters: widthMeters,
+      bends: getPlanetGroundFeatureLineBends(blockEast, blockNorth, seed, length),
       color: getPlanetGroundFeatureTypeColor(type),
       alpha: alpha
     });
@@ -1067,6 +1102,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       widthMeters: clearingWidth,
       heightMeters: clearingHeight,
       rotation: getDeterministicUnitNoise(blockEast, blockNorth, 163) * Math.PI,
+      patchPoints: getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, 167, clearingWidth / 2, clearingHeight / 2),
       color: getPlanetGroundFeatureTypeColor(patchType),
       alpha: patchType === "wetland" ? 0.18 : 0.13
     });
@@ -1085,6 +1121,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       widthMeters: widthMeters,
       heightMeters: heightMeters,
       rotation: getDeterministicUnitNoise(blockEast, blockNorth, 197) * Math.PI,
+      patchPoints: getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, 199, widthMeters / 2, heightMeters / 2),
       color: getPlanetGroundFeatureTypeColor("rockfield"),
       alpha: 0.20
     });

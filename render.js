@@ -672,6 +672,12 @@ function getLocalSurfaceChunkPointForMeters(address, eastMeters, northMeters) {
 function drawLocalSurfaceGroundFeatureLine(targetCtx, address, feature) {
   var start = getLocalSurfaceChunkPointForMeters(address, feature.east1, feature.north1);
   var end = getLocalSurfaceChunkPointForMeters(address, feature.east2, feature.north2);
+  var dx = end.x - start.x;
+  var dy = end.y - start.y;
+  var lengthPixels = Math.sqrt(dx * dx + dy * dy) || 1;
+  var normalX = -dy / lengthPixels;
+  var normalY = dx / lengthPixels;
+  var bends = Array.isArray(feature.bends) ? feature.bends : [];
 
   targetCtx.save();
   targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
@@ -682,8 +688,21 @@ function drawLocalSurfaceGroundFeatureLine(targetCtx, address, feature) {
     9
   );
   targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
   targetCtx.beginPath();
   targetCtx.moveTo(start.x, start.y);
+
+  for (var i = 0; i < bends.length; i++) {
+    var bend = bends[i];
+    var t = clamp(Number(bend.t) || 0, 0, 1);
+    var offsetPixels = (Number(bend.offsetMeters) || 0) / Math.max(0.1, address.sampleMeters) * CONFIG.TILE_SIZE;
+
+    targetCtx.lineTo(
+      start.x + dx * t + normalX * offsetPixels,
+      start.y + dy * t + normalY * offsetPixels
+    );
+  }
+
   targetCtx.lineTo(end.x, end.y);
   targetCtx.stroke();
   targetCtx.restore();
@@ -693,19 +712,45 @@ function drawLocalSurfaceGroundFeatureRect(targetCtx, address, feature) {
   var center = getLocalSurfaceChunkPointForMeters(address, feature.east, feature.north);
   var width = Math.max(1, (Number(feature.widthMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
   var height = Math.max(1, (Number(feature.heightMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
+  var patchPoints = Array.isArray(feature.patchPoints) ? feature.patchPoints : [];
 
   targetCtx.save();
   targetCtx.translate(center.x, center.y);
   targetCtx.rotate(Number(feature.rotation) || 0);
   targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
   targetCtx.fillStyle = feature.color || "#d9e7ff";
-  targetCtx.fillRect(-width / 2, -height / 2, width, height);
+
+  if (patchPoints.length >= 3) {
+    targetCtx.beginPath();
+
+    for (var i = 0; i < patchPoints.length; i++) {
+      var patchPoint = patchPoints[i];
+      var pointX = (Number(patchPoint.x) || 0) / Math.max(0.1, address.sampleMeters) * CONFIG.TILE_SIZE;
+      var pointY = (Number(patchPoint.y) || 0) / Math.max(0.1, address.sampleMeters) * CONFIG.TILE_SIZE;
+
+      if (i === 0) {
+        targetCtx.moveTo(pointX, pointY);
+      } else {
+        targetCtx.lineTo(pointX, pointY);
+      }
+    }
+
+    targetCtx.closePath();
+    targetCtx.fill();
+  } else {
+    targetCtx.fillRect(-width / 2, -height / 2, width, height);
+  }
 
   if (feature.type === "rockfield") {
     targetCtx.globalAlpha = clamp((Number(feature.alpha) || 0.18) + 0.04, 0, 0.44);
     targetCtx.strokeStyle = "rgba(230, 218, 188, 0.26)";
     targetCtx.lineWidth = 1;
-    targetCtx.strokeRect(-width / 2, -height / 2, width, height);
+
+    if (patchPoints.length >= 3) {
+      targetCtx.stroke();
+    } else {
+      targetCtx.strokeRect(-width / 2, -height / 2, width, height);
+    }
   }
 
   targetCtx.restore();

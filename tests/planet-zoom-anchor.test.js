@@ -486,6 +486,17 @@ var wetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureB
 
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "stream"; }), "wet land blocks should generate stream detail");
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "wetland"; }), "wet land blocks should generate wetland patches");
+assert.ok(wetBlockFeatures.filter(function(feature) { return feature.shape === "line"; }).every(function(feature) {
+  return Array.isArray(feature.bends) && feature.bends.length >= 3;
+}), "line features should include deterministic bend metadata");
+assert.ok(wetBlockFeatures.filter(function(feature) { return feature.shape === "rect"; }).every(function(feature) {
+  return Array.isArray(feature.patchPoints) && feature.patchPoints.length >= 6;
+}), "patch features should include irregular render metadata");
+assert.deepStrictEqual(
+  getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters()),
+  wetBlockFeatures,
+  "organic feature geometry should be deterministic"
+);
 
 blockTile.riverStrength = 0;
 blockTile.moisture = 0.4;
@@ -498,6 +509,11 @@ var highlandBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFea
 assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "ridge"; }), "highland blocks should generate ridge detail");
 assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "rockfield"; }), "rough highland blocks should generate rockfield patches");
 assert.ok(highlandBlockFeatures.every(function(feature) { return feature.type !== "track" && feature.type !== "structure"; }), "highland detail should stay natural");
+assert.ok(highlandBlockFeatures.filter(function(feature) { return feature.type === "rockfield"; }).every(function(feature) {
+  return Array.isArray(feature.patchPoints) && feature.patchPoints.some(function(point) {
+    return Math.abs(point.x) !== Math.abs(point.y);
+  });
+}), "rockfields should render as irregular patches");
 
 var featureCenter = getSurfaceMeterCoordinate(34.2117, -77.7265);
 var groundFeatures = getPlanetGroundFeaturesForMeterBounds(
