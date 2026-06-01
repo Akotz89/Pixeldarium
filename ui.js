@@ -9,6 +9,7 @@ function updateHud() {
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
   var planetScaleInfo = getPlanetCameraScaleInfo();
   var planetCacheStats = getPlanetSurfaceCacheStats();
+  var renderCacheStats = getLocalSurfaceRenderCacheStats();
 
   setElementClass(eraText, "hud-card hud-era");
   setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
@@ -29,6 +30,7 @@ function updateHud() {
     makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
     makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
     makeHudMetric("Surface Cache", planetCacheStats.chunks + "c/" + planetCacheStats.samples + "s"),
+    makeHudMetric("Render Chunks", renderCacheStats.chunks + "c " + renderCacheStats.hits + "h"),
     makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
@@ -1123,6 +1125,7 @@ function updateInspectPanel() {
   var localContext = getLocalInspectContext(tileX, tileY);
   var planetScaleInfo = getPlanetCameraScaleInfo();
   var planetCacheStats = getPlanetSurfaceCacheStats();
+  var renderCacheStats = getLocalSurfaceRenderCacheStats();
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
@@ -1135,6 +1138,7 @@ function updateInspectPanel() {
     makeInspectChip("Camera Alt", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
     makeInspectChip("Surface Cache", planetCacheStats.chunks + " chunks / " + planetCacheStats.samples + " samples"),
     makeInspectChip("Surface Chunk", planetCacheStats.lastChunkKey),
+    makeInspectChip("Render Chunks", renderCacheStats.chunks + " chunks / " + renderCacheStats.hits + " hits"),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),

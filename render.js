@@ -1,7 +1,47 @@
 var terrainCache;
+var localSurfaceRenderChunkCache = {
+  chunks: {},
+  order: [],
+  stats: {
+    hits: 0,
+    misses: 0,
+    generatedChunks: 0,
+    evictions: 0,
+    lastChunkKey: "-"
+  }
+};
 
 function invalidateTerrainCache() {
   terrainCache = null;
+}
+
+function getLocalSurfaceRenderChunkCacheLimit() {
+  return Math.max(16, Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_CHUNK_CACHE_LIMIT) || 256));
+}
+
+function resetLocalSurfaceRenderChunkCache() {
+  localSurfaceRenderChunkCache = {
+    chunks: {},
+    order: [],
+    stats: {
+      hits: 0,
+      misses: 0,
+      generatedChunks: 0,
+      evictions: 0,
+      lastChunkKey: "-"
+    }
+  };
+}
+
+function getLocalSurfaceRenderCacheStats() {
+  return {
+    chunks: localSurfaceRenderChunkCache.order.length,
+    hits: localSurfaceRenderChunkCache.stats.hits,
+    misses: localSurfaceRenderChunkCache.stats.misses,
+    generatedChunks: localSurfaceRenderChunkCache.stats.generatedChunks,
+    evictions: localSurfaceRenderChunkCache.stats.evictions,
+    lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
+  };
 }
 
 function drawPixel(x, y, color) {
@@ -187,6 +227,93 @@ function drawSurfaceMarker(tctx, sample, screenX, screenY) {
   tctx.globalAlpha = 1;
 }
 
+function getLocalSurfaceRenderChunkKey(address) {
+  return address.chunkKey + ":tile" + CONFIG.TILE_SIZE + ":surface";
+}
+
+function makeLocalSurfaceRenderCanvas(width, height) {
+  if (typeof document !== "undefined" && document.createElement) {
+    return document.createElement("canvas");
+  }
+
+  if (typeof OffscreenCanvas !== "undefined") {
+    return new OffscreenCanvas(width, height);
+  }
+
+  return null;
+}
+
+function buildLocalSurfaceRenderChunk(address) {
+  var chunkPixels = address.chunkSamples * CONFIG.TILE_SIZE;
+  var chunkCanvas = makeLocalSurfaceRenderCanvas(chunkPixels, chunkPixels);
+
+  if (!chunkCanvas || typeof chunkCanvas.getContext !== "function") {
+    return null;
+  }
+
+  chunkCanvas.width = chunkPixels;
+  chunkCanvas.height = chunkPixels;
+
+  var chunkCtx = chunkCanvas.getContext("2d");
+
+  if (!chunkCtx) {
+    return null;
+  }
+
+  for (var y = 0; y < address.chunkSamples; y++) {
+    for (var x = 0; x < address.chunkSamples; x++) {
+      var sample = getPlanetSurfaceChunkSampleAtAddress(address, x, y);
+      var screenX = x * CONFIG.TILE_SIZE;
+      var screenY = y * CONFIG.TILE_SIZE;
+
+      chunkCtx.fillStyle = getPlanetSurfaceColor(sample);
+      chunkCtx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+      drawSurfaceMarker(chunkCtx, sample, screenX, screenY);
+    }
+  }
+
+  return {
+    key: getLocalSurfaceRenderChunkKey(address),
+    chunkKey: address.chunkKey,
+    canvas: chunkCanvas,
+    width: chunkPixels,
+    height: chunkPixels,
+    sampleMeters: address.sampleMeters,
+    chunkSamples: address.chunkSamples
+  };
+}
+
+function getLocalSurfaceRenderChunk(address) {
+  var renderKey = getLocalSurfaceRenderChunkKey(address);
+  var cachedChunk = localSurfaceRenderChunkCache.chunks[renderKey];
+
+  localSurfaceRenderChunkCache.stats.lastChunkKey = renderKey;
+
+  if (cachedChunk) {
+    localSurfaceRenderChunkCache.stats.hits++;
+    return cachedChunk;
+  }
+
+  var renderChunk = buildLocalSurfaceRenderChunk(address);
+
+  if (!renderChunk) {
+    return null;
+  }
+
+  localSurfaceRenderChunkCache.stats.misses++;
+  localSurfaceRenderChunkCache.stats.generatedChunks++;
+  localSurfaceRenderChunkCache.chunks[renderKey] = renderChunk;
+  localSurfaceRenderChunkCache.order.push(renderKey);
+
+  while (localSurfaceRenderChunkCache.order.length > getLocalSurfaceRenderChunkCacheLimit()) {
+    var evictedKey = localSurfaceRenderChunkCache.order.shift();
+    delete localSurfaceRenderChunkCache.chunks[evictedKey];
+    localSurfaceRenderChunkCache.stats.evictions++;
+  }
+
+  return renderChunk;
+}
+
 function drawPlanetShell(targetCtx) {
   var projection = getPlanetProjection();
   var gradient = targetCtx.createRadialGradient(
@@ -262,20 +389,34 @@ function buildGlobeTerrainCache(tctx) {
 }
 
 function buildLocalTerrainCache(tctx) {
+  var visibleChunks = {};
+
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
 
   for (var y = 0; y < WORLD_HEIGHT; y++) {
     for (var x = 0; x < WORLD_WIDTH; x++) {
-      var sample = getPlanetLocalSample(x, y);
-      var screenX = x * CONFIG.TILE_SIZE;
-      var screenY = y * CONFIG.TILE_SIZE;
+      var localAddress = getPlanetLocalSurfaceAddress(x, y);
+      var address = localAddress.address;
 
-      tctx.fillStyle = getPlanetSurfaceColor(sample);
-      tctx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
-      drawSurfaceMarker(tctx, sample, screenX, screenY);
+      if (!visibleChunks[address.chunkKey]) {
+        visibleChunks[address.chunkKey] = {
+          address: address,
+          screenX: x * CONFIG.TILE_SIZE - address.localSampleX * CONFIG.TILE_SIZE,
+          screenY: y * CONFIG.TILE_SIZE - address.localSampleY * CONFIG.TILE_SIZE
+        };
+      }
     }
   }
+
+  Object.keys(visibleChunks).forEach(function(chunkKey) {
+    var visibleChunk = visibleChunks[chunkKey];
+    var renderChunk = getLocalSurfaceRenderChunk(visibleChunk.address);
+
+    if (renderChunk) {
+      tctx.drawImage(renderChunk.canvas, visibleChunk.screenX, visibleChunk.screenY);
+    }
+  });
 
   tctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
   tctx.lineWidth = 1;
@@ -377,6 +518,7 @@ function drawPlanetReferenceGrid() {
     var view = getPlanetView();
     var scaleInfo = getPlanetCameraScaleInfo();
     var cacheStats = getPlanetSurfaceCacheStats();
+    var renderCacheStats = getLocalSurfaceRenderCacheStats();
 
     ctx.save();
     ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
@@ -397,7 +539,8 @@ function drawPlanetReferenceGrid() {
         " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
         " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
         " | " + getPlanetScaleLabel() +
-        " | cache " + cacheStats.chunks + " chunks / " + cacheStats.samples + " samples",
+        " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
+        " | render " + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h",
       28,
       canvas.height - 87
     );

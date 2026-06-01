@@ -356,6 +356,22 @@ function getLatLonFromLocalOffset(eastKm, northKm) {
   };
 }
 
+function getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters) {
+  var latitude = clamp(
+    (Number(northMeters) || 0) / (getLatitudeDistanceKmPerDegree() * 1000),
+    -90,
+    90
+  );
+  var longitude = normalizeLongitude(
+    (Number(eastMeters) || 0) / (getLongitudeDistanceKmPerDegree(latitude) * 1000)
+  );
+
+  return {
+    latitude: latitude,
+    longitude: longitude
+  };
+}
+
 function getPlanetLocalLatLonFromCanvasPoint(canvasX, canvasY) {
   var scale = getPlanetViewScale();
   var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
@@ -547,11 +563,27 @@ function interpolateLongitudeDeg(fromLongitude, toLongitude, amount) {
   );
 }
 
-function getPlanetLocalSample(gridX, gridY) {
+function getPlanetLocalSurfaceAddress(gridX, gridY) {
   var scale = getPlanetViewScale();
   var eastKm = (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample / 1000;
   var northKm = -(gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample / 1000;
   var latLon = getLatLonFromLocalOffset(eastKm, northKm);
+
+  return {
+    latitude: latLon.latitude,
+    longitude: latLon.longitude,
+    eastKm: eastKm,
+    northKm: northKm,
+    address: getPlanetSurfaceSampleAddress(latLon.latitude, latLon.longitude)
+  };
+}
+
+function getPlanetLocalSample(gridX, gridY) {
+  var localAddress = getPlanetLocalSurfaceAddress(gridX, gridY);
+  var latLon = {
+    latitude: localAddress.latitude,
+    longitude: localAddress.longitude
+  };
   var tilePosition = getTileFromLatLon(latLon.latitude, latLon.longitude);
   var tile = getPlanetTile(tilePosition.x, tilePosition.y);
   var cachedSample = getPlanetSurfaceChunkSample(latLon.latitude, latLon.longitude, tile);
@@ -573,8 +605,8 @@ function getPlanetLocalSample(gridX, gridY) {
     surfaceChunkLocalX: cachedSample.surfaceChunkLocalX,
     surfaceChunkLocalY: cachedSample.surfaceChunkLocalY,
     surfaceSampleMeters: cachedSample.surfaceSampleMeters,
-    eastKm: eastKm,
-    northKm: northKm
+    eastKm: localAddress.eastKm,
+    northKm: localAddress.northKm
   };
 }
 
@@ -641,6 +673,21 @@ function getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex) {
 
 function getPlanetSurfaceChunkKeyForLatLon(latitude, longitude, zoomLevelIndex) {
   return getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex).chunkKey;
+}
+
+function getPlanetSurfaceLatLonFromChunkAddress(address, localSampleX, localSampleY) {
+  var sampleEast = address.chunkX * address.chunkSamples + Math.round(Number(localSampleX) || 0);
+  var sampleNorth = address.chunkY * address.chunkSamples + Math.round(Number(localSampleY) || 0);
+  var eastMeters = (sampleEast + 0.5) * address.sampleMeters;
+  var northMeters = (sampleNorth + 0.5) * address.sampleMeters;
+
+  return getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters);
+}
+
+function getPlanetSurfaceChunkSampleAtAddress(address, localSampleX, localSampleY) {
+  var latLon = getPlanetSurfaceLatLonFromChunkAddress(address, localSampleX, localSampleY);
+
+  return getPlanetSurfaceChunkSample(latLon.latitude, latLon.longitude);
 }
 
 function getPlanetSurfaceChunk(address) {
