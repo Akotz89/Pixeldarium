@@ -202,9 +202,10 @@ var broadFeatures = getPlanetGroundFeaturesForMeterBounds(
 assert.deepStrictEqual(broadFeatures, [], "broad feature bounds query should return safely");
 
 var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
-var chunkBounds = getLocalSurfaceChunkMeterBounds(houseAddress);
+var houseChunkAddress = makePlanetSurfaceChunkAddress(finalGroundZoomIndex, houseAddress.chunkX, houseAddress.chunkY);
+var chunkBounds = getLocalSurfaceChunkMeterBounds(houseChunkAddress);
 var chunkPoint = getLocalSurfaceChunkPointForMeters(
-  houseAddress,
+  houseChunkAddress,
   chunkBounds.minEastMeters,
   chunkBounds.maxNorthMeters
 );
@@ -212,6 +213,44 @@ var chunkPoint = getLocalSurfaceChunkPointForMeters(
 assertNear(chunkBounds.sizeMeters, 32, 1e-9, "house chunk size");
 assertNear(chunkPoint.x, 0, 1e-9, "chunk meter origin x");
 assertNear(chunkPoint.y, 0, 1e-9, "chunk meter origin y");
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var chunkRect = getPlanetSurfaceChunkScreenRect(houseChunkAddress);
+var eastNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
+  finalGroundZoomIndex,
+  houseChunkAddress.chunkX + 1,
+  houseChunkAddress.chunkY
+));
+var northNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
+  finalGroundZoomIndex,
+  houseChunkAddress.chunkX,
+  houseChunkAddress.chunkY + 1
+));
+
+assertNear(chunkRect.x + chunkRect.width, eastNeighborRect.x, 1e-9, "adjacent chunk east edge continuity");
+assertNear(northNeighborRect.y + northNeighborRect.height, chunkRect.y, 1e-9, "adjacent chunk north edge continuity");
+
+var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
+assert.ok(visibleChunks.length > 1, "house zoom should enumerate multiple visible chunks");
+assert.ok(Number.isFinite(visibleChunks[0].priorityDistance), "visible chunks should include priority distance");
+
+for (var chunkIndex = 1; chunkIndex < visibleChunks.length; chunkIndex++) {
+  assert.ok(
+    visibleChunks[chunkIndex - 1].priorityDistance <= visibleChunks[chunkIndex].priorityDistance,
+    "visible chunks should be ordered from viewport focus outward"
+  );
+}
+
+var centerChunk = visibleChunks[0];
+var centerX = centerChunk.screenX + centerChunk.width / 2;
+var centerY = centerChunk.screenY + centerChunk.height / 2;
+assert.ok(Math.abs(centerX - canvas.width / 2) <= centerChunk.width, "first visible chunk should be near viewport center");
+assert.ok(Math.abs(centerY - canvas.height / 2) <= centerChunk.height, "first visible chunk should be near viewport center");
 `, context);
 
 console.log("planet zoom anchor checks passed");

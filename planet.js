@@ -786,21 +786,27 @@ function getPlanetLocalCanvasPoint(longitude, latitude) {
 function getPlanetSurfaceChunkScreenRect(address) {
   var currentScale = getPlanetViewScale();
   var samplePixelSize = CONFIG.TILE_SIZE * (address.sampleMeters / Math.max(0.1, currentScale.metersPerSample));
-  var topLeftLatLon = getPlanetSurfaceLatLonFromChunkAddress(
-    address,
-    0,
-    address.chunkSamples - 1
-  );
-  var topLeftPoint = getPlanetLocalCanvasPoint(topLeftLatLon.longitude, topLeftLatLon.latitude);
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var minEastMeters = address.sampleEast * address.sampleMeters;
+  var maxNorthMeters = (address.sampleNorth + address.chunkSamples) * address.sampleMeters;
   var sizePixels = address.chunkSamples * samplePixelSize;
 
   return {
-    x: topLeftPoint.x - samplePixelSize / 2,
-    y: topLeftPoint.y - samplePixelSize / 2,
+    x: canvas.width / 2 + ((minEastMeters - viewMeters.eastMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
+    y: canvas.height / 2 - ((maxNorthMeters - viewMeters.northMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
     width: sizePixels,
     height: sizePixels,
     samplePixelSize: samplePixelSize
   };
+}
+
+function getPlanetSurfaceChunkScreenPriority(screenRect) {
+  var centerX = (Number(screenRect.x) || 0) + (Number(screenRect.width) || 0) / 2;
+  var centerY = (Number(screenRect.y) || 0) + (Number(screenRect.height) || 0) / 2;
+  var deltaX = centerX - canvas.width / 2;
+  var deltaY = centerY - canvas.height / 2;
+
+  return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 }
 
 function getPlanetVisibleSurfaceChunks(guardSamples) {
@@ -843,10 +849,23 @@ function getPlanetVisibleSurfaceChunks(guardSamples) {
         screenX: screenRect.x,
         screenY: screenRect.y,
         width: screenRect.width,
-        height: screenRect.height
+        height: screenRect.height,
+        priorityDistance: getPlanetSurfaceChunkScreenPriority(screenRect)
       });
     }
   }
+
+  visibleChunks.sort(function(a, b) {
+    if (a.priorityDistance !== b.priorityDistance) {
+      return a.priorityDistance - b.priorityDistance;
+    }
+
+    if (a.address.chunkY !== b.address.chunkY) {
+      return a.address.chunkY - b.address.chunkY;
+    }
+
+    return a.address.chunkX - b.address.chunkX;
+  });
 
   return visibleChunks;
 }
