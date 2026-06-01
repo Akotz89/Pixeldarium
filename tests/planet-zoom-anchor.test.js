@@ -104,6 +104,9 @@ assert.strictEqual(finalGroundZoom.name, "Meter", "final ground zoom should rema
 assert.strictEqual(finalGroundZoom.metersPerSample, 1, "final ground zoom should remain 1 m/sample");
 assert.deepStrictEqual(developedPlaceLabels, [], "undeveloped planet zoom labels should not imply built infrastructure");
 assert.strictEqual(CONFIG.PLANET_DEBUG_OVERLAY, false, "verbose planet debug overlay should be hidden by default");
+assert.strictEqual(CONFIG.PLANET_REFERENCE_GRID, false, "planet reference grid should be hidden by default");
+assert.strictEqual(CONFIG.PLANET_GLOBE_ENTITY_MARKERS, false, "globe-scale entity markers should be hidden by default");
+assert.strictEqual(CONFIG.SHOW_SCANLINES, false, "scanline overlay should be hidden by default");
 
 world.planetView = {
   zoomLevel: 4,

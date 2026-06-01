@@ -709,7 +709,7 @@ function drawPlanetShell(targetCtx) {
 function drawPlanetCloudLayer(targetCtx) {
   var projection = getPlanetProjection();
   var sampleSize = getPlanetGlobeSampleSize(projection, 1.35);
-  var stride = 4;
+  var stride = 6;
   var cloudSeed = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 997 : 0;
   var maxCloudAlpha = clamp(Number(CONFIG.PLANET_CLOUD_ALPHA) || 0.11, 0, 0.22);
 
@@ -730,14 +730,14 @@ function drawPlanetCloudLayer(targetCtx) {
 
       var opacity = getPlanetCloudOpacity(point.tile.latitude, point.tile.longitude, cloudSeed);
 
-      if (opacity <= 0.035) {
+      if (opacity <= 0.09) {
         continue;
       }
 
       var light = getPlanetAtmosphericLight(point);
       var cloudSize = sampleSize * stride * (1.85 + opacity * 0.92);
 
-      targetCtx.globalAlpha = clamp(opacity * (0.10 + light * 0.24), 0, maxCloudAlpha);
+      targetCtx.globalAlpha = clamp(opacity * (0.05 + light * 0.12), 0, maxCloudAlpha);
       targetCtx.fillStyle = light > 0.52 ? "#f6fbff" : "#b6cce2";
       targetCtx.fillRect(
         point.x - cloudSize / 2,
@@ -778,10 +778,10 @@ function drawPlanetAtmosphereOverlay(targetCtx) {
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
   targetCtx.clip();
 
-  limbGradient.addColorStop(0, "rgba(255, 255, 255, 0.10)");
-  limbGradient.addColorStop(0.54, "rgba(86, 176, 255, 0.04)");
-  limbGradient.addColorStop(0.82, "rgba(54, 148, 255, 0.10)");
-  limbGradient.addColorStop(1, "rgba(4, 14, 34, 0.42)");
+  limbGradient.addColorStop(0, "rgba(255, 255, 255, 0.025)");
+  limbGradient.addColorStop(0.58, "rgba(86, 176, 255, 0.012)");
+  limbGradient.addColorStop(0.84, "rgba(54, 148, 255, 0.04)");
+  limbGradient.addColorStop(1, "rgba(4, 14, 34, 0.28)");
   targetCtx.globalCompositeOperation = "screen";
   targetCtx.fillStyle = limbGradient;
   targetCtx.fillRect(
@@ -807,13 +807,13 @@ function drawPlanetAtmosphereOverlay(targetCtx) {
 
   targetCtx.beginPath();
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius + 1, 0, Math.PI * 2);
-  targetCtx.strokeStyle = "rgba(170, 226, 255, 0.42)";
-  targetCtx.lineWidth = 1.5;
+  targetCtx.strokeStyle = "rgba(170, 226, 255, 0.24)";
+  targetCtx.lineWidth = 1;
   targetCtx.stroke();
   targetCtx.beginPath();
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius + 8, 0, Math.PI * 2);
-  targetCtx.strokeStyle = "rgba(107, 227, 255, 0.08)";
-  targetCtx.lineWidth = 9;
+  targetCtx.strokeStyle = "rgba(107, 227, 255, 0.045)";
+  targetCtx.lineWidth = 7;
   targetCtx.stroke();
   targetCtx.globalAlpha = 1;
   targetCtx.globalCompositeOperation = "source-over";
@@ -1225,17 +1225,19 @@ function drawPlanetReferenceGrid() {
   var lonStep = Math.max(10, Math.round(Number(CONFIG.PLANET_GRID_DEGREES) || 30));
   var latStep = lonStep;
   var showDebugOverlay = Boolean(CONFIG.PLANET_DEBUG_OVERLAY);
+  var showReferenceGrid = Boolean(CONFIG.PLANET_REFERENCE_GRID || showDebugOverlay);
 
   if (isGlobeRenderMode() && isPlanetLocalView()) {
-    var view = getPlanetView();
-    var scaleInfo = getPlanetCameraScaleInfo();
-
     ctx.save();
-    drawPlanetLocalCurvatureOverlay();
-    drawPlanetLocalReferenceGrid();
+    if (showReferenceGrid) {
+      drawPlanetLocalCurvatureOverlay();
+      drawPlanetLocalReferenceGrid();
+    }
     drawPlanetScaleBar();
 
     if (showDebugOverlay) {
+      var view = getPlanetView();
+      var scaleInfo = getPlanetCameraScaleInfo();
       var cacheStats = getPlanetSurfaceCacheStats();
       var renderCacheStats = getLocalSurfaceRenderCacheStats();
       var visibleChunks = getPlanetVisibleSurfaceChunks(0);
@@ -1278,6 +1280,10 @@ function drawPlanetReferenceGrid() {
     return;
   }
 
+  if (isGlobeRenderMode() && !showReferenceGrid && !showDebugOverlay) {
+    return;
+  }
+
   ctx.save();
   ctx.lineWidth = 1;
 
@@ -1310,31 +1316,33 @@ function drawPlanetReferenceGrid() {
       ctx.stroke();
     }
 
-    for (var lon = -180; lon <= 180; lon += lonStep) {
-      var longitudePoints = [];
+    if (showReferenceGrid) {
+      for (var lon = -180; lon <= 180; lon += lonStep) {
+        var longitudePoints = [];
 
-      for (var lat = -90; lat <= 90; lat += 2) {
-        longitudePoints.push({ longitude: lon, latitude: lat });
+        for (var lat = -90; lat <= 90; lat += 2) {
+          longitudePoints.push({ longitude: lon, latitude: lat });
+        }
+
+        drawProjectedLine(longitudePoints, lon === 0 ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.055)");
       }
 
-      drawProjectedLine(longitudePoints, lon === 0 ? "rgba(255, 255, 255, 0.18)" : "rgba(255, 255, 255, 0.055)");
-    }
+      for (var gridLat = -60; gridLat <= 60; gridLat += latStep) {
+        var latitudePoints = [];
 
-    for (var gridLat = -60; gridLat <= 60; gridLat += latStep) {
-      var latitudePoints = [];
+        for (var gridLon = -180; gridLon <= 180; gridLon += 2) {
+          latitudePoints.push({ longitude: gridLon, latitude: gridLat });
+        }
 
-      for (var gridLon = -180; gridLon <= 180; gridLon += 2) {
-        latitudePoints.push({ longitude: gridLon, latitude: gridLat });
+        drawProjectedLine(latitudePoints, gridLat === 0 ? "rgba(112, 240, 208, 0.28)" : "rgba(255, 255, 255, 0.055)");
       }
 
-      drawProjectedLine(latitudePoints, gridLat === 0 ? "rgba(112, 240, 208, 0.28)" : "rgba(255, 255, 255, 0.055)");
+      ctx.beginPath();
+      ctx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
-
-    ctx.beginPath();
-    ctx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
   } else {
     for (var lon = -150; lon <= 180; lon += lonStep) {
       var x = ((lon + 180) / 360) * canvas.width;
@@ -1355,7 +1363,7 @@ function drawPlanetReferenceGrid() {
     }
   }
 
-  if (world.planetSummary) {
+  if (showDebugOverlay && world.planetSummary) {
     ctx.fillStyle = "rgba(3, 4, 9, 0.50)";
     ctx.fillRect(18, canvas.height - 42, 430, 24);
     ctx.fillStyle = "rgba(220, 229, 255, 0.86)";
@@ -1454,7 +1462,18 @@ function drawSurfaceEntity(entity, interpolation, size, color) {
   );
 }
 
+function shouldDrawGlobeScaleEntities() {
+  return !isGlobeRenderMode() ||
+    isPlanetLocalView() ||
+    Boolean(CONFIG.PLANET_GLOBE_ENTITY_MARKERS) ||
+    Boolean(CONFIG.PLANET_DEBUG_OVERLAY);
+}
+
 function drawFood() {
+  if (!shouldDrawGlobeScaleEntities()) {
+    return;
+  }
+
   for (var i = 0; i < world.food.length; i++) {
     var food = world.food[i];
     drawSurfaceEntity(food, 1, CONFIG.FOOD_DRAW_SIZE, "#58f06c");
@@ -1497,6 +1516,10 @@ function getOrganismColor(organism) {
 }
 
 function drawOrganisms() {
+  if (!shouldDrawGlobeScaleEntities()) {
+    return;
+  }
+
   var interpolation = world.interpolation;
 
   if (interpolation < 0) {
@@ -1909,6 +1932,10 @@ function drawInterstellarFleets() {
 }
 
 function drawScanlines() {
+  if (!CONFIG.SHOW_SCANLINES && !CONFIG.PLANET_DEBUG_OVERLAY) {
+    return;
+  }
+
   ctx.fillStyle = "rgba(255, 255, 255, 0.025)";
 
   for (var y = 0; y < canvas.height; y += CONFIG.TILE_SIZE * 8) {

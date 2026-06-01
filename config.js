@@ -182,8 +182,11 @@ const CONFIG = {
   PLANET_GRID_DEGREES: 30,
   PLANET_ZOOM_LEVEL: 0,
   PLANET_GLOBE_RASTER_MAX_SIZE: 720,
-  PLANET_CLOUD_ALPHA: 0.11,
+  PLANET_CLOUD_ALPHA: 0.035,
+  PLANET_REFERENCE_GRID: false,
+  PLANET_GLOBE_ENTITY_MARKERS: false,
   PLANET_DEBUG_OVERLAY: false,
+  SHOW_SCANLINES: false,
   PLANET_ZOOM_LEVELS: [
     { name: "Globe", metersPerSample: 125000, chunkKm: 4000 },
     { name: "Continent", metersPerSample: 25000, chunkKm: 1000 },
