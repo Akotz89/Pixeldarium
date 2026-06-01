@@ -1730,6 +1730,15 @@ assert.strictEqual(getLocalSurfaceRenderCacheStats().lastPlaceholderChunks, 0, "
 var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
 assert.ok(visibleChunks.length > 1, "meter zoom should enumerate multiple visible chunks");
 assert.ok(Number.isFinite(visibleChunks[0].priorityDistance), "visible chunks should include priority distance");
+assert.ok(visibleChunks.totalCandidateChunks >= visibleChunks.length, "visible chunks should expose candidate working-set size");
+assert.strictEqual(visibleChunks.workingSetLimit, getPlanetSurfaceVisibleChunkLimit(), "visible chunks should expose default working-set limit");
+assert.ok(visibleChunks.culledChunks >= 0, "visible chunks should expose culled chunk count");
+
+var limitedVisibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount(), 4);
+assert.strictEqual(limitedVisibleChunks.length, 4, "visible chunks should respect explicit working-set limit");
+assert.strictEqual(limitedVisibleChunks.workingSetLimit, 4, "limited visible chunks should expose explicit working-set limit");
+assert.ok(limitedVisibleChunks.totalCandidateChunks > limitedVisibleChunks.length, "limited visible chunks should retain total candidate count");
+assert.strictEqual(limitedVisibleChunks.culledChunks, limitedVisibleChunks.totalCandidateChunks - limitedVisibleChunks.length, "limited visible chunks should expose culled count");
 
 for (var chunkIndex = 1; chunkIndex < visibleChunks.length; chunkIndex++) {
   assert.ok(
@@ -1743,6 +1752,17 @@ var centerX = centerChunk.screenX + centerChunk.width / 2;
 var centerY = centerChunk.screenY + centerChunk.height / 2;
 assert.ok(Math.abs(centerX - canvas.width / 2) <= centerChunk.width, "first visible chunk should be near viewport center");
 assert.ok(Math.abs(centerY - canvas.height / 2) <= centerChunk.height, "first visible chunk should be near viewport center");
+
+var limitedCenterChunk = limitedVisibleChunks[0];
+var limitedCenterX = limitedCenterChunk.screenX + limitedCenterChunk.width / 2;
+var limitedCenterY = limitedCenterChunk.screenY + limitedCenterChunk.height / 2;
+assert.ok(Math.abs(limitedCenterX - canvas.width / 2) <= limitedCenterChunk.width, "limited visible chunks should keep center priority");
+assert.ok(Math.abs(limitedCenterY - canvas.height / 2) <= limitedCenterChunk.height, "limited visible chunks should keep center priority");
+
+var renderStatsAfterReset = getLocalSurfaceRenderCacheStats();
+assert.strictEqual(renderStatsAfterReset.lastVisibleCandidateChunks, 0, "render cache stats should expose candidate chunk count");
+assert.strictEqual(renderStatsAfterReset.lastWorkingSetLimit, 0, "render cache stats should expose working-set limit");
+assert.strictEqual(renderStatsAfterReset.lastCulledChunks, 0, "render cache stats should expose culled chunk count");
 `, context);
 
 console.log("planet zoom anchor checks passed");

@@ -8,6 +8,9 @@ var localSurfaceRenderChunkCache = {
     generatedChunks: 0,
     evictions: 0,
     lastVisibleChunks: 0,
+    lastVisibleCandidateChunks: 0,
+    lastWorkingSetLimit: 0,
+    lastCulledChunks: 0,
     lastPendingChunks: 0,
     lastGeneratedThisPass: 0,
     lastFallbackChunks: 0,
@@ -44,6 +47,9 @@ function resetLocalSurfaceRenderChunkCache() {
       generatedChunks: 0,
       evictions: 0,
       lastVisibleChunks: 0,
+      lastVisibleCandidateChunks: 0,
+      lastWorkingSetLimit: 0,
+      lastCulledChunks: 0,
       lastPendingChunks: 0,
       lastGeneratedThisPass: 0,
       lastFallbackChunks: 0,
@@ -63,6 +69,9 @@ function getLocalSurfaceRenderCacheStats() {
     generatedChunks: localSurfaceRenderChunkCache.stats.generatedChunks,
     evictions: localSurfaceRenderChunkCache.stats.evictions,
     lastVisibleChunks: localSurfaceRenderChunkCache.stats.lastVisibleChunks,
+    lastVisibleCandidateChunks: localSurfaceRenderChunkCache.stats.lastVisibleCandidateChunks,
+    lastWorkingSetLimit: localSurfaceRenderChunkCache.stats.lastWorkingSetLimit,
+    lastCulledChunks: localSurfaceRenderChunkCache.stats.lastCulledChunks,
     lastPendingChunks: localSurfaceRenderChunkCache.stats.lastPendingChunks,
     lastGeneratedThisPass: localSurfaceRenderChunkCache.stats.lastGeneratedThisPass,
     lastFallbackChunks: localSurfaceRenderChunkCache.stats.lastFallbackChunks,
@@ -1991,6 +2000,9 @@ function buildLocalTerrainCache(tctx) {
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
   localSurfaceRenderChunkCache.stats.lastVisibleChunks = visibleChunks.length;
+  localSurfaceRenderChunkCache.stats.lastVisibleCandidateChunks = Number(visibleChunks.totalCandidateChunks) || visibleChunks.length;
+  localSurfaceRenderChunkCache.stats.lastWorkingSetLimit = Number(visibleChunks.workingSetLimit) || getPlanetSurfaceVisibleChunkLimit();
+  localSurfaceRenderChunkCache.stats.lastCulledChunks = Number(visibleChunks.culledChunks) || 0;
   localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = 0;
   localSurfaceRenderChunkCache.stats.lastPendingChunks = 0;
   localSurfaceRenderChunkCache.stats.lastFallbackChunks = 0;

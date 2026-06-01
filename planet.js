@@ -419,6 +419,13 @@ function getPlanetSurfaceChunkCacheLimit() {
   return Math.max(32, Math.round(Number(CONFIG.PLANET_SURFACE_CHUNK_CACHE_LIMIT) || 768));
 }
 
+function getPlanetSurfaceVisibleChunkLimit() {
+  var configuredLimit = Math.round(Number(CONFIG.PLANET_SURFACE_VISIBLE_CHUNK_LIMIT) || 96);
+  var cacheLimited = Math.floor(getPlanetSurfaceChunkCacheLimit() * 0.75);
+
+  return Math.max(16, Math.min(Math.max(16, configuredLimit), Math.max(16, cacheLimited)));
+}
+
 function getPositiveModulo(value, divisor) {
   var normalizedDivisor = Math.max(1, Math.round(Number(divisor) || 1));
   return ((Math.round(Number(value) || 0) % normalizedDivisor) + normalizedDivisor) % normalizedDivisor;
@@ -903,8 +910,12 @@ function getPlanetSurfaceChunkScreenPriority(screenRect) {
   return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 }
 
-function getPlanetVisibleSurfaceChunks(guardSamples) {
+function getPlanetVisibleSurfaceChunks(guardSamples, maxChunks) {
   var normalizedGuardSamples = Math.max(1, Math.round(Number(guardSamples) || 1));
+  var visibleChunkLimit = Math.max(
+    1,
+    Math.round(Number(maxChunks) || getPlanetSurfaceVisibleChunkLimit())
+  );
   var samplePoints = [
     getPlanetLocalSurfaceAddress(-normalizedGuardSamples, -normalizedGuardSamples).address,
     getPlanetLocalSurfaceAddress(WORLD_WIDTH + normalizedGuardSamples, -normalizedGuardSamples).address,
@@ -961,6 +972,18 @@ function getPlanetVisibleSurfaceChunks(guardSamples) {
     return a.address.chunkX - b.address.chunkX;
   });
 
+  var totalCandidateChunks = visibleChunks.length;
+
+  visibleChunks.totalCandidateChunks = totalCandidateChunks;
+  visibleChunks.workingSetLimit = visibleChunkLimit;
+
+  if (visibleChunks.length > visibleChunkLimit) {
+    visibleChunks = visibleChunks.slice(0, visibleChunkLimit);
+    visibleChunks.totalCandidateChunks = totalCandidateChunks;
+    visibleChunks.workingSetLimit = visibleChunkLimit;
+  }
+
+  visibleChunks.culledChunks = Math.max(0, visibleChunks.totalCandidateChunks - visibleChunks.length);
   return visibleChunks;
 }
 
