@@ -45,7 +45,9 @@ function annotatePlanetHydrology() {
     }
 
     tile.coastFactor = 0;
+    tile.coastlineNoise = 0;
     tile.shallowWater = 0;
+    tile.shelfStrength = 0;
     tile.waterFlow = 0;
     tile.riverStrength = 0;
     tile.riverMouth = 0;
@@ -68,6 +70,17 @@ function annotatePlanetHydrology() {
     var neighbors = getTerrainNeighborTiles(currentTile);
     var waterNeighbors = 0;
     var landNeighbors = 0;
+    var secondRingWaterNeighbors = 0;
+    var secondRingLandNeighbors = 0;
+    var shorelineSeedOffset = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
+    var coastlineNoise = getTerrainFractalNoise(
+      currentTile.x + getDeterministicUnitNoise(currentTile.x, currentTile.y, shorelineSeedOffset + 911) * 0.45,
+      currentTile.y + getDeterministicUnitNoise(currentTile.x, currentTile.y, shorelineSeedOffset + 919) * 0.45,
+      5.5,
+      shorelineSeedOffset + 927,
+      3,
+      0.48
+    );
 
     for (var neighborIndex = 0; neighborIndex < neighbors.length; neighborIndex++) {
       var neighborTile = neighbors[neighborIndex].tile;
@@ -83,11 +96,54 @@ function annotatePlanetHydrology() {
       }
     }
 
+    for (var ringY = -2; ringY <= 2; ringY++) {
+      for (var ringX = -2; ringX <= 2; ringX++) {
+        var ringTile;
+
+        if (Math.max(Math.abs(ringX), Math.abs(ringY)) !== 2) {
+          continue;
+        }
+
+        ringTile = getPlanetTile(getWrappedWorldX(currentTile.x + ringX), getClampedWorldY(currentTile.y + ringY));
+
+        if (!ringTile) {
+          continue;
+        }
+
+        if (ringTile.biome === "ocean") {
+          secondRingWaterNeighbors++;
+        } else {
+          secondRingLandNeighbors++;
+        }
+      }
+    }
+
+    currentTile.coastlineNoise = coastlineNoise;
+
     if (currentTile.biome === "ocean") {
-      currentTile.shallowWater = clamp(landNeighbors / 8, 0, 1);
+      currentTile.shallowWater = clamp(
+        landNeighbors / 8 * 0.72 +
+          secondRingLandNeighbors / 16 * 0.22 +
+          Math.max(0, coastlineNoise - 0.38) * 0.18,
+        0,
+        1
+      );
+      currentTile.shelfStrength = clamp(
+        currentTile.shallowWater * 0.82 +
+          Math.max(0, Number(currentTile.seaLevelDelta) || 0) * 0.16,
+        0,
+        1
+      );
       currentTile.coastFactor = currentTile.shallowWater;
     } else {
-      currentTile.coastFactor = clamp(waterNeighbors / 8, 0, 1);
+      currentTile.coastFactor = clamp(
+        waterNeighbors / 8 * 0.72 +
+          secondRingWaterNeighbors / 16 * 0.22 +
+          Math.max(0, coastlineNoise - 0.42) * 0.16,
+        0,
+        1
+      );
+      currentTile.shelfStrength = clamp(currentTile.coastFactor * 0.68 + Math.max(0, 0.12 - (Number(currentTile.seaLevelDelta) || 0)) * 0.25, 0, 1);
     }
   }
 
@@ -251,6 +307,36 @@ function getTerrainRidgedNoise(x, y, scale, seedOffset) {
   return clamp(ridge * ridge * 1.35, 0, 1);
 }
 
+function getTerrainWrappedTileDeltaX(x, centerX) {
+  var width = Math.max(1, WORLD_WIDTH);
+  var delta = Math.abs((Number(x) || 0) - (Number(centerX) || 0));
+
+  return Math.min(delta, width - delta);
+}
+
+function getTerrainContinentPlateInfluence(x, y, seedOffset) {
+  var influence = 0;
+  var plateCount = 8;
+  var normalizedX = Number(x) || 0;
+  var normalizedY = Number(y) || 0;
+
+  for (var plateIndex = 0; plateIndex < plateCount; plateIndex++) {
+    var centerX = getDeterministicUnitNoise(plateIndex, 11, seedOffset + 701) * WORLD_WIDTH;
+    var centerY = (0.14 + getDeterministicUnitNoise(plateIndex, 23, seedOffset + 709) * 0.72) * WORLD_HEIGHT;
+    var radiusX = (0.09 + getDeterministicUnitNoise(plateIndex, 37, seedOffset + 719) * 0.14) * WORLD_WIDTH;
+    var radiusY = (0.11 + getDeterministicUnitNoise(plateIndex, 41, seedOffset + 727) * 0.18) * WORLD_HEIGHT;
+    var weight = 0.70 + getDeterministicUnitNoise(plateIndex, 53, seedOffset + 733) * 0.42;
+    var dx = getTerrainWrappedTileDeltaX(normalizedX, centerX) / Math.max(1, radiusX);
+    var dy = (normalizedY - centerY) / Math.max(1, radiusY);
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    var plate = clamp(1 - Math.pow(distance, 1.55), 0, 1) * weight;
+
+    influence = Math.max(influence, plate);
+  }
+
+  return clamp(influence, 0, 1);
+}
+
 function seedTerrain() {
   if (typeof resetPlanetSurfaceChunkCache === "function") {
     resetPlanetSurfaceChunkCache();
@@ -284,13 +370,25 @@ function seedTerrain() {
       const subtropicalDryBand = Math.max(0, 1 - Math.abs(absLatitude - 28) / 18);
       const polarBand = clamp((absLatitude - 62) / 28, 0, 1);
       const continental = getTerrainFractalNoise(x, y, 74, seedOffset + 1201, 5, 0.58);
+      const plateInfluence = getTerrainContinentPlateInfluence(x, y, seedOffset + 7301);
       const shelf = getTerrainFractalNoise(x, y, 38, seedOffset + 2203, 4, 0.55);
       const basin = getTerrainFractalNoise(x, y, 17, seedOffset + 3209, 3, 0.50);
       const ridge = getTerrainRidgedNoise(x, y, 33, seedOffset + 4211);
       const roughness = getTerrainFractalNoise(x, y, 8, seedOffset + 5227, 3, 0.48);
-      const highlandLift = Math.pow(ridge, 2.25) * clamp(0.42 + continental * 0.78, 0, 1.15);
+      const islandArc = Math.pow(getTerrainRidgedNoise(x, y, 18, seedOffset + 7247), 1.8) *
+        getTerrainFractalNoise(x, y, 26, seedOffset + 7253, 3, 0.52) *
+        clamp(1 - plateInfluence * 0.72, 0, 1);
+      const continentShape = clamp(
+        plateInfluence * 0.72 +
+          continental * 0.24 +
+          islandArc * 0.22 +
+          (shelf - 0.5) * 0.10,
+        0,
+        1.15
+      );
+      const highlandLift = Math.pow(ridge, 2.25) * clamp(0.34 + continentShape * 0.86, 0, 1.15);
       const elevation =
-        (continental - 0.5) * 2.35 +
+        (continentShape - 0.5) * 2.72 +
         (shelf - 0.5) * 0.78 +
         (basin - 0.5) * 0.32 +
         (roughness - 0.5) * 0.16 +
@@ -318,6 +416,9 @@ function seedTerrain() {
         moisture,
         fertilityScore,
         elevation,
+        continentShape,
+        plateInfluence,
+        islandArc,
         ridge,
         roughness,
         highlandLift,
@@ -415,6 +516,10 @@ function seedTerrain() {
     planetTile.ridgeStrength = tileSeed.ridge;
     planetTile.roughness = tileSeed.roughness;
     planetTile.highlandLift = tileSeed.highlandLift;
+    planetTile.continentShape = tileSeed.continentShape;
+    planetTile.plateInfluence = tileSeed.plateInfluence;
+    planetTile.islandArc = tileSeed.islandArc;
+    planetTile.seaLevelDelta = tileSeed.elevation - waterThreshold;
     world.planetTiles.push(planetTile);
 
     if (terrain === CONFIG.TERRAIN_FERTILE) {

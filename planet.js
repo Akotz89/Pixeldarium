@@ -1248,7 +1248,10 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var riverStrength = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
   var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
-  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var shallowWater = clamp(Math.max(
+    tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
+    tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
+  ), 0, 1);
   var ridgeStrength = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var highlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) / 1.4 : 0, 0, 1);
@@ -2187,7 +2190,10 @@ function getPlanetSurfaceFeatureMarker(biome, lod, relief) {
 function getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
-  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var shallowWater = clamp(Math.max(
+    tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
+    tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
+  ), 0, 1);
   var sampleMeters = Math.max(1, Number(lod && lod.sampleMeters) || 1);
   var meters = {
     eastMeters: Number(lod && lod.eastMeters) || 0,
@@ -2255,7 +2261,10 @@ function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longi
   var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
   var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
-  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var shallowWater = clamp(Math.max(
+    tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
+    tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
+  ), 0, 1);
   var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var snow = getPlanetSurfaceSnowSignal(tile, latitude);

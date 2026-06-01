@@ -406,7 +406,9 @@ function getPlanetImageryBlendSignals(latitude, longitude) {
     moisture: 0,
     highlandLift: 0,
     coastFactor: 0,
+    coastlineNoise: 0,
     shallowWater: 0,
+    shelfStrength: 0,
     riverStrength: 0,
     riverMouth: 0,
     ridgeStrength: 0,
@@ -432,7 +434,9 @@ function getPlanetImageryBlendSignals(latitude, longitude) {
     signals.moisture += getPlanetTileNumericSignal(tile, "moisture", 0.8) * weight;
     signals.highlandLift += getPlanetTileNumericSignal(tile, "highlandLift", 0) * weight;
     signals.coastFactor += getPlanetTileNumericSignal(tile, "coastFactor", 0) * weight;
+    signals.coastlineNoise += getPlanetTileNumericSignal(tile, "coastlineNoise", 0) * weight;
     signals.shallowWater += getPlanetTileNumericSignal(tile, "shallowWater", 0) * weight;
+    signals.shelfStrength += getPlanetTileNumericSignal(tile, "shelfStrength", 0) * weight;
     signals.riverStrength += getPlanetTileNumericSignal(tile, "riverStrength", 0) * weight;
     signals.riverMouth += getPlanetTileNumericSignal(tile, "riverMouth", 0) * weight;
     signals.ridgeStrength += getPlanetTileNumericSignal(tile, "ridgeStrength", 0) * weight;
@@ -458,7 +462,9 @@ function getPlanetImageryBlendSignals(latitude, longitude) {
       "moisture",
       "highlandLift",
       "coastFactor",
+      "coastlineNoise",
       "shallowWater",
+      "shelfStrength",
       "riverStrength",
       "riverMouth",
       "ridgeStrength",
@@ -507,7 +513,10 @@ function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
-  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var shallowWater = clamp(Math.max(
+    tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
+    tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
+  ), 0, 1);
   var snowSignal = getPlanetSurfaceSnowSignal(tile, latitude);
   var material = color;
 
@@ -548,7 +557,9 @@ function makePlanetImagerySignalTile(biome, signals, latitude) {
     elevation: signals.elevation,
     highlandLift: signals.highlandLift,
     coastFactor: signals.coastFactor,
+    coastlineNoise: signals.coastlineNoise,
     shallowWater: signals.shallowWater,
+    shelfStrength: signals.shelfStrength,
     riverStrength: signals.riverStrength,
     riverMouth: signals.riverMouth,
     ridgeStrength: signals.ridgeStrength,
@@ -570,7 +581,8 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
   var polar = clamp((Math.abs(normalizedLatitude) - 54) / 32, 0, 1);
   var coast = clamp(signals.coastFactor, 0, 1);
-  var shallowWater = clamp(signals.shallowWater, 0, 1);
+  var shallowWater = clamp(Math.max(signals.shallowWater, signals.shelfStrength), 0, 1);
+  var coastlineNoise = clamp(signals.coastlineNoise, 0, 1);
   var river = clamp(signals.riverStrength, 0, 1);
   var riverMouth = clamp(signals.riverMouth, 0, 1);
   var ridge = clamp(signals.ridgeStrength, 0, 1);
@@ -585,7 +597,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
     var gyre = Math.sin((surfaceMeters.eastMeters * 0.000006) - (surfaceMeters.northMeters * 0.000017)) * 0.5 + 0.5;
     var depth = clamp((1 - shallowWater) * 0.58 + (1 - elevation) * 0.32 + (1 - coast) * 0.10, 0, 1);
-    var shelf = clamp(shallowWater * 0.72 + coast * 0.34 + riverMouth * 0.22, 0, 1);
+    var shelf = clamp(shallowWater * 0.72 + coast * 0.34 + riverMouth * 0.22 + coastlineNoise * coast * 0.08, 0, 1);
 
     color = blendRgbWithHex(color, "#001027", clamp(depth * 0.22, 0, 0.24));
     color = blendRgbWithHex(color, "#06405f", clamp((1 - depth) * 0.10 + current * 0.04, 0, 0.14));
@@ -719,7 +731,10 @@ function getPlanetTileCompositedColor(tile) {
   var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
   var dry = clamp(1 - moisture, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
-  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var shallowWater = clamp(Math.max(
+    tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
+    tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
+  ), 0, 1);
   var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
   var riverMouth = clamp(tile && Number.isFinite(Number(tile.riverMouth)) ? Number(tile.riverMouth) : 0, 0, 1);
   var terrainSlope = clamp(tile && Number.isFinite(Number(tile.terrainSlope)) ? Number(tile.terrainSlope) : 0, 0, 1);

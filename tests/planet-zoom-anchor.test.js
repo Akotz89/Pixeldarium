@@ -99,11 +99,19 @@ function summarizeGeneratedPlanet(seedText) {
 
   var totalAreaKm2 = 0;
   var waterAreaKm2 = 0;
+  var landAreaKm2 = 0;
+  var coastalLandAreaKm2 = 0;
+  var shallowOceanAreaKm2 = 0;
   var biomeCounts = {};
   var minElevation = Infinity;
   var maxElevation = -Infinity;
   var maxRidge = 0;
+  var maxContinentShape = 0;
+  var maxIslandArc = 0;
   var signature = [];
+  var visitedLand = new Array(world.planetTiles.length).fill(false);
+  var largestLandmassAreaKm2 = 0;
+  var landmassCount = 0;
 
   for (var i = 0; i < world.planetTiles.length; i++) {
     var tile = world.planetTiles[i];
@@ -114,9 +122,21 @@ function summarizeGeneratedPlanet(seedText) {
     minElevation = Math.min(minElevation, Number(tile.elevation) || 0);
     maxElevation = Math.max(maxElevation, Number(tile.elevation) || 0);
     maxRidge = Math.max(maxRidge, Number(tile.ridgeStrength) || 0);
+    maxContinentShape = Math.max(maxContinentShape, Number(tile.continentShape) || 0);
+    maxIslandArc = Math.max(maxIslandArc, Number(tile.islandArc) || 0);
 
     if (tile.biome === "ocean") {
       waterAreaKm2 += areaKm2;
+
+      if ((Number(tile.shallowWater) || 0) > 0.24) {
+        shallowOceanAreaKm2 += areaKm2;
+      }
+    } else {
+      landAreaKm2 += areaKm2;
+
+      if ((Number(tile.coastFactor) || 0) > 0.18) {
+        coastalLandAreaKm2 += areaKm2;
+      }
     }
 
     if (i % 233 === 0) {
@@ -129,12 +149,62 @@ function summarizeGeneratedPlanet(seedText) {
     }
   }
 
+  for (var landIndex = 0; landIndex < world.planetTiles.length; landIndex++) {
+    var startTile = world.planetTiles[landIndex];
+    var stack;
+    var componentAreaKm2 = 0;
+
+    if (!startTile || startTile.biome === "ocean" || visitedLand[landIndex]) {
+      continue;
+    }
+
+    landmassCount++;
+    stack = [startTile];
+    visitedLand[landIndex] = true;
+
+    while (stack.length > 0) {
+      var componentTile = stack.pop();
+      var componentNeighbors = [
+        getPlanetTile(getWrappedWorldX(componentTile.x - 1), componentTile.y),
+        getPlanetTile(getWrappedWorldX(componentTile.x + 1), componentTile.y),
+        getPlanetTile(componentTile.x, getClampedWorldY(componentTile.y - 1)),
+        getPlanetTile(componentTile.x, getClampedWorldY(componentTile.y + 1))
+      ];
+
+      componentAreaKm2 += Math.max(0, Number(componentTile.areaKm2) || 0);
+
+      for (var neighborIndex = 0; neighborIndex < componentNeighbors.length; neighborIndex++) {
+        var neighbor = componentNeighbors[neighborIndex];
+        var neighborTileIndex;
+
+        if (!neighbor || neighbor.biome === "ocean") {
+          continue;
+        }
+
+        neighborTileIndex = getTileIndex(neighbor.x, neighbor.y);
+
+        if (!visitedLand[neighborTileIndex]) {
+          visitedLand[neighborTileIndex] = true;
+          stack.push(neighbor);
+        }
+      }
+    }
+
+    largestLandmassAreaKm2 = Math.max(largestLandmassAreaKm2, componentAreaKm2);
+  }
+
   return {
     waterAreaPercent: totalAreaKm2 > 0 ? waterAreaKm2 / totalAreaKm2 * 100 : 0,
+    largestLandmassLandPercent: landAreaKm2 > 0 ? largestLandmassAreaKm2 / landAreaKm2 * 100 : 0,
+    coastalLandPercent: landAreaKm2 > 0 ? coastalLandAreaKm2 / landAreaKm2 * 100 : 0,
+    shallowOceanPercent: waterAreaKm2 > 0 ? shallowOceanAreaKm2 / waterAreaKm2 * 100 : 0,
+    landmassCount: landmassCount,
     biomeCount: Object.keys(biomeCounts).length,
     biomeCounts: biomeCounts,
     elevationRange: maxElevation - minElevation,
     maxRidge: maxRidge,
+    maxContinentShape: maxContinentShape,
+    maxIslandArc: maxIslandArc,
     signature: signature
   };
 }
@@ -177,6 +247,12 @@ assertNear(generatedPlanet.waterAreaPercent, CONFIG.PLANET_TARGET_WATER_PERCENT,
 assert.ok(generatedPlanet.biomeCount >= 4, "generated planet should include multiple biome classes");
 assert.ok(generatedPlanet.elevationRange > 1.2, "generated planet should have meaningful elevation range");
 assert.ok(generatedPlanet.maxRidge > 0.55, "generated planet should include mountain ridge signal");
+assert.ok(generatedPlanet.maxContinentShape > 0.84, "generated planet should include strong continent plate signal");
+assert.ok(generatedPlanet.maxIslandArc > 0.18, "generated planet should include island arc signal");
+assert.ok(generatedPlanet.largestLandmassLandPercent > 18, "generated planet should include a major continent-scale landmass");
+assert.ok(generatedPlanet.landmassCount >= 3, "generated planet should include multiple landmasses/islands");
+assert.ok(generatedPlanet.coastalLandPercent > 8, "generated planet should expose meaningful coastal land");
+assert.ok(generatedPlanet.shallowOceanPercent > 1.5, "generated planet should expose shallow shelf ocean");
 assert.deepStrictEqual(repeatedGeneratedPlanet.signature, generatedPlanet.signature, "generated planet should be deterministic for a seed");
 assert.notDeepStrictEqual(alternateGeneratedPlanet.signature, generatedPlanet.signature, "generated planet should vary by seed");
 
@@ -917,7 +993,7 @@ assertRgbBounds(nearBoundaryEastImagery, "near-boundary east imagery");
 tileBlend.tiles.forEach(function(item) {
   assert.ok(item.weight >= 0 && item.weight <= 1, "surface tile blend item weight should be bounded");
 });
-["coastFactor", "shallowWater", "riverStrength", "ridgeStrength", "roughness", "terrainSlope", "terrainHillshade", "snowSignal"].forEach(function(key) {
+["coastFactor", "coastlineNoise", "shallowWater", "shelfStrength", "riverStrength", "ridgeStrength", "roughness", "terrainSlope", "terrainHillshade", "snowSignal"].forEach(function(key) {
   assert.ok(imageryBlendSignals[key] >= 0 && imageryBlendSignals[key] <= 1, "globe imagery signal " + key + " should be bounded");
 });
 assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud layer should stay disabled while tuning planet surface");
@@ -1275,6 +1351,9 @@ annotatePlanetTerrainRelief();
 
 assert.ok(centerTile.coastFactor > 0, "land next to ocean should have coast factor");
 assert.ok(oceanTile.shallowWater > 0, "ocean next to land should be shallow");
+assert.ok(centerTile.shelfStrength > 0, "coastal land should expose shelf strength");
+assert.ok(oceanTile.shelfStrength > 0, "shallow ocean should expose shelf strength");
+assert.ok(Number.isFinite(centerTile.coastlineNoise), "coastline noise should be finite");
 assert.ok(highTile.waterFlow > 0, "land tiles should accumulate rainfall flow");
 assert.ok(highTile.flowDirectionX !== 0 || highTile.flowDirectionY !== 0, "high land should route downhill");
 assert.ok(Number.isFinite(centerTile.terrainSlope), "terrain relief should include slope");
