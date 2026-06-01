@@ -1130,6 +1130,83 @@ function getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, seed, radiusX,
   return points;
 }
 
+function normalizePlanetLineAngleRadians(angle) {
+  var normalized = Number(angle) || 0;
+
+  while (normalized < 0) {
+    normalized += Math.PI;
+  }
+
+  while (normalized >= Math.PI) {
+    normalized -= Math.PI;
+  }
+
+  return normalized;
+}
+
+function getPlanetLineAngleDifferenceRadians(firstAngle, secondAngle) {
+  var first = normalizePlanetLineAngleRadians(firstAngle);
+  var second = normalizePlanetLineAngleRadians(secondAngle);
+  var delta = Math.abs(first - second);
+
+  return Math.min(delta, Math.PI - delta);
+}
+
+function getPlanetTileFlowAngleRadians(tile) {
+  if (!tile) {
+    return null;
+  }
+
+  var dx = Number(tile.flowDirectionX) || 0;
+  var dy = Number(tile.flowDirectionY) || 0;
+
+  if (dx === 0 && dy === 0) {
+    return null;
+  }
+
+  return normalizePlanetLineAngleRadians(Math.atan2(-dy, dx));
+}
+
+function getPlanetTileRidgeAngleRadians(tile) {
+  if (!tile || !Number.isFinite(Number(tile.terrainAspect))) {
+    return null;
+  }
+
+  return normalizePlanetLineAngleRadians((Number(tile.terrainAspect) * Math.PI / 180) + Math.PI / 2);
+}
+
+function getPlanetGroundFeatureOrientation(tile, type, blockEast, blockNorth, seed) {
+  var seededAngle = getDeterministicUnitNoise(blockEast, blockNorth, seed + 7) * Math.PI;
+  var jitter = (getDeterministicUnitNoise(blockEast, blockNorth, seed + 23) - 0.5) * Math.PI * 0.18;
+  var flowAngle = getPlanetTileFlowAngleRadians(tile);
+  var ridgeAngle = getPlanetTileRidgeAngleRadians(tile);
+  var preferredAngle = null;
+  var source = "seed";
+
+  if ((type === "stream" || type === "swale" || type === "wetland") && flowAngle !== null) {
+    preferredAngle = flowAngle;
+    source = "flow";
+  } else if ((type === "ridge" || type === "rockfield") && ridgeAngle !== null) {
+    preferredAngle = ridgeAngle;
+    source = "ridge";
+  } else if ((type === "shoal" || type === "reef") && ridgeAngle !== null) {
+    preferredAngle = ridgeAngle;
+    source = "coast";
+  }
+
+  if (preferredAngle === null) {
+    preferredAngle = seededAngle;
+  }
+
+  return {
+    angle: normalizePlanetLineAngleRadians(preferredAngle + jitter),
+    source: source,
+    preferredAngle: normalizePlanetLineAngleRadians(preferredAngle),
+    seededAngle: normalizePlanetLineAngleRadians(seededAngle),
+    jitterRadians: jitter
+  };
+}
+
 function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
   var normalizedBlockEast = Math.round(Number(blockEast) || 0);
@@ -1176,7 +1253,8 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var oceanSignal = clamp(shallowWater * 0.56 + coast * 0.34 + naturalSeed * 0.10, 0, 1);
 
   function makeLine(type, seed, widthMeters, alpha) {
-    var angle = getDeterministicUnitNoise(blockEast, blockNorth, seed + 7) * Math.PI;
+    var orientation = getPlanetGroundFeatureOrientation(tile, type, blockEast, blockNorth, seed);
+    var angle = orientation.angle;
     var offset = (getDeterministicUnitNoise(blockEast, blockNorth, seed + 13) - 0.5) * normalizedBlockMeters * 0.62;
     var length = normalizedBlockMeters * (1.18 + getDeterministicUnitNoise(blockEast, blockNorth, seed + 19) * 0.62);
     var normalX = -Math.sin(angle);
@@ -1196,6 +1274,10 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       north2: centerLineNorth + dy,
       widthMeters: widthMeters,
       bends: getPlanetGroundFeatureLineBends(blockEast, blockNorth, seed, length),
+      angleRadians: angle,
+      orientationSource: orientation.source,
+      preferredAngleRadians: orientation.preferredAngle,
+      seededAngleRadians: orientation.seededAngle,
       color: getPlanetGroundFeatureTypeColor(type),
       alpha: alpha
     });
@@ -1221,6 +1303,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
     var clearingWidth = normalizedBlockMeters * (0.18 + meadowSeed * 0.20);
     var clearingHeight = normalizedBlockMeters * (0.12 + getDeterministicUnitNoise(blockEast, blockNorth, 149) * 0.18);
     var patchType = wetSignal > 0.66 ? "wetland" : "meadow";
+    var patchOrientation = getPlanetGroundFeatureOrientation(tile, patchType, blockEast, blockNorth, 163);
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: patchType,
@@ -1230,7 +1313,10 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       north: centerNorth + (getDeterministicUnitNoise(blockEast, blockNorth, 157) - 0.5) * normalizedBlockMeters * 0.46,
       widthMeters: clearingWidth,
       heightMeters: clearingHeight,
-      rotation: getDeterministicUnitNoise(blockEast, blockNorth, 163) * Math.PI,
+      rotation: patchOrientation.angle,
+      orientationSource: patchOrientation.source,
+      preferredAngleRadians: patchOrientation.preferredAngle,
+      seededAngleRadians: patchOrientation.seededAngle,
       patchPoints: getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, 167, clearingWidth / 2, clearingHeight / 2),
       color: getPlanetGroundFeatureTypeColor(patchType),
       alpha: patchType === "wetland" ? 0.18 : 0.13
@@ -1240,6 +1326,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   if (openBiome && (rockSeed > 0.88 || ridgeSignal > 0.62)) {
     var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18 + ridgeSignal * 8;
     var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14 + roughness * 6;
+    var rockfieldOrientation = getPlanetGroundFeatureOrientation(tile, "rockfield", blockEast, blockNorth, 197);
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: "rockfield",
@@ -1249,7 +1336,10 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       north: centerNorth + (getDeterministicUnitNoise(blockEast, blockNorth, 193) - 0.5) * normalizedBlockMeters * 0.52,
       widthMeters: widthMeters,
       heightMeters: heightMeters,
-      rotation: getDeterministicUnitNoise(blockEast, blockNorth, 197) * Math.PI,
+      rotation: rockfieldOrientation.angle,
+      orientationSource: rockfieldOrientation.source,
+      preferredAngleRadians: rockfieldOrientation.preferredAngle,
+      seededAngleRadians: rockfieldOrientation.seededAngle,
       patchPoints: getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, 199, widthMeters / 2, heightMeters / 2),
       color: getPlanetGroundFeatureTypeColor("rockfield"),
       alpha: 0.20

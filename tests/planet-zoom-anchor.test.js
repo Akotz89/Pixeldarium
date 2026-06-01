@@ -990,6 +990,9 @@ blockTile.moisture = 2.2;
 blockTile.ridgeStrength = 0;
 blockTile.roughness = 0;
 blockTile.highlandLift = 0;
+blockTile.flowDirectionX = 1;
+blockTile.flowDirectionY = 0;
+blockTile.terrainAspect = 45;
 
 resetPlanetGroundFeatureBlockCache();
 var wetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
@@ -1001,6 +1004,14 @@ setWorldSeed("PIXEL-2026");
 
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "stream"; }), "wet land blocks should generate stream detail");
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "wetland"; }), "wet land blocks should generate wetland patches");
+var wetStreamFeature = wetBlockFeatures.filter(function(feature) { return feature.type === "stream"; })[0];
+var wetlandFeature = wetBlockFeatures.filter(function(feature) { return feature.type === "wetland"; })[0];
+assert.strictEqual(wetStreamFeature.orientationSource, "flow", "stream detail should inherit parent tile flow direction");
+assert.ok(
+  getPlanetLineAngleDifferenceRadians(wetStreamFeature.angleRadians, getPlanetTileFlowAngleRadians(blockTile)) < 0.35,
+  "stream detail should align with parent tile flow direction"
+);
+assert.strictEqual(wetlandFeature.orientationSource, "flow", "wetland patches should inherit parent tile flow direction");
 assert.deepStrictEqual(repeatedWetBlockFeatures, wetBlockFeatures, "cached ground feature blocks should be deterministic");
 assert.ok(groundFeatureCacheStats.hits >= 1, "ground feature block cache should record repeated hits");
 assert.notDeepStrictEqual(alternateSeedWetBlockFeatures, wetBlockFeatures, "ground feature blocks should vary by seed");
@@ -1021,11 +1032,27 @@ blockTile.moisture = 0.4;
 blockTile.ridgeStrength = 1;
 blockTile.roughness = 1;
 blockTile.highlandLift = 1.2;
+blockTile.flowDirectionX = 0;
+blockTile.flowDirectionY = 0;
+blockTile.terrainAspect = 0;
 
+resetPlanetGroundFeatureBlockCache();
 var highlandBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+var highlandRidgeFeature = highlandBlockFeatures.filter(function(feature) { return feature.type === "ridge"; })[0];
+var rockfieldFeature = highlandBlockFeatures.filter(function(feature) { return feature.type === "rockfield"; })[0];
 
 assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "ridge"; }), "highland blocks should generate ridge detail");
 assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "rockfield"; }), "rough highland blocks should generate rockfield patches");
+assert.strictEqual(highlandRidgeFeature.orientationSource, "ridge", "ridge detail should inherit parent terrain aspect");
+assert.ok(
+  getPlanetLineAngleDifferenceRadians(highlandRidgeFeature.angleRadians, getPlanetTileRidgeAngleRadians(blockTile)) < 0.35,
+  "ridge detail should align with parent terrain aspect"
+);
+assert.strictEqual(rockfieldFeature.orientationSource, "ridge", "rockfields should inherit parent terrain aspect");
+assert.ok(
+  getPlanetLineAngleDifferenceRadians(rockfieldFeature.rotation, getPlanetTileRidgeAngleRadians(blockTile)) < 0.35,
+  "rockfield patches should align with parent terrain aspect"
+);
 assert.ok(highlandBlockFeatures.every(function(feature) { return feature.type !== "track" && feature.type !== "structure"; }), "highland detail should stay natural");
 assert.ok(highlandBlockFeatures.filter(function(feature) { return feature.type === "rockfield"; }).every(function(feature) {
   return Array.isArray(feature.patchPoints) && feature.patchPoints.some(function(point) {
