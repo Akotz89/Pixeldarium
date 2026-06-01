@@ -907,6 +907,167 @@ function getSurfaceMeterCoordinate(latitude, longitude) {
   };
 }
 
+function getPlanetGroundFeatureBlockMeters() {
+  return 64;
+}
+
+function getPlanetGroundFeatureTypeColor(type) {
+  switch (type) {
+    case "stream":
+      return "#7ec8ff";
+    case "track":
+      return "#d7c28b";
+    case "structure":
+      return "#d8e0df";
+    case "clearing":
+      return "#8fcf71";
+    default:
+      return "#d9e7ff";
+  }
+}
+
+function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
+  var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
+  var centerEast = (Number(blockEast) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
+  var centerNorth = (Number(blockNorth) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
+  var center = getLatLonFromSurfaceMeterCoordinate(centerEast, centerNorth);
+  var tilePosition = getTileFromLatLon(center.latitude, center.longitude);
+  var tile = getPlanetTile(tilePosition.x, tilePosition.y);
+  var biome = tile ? tile.biome : "unknown";
+  var landBiome = biome !== "ocean" && biome !== "ice" && biome !== "unknown";
+  var forestBiome = biome === "forest" || biome === "tundra";
+  var openBiome = biome === "grassland" || biome === "desert" || biome === "tundra";
+  var features = [];
+  var naturalSeed = getDeterministicUnitNoise(blockEast, blockNorth, 41);
+  var pathSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73);
+  var structureSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109);
+  var clearingSeed = getDeterministicUnitNoise(blockEast, blockNorth, 131);
+
+  function makeLine(type, seed, widthMeters, alpha) {
+    var angle = getDeterministicUnitNoise(blockEast, blockNorth, seed + 7) * Math.PI;
+    var offset = (getDeterministicUnitNoise(blockEast, blockNorth, seed + 13) - 0.5) * normalizedBlockMeters * 0.62;
+    var length = normalizedBlockMeters * (1.18 + getDeterministicUnitNoise(blockEast, blockNorth, seed + 19) * 0.62);
+    var normalX = -Math.sin(angle);
+    var normalY = Math.cos(angle);
+    var centerLineEast = centerEast + normalX * offset;
+    var centerLineNorth = centerNorth + normalY * offset;
+    var dx = Math.cos(angle) * length / 2;
+    var dy = Math.sin(angle) * length / 2;
+
+    features.push({
+      type: type,
+      shape: "line",
+      biome: biome,
+      east1: centerLineEast - dx,
+      north1: centerLineNorth - dy,
+      east2: centerLineEast + dx,
+      north2: centerLineNorth + dy,
+      widthMeters: widthMeters,
+      color: getPlanetGroundFeatureTypeColor(type),
+      alpha: alpha
+    });
+  }
+
+  if (biome === "ocean") {
+    if (naturalSeed > 0.46) {
+      makeLine("stream", 211, 1.2 + naturalSeed * 2.4, 0.16);
+    }
+  } else if (landBiome && naturalSeed > 0.34) {
+    makeLine(forestBiome ? "clearing" : "track", 223, 0.7 + naturalSeed * 1.8, forestBiome ? 0.16 : 0.22);
+  }
+
+  if (landBiome && pathSeed > 0.72) {
+    makeLine("track", 307, openBiome ? 2.6 : 1.4, openBiome ? 0.34 : 0.22);
+  }
+
+  if (landBiome && clearingSeed > 0.82) {
+    var clearingWidth = normalizedBlockMeters * (0.18 + clearingSeed * 0.20);
+    var clearingHeight = normalizedBlockMeters * (0.12 + getDeterministicUnitNoise(blockEast, blockNorth, 149) * 0.18);
+
+    features.push({
+      type: "clearing",
+      shape: "rect",
+      biome: biome,
+      east: centerEast + (getDeterministicUnitNoise(blockEast, blockNorth, 151) - 0.5) * normalizedBlockMeters * 0.46,
+      north: centerNorth + (getDeterministicUnitNoise(blockEast, blockNorth, 157) - 0.5) * normalizedBlockMeters * 0.46,
+      widthMeters: clearingWidth,
+      heightMeters: clearingHeight,
+      rotation: getDeterministicUnitNoise(blockEast, blockNorth, 163) * Math.PI,
+      color: getPlanetGroundFeatureTypeColor("clearing"),
+      alpha: 0.16
+    });
+  }
+
+  if (openBiome && structureSeed > 0.88) {
+    var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18;
+    var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14;
+
+    features.push({
+      type: "structure",
+      shape: "rect",
+      biome: biome,
+      east: centerEast + (getDeterministicUnitNoise(blockEast, blockNorth, 191) - 0.5) * normalizedBlockMeters * 0.52,
+      north: centerNorth + (getDeterministicUnitNoise(blockEast, blockNorth, 193) - 0.5) * normalizedBlockMeters * 0.52,
+      widthMeters: widthMeters,
+      heightMeters: heightMeters,
+      rotation: getDeterministicUnitNoise(blockEast, blockNorth, 197) * Math.PI,
+      color: getPlanetGroundFeatureTypeColor("structure"),
+      alpha: 0.52
+    });
+  }
+
+  return features;
+}
+
+function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, minNorthMeters, maxNorthMeters, blockMeters) {
+  var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
+  var minEast = Math.min(Number(minEastMeters) || 0, Number(maxEastMeters) || 0);
+  var maxEast = Math.max(Number(minEastMeters) || 0, Number(maxEastMeters) || 0);
+  var minNorth = Math.min(Number(minNorthMeters) || 0, Number(maxNorthMeters) || 0);
+  var maxNorth = Math.max(Number(minNorthMeters) || 0, Number(maxNorthMeters) || 0);
+  var minBlockEast = Math.floor(minEast / normalizedBlockMeters) - 1;
+  var maxBlockEast = Math.floor(maxEast / normalizedBlockMeters) + 1;
+  var minBlockNorth = Math.floor(minNorth / normalizedBlockMeters) - 1;
+  var maxBlockNorth = Math.floor(maxNorth / normalizedBlockMeters) + 1;
+  var features = [];
+
+  for (var blockNorth = minBlockNorth; blockNorth <= maxBlockNorth; blockNorth++) {
+    for (var blockEast = minBlockEast; blockEast <= maxBlockEast; blockEast++) {
+      var blockFeatures = getPlanetGroundFeatureBlock(blockEast, blockNorth, normalizedBlockMeters);
+
+      for (var i = 0; i < blockFeatures.length; i++) {
+        features.push(blockFeatures[i]);
+      }
+    }
+  }
+
+  return features;
+}
+
+function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var radius = Math.max(8, Number(radiusMeters) || 48);
+  var features = getPlanetGroundFeaturesForMeterBounds(
+    meters.eastMeters - radius,
+    meters.eastMeters + radius,
+    meters.northMeters - radius,
+    meters.northMeters + radius
+  );
+  var counts = {};
+
+  for (var i = 0; i < features.length; i++) {
+    counts[features[i].type] = (counts[features[i].type] || 0) + 1;
+  }
+
+  return {
+    count: features.length,
+    counts: counts,
+    label: Object.keys(counts).sort().map(function(type) {
+      return type + " " + counts[type];
+    }).join(", ") || "none"
+  };
+}
+
 function getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex) {
   var scale = getPlanetZoomLevel(
     typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetZoomAnchorIndex(getPlanetView().zoomLevel)

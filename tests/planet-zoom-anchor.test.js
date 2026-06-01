@@ -52,6 +52,24 @@ function assertNear(actual, expected, tolerance, label) {
   );
 }
 
+function fillPlanetTiles(biome) {
+  world.planetTiles = [];
+
+  for (var y = 0; y < WORLD_HEIGHT; y++) {
+    for (var x = 0; x < WORLD_WIDTH; x++) {
+      world.planetTiles[getTileIndex(x, y)] = {
+        x: x,
+        y: y,
+        latitude: getPlanetLatitudeForTile(y),
+        longitude: getPlanetLongitudeForTile(x),
+        biome: biome,
+        elevation: 0,
+        areaKm2: 1
+      };
+    }
+  }
+}
+
 CONFIG.PLANET_RENDER_MODE = "globe";
 
 world.planetView = {
@@ -104,6 +122,46 @@ var gridInfo = getPlanetLocalReferenceGridInfo(140);
 assert.ok(gridInfo.distanceMeters > 0, "local grid should pick a real-world distance");
 assert.ok(gridInfo.pixelSpacing >= 72 && gridInfo.pixelSpacing <= 230, "local grid should stay glanceable");
 assert.ok(gridInfo.opacity > 0 && gridInfo.opacity <= 0.105, "local grid opacity should stay subdued");
+
+fillPlanetTiles("grassland");
+
+var featureCenter = getSurfaceMeterCoordinate(34.2117, -77.7265);
+var groundFeatures = getPlanetGroundFeaturesForMeterBounds(
+  featureCenter.eastMeters - 512,
+  featureCenter.eastMeters + 512,
+  featureCenter.northMeters - 512,
+  featureCenter.northMeters + 512
+);
+var stableGroundFeatures = getPlanetGroundFeaturesForMeterBounds(
+  featureCenter.eastMeters - 512,
+  featureCenter.eastMeters + 512,
+  featureCenter.northMeters - 512,
+  featureCenter.northMeters + 512
+);
+var shiftedGroundFeatures = getPlanetGroundFeaturesForMeterBounds(
+  featureCenter.eastMeters + 512,
+  featureCenter.eastMeters + 1536,
+  featureCenter.northMeters - 512,
+  featureCenter.northMeters + 512
+);
+
+assert.ok(groundFeatures.length > 0, "ground feature layer should generate features over land");
+assert.deepStrictEqual(stableGroundFeatures, groundFeatures, "ground features should be deterministic");
+assert.notDeepStrictEqual(shiftedGroundFeatures, groundFeatures, "ground features should vary by meter-space bounds");
+assert.ok(groundFeatures.some(function(feature) { return feature.shape === "line"; }), "ground features should include linear detail");
+assert.ok(groundFeatures.some(function(feature) { return feature.shape === "rect"; }), "ground features should include footprint detail");
+
+var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, 5);
+var chunkBounds = getLocalSurfaceChunkMeterBounds(houseAddress);
+var chunkPoint = getLocalSurfaceChunkPointForMeters(
+  houseAddress,
+  chunkBounds.minEastMeters,
+  chunkBounds.maxNorthMeters
+);
+
+assertNear(chunkBounds.sizeMeters, 32, 1e-9, "house chunk size");
+assertNear(chunkPoint.x, 0, 1e-9, "chunk meter origin x");
+assertNear(chunkPoint.y, 0, 1e-9, "chunk meter origin y");
 `, context);
 
 console.log("planet zoom anchor checks passed");

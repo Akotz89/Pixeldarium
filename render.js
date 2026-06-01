@@ -298,6 +298,8 @@ function buildLocalSurfaceRenderChunk(address) {
     }
   }
 
+  drawLocalSurfaceGroundFeatures(chunkCtx, address);
+
   return {
     key: getLocalSurfaceRenderChunkKey(address),
     chunkKey: address.chunkKey,
@@ -308,6 +310,97 @@ function buildLocalSurfaceRenderChunk(address) {
     sampleMeters: address.sampleMeters,
     chunkSamples: address.chunkSamples
   };
+}
+
+function getLocalSurfaceChunkMeterBounds(address) {
+  var minEastMeters = address.sampleEast * address.sampleMeters;
+  var minNorthMeters = address.sampleNorth * address.sampleMeters;
+  var sizeMeters = address.chunkSamples * address.sampleMeters;
+
+  return {
+    minEastMeters: minEastMeters,
+    maxEastMeters: minEastMeters + sizeMeters,
+    minNorthMeters: minNorthMeters,
+    maxNorthMeters: minNorthMeters + sizeMeters,
+    sizeMeters: sizeMeters
+  };
+}
+
+function getLocalSurfaceChunkPointForMeters(address, eastMeters, northMeters) {
+  var bounds = getLocalSurfaceChunkMeterBounds(address);
+  var x = ((Number(eastMeters) || 0) - bounds.minEastMeters) / address.sampleMeters * CONFIG.TILE_SIZE;
+  var y = (bounds.maxNorthMeters - (Number(northMeters) || 0)) / address.sampleMeters * CONFIG.TILE_SIZE;
+
+  return {
+    x: x,
+    y: y
+  };
+}
+
+function drawLocalSurfaceGroundFeatureLine(targetCtx, address, feature) {
+  var start = getLocalSurfaceChunkPointForMeters(address, feature.east1, feature.north1);
+  var end = getLocalSurfaceChunkPointForMeters(address, feature.east2, feature.north2);
+
+  targetCtx.save();
+  targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
+  targetCtx.strokeStyle = feature.color || "#d9e7ff";
+  targetCtx.lineWidth = clamp(
+    (Number(feature.widthMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE,
+    1,
+    9
+  );
+  targetCtx.lineCap = "round";
+  targetCtx.beginPath();
+  targetCtx.moveTo(start.x, start.y);
+  targetCtx.lineTo(end.x, end.y);
+  targetCtx.stroke();
+  targetCtx.restore();
+}
+
+function drawLocalSurfaceGroundFeatureRect(targetCtx, address, feature) {
+  var center = getLocalSurfaceChunkPointForMeters(address, feature.east, feature.north);
+  var width = Math.max(1, (Number(feature.widthMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
+  var height = Math.max(1, (Number(feature.heightMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
+
+  targetCtx.save();
+  targetCtx.translate(center.x, center.y);
+  targetCtx.rotate(Number(feature.rotation) || 0);
+  targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
+  targetCtx.fillStyle = feature.color || "#d9e7ff";
+  targetCtx.fillRect(-width / 2, -height / 2, width, height);
+
+  if (feature.type === "structure") {
+    targetCtx.globalAlpha = clamp((Number(feature.alpha) || 0.18) + 0.18, 0, 0.82);
+    targetCtx.strokeStyle = "rgba(3, 4, 9, 0.82)";
+    targetCtx.lineWidth = 1;
+    targetCtx.strokeRect(-width / 2, -height / 2, width, height);
+  }
+
+  targetCtx.restore();
+}
+
+function drawLocalSurfaceGroundFeatures(targetCtx, address) {
+  if (address.sampleMeters > 25 || typeof getPlanetGroundFeaturesForMeterBounds !== "function") {
+    return;
+  }
+
+  var bounds = getLocalSurfaceChunkMeterBounds(address);
+  var features = getPlanetGroundFeaturesForMeterBounds(
+    bounds.minEastMeters,
+    bounds.maxEastMeters,
+    bounds.minNorthMeters,
+    bounds.maxNorthMeters
+  );
+
+  for (var i = 0; i < features.length; i++) {
+    var feature = features[i];
+
+    if (feature.shape === "line") {
+      drawLocalSurfaceGroundFeatureLine(targetCtx, address, feature);
+    } else if (feature.shape === "rect") {
+      drawLocalSurfaceGroundFeatureRect(targetCtx, address, feature);
+    }
+  }
 }
 
 function getLocalSurfaceRenderChunk(address, allowGenerate) {

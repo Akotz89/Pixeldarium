@@ -1151,6 +1151,7 @@ function updateInspectPanel() {
     makeInspectChip("Pyramid", getPlanetSurfaceChunkLineageLabel(inspectedPyramidLineage)),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
+    makeInspectChip("Ground Features", getInspectGroundFeatureLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),
     makeInspectChip("Local Org", localContext.nearbyOrganisms),
     makeInspectChip("Local Food", localContext.nearbyFood),
@@ -1238,6 +1239,25 @@ function getInspectSurfaceLabel(tileX, tileY) {
     " height " + Math.round(detail.heightMeters).toLocaleString() + "m" +
     " shade " + Math.round(detail.hillshade * 100) +
     " @ " + detail.sampleMeters + "m";
+}
+
+function getInspectGroundFeatureLabel(tileX, tileY) {
+  if (!isPlanetLocalView() || typeof getPlanetGroundFeatureSummary !== "function") {
+    return "-";
+  }
+
+  var tile = getPlanetTile(tileX, tileY);
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+  var latitude = surfacePosition ? surfacePosition.latitude : (tile ? tile.latitude : getPlanetLatitudeForTile(tileY));
+  var longitude = surfacePosition ? surfacePosition.longitude : (tile ? tile.longitude : getPlanetLongitudeForTile(tileX));
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var summary = getPlanetGroundFeatureSummary(
+    latitude,
+    longitude,
+    Math.max(32, scaleInfo.metersPerCanvasPixel * 90)
+  );
+
+  return summary.label;
 }
 
 function getInspectSurfacePosition(tileX, tileY) {
