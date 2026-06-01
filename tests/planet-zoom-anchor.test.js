@@ -186,14 +186,32 @@ var riverLandColor = getPlanetTileCompositedColor({
   latitude: 20,
   moisture: 1.2,
   elevation: 0.2,
-  riverStrength: 1
+  riverStrength: 1,
+  terrainHillshade: 0.55
 });
 var plainLandColor = getPlanetTileCompositedColor({
   biome: "grassland",
   latitude: 20,
   moisture: 1.2,
   elevation: 0.2,
-  riverStrength: 0
+  riverStrength: 0,
+  terrainHillshade: 0.55
+});
+var litSlopeColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 20,
+  moisture: 1.2,
+  elevation: 0.7,
+  terrainSlope: 0.8,
+  terrainHillshade: 0.95
+});
+var shadowSlopeColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 20,
+  moisture: 1.2,
+  elevation: 0.7,
+  terrainSlope: 0.8,
+  terrainHillshade: 0.20
 });
 var shallowCoastColor = getPlanetTileCompositedColor({
   biome: "ocean",
@@ -207,6 +225,7 @@ assert.ok(colorLuminance(shallowOceanColor) > colorLuminance(deepOceanColor), "s
 assert.ok(colorDistance(lushLandColor, dryLandColor) > 50, "lush and dry land colors should diverge");
 assert.ok(colorLuminance(highIceColor) > colorLuminance(lushLandColor), "ice/high latitude terrain should read brighter than forest");
 assert.ok(colorDistance(riverLandColor, plainLandColor) > 20, "river corridors should alter land color");
+assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
 
 var deepWaterSurfaceColor = getPlanetSurfaceColor({
@@ -247,7 +266,7 @@ var snowySurfaceColor = getPlanetSurfaceColor({
 });
 
 assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
-assert.ok(colorLuminance(snowySurfaceColor) > colorLuminance(dryLandColor), "high local terrain should receive snow tint");
+assert.ok(colorDistance(snowySurfaceColor, dryLandColor) > 40, "high local terrain should receive snow tint");
 
 fillPlanetTiles("grassland");
 
@@ -265,11 +284,16 @@ highTile.elevation = 2.5;
 highTile.moisture = 2;
 highTile.areaKm2 = 100;
 annotatePlanetHydrology();
+annotatePlanetTerrainRelief();
 
 assert.ok(centerTile.coastFactor > 0, "land next to ocean should have coast factor");
 assert.ok(oceanTile.shallowWater > 0, "ocean next to land should be shallow");
 assert.ok(highTile.waterFlow > 0, "land tiles should accumulate rainfall flow");
 assert.ok(highTile.flowDirectionX !== 0 || highTile.flowDirectionY !== 0, "high land should route downhill");
+assert.ok(Number.isFinite(centerTile.terrainSlope), "terrain relief should include slope");
+assert.ok(Number.isFinite(centerTile.terrainHillshade), "terrain relief should include hillshade");
+assert.ok(centerTile.terrainSlope >= 0 && centerTile.terrainSlope <= 1, "terrain slope should be normalized");
+assert.ok(centerTile.terrainHillshade >= 0 && centerTile.terrainHillshade <= 1, "terrain hillshade should be normalized");
 
 var featureCenter = getSurfaceMeterCoordinate(34.2117, -77.7265);
 var groundFeatures = getPlanetGroundFeaturesForMeterBounds(

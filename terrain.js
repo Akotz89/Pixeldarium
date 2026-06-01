@@ -152,6 +152,45 @@ function annotatePlanetHydrology() {
   }
 }
 
+function annotatePlanetTerrainRelief() {
+  if (!Array.isArray(world.planetTiles) || world.planetTiles.length === 0) {
+    return;
+  }
+
+  var lightX = -0.46;
+  var lightY = 0.54;
+  var lightZ = 0.70;
+  var lightLength = Math.sqrt(lightX * lightX + lightY * lightY + lightZ * lightZ) || 1;
+
+  for (var i = 0; i < world.planetTiles.length; i++) {
+    var tile = world.planetTiles[i];
+
+    if (!tile) {
+      continue;
+    }
+
+    var west = getPlanetTile(getWrappedWorldX(tile.x - 1), tile.y);
+    var east = getPlanetTile(getWrappedWorldX(tile.x + 1), tile.y);
+    var north = getPlanetTile(tile.x, getClampedWorldY(tile.y - 1));
+    var south = getPlanetTile(tile.x, getClampedWorldY(tile.y + 1));
+    var dzdx = ((east ? Number(east.elevation) || 0 : 0) - (west ? Number(west.elevation) || 0 : 0)) / 2;
+    var dzdy = ((north ? Number(north.elevation) || 0 : 0) - (south ? Number(south.elevation) || 0 : 0)) / 2;
+    var slopeMagnitude = Math.sqrt(dzdx * dzdx + dzdy * dzdy);
+    var normalX = -dzdx;
+    var normalY = -dzdy;
+    var normalZ = 1.2;
+    var normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ) || 1;
+    var dot =
+      (normalX / normalLength) * (lightX / lightLength) +
+      (normalY / normalLength) * (lightY / lightLength) +
+      (normalZ / normalLength) * (lightZ / lightLength);
+
+    tile.terrainSlope = clamp(slopeMagnitude / 1.8, 0, 1);
+    tile.terrainAspect = normalizeLongitude(Math.atan2(dzdy, dzdx) * 180 / Math.PI);
+    tile.terrainHillshade = clamp(0.26 + Math.max(0, dot) * 0.74, 0, 1);
+  }
+}
+
 function seedTerrain() {
   if (typeof resetPlanetSurfaceChunkCache === "function") {
     resetPlanetSurfaceChunkCache();
@@ -291,6 +330,7 @@ function seedTerrain() {
   }
 
   annotatePlanetHydrology();
+  annotatePlanetTerrainRelief();
   refreshPlanetSummary();
 }
 
