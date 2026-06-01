@@ -782,15 +782,39 @@ var repeatedTileBlend = getPlanetSurfaceTileBlend(boundaryLatitude, boundaryLong
 var tileBlendWeightSum = tileBlend.tiles.reduce(function(total, item) {
   return total + item.weight;
 }, 0);
+var imageryBlendSignals = getPlanetImageryBlendSignals(boundaryLatitude, boundaryLongitude);
+var imageryBlendWeightSum = Object.keys(imageryBlendSignals.biomeWeights).reduce(function(total, biome) {
+  return total + imageryBlendSignals.biomeWeights[biome];
+}, 0);
+var nearBoundaryLongitudeOffset = getPlanetTileLongitudeStepDeg() * 0.02;
+var nearBoundaryWestImagery = getPlanetImageryRgbAtLatLon(boundaryLatitude, boundaryLongitude - nearBoundaryLongitudeOffset);
+var nearBoundaryEastImagery = getPlanetImageryRgbAtLatLon(boundaryLatitude, boundaryLongitude + nearBoundaryLongitudeOffset);
+var rawBoundaryJump = rgbDistance(
+  getRgbFromHex(getPlanetTileCompositedColor(blendWestTile)),
+  getRgbFromHex(getPlanetTileCompositedColor(blendEastTile))
+);
+var blendedBoundaryJump = rgbDistance(nearBoundaryWestImagery, nearBoundaryEastImagery);
 
 assert.deepStrictEqual(repeatedTileBlend, tileBlend, "surface tile blend should be deterministic");
 assertNear(tileBlendWeightSum, 1, 1e-9, "surface tile blend weights");
 assert.ok(tileBlend.transitionStrength > 0.45, "surface tile blend should detect tile-boundary transition");
 assert.ok(tileBlend.biomeWeights.desert > 0.20, "surface tile blend should include west biome");
 assert.ok(tileBlend.biomeWeights.forest > 0.20, "surface tile blend should include east biome");
+assertNear(imageryBlendWeightSum, 1, 1e-9, "globe imagery blend weights");
+assert.ok(imageryBlendSignals.transitionStrength > 0.45, "globe imagery should detect biome transition strength");
+assert.ok(imageryBlendSignals.biomeWeights.desert > 0.20, "globe imagery blend should include west biome");
+assert.ok(imageryBlendSignals.biomeWeights.forest > 0.20, "globe imagery blend should include east biome");
+assert.ok(imageryBlendSignals.roughness > blendEastTile.roughness, "globe imagery signals should inherit neighboring roughness");
+assert.ok(blendedBoundaryJump < rawBoundaryJump * 0.65, "globe imagery should smooth raw square biome jumps");
+assertRgbBounds(nearBoundaryWestImagery, "near-boundary west imagery");
+assertRgbBounds(nearBoundaryEastImagery, "near-boundary east imagery");
 tileBlend.tiles.forEach(function(item) {
   assert.ok(item.weight >= 0 && item.weight <= 1, "surface tile blend item weight should be bounded");
 });
+["coastFactor", "shallowWater", "riverStrength", "ridgeStrength", "roughness", "terrainSlope", "terrainHillshade", "snowSignal"].forEach(function(key) {
+  assert.ok(imageryBlendSignals[key] >= 0 && imageryBlendSignals[key] <= 1, "globe imagery signal " + key + " should be bounded");
+});
+assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud layer should stay disabled while tuning planet surface");
 
 var boundarySample = {
   biome: "forest",

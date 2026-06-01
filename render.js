@@ -380,6 +380,109 @@ function getPlanetSurfaceRgbAtLatLon(latitude, longitude, tileRgbCache) {
   return mixRgb(top, bottom, yAmount);
 }
 
+function getPlanetTileNumericSignal(tile, key, fallback) {
+  return tile && Number.isFinite(Number(tile[key])) ? Number(tile[key]) : fallback;
+}
+
+function getPlanetImageryBlendSignals(latitude, longitude) {
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var tilePosition = getTileFromLatLon(normalizedLatitude, normalizedLongitude);
+  var fallbackTile = getPlanetTile(tilePosition.x, tilePosition.y) || {};
+  var tileBlend = typeof getPlanetSurfaceTileBlend === "function"
+    ? getPlanetSurfaceTileBlend(normalizedLatitude, normalizedLongitude)
+    : null;
+  var blendItems = tileBlend && Array.isArray(tileBlend.tiles) && tileBlend.tiles.length > 0
+    ? tileBlend.tiles
+    : [{ tile: fallbackTile, biome: fallbackTile.biome || "unknown", weight: 1 }];
+  var signals = {
+    tile: fallbackTile,
+    tileBlend: tileBlend,
+    biomeWeights: {},
+    dominantBiome: fallbackTile.biome || "unknown",
+    dominantWeight: 0,
+    transitionStrength: 0,
+    elevation: 0,
+    moisture: 0,
+    highlandLift: 0,
+    coastFactor: 0,
+    shallowWater: 0,
+    riverStrength: 0,
+    riverMouth: 0,
+    ridgeStrength: 0,
+    roughness: 0,
+    terrainSlope: 0,
+    terrainHillshade: 0,
+    snowSignal: 0,
+    totalWeight: 0
+  };
+
+  for (var i = 0; i < blendItems.length; i++) {
+    var item = blendItems[i];
+    var tile = item.tile || getPlanetTile(item.x, item.y) || fallbackTile;
+    var biome = item.biome || (tile && tile.biome) || "unknown";
+    var weight = clamp(Number(item.weight) || 0, 0, 1);
+
+    if (weight <= 0) {
+      continue;
+    }
+
+    signals.biomeWeights[biome] = (signals.biomeWeights[biome] || 0) + weight;
+    signals.elevation += getPlanetTileNumericSignal(tile, "elevation", 0) * weight;
+    signals.moisture += getPlanetTileNumericSignal(tile, "moisture", 0.8) * weight;
+    signals.highlandLift += getPlanetTileNumericSignal(tile, "highlandLift", 0) * weight;
+    signals.coastFactor += getPlanetTileNumericSignal(tile, "coastFactor", 0) * weight;
+    signals.shallowWater += getPlanetTileNumericSignal(tile, "shallowWater", 0) * weight;
+    signals.riverStrength += getPlanetTileNumericSignal(tile, "riverStrength", 0) * weight;
+    signals.riverMouth += getPlanetTileNumericSignal(tile, "riverMouth", 0) * weight;
+    signals.ridgeStrength += getPlanetTileNumericSignal(tile, "ridgeStrength", 0) * weight;
+    signals.roughness += getPlanetTileNumericSignal(tile, "roughness", 0) * weight;
+    signals.terrainSlope += getPlanetTileNumericSignal(tile, "terrainSlope", 0) * weight;
+    signals.terrainHillshade += getPlanetTileNumericSignal(tile, "terrainHillshade", 0.55) * weight;
+    signals.snowSignal += getPlanetSurfaceSnowSignal(tile, normalizedLatitude) * weight;
+    signals.totalWeight += weight;
+  }
+
+  if (signals.totalWeight <= 0) {
+    signals.totalWeight = 1;
+    signals.biomeWeights[signals.dominantBiome] = 1;
+    signals.moisture = getPlanetTileNumericSignal(fallbackTile, "moisture", 0.8);
+    signals.terrainHillshade = getPlanetTileNumericSignal(fallbackTile, "terrainHillshade", 0.55);
+    signals.snowSignal = getPlanetSurfaceSnowSignal(fallbackTile, normalizedLatitude);
+  } else if (Math.abs(signals.totalWeight - 1) > 0.000001) {
+    Object.keys(signals.biomeWeights).forEach(function(biome) {
+      signals.biomeWeights[biome] = signals.biomeWeights[biome] / signals.totalWeight;
+    });
+    [
+      "elevation",
+      "moisture",
+      "highlandLift",
+      "coastFactor",
+      "shallowWater",
+      "riverStrength",
+      "riverMouth",
+      "ridgeStrength",
+      "roughness",
+      "terrainSlope",
+      "terrainHillshade",
+      "snowSignal"
+    ].forEach(function(key) {
+      signals[key] = signals[key] / signals.totalWeight;
+    });
+    signals.totalWeight = 1;
+  }
+
+  Object.keys(signals.biomeWeights).forEach(function(biome) {
+    if (signals.biomeWeights[biome] > signals.dominantWeight) {
+      signals.dominantWeight = signals.biomeWeights[biome];
+      signals.dominantBiome = biome;
+    }
+  });
+
+  signals.transitionStrength = clamp(1 - signals.dominantWeight, 0, 1);
+  return signals;
+}
+
 function getPlanetMaterialPixelNoise(latitude, longitude, patchMeters, seedOffset) {
   var surfaceMeters = getSurfaceMeterCoordinate(latitude, longitude);
   var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
@@ -430,31 +533,41 @@ function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
   return clampRgb(shadeRgb(material, clamp(0.94 + (coarse - 0.5) * 0.10 + (fine - 0.5) * 0.08, 0.84, 1.08)));
 }
 
-function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
-  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
-  var normalizedLongitude = normalizeLongitude(longitude);
-  var tilePosition = getTileFromLatLon(normalizedLatitude, normalizedLongitude);
-  var tile = getPlanetTile(tilePosition.x, tilePosition.y) || {};
-  var biome = tile.biome || "unknown";
-  var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
-  var broad = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 260000, 17);
-  var regional = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 82000, 31);
-  var local = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 26000, 47);
-  var fine = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 8200, 59);
-  var micro = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2600, 67);
-  var color = clampRgb(getPlanetSurfaceRgbAtLatLon(normalizedLatitude, normalizedLongitude, tileRgbCache));
-  var elevationValue = Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
-  var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
-  var moisture = clamp(Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 1.8 : 0.45, 0, 1);
+function makePlanetImagerySignalTile(biome, signals, latitude) {
+  return {
+    biome: biome,
+    latitude: latitude,
+    moisture: signals.moisture,
+    elevation: signals.elevation,
+    highlandLift: signals.highlandLift,
+    coastFactor: signals.coastFactor,
+    shallowWater: signals.shallowWater,
+    riverStrength: signals.riverStrength,
+    riverMouth: signals.riverMouth,
+    ridgeStrength: signals.ridgeStrength,
+    roughness: signals.roughness,
+    terrainSlope: signals.terrainSlope,
+    terrainHillshade: signals.terrainHillshade
+  };
+}
+
+function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, noise, texture, normalizedLatitude, normalizedLongitude) {
+  var color = clampRgb(baseColor);
+  var broad = noise ? clamp(Number(noise.broad) || 0, 0, 1) : 0.5;
+  var regional = noise ? clamp(Number(noise.regional) || 0, 0, 1) : 0.5;
+  var local = noise ? clamp(Number(noise.local) || 0, 0, 1) : 0.5;
+  var fine = noise ? clamp(Number(noise.fine) || 0, 0, 1) : 0.5;
+  var elevation = clamp((Math.tanh(signals.elevation / 2) + 1) / 2, 0, 1);
+  var moisture = clamp(signals.moisture / 1.8, 0, 1);
   var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
   var polar = clamp((Math.abs(normalizedLatitude) - 54) / 32, 0, 1);
-  var coast = clamp(Number(tile.coastFactor) || 0, 0, 1);
-  var shallowWater = clamp(Number(tile.shallowWater) || 0, 0, 1);
-  var river = clamp(Number(tile.riverStrength) || 0, 0, 1);
-  var ridge = clamp(Number(tile.ridgeStrength) || 0, 0, 1);
-  var roughness = clamp(Number(tile.roughness) || 0, 0, 1);
-  var snowSignal = getPlanetSurfaceSnowSignal(tile, normalizedLatitude);
-  var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.04 + (micro - 0.5) * 0.035;
+  var coast = clamp(signals.coastFactor, 0, 1);
+  var shallowWater = clamp(signals.shallowWater, 0, 1);
+  var river = clamp(signals.riverStrength, 0, 1);
+  var ridge = clamp(signals.ridgeStrength, 0, 1);
+  var roughness = clamp(signals.roughness, 0, 1);
+  var snowSignal = clamp(signals.snowSignal, 0, 1);
+  var signalTile = makePlanetImagerySignalTile(biome, signals, normalizedLatitude);
 
   if (biome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
@@ -466,7 +579,7 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
       clampRgb(shadeRgb(color, clamp(0.50 + texture * 0.72 + current * 0.035, 0, 1))),
       normalizedLatitude,
       normalizedLongitude,
-      tile
+      signalTile
     );
   }
 
@@ -496,8 +609,81 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
     clampRgb(shadeRgb(color, clamp(0.50 + texture + highland * 0.025 + ridge * 0.016 - (1 - moisture) * 0.02, 0, 1))),
     normalizedLatitude,
     normalizedLongitude,
-    tile
+    signalTile
   );
+}
+
+function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
+  var broad = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 260000, 17);
+  var regional = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 82000, 31);
+  var local = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 26000, 47);
+  var fine = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 8200, 59);
+  var micro = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2600, 67);
+  var baseColor = clampRgb(getPlanetSurfaceRgbAtLatLon(normalizedLatitude, normalizedLongitude, tileRgbCache));
+  var signals = getPlanetImageryBlendSignals(normalizedLatitude, normalizedLongitude);
+  var biomeWeights = signals.biomeWeights || {};
+  var biomeNames = Object.keys(biomeWeights);
+  var noise = {
+    broad: broad,
+    regional: regional,
+    local: local,
+    fine: fine,
+    micro: micro
+  };
+  var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.04 + (micro - 0.5) * 0.035;
+  var mixed = { red: 0, green: 0, blue: 0 };
+  var totalWeight = 0;
+
+  if (biomeNames.length === 0) {
+    biomeNames = [signals.dominantBiome || "unknown"];
+    biomeWeights[biomeNames[0]] = 1;
+  }
+
+  biomeNames.forEach(function(biome) {
+    var weight = clamp(Number(biomeWeights[biome]) || 0, 0, 1);
+    var candidate;
+
+    if (weight <= 0) {
+      return;
+    }
+
+    candidate = getPlanetImageryBiomeRgb(
+      baseColor,
+      biome,
+      signals,
+      surfaceMeters,
+      noise,
+      texture,
+      normalizedLatitude,
+      normalizedLongitude
+    );
+    mixed.red += candidate.red * weight;
+    mixed.green += candidate.green * weight;
+    mixed.blue += candidate.blue * weight;
+    totalWeight += weight;
+  });
+
+  if (totalWeight <= 0) {
+    return getPlanetImageryBiomeRgb(
+      baseColor,
+      signals.dominantBiome || "unknown",
+      signals,
+      surfaceMeters,
+      noise,
+      texture,
+      normalizedLatitude,
+      normalizedLongitude
+    );
+  }
+
+  return clampRgb({
+    red: mixed.red / totalWeight,
+    green: mixed.green / totalWeight,
+    blue: mixed.blue / totalWeight
+  });
 }
 
 function getPlanetTileCompositedColor(tile) {
