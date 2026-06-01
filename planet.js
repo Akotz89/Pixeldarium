@@ -77,6 +77,58 @@ function getPlanetZoomLevel(index) {
   };
 }
 
+function interpolatePlanetScaleValue(fromValue, toValue, amount) {
+  var from = Math.max(0.000001, Number(fromValue) || 1);
+  var to = Math.max(0.000001, Number(toValue) || from);
+
+  return Math.exp(Math.log(from) + (Math.log(to) - Math.log(from)) * clamp(Number(amount) || 0, 0, 1));
+}
+
+function getPlanetZoomAnchorIndex(zoomLevel) {
+  var levels = getPlanetZoomLevels();
+
+  return clamp(Math.floor(Number(zoomLevel) || 0), 0, levels.length - 1);
+}
+
+function getPlanetInterpolatedZoomLevel(zoomLevel) {
+  var levels = getPlanetZoomLevels();
+  var normalizedZoom = clamp(Number(zoomLevel) || 0, 0, levels.length - 1);
+  var lowerIndex = Math.floor(normalizedZoom);
+  var upperIndex = Math.ceil(normalizedZoom);
+  var amount = normalizedZoom - lowerIndex;
+  var lower = getPlanetZoomLevel(lowerIndex);
+  var upper = getPlanetZoomLevel(upperIndex);
+  var anchorIndex = getPlanetZoomAnchorIndex(normalizedZoom);
+
+  if (lowerIndex === upperIndex) {
+    return {
+      index: lower.index,
+      anchorIndex: lower.index,
+      lowerIndex: lower.index,
+      upperIndex: upper.index,
+      zoomValue: normalizedZoom,
+      zoomFraction: 0,
+      name: lower.name,
+      anchorName: lower.name,
+      metersPerSample: lower.metersPerSample,
+      chunkKm: lower.chunkKm
+    };
+  }
+
+  return {
+    index: anchorIndex,
+    anchorIndex: anchorIndex,
+    lowerIndex: lower.index,
+    upperIndex: upper.index,
+    zoomValue: normalizedZoom,
+    zoomFraction: amount,
+    name: lower.name + "-" + upper.name,
+    anchorName: getPlanetZoomLevel(anchorIndex).name,
+    metersPerSample: interpolatePlanetScaleValue(lower.metersPerSample, upper.metersPerSample, amount),
+    chunkKm: interpolatePlanetScaleValue(lower.chunkKm, upper.chunkKm, amount)
+  };
+}
+
 function getPlanetZoomFactor() {
   var scale = getPlanetViewScale();
   var globeScale = getPlanetZoomLevel(0);
@@ -89,7 +141,7 @@ function getPlanetView() {
   if (!world.planetView) {
     world.planetView = {
       zoomLevel: clamp(
-        Math.round(Number(CONFIG.PLANET_ZOOM_LEVEL) || 0),
+        Number(CONFIG.PLANET_ZOOM_LEVEL) || 0,
         0,
         getPlanetZoomLevels().length - 1
       ),
@@ -99,7 +151,7 @@ function getPlanetView() {
   }
 
   world.planetView.zoomLevel = clamp(
-    Math.round(Number(world.planetView.zoomLevel) || 0),
+    Number(world.planetView.zoomLevel) || 0,
     0,
     getPlanetZoomLevels().length - 1
   );
@@ -148,7 +200,7 @@ function invalidatePlanetRenderCache() {
 function setPlanetZoomLevel(zoomLevel) {
   var view = getPlanetView();
   var nextZoom = clamp(
-    Math.round(Number(zoomLevel) || 0),
+    Number(zoomLevel) || 0,
     0,
     getPlanetZoomLevels().length - 1
   );
@@ -163,21 +215,24 @@ function setPlanetZoomLevel(zoomLevel) {
 }
 
 function adjustPlanetZoom(delta) {
-  return setPlanetZoomLevel(getPlanetView().zoomLevel + Math.round(Number(delta) || 0));
+  return setPlanetZoomLevel(getPlanetView().zoomLevel + (Number(delta) || 0));
 }
 
 function getPlanetViewScale() {
-  return getPlanetZoomLevel(getPlanetView().zoomLevel);
+  return getPlanetInterpolatedZoomLevel(getPlanetView().zoomLevel);
 }
 
 function getPlanetScaleLabel() {
   var scale = getPlanetViewScale();
+  var anchorLabel = scale.zoomFraction > 0
+    ? " anchor " + scale.anchorName
+    : "";
 
   if (scale.metersPerSample >= 1000) {
-    return scale.name + " " + (scale.metersPerSample / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " km/sample";
+    return scale.name + " " + (scale.metersPerSample / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " km/sample" + anchorLabel;
   }
 
-  return scale.name + " " + scale.metersPerSample.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " m/sample";
+  return scale.name + " " + scale.metersPerSample.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " m/sample" + anchorLabel;
 }
 
 function getPlanetViewFootprintKm() {
@@ -188,7 +243,7 @@ function getPlanetViewFootprintKm() {
 }
 
 function isPlanetLocalView() {
-  return getPlanetView().zoomLevel > 0;
+  return getPlanetView().zoomLevel >= 1;
 }
 
 function getPlanetLocalViewFootprint() {
@@ -229,6 +284,10 @@ function getPlanetCameraScaleInfo() {
 
   return {
     zoomLevel: scale.index,
+    zoomValue: scale.zoomValue,
+    zoomFraction: scale.zoomFraction,
+    anchorLevel: scale.anchorIndex,
+    anchorName: scale.anchorName,
     scaleName: scale.name,
     latitude: view.latitude,
     longitude: view.longitude,
@@ -580,7 +639,7 @@ function getPlanetLocalSurfaceAddress(gridX, gridY) {
 
 function makePlanetSurfaceChunkAddress(zoomLevelIndex, chunkX, chunkY) {
   var scale = getPlanetZoomLevel(
-    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetView().zoomLevel
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetZoomAnchorIndex(getPlanetView().zoomLevel)
   );
   var chunkSamples = getPlanetSurfaceChunkSampleCount();
   var sampleMeters = Math.max(0.1, scale.metersPerSample);
@@ -718,7 +777,7 @@ function getPlanetVisibleSurfaceChunks(guardSamples) {
 
   for (var chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
     for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-      var address = makePlanetSurfaceChunkAddress(getPlanetView().zoomLevel, chunkX, chunkY);
+      var address = makePlanetSurfaceChunkAddress(getPlanetZoomAnchorIndex(getPlanetView().zoomLevel), chunkX, chunkY);
       var screenRect = getPlanetSurfaceChunkScreenRect(address);
 
       if (
@@ -801,7 +860,7 @@ function getSurfaceMeterCoordinate(latitude, longitude) {
 
 function getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex) {
   var scale = getPlanetZoomLevel(
-    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetView().zoomLevel
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetZoomAnchorIndex(getPlanetView().zoomLevel)
   );
   var chunkSamples = getPlanetSurfaceChunkSampleCount();
   var meters = getSurfaceMeterCoordinate(latitude, longitude);

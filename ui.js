@@ -29,6 +29,7 @@ function updateHud() {
     makeHudMetric("Water", waterPercent + "%"),
     makeHudMetric("Fertile Land", fertilePercent + "%"),
     makeHudMetric("Zoom", getPlanetScaleLabel()),
+    makeHudMetric("Cache LOD", planetScaleInfo.anchorName + " " + planetScaleInfo.anchorLevel),
     makeHudMetric("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
     makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
     makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
@@ -1140,6 +1141,7 @@ function updateInspectPanel() {
     makeInspectChip("Surface Lat/Lon", getInspectSurfacePositionLabel(tileX, tileY)),
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
     makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
+    makeInspectChip("Cache LOD", planetScaleInfo.anchorName + " " + planetScaleInfo.anchorLevel),
     makeInspectChip("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
     makeInspectChip("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
     makeInspectChip("Camera Alt", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
@@ -1557,7 +1559,7 @@ window.setupControls = function() {
 
     var tile = surfaceTile || getTileFromCanvasEvent(event);
     inspectTile(tile.x, tile.y, false, surfacePosition);
-    zoomPlanetView(event.deltaY < 0 ? 1 : -1);
+    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25);
   }, { passive: false });
 
   pauseButton.addEventListener("click", function() {
