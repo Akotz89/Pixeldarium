@@ -486,10 +486,17 @@ function getPlanetImageryBlendSignals(latitude, longitude) {
 function getPlanetMaterialPixelNoise(latitude, longitude, patchMeters, seedOffset) {
   var surfaceMeters = getSurfaceMeterCoordinate(latitude, longitude);
   var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
-  var eastCell = Math.floor(surfaceMeters.eastMeters / normalizedPatchMeters);
-  var northCell = Math.floor(surfaceMeters.northMeters / normalizedPatchMeters);
+  var smoothNoise = getPlanetSmoothMeterNoise(
+    surfaceMeters.eastMeters,
+    surfaceMeters.northMeters,
+    normalizedPatchMeters,
+    seedOffset
+  );
+  var quantizedSteps = normalizedPatchMeters >= 10000
+    ? 10
+    : (normalizedPatchMeters >= 4000 ? 8 : 6);
 
-  return getDeterministicUnitNoise(eastCell, northCell, getPlanetVisualSeedOffset() + Math.round(Number(seedOffset) || 0));
+  return Math.round(clamp(smoothNoise, 0, 1) * quantizedSteps) / quantizedSteps;
 }
 
 function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
@@ -557,6 +564,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   var regional = noise ? clamp(Number(noise.regional) || 0, 0, 1) : 0.5;
   var local = noise ? clamp(Number(noise.local) || 0, 0, 1) : 0.5;
   var fine = noise ? clamp(Number(noise.fine) || 0, 0, 1) : 0.5;
+  var micro = noise ? clamp(Number(noise.micro) || 0, 0, 1) : 0.5;
   var elevation = clamp((Math.tanh(signals.elevation / 2) + 1) / 2, 0, 1);
   var moisture = clamp(signals.moisture / 1.8, 0, 1);
   var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
@@ -564,19 +572,28 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   var coast = clamp(signals.coastFactor, 0, 1);
   var shallowWater = clamp(signals.shallowWater, 0, 1);
   var river = clamp(signals.riverStrength, 0, 1);
+  var riverMouth = clamp(signals.riverMouth, 0, 1);
   var ridge = clamp(signals.ridgeStrength, 0, 1);
   var roughness = clamp(signals.roughness, 0, 1);
   var snowSignal = clamp(signals.snowSignal, 0, 1);
   var signalTile = makePlanetImagerySignalTile(biome, signals, normalizedLatitude);
+  var reliefBand = clamp(highland * 0.38 + ridge * 0.34 + roughness * 0.16 + regional * 0.12, 0, 1);
+  var weathering = clamp((broad - 0.5) * 0.34 + (local - 0.5) * 0.22 + (fine - 0.5) * 0.14 + 0.5, 0, 1);
+  var terrainGrain = clamp((regional - 0.5) * 0.36 + (fine - 0.5) * 0.28 + (micro - 0.5) * 0.18 + 0.5, 0, 1);
 
   if (biome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
-    color = blendRgbWithHex(color, "#02132c", clamp((1 - shallowWater) * 0.10 + (1 - elevation) * 0.06, 0, 0.18));
-    color = blendRgbWithHex(color, "#14708d", clamp(shallowWater * 0.22 + coast * 0.10, 0, 0.28));
-    color = blendRgbWithHex(color, "#a5d9c7", clamp(coast * 0.10, 0, 0.16));
-    color = blendRgbWithHex(color, "#d9edf4", clamp(snowSignal * 0.20, 0, 0.12));
+    var gyre = Math.sin((surfaceMeters.eastMeters * 0.000006) - (surfaceMeters.northMeters * 0.000017)) * 0.5 + 0.5;
+    var depth = clamp((1 - shallowWater) * 0.58 + (1 - elevation) * 0.32 + (1 - coast) * 0.10, 0, 1);
+    var shelf = clamp(shallowWater * 0.72 + coast * 0.34 + riverMouth * 0.22, 0, 1);
+
+    color = blendRgbWithHex(color, "#001027", clamp(depth * 0.22, 0, 0.24));
+    color = blendRgbWithHex(color, "#06405f", clamp((1 - depth) * 0.10 + current * 0.04, 0, 0.14));
+    color = blendRgbWithHex(color, "#0d7894", clamp(shelf * 0.26 + gyre * 0.035, 0, 0.30));
+    color = blendRgbWithHex(color, "#8ccfc2", clamp(shelf * coast * 0.24, 0, 0.24));
+    color = blendRgbWithHex(color, "#d9edf4", clamp(snowSignal * 0.12, 0, 0.10));
     return applyPlanetMaterialPixelAccents(
-      clampRgb(shadeRgb(color, clamp(0.50 + texture * 0.72 + current * 0.035, 0, 1))),
+      clampRgb(shadeRgb(color, clamp(0.48 + texture * 0.58 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
       normalizedLatitude,
       normalizedLongitude,
       signalTile
@@ -584,29 +601,34 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   }
 
   if (biome === "forest") {
-    color = blendRgbWithHex(color, "#092717", clamp(0.06 + moisture * 0.10 + local * 0.05, 0, 0.18));
-    color = blendRgbWithHex(color, "#2d6532", clamp(regional * moisture * 0.08, 0, 0.12));
+    color = blendRgbWithHex(color, "#071f12", clamp(0.06 + moisture * 0.12 + terrainGrain * 0.04, 0, 0.20));
+    color = blendRgbWithHex(color, "#2d6532", clamp(regional * moisture * 0.10 + weathering * 0.035, 0, 0.14));
+    color = blendRgbWithHex(color, "#5d7041", clamp(reliefBand * 0.07, 0, 0.10));
   } else if (biome === "grassland") {
-    color = blendRgbWithHex(color, "#789144", clamp(0.05 + moisture * 0.08 + regional * 0.04, 0, 0.14));
-    color = blendRgbWithHex(color, "#9a843f", clamp((1 - moisture) * 0.08 + broad * 0.04, 0, 0.14));
+    color = blendRgbWithHex(color, "#6f8a3f", clamp(0.06 + moisture * 0.09 + regional * 0.04, 0, 0.16));
+    color = blendRgbWithHex(color, "#9a843f", clamp((1 - moisture) * 0.12 + weathering * 0.05, 0, 0.18));
+    color = blendRgbWithHex(color, "#365c36", clamp(moisture * (1 - reliefBand) * 0.06, 0, 0.08));
   } else if (biome === "desert") {
     var dune = Math.sin((surfaceMeters.eastMeters + surfaceMeters.northMeters * 0.48) / 85000) * 0.5 + 0.5;
-    color = blendRgbWithHex(color, "#c9ab5d", clamp(0.08 + dune * 0.10 + fine * 0.04, 0, 0.20));
-    color = blendRgbWithHex(color, "#836b35", clamp((1 - dune) * 0.06 + regional * 0.04, 0, 0.14));
+    color = blendRgbWithHex(color, "#c8a85b", clamp(0.10 + dune * 0.10 + fine * 0.05, 0, 0.22));
+    color = blendRgbWithHex(color, "#7e6734", clamp((1 - dune) * 0.08 + regional * 0.05, 0, 0.16));
+    color = blendRgbWithHex(color, "#5f6154", clamp(reliefBand * 0.12 + roughness * 0.04, 0, 0.18));
   } else if (biome === "tundra") {
-    color = blendRgbWithHex(color, "#7e8b7a", clamp(0.05 + polar * 0.08 + local * 0.05, 0, 0.16));
-    color = blendRgbWithHex(color, "#dce5df", clamp(polar * 0.08 + highland * 0.08, 0, 0.16));
+    color = blendRgbWithHex(color, "#788777", clamp(0.06 + polar * 0.09 + terrainGrain * 0.05, 0, 0.18));
+    color = blendRgbWithHex(color, "#dce5df", clamp(polar * 0.10 + highland * 0.08 + snowSignal * 0.08, 0, 0.22));
+    color = blendRgbWithHex(color, "#555e5b", clamp(reliefBand * 0.08, 0, 0.12));
   } else if (biome === "ice") {
-    color = blendRgbWithHex(color, "#f2fbff", clamp(0.10 + polar * 0.14 + broad * 0.06, 0, 0.28));
-    color = blendRgbWithHex(color, "#8fc6dc", clamp(local * 0.05 + (1 - fine) * 0.04, 0, 0.10));
+    color = blendRgbWithHex(color, "#f3fbff", clamp(0.14 + polar * 0.15 + broad * 0.06, 0, 0.32));
+    color = blendRgbWithHex(color, "#8fc6dc", clamp(local * 0.06 + (1 - fine) * 0.05 + reliefBand * 0.04, 0, 0.14));
+    color = blendRgbWithHex(color, "#d6eef7", clamp(terrainGrain * 0.06, 0, 0.08));
   }
 
   color = blendRgbWithHex(color, "#244f63", river * 0.18);
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
-  color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.11 + roughness * 0.05, 0, 0.22));
-  color = blendRgbWithHex(color, "#e8f4f3", clamp(snowSignal * 0.26, 0, 0.30));
+  color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.13 + roughness * 0.05, 0, 0.24));
+  color = blendRgbWithHex(color, "#e8f4f3", clamp(snowSignal * 0.30, 0, 0.34));
   return applyPlanetMaterialPixelAccents(
-    clampRgb(shadeRgb(color, clamp(0.50 + texture + highland * 0.025 + ridge * 0.016 - (1 - moisture) * 0.02, 0, 1))),
+    clampRgb(shadeRgb(color, clamp(0.50 + texture * 0.82 + highland * 0.035 + ridge * 0.025 - (1 - moisture) * 0.02, 0, 1))),
     normalizedLatitude,
     normalizedLongitude,
     signalTile

@@ -922,6 +922,53 @@ tileBlend.tiles.forEach(function(item) {
 });
 assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud layer should stay disabled while tuning planet surface");
 
+var materialPixelNoise = getPlanetMaterialPixelNoise(12, 34, 18000, 503);
+var nearbyMaterialPixelNoise = getPlanetMaterialPixelNoise(12, 34.02, 18000, 503);
+var alternateSeedMaterialPixelNoise;
+
+setWorldSeed("PIXEL-2027");
+alternateSeedMaterialPixelNoise = getPlanetMaterialPixelNoise(12, 34, 18000, 503);
+setWorldSeed("PIXEL-2026");
+
+assertNear(materialPixelNoise * 10, Math.round(materialPixelNoise * 10), 1e-9, "globe material noise should stay quantized");
+assert.ok(Math.abs(materialPixelNoise - nearbyMaterialPixelNoise) <= 0.20, "globe material noise should avoid hard square jumps");
+assert.notStrictEqual(alternateSeedMaterialPixelNoise, materialPixelNoise, "globe material noise should vary by seed");
+
+fillPlanetTiles("ocean");
+var oceanImageryTile = getPlanetTile(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2));
+oceanImageryTile.elevation = -2.8;
+oceanImageryTile.shallowWater = 0;
+oceanImageryTile.coastFactor = 0;
+var deepOceanImagery = getPlanetImageryRgbAtLatLon(oceanImageryTile.latitude, oceanImageryTile.longitude);
+oceanImageryTile.elevation = -0.15;
+oceanImageryTile.shallowWater = 1;
+oceanImageryTile.coastFactor = 0.8;
+var shelfOceanImagery = getPlanetImageryRgbAtLatLon(oceanImageryTile.latitude, oceanImageryTile.longitude);
+
+fillPlanetTiles("forest");
+var forestImageryTile = getPlanetTile(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2));
+forestImageryTile.moisture = 1.8;
+forestImageryTile.elevation = 0.2;
+var forestImagery = getPlanetImageryRgbAtLatLon(forestImageryTile.latitude, forestImageryTile.longitude);
+
+fillPlanetTiles("desert");
+var desertImageryTile = getPlanetTile(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2));
+desertImageryTile.moisture = 0.1;
+desertImageryTile.elevation = 0.4;
+desertImageryTile.roughness = 0.5;
+var desertImagery = getPlanetImageryRgbAtLatLon(desertImageryTile.latitude, desertImageryTile.longitude);
+
+assert.ok(deepOceanImagery.blue > deepOceanImagery.red * 1.8, "deep ocean imagery should read blue, not gray");
+assert.ok(rgbDistance(shelfOceanImagery, deepOceanImagery) > 24, "shallow shelves should separate visually from deep ocean");
+assert.ok(shelfOceanImagery.green > deepOceanImagery.green, "shallow shelves should brighten green channel");
+assert.ok(forestImagery.green > forestImagery.red && forestImagery.green > forestImagery.blue, "forest imagery should read green");
+assert.ok(desertImagery.red > desertImagery.blue * 1.35 && desertImagery.green > desertImagery.blue * 1.15, "desert imagery should read warm and dry");
+[deepOceanImagery, shelfOceanImagery, forestImagery, desertImagery].forEach(function(rgb) {
+  assertRgbBounds(rgb, "earthlike globe imagery");
+});
+
+fillPlanetTiles("grassland");
+
 var boundarySample = {
   biome: "forest",
   tile: blendEastTile,
