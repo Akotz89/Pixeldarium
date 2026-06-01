@@ -30,12 +30,6 @@ Pixeldarium is a **planet-scale pixel simulation engine** inspired by [Songs of 
 
 **No frameworks. No server. No build step.** Just open `index.html` and watch evolution unfold.
 
-<p align="center">
-  <img src="docs/screenshots/globe-view.png" alt="Pixeldarium Globe View" width="700">
-  <br>
-  <em>Procedurally generated planet with 8-level zoom — from orbit to 1-meter ground detail</em>
-</p>
-
 ---
 
 ## 🚀 Quick Start
