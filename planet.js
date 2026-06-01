@@ -171,7 +171,9 @@ function getPlanetView() {
         getPlanetZoomLevels().length - 1
       ),
       latitude: Number(CONFIG.PLANET_VIEW_LATITUDE_DEG) || 0,
-      longitude: Number(CONFIG.PLANET_VIEW_LONGITUDE_DEG) || 0
+      longitude: Number(CONFIG.PLANET_VIEW_LONGITUDE_DEG) || 0,
+      panEastMeters: 0,
+      panNorthMeters: 0
     };
   }
 
@@ -200,6 +202,7 @@ function focusPlanetViewOnLatLon(latitude, longitude) {
   var view = getPlanetView();
   var previousLatitude = view.latitude;
   var previousLongitude = view.longitude;
+  var previousMeters = getSurfaceMeterCoordinate(previousLatitude, previousLongitude);
 
   view.latitude = clamp(Number(latitude) || 0, -90, 90);
   view.longitude = normalizeLongitude(longitude);
@@ -208,10 +211,39 @@ function focusPlanetViewOnLatLon(latitude, longitude) {
     previousLatitude !== view.latitude ||
     previousLongitude !== view.longitude
   ) {
+    var nextMeters = getSurfaceMeterCoordinate(view.latitude, view.longitude);
+
+    view.panEastMeters = clamp(nextMeters.eastMeters - previousMeters.eastMeters, -10000000, 10000000);
+    view.panNorthMeters = clamp(nextMeters.northMeters - previousMeters.northMeters, -10000000, 10000000);
     invalidatePlanetRenderCache();
   }
 
   return view;
+}
+
+function getPlanetViewPanVector() {
+  var view = getPlanetView();
+  var eastMeters = Number(view.panEastMeters) || 0;
+  var northMeters = Number(view.panNorthMeters) || 0;
+  var magnitude = Math.sqrt(eastMeters * eastMeters + northMeters * northMeters);
+
+  if (magnitude <= 0.000001) {
+    return {
+      eastMeters: 0,
+      northMeters: 0,
+      magnitude: 0,
+      eastUnit: 0,
+      northUnit: 0
+    };
+  }
+
+  return {
+    eastMeters: eastMeters,
+    northMeters: northMeters,
+    magnitude: magnitude,
+    eastUnit: eastMeters / magnitude,
+    northUnit: northMeters / magnitude
+  };
 }
 
 function invalidatePlanetRenderCache() {
@@ -910,6 +942,21 @@ function getPlanetSurfaceChunkScreenPriority(screenRect) {
   return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 }
 
+function getPlanetSurfaceChunkPriorityScore(screenRect) {
+  var priorityDistance = getPlanetSurfaceChunkScreenPriority(screenRect);
+  var panVector = getPlanetViewPanVector();
+  var centerX = (Number(screenRect.x) || 0) + (Number(screenRect.width) || 0) / 2;
+  var centerY = (Number(screenRect.y) || 0) + (Number(screenRect.height) || 0) / 2;
+  var deltaX = centerX - canvas.width / 2;
+  var deltaNorthPixels = canvas.height / 2 - centerY;
+  var aheadPixels = deltaX * panVector.eastUnit + deltaNorthPixels * panVector.northUnit;
+  var directionalBoost = panVector.magnitude > 0
+    ? clamp(aheadPixels / Math.max(1, Math.max(canvas.width, canvas.height) * 0.42), 0, 1) * Math.max(CONFIG.TILE_SIZE, Math.min(canvas.width, canvas.height) * 0.16)
+    : 0;
+
+  return Math.max(0, priorityDistance - directionalBoost);
+}
+
 function getPlanetVisibleSurfaceChunks(guardSamples, maxChunks) {
   var normalizedGuardSamples = Math.max(1, Math.round(Number(guardSamples) || 1));
   var visibleChunkLimit = Math.max(
@@ -955,12 +1002,17 @@ function getPlanetVisibleSurfaceChunks(guardSamples, maxChunks) {
         screenY: screenRect.y,
         width: screenRect.width,
         height: screenRect.height,
-        priorityDistance: getPlanetSurfaceChunkScreenPriority(screenRect)
+        priorityDistance: getPlanetSurfaceChunkScreenPriority(screenRect),
+        priorityScore: getPlanetSurfaceChunkPriorityScore(screenRect)
       });
     }
   }
 
   visibleChunks.sort(function(a, b) {
+    if (a.priorityScore !== b.priorityScore) {
+      return a.priorityScore - b.priorityScore;
+    }
+
     if (a.priorityDistance !== b.priorityDistance) {
       return a.priorityDistance - b.priorityDistance;
     }

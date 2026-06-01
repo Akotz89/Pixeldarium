@@ -1721,7 +1721,9 @@ assert.strictEqual(placeholderDraw.chunkKey, fractionalMeterChunkAddress.chunkKe
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
   latitude: 34.2117,
-  longitude: -77.7265
+  longitude: -77.7265,
+  panEastMeters: 0,
+  panNorthMeters: 0
 };
 
 resetLocalSurfaceRenderChunkCache();
@@ -1730,6 +1732,7 @@ assert.strictEqual(getLocalSurfaceRenderCacheStats().lastPlaceholderChunks, 0, "
 var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
 assert.ok(visibleChunks.length > 1, "meter zoom should enumerate multiple visible chunks");
 assert.ok(Number.isFinite(visibleChunks[0].priorityDistance), "visible chunks should include priority distance");
+assert.ok(Number.isFinite(visibleChunks[0].priorityScore), "visible chunks should include priority score");
 assert.ok(visibleChunks.totalCandidateChunks >= visibleChunks.length, "visible chunks should expose candidate working-set size");
 assert.strictEqual(visibleChunks.workingSetLimit, getPlanetSurfaceVisibleChunkLimit(), "visible chunks should expose default working-set limit");
 assert.ok(visibleChunks.culledChunks >= 0, "visible chunks should expose culled chunk count");
@@ -1742,8 +1745,8 @@ assert.strictEqual(limitedVisibleChunks.culledChunks, limitedVisibleChunks.total
 
 for (var chunkIndex = 1; chunkIndex < visibleChunks.length; chunkIndex++) {
   assert.ok(
-    visibleChunks[chunkIndex - 1].priorityDistance <= visibleChunks[chunkIndex].priorityDistance,
-    "visible chunks should be ordered from viewport focus outward"
+    visibleChunks[chunkIndex - 1].priorityScore <= visibleChunks[chunkIndex].priorityScore,
+    "visible chunks should be ordered by scheduling priority"
   );
 }
 
@@ -1758,6 +1761,47 @@ var limitedCenterX = limitedCenterChunk.screenX + limitedCenterChunk.width / 2;
 var limitedCenterY = limitedCenterChunk.screenY + limitedCenterChunk.height / 2;
 assert.ok(Math.abs(limitedCenterX - canvas.width / 2) <= limitedCenterChunk.width, "limited visible chunks should keep center priority");
 assert.ok(Math.abs(limitedCenterY - canvas.height / 2) <= limitedCenterChunk.height, "limited visible chunks should keep center priority");
+
+var prePanView = getPlanetView();
+prePanView.panEastMeters = 0;
+prePanView.panNorthMeters = 0;
+var eastCandidate = null;
+var westCandidate = null;
+
+visibleChunks.forEach(function(item) {
+  var itemCenterX = item.screenX + item.width / 2;
+
+  if (!eastCandidate && itemCenterX > canvas.width / 2 + item.width) {
+    eastCandidate = item;
+  }
+
+  if (!westCandidate && itemCenterX < canvas.width / 2 - item.width) {
+    westCandidate = item;
+  }
+});
+
+assert.ok(eastCandidate && westCandidate, "visible chunks should include east and west pan candidates");
+
+prePanView.panEastMeters = 100;
+prePanView.panNorthMeters = 0;
+var eastBoostedScore = getPlanetSurfaceChunkPriorityScore({
+  x: eastCandidate.screenX,
+  y: eastCandidate.screenY,
+  width: eastCandidate.width,
+  height: eastCandidate.height
+});
+var westBoostedScore = getPlanetSurfaceChunkPriorityScore({
+  x: westCandidate.screenX,
+  y: westCandidate.screenY,
+  width: westCandidate.width,
+  height: westCandidate.height
+});
+
+assert.ok(eastBoostedScore < eastCandidate.priorityDistance, "eastward pan should boost east chunk priority");
+assert.strictEqual(westBoostedScore, westCandidate.priorityDistance, "eastward pan should not boost chunks behind the pan");
+
+prePanView.panEastMeters = 0;
+prePanView.panNorthMeters = 0;
 
 var renderStatsAfterReset = getLocalSurfaceRenderCacheStats();
 assert.strictEqual(renderStatsAfterReset.lastVisibleCandidateChunks, 0, "render cache stats should expose candidate chunk count");
