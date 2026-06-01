@@ -412,6 +412,35 @@ var snowySurfaceColor = getPlanetSurfaceColor({
 assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
 assert.ok(colorDistance(snowySurfaceColor, dryLandColor) > 40, "high local terrain should receive snow tint");
 
+setWorldSeed("PIXEL-2026");
+var smoothNoiseA = getSurfaceLayerNoise({ eastMeters: 12351.8, northMeters: 67891.2 }, 64, 11);
+var smoothNoiseB = getSurfaceLayerNoise({ eastMeters: 12352.2, northMeters: 67891.2 }, 64, 11);
+var smoothNoiseC = getSurfaceLayerNoise({ eastMeters: 12384.0, northMeters: 67891.2 }, 64, 11);
+var repeatedSmoothNoiseA = getSurfaceLayerNoise({ eastMeters: 12351.8, northMeters: 67891.2 }, 64, 11);
+setWorldSeed("PIXEL-2027");
+var alternateSeedNoiseA = getSurfaceLayerNoise({ eastMeters: 12351.8, northMeters: 67891.2 }, 64, 11);
+setWorldSeed("PIXEL-2026");
+var localLowlandHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "grassland",
+  elevation: 0.6,
+  ridgeStrength: 0,
+  roughness: 0,
+  highlandLift: 0
+});
+var localHighlandHeight = getPlanetSurfaceHeightMeters(34.2117, -77.7265, {
+  biome: "grassland",
+  elevation: 0.6,
+  ridgeStrength: 1,
+  roughness: 1,
+  highlandLift: 1.2
+});
+
+assertNear(repeatedSmoothNoiseA, smoothNoiseA, 1e-12, "local smooth noise should be deterministic");
+assert.ok(Math.abs(smoothNoiseA - smoothNoiseB) < 0.04, "local smooth noise should avoid hard meter-cell discontinuities");
+assert.ok(Math.abs(smoothNoiseA - smoothNoiseC) > 0.00001, "local smooth noise should still vary across a patch");
+assert.ok(Math.abs(alternateSeedNoiseA - smoothNoiseA) > 0.00001, "local smooth noise should vary by seed");
+assert.ok(localHighlandHeight > localLowlandHeight + 100, "local relief should inherit planet-scale highland lift");
+
 fillPlanetTiles("grassland");
 
 var centerTile = getPlanetTile(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2));

@@ -1419,14 +1419,48 @@ function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
 
 function getSurfaceLayerNoise(meters, patchMeters, salt) {
   var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
-  var cellEast = Math.floor(meters.eastMeters / normalizedPatchMeters);
-  var cellNorth = Math.floor(meters.northMeters / normalizedPatchMeters);
+  var eastCell = (Number(meters.eastMeters) || 0) / normalizedPatchMeters;
+  var northCell = (Number(meters.northMeters) || 0) / normalizedPatchMeters;
+  var cellEast = Math.floor(eastCell);
+  var cellNorth = Math.floor(northCell);
+  var eastAmount = smoothSurfaceNoiseAmount(eastCell - cellEast);
+  var northAmount = smoothSurfaceNoiseAmount(northCell - cellNorth);
+  var topLeft = getSurfaceCellNoise(cellEast, cellNorth, normalizedPatchMeters, salt);
+  var topRight = getSurfaceCellNoise(cellEast + 1, cellNorth, normalizedPatchMeters, salt);
+  var bottomLeft = getSurfaceCellNoise(cellEast, cellNorth + 1, normalizedPatchMeters, salt);
+  var bottomRight = getSurfaceCellNoise(cellEast + 1, cellNorth + 1, normalizedPatchMeters, salt);
+  var top = topLeft + (topRight - topLeft) * eastAmount;
+  var bottom = bottomLeft + (bottomRight - bottomLeft) * eastAmount;
 
+  return top + (bottom - top) * northAmount;
+}
+
+function smoothSurfaceNoiseAmount(amount) {
+  var t = clamp(Number(amount) || 0, 0, 1);
+
+  return t * t * (3 - 2 * t);
+}
+
+function getSurfaceNoiseSeed(patchMeters, salt) {
+  var seedOffset = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
+
+  return Math.round(Number(patchMeters) || 1) + (Number(salt) || 0) * 31 + seedOffset;
+}
+
+function getSurfaceCellNoise(cellEast, cellNorth, patchMeters, salt) {
   return getDeterministicUnitNoise(
-    cellEast + (Number(salt) || 0) * 17,
-    cellNorth - (Number(salt) || 0) * 23,
-    normalizedPatchMeters + (Number(salt) || 0) * 31
+    Math.round(Number(cellEast) || 0) + (Number(salt) || 0) * 17,
+    Math.round(Number(cellNorth) || 0) - (Number(salt) || 0) * 23,
+    getSurfaceNoiseSeed(patchMeters, salt)
   );
+}
+
+function getSurfacePixelNoise(meters, patchMeters, salt) {
+  var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
+  var cellEast = Math.floor((Number(meters.eastMeters) || 0) / normalizedPatchMeters);
+  var cellNorth = Math.floor((Number(meters.northMeters) || 0) / normalizedPatchMeters);
+
+  return getSurfaceCellNoise(cellEast, cellNorth, normalizedPatchMeters, salt);
 }
 
 function getPlanetGroundLod(latitude, longitude) {
@@ -1438,7 +1472,7 @@ function getPlanetGroundLod(latitude, longitude) {
   var canopy = getSurfaceLayerNoise(meters, Math.max(30, sampleMeters * 10), 3);
   var ground = getSurfaceLayerNoise(meters, Math.max(6, sampleMeters * 3), 4);
   var meter = getSurfaceLayerNoise(meters, Math.max(1, sampleMeters), 5);
-  var micro = getSurfaceLayerNoise(meters, 1, 6);
+  var micro = getSurfacePixelNoise(meters, Math.max(1, sampleMeters), 6);
   var elevation = clamp(
     continental * 0.34 +
       landform * 0.28 +
@@ -1533,10 +1567,14 @@ function getBiomeBaseHeightMeters(biome, tile) {
 function getPlanetSurfaceHeightMeters(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
-  var reliefRangeMeters = getBiomeReliefRangeMeters(biome);
+  var tileRidge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
+  var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
+  var tileHighlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) : 0, 0, 1.4);
+  var reliefRangeMeters = getBiomeReliefRangeMeters(biome) * (1 + tileRidge * 0.44 + tileRoughness * 0.16);
   var landformMeters = (lod.elevation - 0.5) * reliefRangeMeters;
   var roughMeters = (lod.ground - 0.5) * reliefRangeMeters * 0.22;
   var microMeters = (lod.micro - 0.5) * reliefRangeMeters * 0.06;
+  var highlandMeters = biome === "ocean" ? 0 : tileHighlandLift * 240;
 
   if (biome === "ocean") {
     return getBiomeBaseHeightMeters(biome, tile) +
@@ -1545,7 +1583,7 @@ function getPlanetSurfaceHeightMeters(latitude, longitude, tile) {
       microMeters * 0.18;
   }
 
-  return getBiomeBaseHeightMeters(biome, tile) + landformMeters + roughMeters + microMeters;
+  return getBiomeBaseHeightMeters(biome, tile) + highlandMeters + landformMeters + roughMeters + microMeters;
 }
 
 function getPlanetSurfaceRelief(latitude, longitude, tile) {
