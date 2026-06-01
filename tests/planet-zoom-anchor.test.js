@@ -88,17 +88,22 @@ CONFIG.PLANET_RENDER_MODE = "globe";
 var zoomLevels = getPlanetZoomLevels();
 var finalGroundZoomIndex = zoomLevels.length - 1;
 var finalGroundZoom = getPlanetZoomLevel(finalGroundZoomIndex);
-var streetZoom = zoomLevels.filter(function(level) {
-  return level.name === "Street" && level.metersPerSample === 25;
+var detailZoom = zoomLevels.filter(function(level) {
+  return level.name === "Detail" && level.metersPerSample === 25;
 })[0];
-var yardZoom = zoomLevels.filter(function(level) {
-  return level.name === "Yard" && level.metersPerSample === 5;
+var groundZoom = zoomLevels.filter(function(level) {
+  return level.name === "Ground" && level.metersPerSample === 5;
 })[0];
+var developedPlaceLabels = zoomLevels.filter(function(level) {
+  return ["Neighborhood", "Street", "Yard", "House"].indexOf(level.name) >= 0;
+});
 
-assert.ok(streetZoom, "zoom ladder should include street scale");
-assert.ok(yardZoom, "zoom ladder should include yard scale");
-assert.strictEqual(finalGroundZoom.name, "House", "final ground zoom should remain House");
+assert.ok(detailZoom, "zoom ladder should include detail scale");
+assert.ok(groundZoom, "zoom ladder should include ground scale");
+assert.strictEqual(finalGroundZoom.name, "Meter", "final ground zoom should remain Meter");
 assert.strictEqual(finalGroundZoom.metersPerSample, 1, "final ground zoom should remain 1 m/sample");
+assert.deepStrictEqual(developedPlaceLabels, [], "undeveloped planet zoom labels should not imply built infrastructure");
+assert.strictEqual(CONFIG.PLANET_DEBUG_OVERLAY, false, "verbose planet debug overlay should be hidden by default");
 
 world.planetView = {
   zoomLevel: 4,
@@ -392,16 +397,16 @@ var broadFeatures = getPlanetGroundFeaturesForMeterBounds(
 );
 assert.deepStrictEqual(broadFeatures, [], "broad feature bounds query should return safely");
 
-var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
-var houseChunkAddress = makePlanetSurfaceChunkAddress(finalGroundZoomIndex, houseAddress.chunkX, houseAddress.chunkY);
-var chunkBounds = getLocalSurfaceChunkMeterBounds(houseChunkAddress);
+var meterAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
+var meterChunkAddress = makePlanetSurfaceChunkAddress(finalGroundZoomIndex, meterAddress.chunkX, meterAddress.chunkY);
+var chunkBounds = getLocalSurfaceChunkMeterBounds(meterChunkAddress);
 var chunkPoint = getLocalSurfaceChunkPointForMeters(
-  houseChunkAddress,
+  meterChunkAddress,
   chunkBounds.minEastMeters,
   chunkBounds.maxNorthMeters
 );
 
-assertNear(chunkBounds.sizeMeters, 32, 1e-9, "house chunk size");
+assertNear(chunkBounds.sizeMeters, 32, 1e-9, "meter chunk size");
 assertNear(chunkPoint.x, 0, 1e-9, "chunk meter origin x");
 assertNear(chunkPoint.y, 0, 1e-9, "chunk meter origin y");
 
@@ -411,23 +416,23 @@ world.planetView = {
   longitude: -77.7265
 };
 
-var chunkRect = getPlanetSurfaceChunkScreenRect(houseChunkAddress);
+var chunkRect = getPlanetSurfaceChunkScreenRect(meterChunkAddress);
 var eastNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
   finalGroundZoomIndex,
-  houseChunkAddress.chunkX + 1,
-  houseChunkAddress.chunkY
+  meterChunkAddress.chunkX + 1,
+  meterChunkAddress.chunkY
 ));
 var northNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
   finalGroundZoomIndex,
-  houseChunkAddress.chunkX,
-  houseChunkAddress.chunkY + 1
+  meterChunkAddress.chunkX,
+  meterChunkAddress.chunkY + 1
 ));
 
 assertNear(chunkRect.x + chunkRect.width, eastNeighborRect.x, 1e-9, "adjacent chunk east edge continuity");
 assertNear(northNeighborRect.y + northNeighborRect.height, chunkRect.y, 1e-9, "adjacent chunk north edge continuity");
 
 var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
-assert.ok(visibleChunks.length > 1, "house zoom should enumerate multiple visible chunks");
+assert.ok(visibleChunks.length > 1, "meter zoom should enumerate multiple visible chunks");
 assert.ok(Number.isFinite(visibleChunks[0].priorityDistance), "visible chunks should include priority distance");
 
 for (var chunkIndex = 1; chunkIndex < visibleChunks.length; chunkIndex++) {

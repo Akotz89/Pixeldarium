@@ -1224,50 +1224,56 @@ function drawPlanetScaleBar() {
 function drawPlanetReferenceGrid() {
   var lonStep = Math.max(10, Math.round(Number(CONFIG.PLANET_GRID_DEGREES) || 30));
   var latStep = lonStep;
+  var showDebugOverlay = Boolean(CONFIG.PLANET_DEBUG_OVERLAY);
 
   if (isGlobeRenderMode() && isPlanetLocalView()) {
     var view = getPlanetView();
     var scaleInfo = getPlanetCameraScaleInfo();
-    var cacheStats = getPlanetSurfaceCacheStats();
-    var renderCacheStats = getLocalSurfaceRenderCacheStats();
-    var visibleChunks = getPlanetVisibleSurfaceChunks(0);
-    var pyramidLabel = visibleChunks.length > 0
-      ? getPlanetSurfaceChunkLineageLabel(getPlanetSurfaceChunkLineage(visibleChunks[0].address))
-      : "-";
 
     ctx.save();
     drawPlanetLocalCurvatureOverlay();
     drawPlanetLocalReferenceGrid();
-    ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(
-      canvas.width / 2 - 12,
-      canvas.height / 2 - 12,
-      24,
-      24
-    );
     drawPlanetScaleBar();
-    ctx.fillStyle = "rgba(3, 4, 9, 0.54)";
-    ctx.fillRect(18, canvas.height - 104, canvas.width - 36, 24);
-    ctx.fillStyle = "rgba(220, 229, 255, 0.88)";
-    ctx.font = "12px Arial, Helvetica, sans-serif";
-    ctx.fillText(
-      "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
-        " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
-        " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
-        " | " + getPlanetScaleLabel() +
-        " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
-        " | render " + renderCacheStats.lastVisibleChunks + "v/" +
-          renderCacheStats.chunks + "c/" +
-          renderCacheStats.lastPendingChunks + "p/" +
-          renderCacheStats.lastGeneratedThisPass + "g/" +
-          renderCacheStats.lastFallbackChunks + "f/" +
-          renderCacheStats.lastFallbackGeneratedThisPass + "fg/" +
-          renderCacheStats.hits + "h" +
-        " | pyramid " + pyramidLabel,
-      28,
-      canvas.height - 87
-    );
+
+    if (showDebugOverlay) {
+      var cacheStats = getPlanetSurfaceCacheStats();
+      var renderCacheStats = getLocalSurfaceRenderCacheStats();
+      var visibleChunks = getPlanetVisibleSurfaceChunks(0);
+      var pyramidLabel = visibleChunks.length > 0
+        ? getPlanetSurfaceChunkLineageLabel(getPlanetSurfaceChunkLineage(visibleChunks[0].address))
+        : "-";
+
+      ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(
+        canvas.width / 2 - 12,
+        canvas.height / 2 - 12,
+        24,
+        24
+      );
+      ctx.fillStyle = "rgba(3, 4, 9, 0.54)";
+      ctx.fillRect(18, canvas.height - 104, canvas.width - 36, 24);
+      ctx.fillStyle = "rgba(220, 229, 255, 0.88)";
+      ctx.font = "12px Arial, Helvetica, sans-serif";
+      ctx.fillText(
+        "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
+          " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
+          " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
+          " | " + getPlanetScaleLabel() +
+          " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
+          " | render " + renderCacheStats.lastVisibleChunks + "v/" +
+            renderCacheStats.chunks + "c/" +
+            renderCacheStats.lastPendingChunks + "p/" +
+            renderCacheStats.lastGeneratedThisPass + "g/" +
+            renderCacheStats.lastFallbackChunks + "f/" +
+            renderCacheStats.lastFallbackGeneratedThisPass + "fg/" +
+            renderCacheStats.hits + "h" +
+          " | pyramid " + pyramidLabel,
+        28,
+        canvas.height - 87
+      );
+    }
+
     ctx.restore();
     return;
   }

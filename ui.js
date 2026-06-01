@@ -1253,7 +1253,7 @@ function getInspectGroundFeatureLabel(tileX, tileY) {
   var scaleInfo = getPlanetCameraScaleInfo();
 
   if (scaleInfo.metersPerSample > 25) {
-    return "available at Street scale";
+    return "available at Detail scale";
   }
 
   var summary = getPlanetGroundFeatureSummary(

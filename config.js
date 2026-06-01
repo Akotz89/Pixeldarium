@@ -183,15 +183,16 @@ const CONFIG = {
   PLANET_ZOOM_LEVEL: 0,
   PLANET_GLOBE_RASTER_MAX_SIZE: 720,
   PLANET_CLOUD_ALPHA: 0.11,
+  PLANET_DEBUG_OVERLAY: false,
   PLANET_ZOOM_LEVELS: [
     { name: "Globe", metersPerSample: 125000, chunkKm: 4000 },
     { name: "Continent", metersPerSample: 25000, chunkKm: 1000 },
     { name: "Region", metersPerSample: 5000, chunkKm: 200 },
-    { name: "Local", metersPerSample: 1000, chunkKm: 40 },
-    { name: "Neighborhood", metersPerSample: 100, chunkKm: 4 },
-    { name: "Street", metersPerSample: 25, chunkKm: 1 },
-    { name: "Yard", metersPerSample: 5, chunkKm: 0.25 },
-    { name: "House", metersPerSample: 1, chunkKm: 0.25 }
+    { name: "Area", metersPerSample: 1000, chunkKm: 40 },
+    { name: "Landscape", metersPerSample: 100, chunkKm: 4 },
+    { name: "Detail", metersPerSample: 25, chunkKm: 1 },
+    { name: "Ground", metersPerSample: 5, chunkKm: 0.25 },
+    { name: "Meter", metersPerSample: 1, chunkKm: 0.25 }
   ],
   PLANET_SURFACE_CHUNK_SAMPLES: 32,
   PLANET_SURFACE_CHUNK_CACHE_LIMIT: 768,
