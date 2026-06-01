@@ -938,8 +938,12 @@ function getPlanetGroundFeatureTypeColor(type) {
   switch (type) {
     case "stream":
       return "#7ec8ff";
+    case "wetland":
+      return "#5da879";
     case "reef":
       return "#8ed7c9";
+    case "shoal":
+      return "#a5d9c7";
     case "ridge":
       return "#b9b081";
     case "swale":
@@ -953,6 +957,10 @@ function getPlanetGroundFeatureTypeColor(type) {
     default:
       return "#d9e7ff";
   }
+}
+
+function getPlanetGroundFeatureSeedOffset() {
+  return typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
 }
 
 function getPlanetGroundFeatureId(blockEast, blockNorth, type, localIndex) {
@@ -987,11 +995,22 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var landBiome = biome !== "ocean" && biome !== "ice" && biome !== "unknown";
   var forestBiome = biome === "forest" || biome === "tundra";
   var openBiome = biome === "grassland" || biome === "desert" || biome === "tundra";
+  var riverStrength = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
+  var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
+  var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
+  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var ridgeStrength = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
+  var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
+  var highlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) / 1.4 : 0, 0, 1);
   var features = [];
-  var naturalSeed = getDeterministicUnitNoise(blockEast, blockNorth, 41);
-  var ridgeSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73);
-  var rockSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109);
-  var meadowSeed = getDeterministicUnitNoise(blockEast, blockNorth, 131);
+  var seedOffset = getPlanetGroundFeatureSeedOffset();
+  var naturalSeed = getDeterministicUnitNoise(blockEast, blockNorth, 41 + seedOffset);
+  var ridgeSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73 + seedOffset);
+  var rockSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109 + seedOffset);
+  var meadowSeed = getDeterministicUnitNoise(blockEast, blockNorth, 131 + seedOffset);
+  var wetSignal = clamp(riverStrength * 0.62 + moisture * 0.30 + coast * 0.18, 0, 1);
+  var ridgeSignal = clamp(ridgeStrength * 0.58 + roughness * 0.24 + highlandLift * 0.34, 0, 1);
+  var oceanSignal = clamp(shallowWater * 0.56 + coast * 0.34 + naturalSeed * 0.10, 0, 1);
 
   function makeLine(type, seed, widthMeters, alpha) {
     var angle = getDeterministicUnitNoise(blockEast, blockNorth, seed + 7) * Math.PI;
@@ -1019,23 +1038,28 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   }
 
   if (biome === "ocean") {
-    if (naturalSeed > 0.46) {
-      makeLine("reef", 211, 1.2 + naturalSeed * 2.4, 0.14);
+    if (oceanSignal > 0.46 || naturalSeed > 0.58) {
+      makeLine(shallowWater > 0.44 ? "shoal" : "reef", 211, 1.2 + naturalSeed * 2.4 + oceanSignal * 1.6, 0.12 + oceanSignal * 0.08);
     }
   } else if (landBiome && naturalSeed > 0.34) {
     makeLine(forestBiome ? "swale" : "ridge", 223, 0.7 + naturalSeed * 1.8, forestBiome ? 0.16 : 0.20);
   }
 
-  if (landBiome && ridgeSeed > 0.72) {
-    makeLine(openBiome ? "ridge" : "swale", 307, openBiome ? 2.6 : 1.4, openBiome ? 0.24 : 0.18);
+  if (landBiome && (wetSignal > 0.58 || (wetSignal > 0.34 && naturalSeed > 0.26))) {
+    makeLine("stream", 257, 1.2 + wetSignal * 3.2, 0.20 + wetSignal * 0.20);
   }
 
-  if (landBiome && meadowSeed > 0.82) {
+  if (landBiome && (ridgeSeed > 0.72 || ridgeSignal > 0.52)) {
+    makeLine(openBiome || ridgeSignal > 0.52 ? "ridge" : "swale", 307, openBiome ? 2.2 + ridgeSignal * 2.0 : 1.4 + ridgeSignal, openBiome ? 0.20 + ridgeSignal * 0.16 : 0.16 + ridgeSignal * 0.12);
+  }
+
+  if (landBiome && (meadowSeed > 0.82 || wetSignal > 0.66)) {
     var clearingWidth = normalizedBlockMeters * (0.18 + meadowSeed * 0.20);
     var clearingHeight = normalizedBlockMeters * (0.12 + getDeterministicUnitNoise(blockEast, blockNorth, 149) * 0.18);
+    var patchType = wetSignal > 0.66 ? "wetland" : "meadow";
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
-      type: "meadow",
+      type: patchType,
       shape: "rect",
       biome: biome,
       east: centerEast + (getDeterministicUnitNoise(blockEast, blockNorth, 151) - 0.5) * normalizedBlockMeters * 0.46,
@@ -1043,14 +1067,14 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       widthMeters: clearingWidth,
       heightMeters: clearingHeight,
       rotation: getDeterministicUnitNoise(blockEast, blockNorth, 163) * Math.PI,
-      color: getPlanetGroundFeatureTypeColor("meadow"),
-      alpha: 0.13
+      color: getPlanetGroundFeatureTypeColor(patchType),
+      alpha: patchType === "wetland" ? 0.18 : 0.13
     });
   }
 
-  if (openBiome && rockSeed > 0.88) {
-    var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18;
-    var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14;
+  if (openBiome && (rockSeed > 0.88 || ridgeSignal > 0.62)) {
+    var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18 + ridgeSignal * 8;
+    var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14 + roughness * 6;
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: "rockfield",

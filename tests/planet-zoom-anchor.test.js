@@ -468,6 +468,37 @@ assert.ok(Number.isFinite(centerTile.terrainHillshade), "terrain relief should i
 assert.ok(centerTile.terrainSlope >= 0 && centerTile.terrainSlope <= 1, "terrain slope should be normalized");
 assert.ok(centerTile.terrainHillshade >= 0 && centerTile.terrainHillshade <= 1, "terrain hillshade should be normalized");
 
+var blockCenter = getLatLonFromSurfaceMeterCoordinate(
+  getPlanetGroundFeatureBlockMeters() / 2,
+  getPlanetGroundFeatureBlockMeters() / 2
+);
+var blockTilePosition = getTileFromLatLon(blockCenter.latitude, blockCenter.longitude);
+var blockTile = getPlanetTile(blockTilePosition.x, blockTilePosition.y);
+
+blockTile.biome = "grassland";
+blockTile.riverStrength = 1;
+blockTile.moisture = 2.2;
+blockTile.ridgeStrength = 0;
+blockTile.roughness = 0;
+blockTile.highlandLift = 0;
+
+var wetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+
+assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "stream"; }), "wet land blocks should generate stream detail");
+assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "wetland"; }), "wet land blocks should generate wetland patches");
+
+blockTile.riverStrength = 0;
+blockTile.moisture = 0.4;
+blockTile.ridgeStrength = 1;
+blockTile.roughness = 1;
+blockTile.highlandLift = 1.2;
+
+var highlandBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+
+assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "ridge"; }), "highland blocks should generate ridge detail");
+assert.ok(highlandBlockFeatures.some(function(feature) { return feature.type === "rockfield"; }), "rough highland blocks should generate rockfield patches");
+assert.ok(highlandBlockFeatures.every(function(feature) { return feature.type !== "track" && feature.type !== "structure"; }), "highland detail should stay natural");
+
 var featureCenter = getSurfaceMeterCoordinate(34.2117, -77.7265);
 var groundFeatures = getPlanetGroundFeaturesForMeterBounds(
   featureCenter.eastMeters - 512,
