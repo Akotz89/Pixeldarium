@@ -85,6 +85,7 @@ const world = {
   totalFoodHarvested: 0,
   isPaused: false,
   isExtinct: false,
+  isCameraInteracting: false,
   isMenuOpen: false,
   menuPage: "controls",
   extinctionTick: 0,

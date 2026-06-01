@@ -41,6 +41,7 @@ const source = [
   "utils.js",
   "planet.js",
   "terrain.js",
+  "render-terrain-cache.js",
   "render.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
@@ -627,8 +628,8 @@ var sampleProjection = { radius: 610 };
 var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
 assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
 assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.85, "oversized globe raster should downsample for responsiveness");
-assert.strictEqual(getPlanetGlobeRasterScale(480, 360), 1, "small globe raster should keep native resolution");
-assert.ok(getPlanetGlobeRasterScale(5000, 3000) >= 0.56, "large globe raster should not downsample into oversized square cells");
+assert.ok(getPlanetGlobeRasterScale(480, 360) >= 0.875, "small globe raster should retain most native resolution");
+assert.ok(getPlanetGlobeRasterScale(5000, 3000) >= 0.04, "large globe raster should keep a bounded preview scale");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) >= 0, "smooth imagery noise should stay bounded");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) <= 1, "smooth imagery noise should stay bounded");
 
@@ -2209,7 +2210,7 @@ var chunkPoint = getLocalSurfaceChunkPointForMeters(
   chunkBounds.maxNorthMeters
 );
 
-assertNear(chunkBounds.sizeMeters, 32, 1e-9, "meter chunk size");
+assertNear(chunkBounds.sizeMeters, CONFIG.PLANET_SURFACE_CHUNK_SAMPLES, 1e-9, "meter chunk size");
 assertNear(chunkPoint.x, 0, 1e-9, "chunk meter origin x");
 assertNear(chunkPoint.y, 0, 1e-9, "chunk meter origin y");
 

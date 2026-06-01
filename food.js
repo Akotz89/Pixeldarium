@@ -29,6 +29,7 @@ function rebuildFoodPositions() {
   world.foodBuckets = {};
 
   for (var i = 0; i < world.food.length; i++) {
+    world.food[i].foodIndex = i;
     registerFood(world.food[i]);
   }
 
@@ -113,20 +114,41 @@ function unregisterFood(food) {
 
 function addFoodAt(x, y) {
   var food = makeFood(x, y);
+  food.foodIndex = world.food.length;
   world.food.push(food);
   registerFood(food);
   return food;
 }
 
 function removeFoodAtIndex(index) {
-  var food = world.food[index];
+  var rawIndex = Number(index);
+
+  if (!Number.isFinite(rawIndex)) {
+    return null;
+  }
+
+  var normalizedIndex = Math.round(rawIndex);
+  var food = world.food[normalizedIndex];
 
   if (!food) {
     return null;
   }
 
   unregisterFood(food);
-  world.food.splice(index, 1);
+
+  var lastIndex = world.food.length - 1;
+  var lastFood = world.food[lastIndex];
+
+  if (normalizedIndex !== lastIndex) {
+    world.food[normalizedIndex] = lastFood;
+
+    if (lastFood) {
+      lastFood.foodIndex = normalizedIndex;
+    }
+  }
+
+  world.food.pop();
+  delete food.foodIndex;
   return food;
 }
 
@@ -135,15 +157,12 @@ function removeFood(food) {
     return null;
   }
 
-  unregisterFood(food);
+  var indexedPosition = Math.round(Number(food.foodIndex));
+  var index = Number.isFinite(indexedPosition) && world.food[indexedPosition] === food
+    ? indexedPosition
+    : world.food.indexOf(food);
 
-  var index = world.food.indexOf(food);
-
-  if (index >= 0) {
-    world.food.splice(index, 1);
-  }
-
-  return food;
+  return index >= 0 ? removeFoodAtIndex(index) : null;
 }
 
 function findFoodAt(x, y) {
@@ -169,6 +188,12 @@ function removeFoodAtPosition(x, y) {
 }
 
 function findNearestFoodInBuckets(x, y, searchRadius) {
+  var currentTileFood = findFoodAt(x, y);
+
+  if (currentTileFood) {
+    return currentTileFood;
+  }
+
   var buckets = ensureFoodBuckets();
   var bucketSize = getFoodBucketSize();
   var normalizedRadius = Math.max(0, Math.round(Number(searchRadius) || 0));

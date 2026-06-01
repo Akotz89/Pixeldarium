@@ -41,6 +41,7 @@ function clearWorld() {
   world.totalFoodHarvested = 0;
   world.isPaused = false;
   world.isExtinct = false;
+  world.isCameraInteracting = false;
   world.extinctionTick = 0;
   world.needsRender = true;
   setWorldSeed(world.seedText);

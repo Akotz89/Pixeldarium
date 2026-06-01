@@ -1315,6 +1315,24 @@ var planetDragState = {
   lastClientX: 0,
   lastClientY: 0
 };
+var cameraInteractionTimer = null;
+
+function markCameraInteracting() {
+  world.isCameraInteracting = true;
+
+  if (cameraInteractionTimer !== null && typeof window.clearTimeout === "function") {
+    window.clearTimeout(cameraInteractionTimer);
+  }
+
+  if (typeof window.setTimeout === "function") {
+    cameraInteractionTimer = window.setTimeout(function() {
+      world.isCameraInteracting = false;
+      cameraInteractionTimer = null;
+      invalidateTerrainCache();
+      world.needsRender = true;
+    }, Math.max(40, Number(CONFIG.PLANET_CAMERA_INTERACTION_SETTLE_MS) || 140));
+  }
+}
 
 function getCanvasPointFromEvent(event) {
   var rect = canvas.getBoundingClientRect();
@@ -1361,11 +1379,13 @@ function inspectTile(tileX, tileY, shouldFocus, surfacePosition) {
     focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
   }
 
-  drawWorld();
+  world.needsRender = true;
   updateHud();
 }
 
 function zoomPlanetView(delta, anchorPoint) {
+  markCameraInteracting();
+
   var didZoom = anchorPoint && typeof adjustPlanetZoomAtCanvasPoint === "function"
     ? adjustPlanetZoomAtCanvasPoint(delta, anchorPoint.canvasX, anchorPoint.canvasY)
     : adjustPlanetZoom(delta);
@@ -1374,14 +1394,12 @@ function zoomPlanetView(delta, anchorPoint) {
     return false;
   }
 
-  drawWorld();
-  updateHud();
+  world.needsRender = true;
   return true;
 }
 
 function redrawPlanetView() {
-  drawWorld();
-  updateHud();
+  world.needsRender = true;
 }
 
 function beginPlanetDrag(event) {
@@ -1422,6 +1440,7 @@ function updatePlanetDrag(event) {
   }
 
   if (typeof panPlanetViewByScreenDelta === "function") {
+    markCameraInteracting();
     panPlanetViewByScreenDelta(deltaX, deltaY);
     redrawPlanetView();
   }
@@ -1589,13 +1608,6 @@ window.setupControls = function() {
     }
 
     var point = getCanvasPointFromEvent(event);
-    var surfacePosition = typeof getPlanetLatLonFromCanvasPoint === "function"
-      ? getPlanetLatLonFromCanvasPoint(point.canvasX, point.canvasY)
-      : null;
-    var surfaceTile = surfacePosition ? getTileFromLatLon(surfacePosition.latitude, surfacePosition.longitude) : null;
-
-    var tile = surfaceTile || getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y, false, surfacePosition);
     zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25, point);
   }, { passive: false });
 
