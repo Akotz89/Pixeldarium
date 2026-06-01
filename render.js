@@ -7,6 +7,7 @@ var localSurfaceRenderChunkCache = {
     misses: 0,
     generatedChunks: 0,
     evictions: 0,
+    lastVisibleChunks: 0,
     lastChunkKey: "-"
   }
 };
@@ -28,6 +29,7 @@ function resetLocalSurfaceRenderChunkCache() {
       misses: 0,
       generatedChunks: 0,
       evictions: 0,
+      lastVisibleChunks: 0,
       lastChunkKey: "-"
     }
   };
@@ -40,6 +42,7 @@ function getLocalSurfaceRenderCacheStats() {
     misses: localSurfaceRenderChunkCache.stats.misses,
     generatedChunks: localSurfaceRenderChunkCache.stats.generatedChunks,
     evictions: localSurfaceRenderChunkCache.stats.evictions,
+    lastVisibleChunks: localSurfaceRenderChunkCache.stats.lastVisibleChunks,
     lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
   };
 }
@@ -264,7 +267,7 @@ function buildLocalSurfaceRenderChunk(address) {
     for (var x = 0; x < address.chunkSamples; x++) {
       var sample = getPlanetSurfaceChunkSampleAtAddress(address, x, y);
       var screenX = x * CONFIG.TILE_SIZE;
-      var screenY = y * CONFIG.TILE_SIZE;
+      var screenY = (address.chunkSamples - 1 - y) * CONFIG.TILE_SIZE;
 
       chunkCtx.fillStyle = getPlanetSurfaceColor(sample);
       chunkCtx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
@@ -389,28 +392,13 @@ function buildGlobeTerrainCache(tctx) {
 }
 
 function buildLocalTerrainCache(tctx) {
-  var visibleChunks = {};
+  var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
 
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
+  localSurfaceRenderChunkCache.stats.lastVisibleChunks = visibleChunks.length;
 
-  for (var y = 0; y < WORLD_HEIGHT; y++) {
-    for (var x = 0; x < WORLD_WIDTH; x++) {
-      var localAddress = getPlanetLocalSurfaceAddress(x, y);
-      var address = localAddress.address;
-
-      if (!visibleChunks[address.chunkKey]) {
-        visibleChunks[address.chunkKey] = {
-          address: address,
-          screenX: x * CONFIG.TILE_SIZE - address.localSampleX * CONFIG.TILE_SIZE,
-          screenY: y * CONFIG.TILE_SIZE - address.localSampleY * CONFIG.TILE_SIZE
-        };
-      }
-    }
-  }
-
-  Object.keys(visibleChunks).forEach(function(chunkKey) {
-    var visibleChunk = visibleChunks[chunkKey];
+  visibleChunks.forEach(function(visibleChunk) {
     var renderChunk = getLocalSurfaceRenderChunk(visibleChunk.address);
 
     if (renderChunk) {
@@ -540,7 +528,7 @@ function drawPlanetReferenceGrid() {
         " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
         " | " + getPlanetScaleLabel() +
         " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
-        " | render " + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h",
+        " | render " + renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h",
       28,
       canvas.height - 87
     );

@@ -578,6 +578,116 @@ function getPlanetLocalSurfaceAddress(gridX, gridY) {
   };
 }
 
+function makePlanetSurfaceChunkAddress(zoomLevelIndex, chunkX, chunkY) {
+  var scale = getPlanetZoomLevel(
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetView().zoomLevel
+  );
+  var chunkSamples = getPlanetSurfaceChunkSampleCount();
+  var sampleMeters = Math.max(0.1, scale.metersPerSample);
+  var normalizedChunkX = Math.round(Number(chunkX) || 0);
+  var normalizedChunkY = Math.round(Number(chunkY) || 0);
+  var chunkKey = [
+    scale.index,
+    sampleMeters,
+    chunkSamples,
+    normalizedChunkX,
+    normalizedChunkY
+  ].join(":");
+
+  return {
+    zoomLevel: scale.index,
+    scaleName: scale.name,
+    sampleMeters: sampleMeters,
+    chunkSamples: chunkSamples,
+    sampleEast: normalizedChunkX * chunkSamples,
+    sampleNorth: normalizedChunkY * chunkSamples,
+    chunkX: normalizedChunkX,
+    chunkY: normalizedChunkY,
+    localSampleX: 0,
+    localSampleY: 0,
+    chunkKey: chunkKey,
+    sampleKey: "0:0"
+  };
+}
+
+function getPlanetLocalCanvasPoint(longitude, latitude) {
+  var view = getPlanetView();
+  var scale = getPlanetViewScale();
+  var eastKm = wrapPlanetLongitudeDelta((Number(longitude) || 0) - view.longitude) *
+    getLongitudeDistanceKmPerDegree(view.latitude);
+  var northKm = ((Number(latitude) || 0) - view.latitude) * getLatitudeDistanceKmPerDegree();
+
+  return {
+    x: canvas.width / 2 + (eastKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE,
+    y: canvas.height / 2 - (northKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE
+  };
+}
+
+function getPlanetSurfaceChunkScreenRect(address) {
+  var topLeftLatLon = getPlanetSurfaceLatLonFromChunkAddress(
+    address,
+    0,
+    address.chunkSamples - 1
+  );
+  var topLeftPoint = getPlanetLocalCanvasPoint(topLeftLatLon.longitude, topLeftLatLon.latitude);
+  var sizePixels = address.chunkSamples * CONFIG.TILE_SIZE;
+
+  return {
+    x: topLeftPoint.x - CONFIG.TILE_SIZE / 2,
+    y: topLeftPoint.y - CONFIG.TILE_SIZE / 2,
+    width: sizePixels,
+    height: sizePixels
+  };
+}
+
+function getPlanetVisibleSurfaceChunks(guardSamples) {
+  var normalizedGuardSamples = Math.max(1, Math.round(Number(guardSamples) || 1));
+  var samplePoints = [
+    getPlanetLocalSurfaceAddress(-normalizedGuardSamples, -normalizedGuardSamples).address,
+    getPlanetLocalSurfaceAddress(WORLD_WIDTH + normalizedGuardSamples, -normalizedGuardSamples).address,
+    getPlanetLocalSurfaceAddress(-normalizedGuardSamples, WORLD_HEIGHT + normalizedGuardSamples).address,
+    getPlanetLocalSurfaceAddress(WORLD_WIDTH + normalizedGuardSamples, WORLD_HEIGHT + normalizedGuardSamples).address
+  ];
+  var minChunkX = samplePoints[0].chunkX;
+  var maxChunkX = samplePoints[0].chunkX;
+  var minChunkY = samplePoints[0].chunkY;
+  var maxChunkY = samplePoints[0].chunkY;
+  var visibleChunks = [];
+
+  for (var i = 1; i < samplePoints.length; i++) {
+    minChunkX = Math.min(minChunkX, samplePoints[i].chunkX);
+    maxChunkX = Math.max(maxChunkX, samplePoints[i].chunkX);
+    minChunkY = Math.min(minChunkY, samplePoints[i].chunkY);
+    maxChunkY = Math.max(maxChunkY, samplePoints[i].chunkY);
+  }
+
+  for (var chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+    for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+      var address = makePlanetSurfaceChunkAddress(getPlanetView().zoomLevel, chunkX, chunkY);
+      var screenRect = getPlanetSurfaceChunkScreenRect(address);
+
+      if (
+        screenRect.x > canvas.width + CONFIG.TILE_SIZE ||
+        screenRect.x + screenRect.width < -CONFIG.TILE_SIZE ||
+        screenRect.y > canvas.height + CONFIG.TILE_SIZE ||
+        screenRect.y + screenRect.height < -CONFIG.TILE_SIZE
+      ) {
+        continue;
+      }
+
+      visibleChunks.push({
+        address: address,
+        screenX: screenRect.x,
+        screenY: screenRect.y,
+        width: screenRect.width,
+        height: screenRect.height
+      });
+    }
+  }
+
+  return visibleChunks;
+}
+
 function getPlanetLocalSample(gridX, gridY) {
   var localAddress = getPlanetLocalSurfaceAddress(gridX, gridY);
   var latLon = {
@@ -1033,26 +1143,20 @@ function getPlanetSurfaceDetail(latitude, longitude, tile) {
 }
 
 function projectPlanetLocalPoint(longitude, latitude) {
-  var view = getPlanetView();
-  var scale = getPlanetViewScale();
-  var eastKm = wrapPlanetLongitudeDelta((Number(longitude) || 0) - view.longitude) *
-    getLongitudeDistanceKmPerDegree(view.latitude);
-  var northKm = ((Number(latitude) || 0) - view.latitude) * getLatitudeDistanceKmPerDegree();
-  var x = canvas.width / 2 + (eastKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE;
-  var y = canvas.height / 2 - (northKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE;
+  var point = getPlanetLocalCanvasPoint(longitude, latitude);
 
   if (
-    x < -CONFIG.TILE_SIZE ||
-    x > canvas.width + CONFIG.TILE_SIZE ||
-    y < -CONFIG.TILE_SIZE ||
-    y > canvas.height + CONFIG.TILE_SIZE
+    point.x < -CONFIG.TILE_SIZE ||
+    point.x > canvas.width + CONFIG.TILE_SIZE ||
+    point.y < -CONFIG.TILE_SIZE ||
+    point.y > canvas.height + CONFIG.TILE_SIZE
   ) {
     return null;
   }
 
   return {
-    x: x,
-    y: y,
+    x: point.x,
+    y: point.y,
     scale: 1,
     visibility: 1,
     visible: true
