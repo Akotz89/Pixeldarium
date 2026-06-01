@@ -995,6 +995,50 @@ var featureTexturedGrassSample = Object.assign({}, texturedGrassSample, {
     }
   })
 });
+var slopedRockSample = {
+  biome: "desert",
+  surfaceSampleX: 12045,
+  surfaceSampleY: 8091,
+  surfaceSampleMeters: 1,
+  detail: {
+    surface: "rock",
+    roughness: 0.82,
+    slope: 0.58,
+    aspect: 12,
+    hillshade: 0.34,
+    heightMeters: 1420,
+    sampleMeters: 1,
+    featureRelief: {
+      roughnessBoost: 0.28
+    }
+  }
+};
+var alternateAspectRockSample = Object.assign({}, slopedRockSample, {
+  detail: Object.assign({}, slopedRockSample.detail, {
+    aspect: 102
+  })
+});
+var flatReliefSample = {
+  biome: "grassland",
+  surfaceSampleX: 12045,
+  surfaceSampleY: 8091,
+  surfaceSampleMeters: 1,
+  detail: {
+    surface: "grass",
+    roughness: 0.04,
+    slope: 0.02,
+    aspect: 0,
+    hillshade: 0.72,
+    heightMeters: 120,
+    sampleMeters: 1
+  }
+};
+var coarseReliefSample = Object.assign({}, slopedRockSample, {
+  surfaceSampleMeters: 25,
+  detail: Object.assign({}, slopedRockSample.detail, {
+    sampleMeters: 25
+  })
+});
 
 setWorldSeed("PIXEL-2026");
 var grassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
@@ -1007,9 +1051,15 @@ var repeatedGrassFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSam
 var waterFinePixels = getPlanetSurfaceFinePixelSwatches(texturedWaterSample, "#08365f");
 var coarseGrassFinePixels = getPlanetSurfaceFinePixelSwatches(coarseTexturedGrassSample, "#2f6531");
 var featureGrassFinePixels = getPlanetSurfaceFinePixelSwatches(featureTexturedGrassSample, "#2f6531");
+var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
+var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
+var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
+var flatReliefAccents = getPlanetSurfaceReliefAccentSwatches(flatReliefSample, "#2f6531");
+var coarseReliefAccents = getPlanetSurfaceReliefAccentSwatches(coarseReliefSample, "#665226");
 setWorldSeed("PIXEL-2027");
 var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
 assert.ok(grassMicrotexture.length > 0, "local surface microtexture should add sub-sample swatches");
@@ -1044,6 +1094,28 @@ grassFinePixels.concat(waterFinePixels).forEach(function(swatch) {
   assert.ok(swatch.height >= 1 && swatch.height <= 2, "fine pixel height should stay small");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "fine pixel width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "fine pixel height should stay in cell");
+});
+assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
+assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");
+assert.deepStrictEqual(repeatedRockReliefAccents, rockReliefAccents, "relief accents should be deterministic");
+assert.notDeepStrictEqual(alternateSeedReliefAccents, rockReliefAccents, "relief accents should vary by seed");
+assert.notDeepStrictEqual(alternateAspectReliefAccents, rockReliefAccents, "relief accents should vary by terrain aspect");
+assert.deepStrictEqual(flatReliefAccents, [], "flat close terrain should skip relief accents");
+assert.deepStrictEqual(coarseReliefAccents, [], "coarse terrain should skip relief accents");
+assert.ok(
+  rockReliefAccents.some(function(swatch) { return swatch.width !== swatch.height; }),
+  "relief accents should form directional strips"
+);
+rockReliefAccents.forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "relief accent swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.48, "relief accent alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "relief accent x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "relief accent y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "relief accent width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "relief accent height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "relief accent width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "relief accent height should stay in cell");
+  assert.strictEqual(swatch.aspect, 12, "relief accent should expose source aspect");
 });
 
 var edgeAccentSample = Object.assign({}, boundarySample, {
