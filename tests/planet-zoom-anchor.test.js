@@ -1031,6 +1031,78 @@ assertNear(materialPixelNoise * 10, Math.round(materialPixelNoise * 10), 1e-9, "
 assert.ok(Math.abs(materialPixelNoise - nearbyMaterialPixelNoise) <= 0.20, "globe material noise should avoid hard square jumps");
 assert.notStrictEqual(alternateSeedMaterialPixelNoise, materialPixelNoise, "globe material noise should vary by seed");
 
+var lowlandTerrainBand = getPlanetLandformTerrainBand("grassland", {
+  elevation: 0.1,
+  moisture: 1.2,
+  ridgeStrength: 0.1,
+  roughness: 0.1,
+  terrainSlope: 0.05,
+  terrainHillshade: 0.55,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0
+}, { regional: 0.45, fine: 0.55 }, 20);
+var repeatedLowlandTerrainBand = getPlanetLandformTerrainBand("grassland", {
+  elevation: 0.1,
+  moisture: 1.2,
+  ridgeStrength: 0.1,
+  roughness: 0.1,
+  terrainSlope: 0.05,
+  terrainHillshade: 0.55,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0
+}, { regional: 0.45, fine: 0.55 }, 20);
+var highlandTerrainBand = getPlanetLandformTerrainBand("grassland", {
+  elevation: 1.8,
+  moisture: 1.0,
+  ridgeStrength: 0.9,
+  roughness: 0.8,
+  terrainSlope: 0.7,
+  terrainHillshade: 0.25,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0
+}, { regional: 0.55, fine: 0.65 }, 20);
+var desertTerrainBand = getPlanetLandformTerrainBand("desert", {
+  elevation: 0.6,
+  moisture: 0.1,
+  ridgeStrength: 0.4,
+  roughness: 0.6,
+  terrainSlope: 0.3,
+  terrainHillshade: 0.64,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0
+}, { regional: 0.62, fine: 0.58 }, 24);
+var shelfTerrainBand = getPlanetLandformTerrainBand("ocean", {
+  elevation: -0.15,
+  moisture: 1,
+  ridgeStrength: 0,
+  roughness: 0.1,
+  terrainSlope: 0,
+  terrainHillshade: 0.55,
+  coastFactor: 0.8,
+  shallowWater: 1,
+  shelfStrength: 0.8,
+  riverStrength: 0
+}, { regional: 0.5, fine: 0.5 }, 0);
+
+assert.deepStrictEqual(repeatedLowlandTerrainBand, lowlandTerrainBand, "landform terrain bands should be deterministic");
+assert.ok(highlandTerrainBand.relief > lowlandTerrainBand.relief + 0.45, "landform terrain bands should respond to highland relief");
+assert.ok(highlandTerrainBand.amount > lowlandTerrainBand.amount, "highland terrain bands should carry stronger tint");
+assert.notStrictEqual(desertTerrainBand.color, lowlandTerrainBand.color, "terrain bands should keep biome-specific color targets");
+assert.ok(shelfTerrainBand.color !== "#021631", "shelf terrain band should not use deep-ocean color");
+[lowlandTerrainBand, highlandTerrainBand, desertTerrainBand, shelfTerrainBand].forEach(function(band) {
+  assert.ok(band.amount >= 0 && band.amount <= 0.28, "terrain band tint amount should stay bounded");
+  assert.ok(band.relief >= 0 && band.relief <= 1, "terrain band relief should stay bounded");
+  assert.ok(band.bandNoise >= 0 && band.bandNoise <= 1, "terrain band noise should stay bounded");
+});
+
 fillPlanetTiles("ocean");
 var oceanImageryTile = getPlanetTile(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2));
 oceanImageryTile.elevation = -2.8;

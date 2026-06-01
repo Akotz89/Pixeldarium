@@ -606,6 +606,64 @@ function getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, 
   return clamp(normalizedSnow * mountainGate * 0.15, 0, 0.16);
 }
 
+function getPlanetLandformTerrainBand(biome, signals, noise, normalizedLatitude) {
+  var normalizedBiome = biome || "unknown";
+  var elevationValue = signals && Number.isFinite(Number(signals.elevation)) ? Number(signals.elevation) : 0;
+  var moistureValue = signals && Number.isFinite(Number(signals.moisture)) ? Number(signals.moisture) : 0.8;
+  var elevation = clamp((Math.tanh(elevationValue) + 1) / 2, 0, 1);
+  var moisture = clamp(moistureValue / 1.8, 0, 1);
+  var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
+  var ridge = clamp(signals && Number.isFinite(Number(signals.ridgeStrength)) ? Number(signals.ridgeStrength) : 0, 0, 1);
+  var roughness = clamp(signals && Number.isFinite(Number(signals.roughness)) ? Number(signals.roughness) : 0, 0, 1);
+  var slope = clamp(signals && Number.isFinite(Number(signals.terrainSlope)) ? Number(signals.terrainSlope) : 0, 0, 1);
+  var hillshade = clamp(signals && Number.isFinite(Number(signals.terrainHillshade)) ? Number(signals.terrainHillshade) : 0.55, 0, 1);
+  var coast = clamp(signals && Number.isFinite(Number(signals.coastFactor)) ? Number(signals.coastFactor) : 0, 0, 1);
+  var shelf = clamp(Math.max(
+    signals && Number.isFinite(Number(signals.shallowWater)) ? Number(signals.shallowWater) : 0,
+    signals && Number.isFinite(Number(signals.shelfStrength)) ? Number(signals.shelfStrength) : 0
+  ), 0, 1);
+  var river = clamp(signals && Number.isFinite(Number(signals.riverStrength)) ? Number(signals.riverStrength) : 0, 0, 1);
+  var polar = clamp((Math.abs(Number(normalizedLatitude) || 0) - 54) / 32, 0, 1);
+  var regional = noise ? clamp(Number(noise.regional) || 0, 0, 1) : 0.5;
+  var fine = noise ? clamp(Number(noise.fine) || 0, 0, 1) : 0.5;
+  var bandNoise = Math.round(clamp(regional * 0.55 + fine * 0.45, 0, 1) * 6) / 6;
+  var relief = clamp(highland * 0.34 + ridge * 0.28 + roughness * 0.13 + slope * 0.17 + Math.abs(hillshade - 0.5) * 0.12, 0, 1);
+  var dry = clamp(1 - moisture, 0, 1);
+  var amount = clamp(0.025 + relief * 0.16 + bandNoise * 0.045, 0, 0.24);
+  var color = "#6b6a5f";
+
+  if (normalizedBiome === "ocean") {
+    amount = clamp(0.04 + shelf * 0.14 + coast * 0.07 + (1 - elevation) * 0.035, 0, 0.20);
+    color = shelf > 0.36 || coast > 0.40 ? "#69b7a6" : "#021631";
+  } else if (normalizedBiome === "forest") {
+    color = relief > 0.44 ? "#5f674b" : (moisture > 0.58 ? "#0a2516" : "#24442a");
+    amount = clamp(amount + moisture * 0.035 - dry * 0.025, 0, 0.23);
+  } else if (normalizedBiome === "grassland") {
+    color = relief > 0.50 ? "#77735a" : (dry > 0.48 ? "#a08a43" : "#47723a");
+  } else if (normalizedBiome === "desert") {
+    color = relief > 0.42 ? "#786b53" : "#c3a456";
+    amount = clamp(amount + dry * 0.05, 0, 0.27);
+  } else if (normalizedBiome === "tundra") {
+    color = relief > 0.36 || polar > 0.32 ? "#a3aca1" : "#5f7068";
+    amount = clamp(amount + polar * 0.035, 0, 0.25);
+  } else if (normalizedBiome === "ice") {
+    color = relief > 0.38 ? "#88bdd2" : "#f2fbff";
+    amount = clamp(0.04 + relief * 0.10 + polar * 0.045, 0, 0.19);
+  }
+
+  if (river > 0.36 && normalizedBiome !== "ocean" && normalizedBiome !== "ice") {
+    color = "#245d70";
+    amount = clamp(amount + river * 0.08, 0, 0.28);
+  }
+
+  return {
+    color: color,
+    amount: amount,
+    relief: relief,
+    bandNoise: bandNoise
+  };
+}
+
 function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, noise, texture, normalizedLatitude, normalizedLongitude) {
   var color = clampRgb(baseColor);
   var broad = noise ? clamp(Number(noise.broad) || 0, 0, 1) : 0.5;
@@ -640,6 +698,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     0,
     1
   );
+  var terrainBand = getPlanetLandformTerrainBand(biome, signals, noise, normalizedLatitude);
 
   if (biome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
@@ -651,6 +710,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     color = blendRgbWithHex(color, "#06405f", clamp((1 - depth) * 0.10 + current * 0.04, 0, 0.14));
     color = blendRgbWithHex(color, "#0d7894", clamp(shelf * 0.26 + gyre * 0.035, 0, 0.30));
     color = blendRgbWithHex(color, "#8ccfc2", clamp(shelf * coast * 0.24, 0, 0.24));
+    color = blendRgbWithHex(color, terrainBand.color, terrainBand.amount);
     color = blendRgbWithHex(color, "#d9edf4", snowVisual);
     return applyPlanetMaterialPixelAccents(
       clampRgb(shadeRgb(color, clamp(terrainShade - 0.02 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
@@ -683,6 +743,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     color = blendRgbWithHex(color, "#d6eef7", clamp(terrainGrain * 0.06, 0, 0.08));
   }
 
+  color = blendRgbWithHex(color, terrainBand.color, terrainBand.amount);
   color = blendRgbWithHex(color, "#244f63", river * 0.18);
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
   color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.13 + roughness * 0.05, 0, 0.24));
