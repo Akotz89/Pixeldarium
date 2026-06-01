@@ -1484,6 +1484,13 @@ var texturedWaterSample = {
     }
   }
 };
+var alternateOrientationWaterSample = Object.assign({}, texturedWaterSample, {
+  detail: Object.assign({}, texturedWaterSample.detail, {
+    naturalElement: Object.assign({}, texturedWaterSample.detail.naturalElement, {
+      orientationRadians: 1.1
+    })
+  })
+});
 var coarseTexturedGrassSample = Object.assign({}, texturedGrassSample, {
   surfaceSampleMeters: 100,
   detail: Object.assign({}, texturedGrassSample.detail, {
@@ -1579,6 +1586,7 @@ var featureGrassPatternSwatches = getPlanetSurfacePatternSwatches(featureTexture
 var grassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var repeatedGrassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var waterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedWaterSample, "#08365f");
+var alternateOrientationWaterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(alternateOrientationWaterSample, "#08365f");
 var rockNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(slopedRockSample, "#665226");
 var coarseNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(coarseTexturedGrassSample, "#2f6531");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
@@ -1680,9 +1688,18 @@ assert.strictEqual(grassNaturalElementSwatches[0].elementType, "grass-blade", "g
 assert.strictEqual(waterNaturalElementSwatches[0].elementType, "water-ripple", "water natural elements should render ripples");
 assert.strictEqual(rockNaturalElementSwatches[0].elementType, "stone-chip", "rock natural elements should render stone chips");
 assert.deepStrictEqual(coarseNaturalElementSwatches, [], "broad local samples should skip natural micro-elements");
+assert.notDeepStrictEqual(alternateOrientationWaterNaturalElementSwatches, waterNaturalElementSwatches, "natural element swatches should vary by orientation");
 assert.notStrictEqual(waterNaturalElementSwatches[0].color, grassNaturalElementSwatches[0].color, "natural element color should vary by material");
 assert.ok(waterNaturalElementSwatches.some(function(swatch) { return swatch.width > swatch.height; }), "water natural elements should include ripple strips");
 assert.ok(grassNaturalElementSwatches.some(function(swatch) { return swatch.height >= swatch.width; }), "grass natural elements should include blade-like marks");
+assert.ok(
+  getPlanetLineAngleDifferenceRadians(waterNaturalElementSwatches[0].rotationRadians, texturedWaterSample.detail.naturalElement.orientationRadians) < 0.30,
+  "water natural element rotation should follow source orientation"
+);
+assert.ok(
+  getPlanetLineAngleDifferenceRadians(alternateOrientationWaterNaturalElementSwatches[0].rotationRadians, waterNaturalElementSwatches[0].rotationRadians) > 0.30,
+  "changed natural element orientation should rotate rendered swatches"
+);
 grassNaturalElementSwatches.concat(waterNaturalElementSwatches).concat(rockNaturalElementSwatches).forEach(function(swatch) {
   assertRgbBounds(getRgbFromHex(swatch.color), "natural element swatch");
   assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.50, "natural element alpha should stay subdued");
@@ -1692,6 +1709,7 @@ grassNaturalElementSwatches.concat(waterNaturalElementSwatches).concat(rockNatur
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "natural element height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "natural element width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "natural element height should stay in cell");
+  assert.ok(swatch.rotationRadians >= 0 && swatch.rotationRadians < Math.PI, "natural element rotation should stay normalized");
   assert.ok(["structure", "road", "track", "street", "house", "yard"].indexOf(swatch.elementType) < 0, "natural element swatches should not imply built infrastructure");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");

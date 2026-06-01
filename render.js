@@ -1780,6 +1780,23 @@ function getPlanetSurfaceNaturalElementShape(elementType, noise, index) {
   };
 }
 
+function getPlanetSurfaceNaturalElementRotation(element, elementType, noise, index) {
+  var base = Number.isFinite(Number(element && element.orientationRadians))
+    ? Number(element.orientationRadians)
+    : 0;
+  var jitter = (clamp(Number(noise) || 0, 0, 1) - 0.5) * Math.PI * 0.18;
+
+  if (elementType === "grass-blade") {
+    jitter += (index % 2 === 0 ? -1 : 1) * Math.PI * 0.035;
+  } else if (elementType === "stone-chip" || elementType === "pebble") {
+    jitter += (index % 3 - 1) * Math.PI * 0.08;
+  } else if (elementType === "leaf-litter" || elementType === "snow-crust") {
+    jitter += Math.PI * 0.5;
+  }
+
+  return normalizePlanetLineAngleRadians(base + jitter);
+}
+
 function getPlanetSurfaceNaturalElementSwatches(sample, baseColor) {
   var detail = sample && sample.detail ? sample.detail : {};
   var element = detail.naturalElement || null;
@@ -1816,6 +1833,7 @@ function getPlanetSurfaceNaturalElementSwatches(sample, baseColor) {
       size: Math.max(shape.width, shape.height),
       color: blendHexColors(baseColor, element.color || "#d9e7ff", clamp(0.18 + density * 0.28 + noise * 0.10, 0.18, 0.54)),
       alpha: clamp((Number(element.alpha) || 0.18) + noise * 0.08, 0.12, 0.50),
+      rotationRadians: getPlanetSurfaceNaturalElementRotation(element, type, noise, i),
       elementType: type
     });
   }
@@ -2037,6 +2055,34 @@ function drawSurfaceMarker(tctx, sample, screenX, screenY) {
   tctx.globalAlpha = 1;
 }
 
+function drawSurfaceSwatch(tctx, swatch, screenX, screenY) {
+  var width = Number(swatch.width) || swatch.size;
+  var height = Number(swatch.height) || swatch.size;
+  var rotation = Number.isFinite(Number(swatch.rotationRadians)) ? Number(swatch.rotationRadians) : 0;
+
+  tctx.globalAlpha = clamp(Number(swatch.alpha) || 0.24, 0, 0.82);
+  tctx.fillStyle = swatch.color;
+
+  if (rotation) {
+    tctx.save();
+    tctx.beginPath();
+    tctx.rect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    tctx.clip();
+    tctx.translate(screenX + swatch.x + width / 2, screenY + swatch.y + height / 2);
+    tctx.rotate(rotation);
+    tctx.fillRect(-width / 2, -height / 2, width, height);
+    tctx.restore();
+    return;
+  }
+
+  tctx.fillRect(
+    screenX + swatch.x,
+    screenY + swatch.y,
+    width,
+    height
+  );
+}
+
 function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
   var swatches = getPlanetSurfaceFinePixelSwatches(sample, baseColor)
     .concat(getPlanetSurfaceReliefAccentSwatches(sample, baseColor))
@@ -2047,16 +2093,7 @@ function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
     .concat(getPlanetSurfaceMicrotextureSwatches(sample, baseColor));
 
   for (var i = 0; i < swatches.length; i++) {
-    var swatch = swatches[i];
-
-    tctx.globalAlpha = clamp(Number(swatch.alpha) || 0.24, 0, 0.82);
-    tctx.fillStyle = swatch.color;
-    tctx.fillRect(
-      screenX + swatch.x,
-      screenY + swatch.y,
-      Number(swatch.width) || swatch.size,
-      Number(swatch.height) || swatch.size
-    );
+    drawSurfaceSwatch(tctx, swatches[i], screenX, screenY);
   }
 
   tctx.globalAlpha = 1;
