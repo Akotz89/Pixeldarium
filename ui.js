@@ -8,6 +8,7 @@ function updateHud() {
   var estimatedIndividuals = world.organisms.length * Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1));
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
   var planetScaleInfo = getPlanetCameraScaleInfo();
+  var planetCacheStats = getPlanetSurfaceCacheStats();
 
   setElementClass(eraText, "hud-card hud-era");
   setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
@@ -27,6 +28,7 @@ function updateHud() {
     makeHudMetric("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
     makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
     makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
+    makeHudMetric("Surface Cache", planetCacheStats.chunks + "c/" + planetCacheStats.samples + "s"),
     makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
@@ -1120,6 +1122,7 @@ function updateInspectPanel() {
   var settlement = getNearestSettlementToTile(tileX, tileY);
   var localContext = getLocalInspectContext(tileX, tileY);
   var planetScaleInfo = getPlanetCameraScaleInfo();
+  var planetCacheStats = getPlanetSurfaceCacheStats();
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
@@ -1130,6 +1133,8 @@ function updateInspectPanel() {
     makeInspectChip("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
     makeInspectChip("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
     makeInspectChip("Camera Alt", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
+    makeInspectChip("Surface Cache", planetCacheStats.chunks + " chunks / " + planetCacheStats.samples + " samples"),
+    makeInspectChip("Surface Chunk", planetCacheStats.lastChunkKey),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),

@@ -189,6 +189,8 @@ const CONFIG = {
     { name: "Neighborhood", metersPerSample: 100, chunkKm: 4 },
     { name: "House", metersPerSample: 1, chunkKm: 0.25 }
   ],
+  PLANET_SURFACE_CHUNK_SAMPLES: 32,
+  PLANET_SURFACE_CHUNK_CACHE_LIMIT: 768,
 
   SIM_UPDATE_INTERVAL_MS: 200,
   MAX_SIM_UPDATES_PER_FRAME: 8,

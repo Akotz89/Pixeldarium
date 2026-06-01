@@ -1,6 +1,19 @@
 // Pixel Sim Engine - planet.js
 // Earth-scale projection helpers for the planet-sized simulation map.
 
+var planetSurfaceChunkCache = {
+  chunks: {},
+  order: [],
+  stats: {
+    hits: 0,
+    misses: 0,
+    generatedChunks: 0,
+    evictions: 0,
+    lastChunkKey: "-",
+    lastSampleKey: "-"
+  }
+};
+
 function getPlanetRadiusKm() {
   return Math.max(1, Number(CONFIG.PLANET_RADIUS_KM) || 6371);
 }
@@ -266,6 +279,54 @@ function getPlanetScaleBar(targetPixels) {
   };
 }
 
+function getPlanetSurfaceChunkSampleCount() {
+  return Math.max(8, Math.round(Number(CONFIG.PLANET_SURFACE_CHUNK_SAMPLES) || 32));
+}
+
+function getPlanetSurfaceChunkCacheLimit() {
+  return Math.max(32, Math.round(Number(CONFIG.PLANET_SURFACE_CHUNK_CACHE_LIMIT) || 768));
+}
+
+function getPositiveModulo(value, divisor) {
+  var normalizedDivisor = Math.max(1, Math.round(Number(divisor) || 1));
+  return ((Math.round(Number(value) || 0) % normalizedDivisor) + normalizedDivisor) % normalizedDivisor;
+}
+
+function resetPlanetSurfaceChunkCache() {
+  planetSurfaceChunkCache = {
+    chunks: {},
+    order: [],
+    stats: {
+      hits: 0,
+      misses: 0,
+      generatedChunks: 0,
+      evictions: 0,
+      lastChunkKey: "-",
+      lastSampleKey: "-"
+    }
+  };
+}
+
+function getPlanetSurfaceCacheStats() {
+  var sampleCount = 0;
+
+  for (var i = 0; i < planetSurfaceChunkCache.order.length; i++) {
+    var chunk = planetSurfaceChunkCache.chunks[planetSurfaceChunkCache.order[i]];
+    sampleCount += chunk && chunk.samples ? Object.keys(chunk.samples).length : 0;
+  }
+
+  return {
+    chunks: planetSurfaceChunkCache.order.length,
+    samples: sampleCount,
+    hits: planetSurfaceChunkCache.stats.hits,
+    misses: planetSurfaceChunkCache.stats.misses,
+    generatedChunks: planetSurfaceChunkCache.stats.generatedChunks,
+    evictions: planetSurfaceChunkCache.stats.evictions,
+    lastChunkKey: planetSurfaceChunkCache.stats.lastChunkKey,
+    lastSampleKey: planetSurfaceChunkCache.stats.lastSampleKey
+  };
+}
+
 function getLongitudeDistanceKmPerDegree(latitude) {
   return Math.max(0.001, (getPlanetCircumferenceKm() / 360) * getPlanetLatitudeScale(latitude));
 }
@@ -493,16 +554,25 @@ function getPlanetLocalSample(gridX, gridY) {
   var latLon = getLatLonFromLocalOffset(eastKm, northKm);
   var tilePosition = getTileFromLatLon(latLon.latitude, latLon.longitude);
   var tile = getPlanetTile(tilePosition.x, tilePosition.y);
-  var detail = getPlanetSurfaceDetail(latLon.latitude, latLon.longitude, tile);
+  var cachedSample = getPlanetSurfaceChunkSample(latLon.latitude, latLon.longitude, tile);
 
   return {
-    x: tilePosition.x,
-    y: tilePosition.y,
-    latitude: latLon.latitude,
-    longitude: latLon.longitude,
-    tile: tile,
-    biome: tile ? tile.biome : "unknown",
-    detail: detail,
+    x: cachedSample.x,
+    y: cachedSample.y,
+    latitude: cachedSample.latitude,
+    longitude: cachedSample.longitude,
+    tile: cachedSample.tile,
+    biome: cachedSample.biome,
+    detail: cachedSample.detail,
+    surfaceChunkKey: cachedSample.surfaceChunkKey,
+    surfaceSampleKey: cachedSample.surfaceSampleKey,
+    surfaceChunkX: cachedSample.surfaceChunkX,
+    surfaceChunkY: cachedSample.surfaceChunkY,
+    surfaceSampleX: cachedSample.surfaceSampleX,
+    surfaceSampleY: cachedSample.surfaceSampleY,
+    surfaceChunkLocalX: cachedSample.surfaceChunkLocalX,
+    surfaceChunkLocalY: cachedSample.surfaceChunkLocalY,
+    surfaceSampleMeters: cachedSample.surfaceSampleMeters,
     eastKm: eastKm,
     northKm: northKm
   };
@@ -529,6 +599,120 @@ function getSurfaceMeterCoordinate(latitude, longitude) {
     northMeters: (Number(latitude) || 0) * getLatitudeDistanceKmPerDegree() * 1000,
     eastMeters: normalizeLongitude(longitude) * getLongitudeDistanceKmPerDegree(latitude) * 1000
   };
+}
+
+function getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex) {
+  var scale = getPlanetZoomLevel(
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetView().zoomLevel
+  );
+  var chunkSamples = getPlanetSurfaceChunkSampleCount();
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var sampleMeters = Math.max(0.1, scale.metersPerSample);
+  var sampleEast = Math.floor(meters.eastMeters / sampleMeters);
+  var sampleNorth = Math.floor(meters.northMeters / sampleMeters);
+  var chunkX = Math.floor(sampleEast / chunkSamples);
+  var chunkY = Math.floor(sampleNorth / chunkSamples);
+  var localSampleX = getPositiveModulo(sampleEast, chunkSamples);
+  var localSampleY = getPositiveModulo(sampleNorth, chunkSamples);
+  var chunkKey = [
+    scale.index,
+    sampleMeters,
+    chunkSamples,
+    chunkX,
+    chunkY
+  ].join(":");
+  var sampleKey = localSampleX + ":" + localSampleY;
+
+  return {
+    zoomLevel: scale.index,
+    scaleName: scale.name,
+    sampleMeters: sampleMeters,
+    chunkSamples: chunkSamples,
+    sampleEast: sampleEast,
+    sampleNorth: sampleNorth,
+    chunkX: chunkX,
+    chunkY: chunkY,
+    localSampleX: localSampleX,
+    localSampleY: localSampleY,
+    chunkKey: chunkKey,
+    sampleKey: sampleKey
+  };
+}
+
+function getPlanetSurfaceChunkKeyForLatLon(latitude, longitude, zoomLevelIndex) {
+  return getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex).chunkKey;
+}
+
+function getPlanetSurfaceChunk(address) {
+  var chunk = planetSurfaceChunkCache.chunks[address.chunkKey];
+
+  if (chunk) {
+    return chunk;
+  }
+
+  chunk = {
+    key: address.chunkKey,
+    zoomLevel: address.zoomLevel,
+    sampleMeters: address.sampleMeters,
+    chunkSamples: address.chunkSamples,
+    chunkX: address.chunkX,
+    chunkY: address.chunkY,
+    samples: {}
+  };
+
+  planetSurfaceChunkCache.chunks[address.chunkKey] = chunk;
+  planetSurfaceChunkCache.order.push(address.chunkKey);
+  planetSurfaceChunkCache.stats.generatedChunks++;
+
+  while (planetSurfaceChunkCache.order.length > getPlanetSurfaceChunkCacheLimit()) {
+    var evictedKey = planetSurfaceChunkCache.order.shift();
+    delete planetSurfaceChunkCache.chunks[evictedKey];
+    planetSurfaceChunkCache.stats.evictions++;
+  }
+
+  return chunk;
+}
+
+function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
+  var address = getPlanetSurfaceSampleAddress(latitude, longitude);
+  var chunk = getPlanetSurfaceChunk(address);
+  var cachedSample = chunk.samples[address.sampleKey];
+
+  planetSurfaceChunkCache.stats.lastChunkKey = address.chunkKey;
+  planetSurfaceChunkCache.stats.lastSampleKey = address.sampleKey;
+
+  if (cachedSample) {
+    planetSurfaceChunkCache.stats.hits++;
+    return cachedSample;
+  }
+
+  var tilePosition = tile
+    ? { x: tile.x, y: tile.y }
+    : getTileFromLatLon(latitude, longitude);
+  var resolvedTile = tile || getPlanetTile(tilePosition.x, tilePosition.y);
+
+  planetSurfaceChunkCache.stats.misses++;
+  cachedSample = {
+    x: tilePosition.x,
+    y: tilePosition.y,
+    latitude: latitude,
+    longitude: longitude,
+    tile: resolvedTile,
+    biome: resolvedTile ? resolvedTile.biome : "unknown",
+    detail: getPlanetSurfaceDetail(latitude, longitude, resolvedTile),
+    surfaceChunkKey: address.chunkKey,
+    surfaceSampleKey: address.sampleKey,
+    surfaceChunkX: address.chunkX,
+    surfaceChunkY: address.chunkY,
+    surfaceSampleX: address.sampleEast,
+    surfaceSampleY: address.sampleNorth,
+    surfaceChunkLocalX: address.localSampleX,
+    surfaceChunkLocalY: address.localSampleY,
+    surfaceSampleMeters: address.sampleMeters
+  };
+  chunk.samples[address.sampleKey] = cachedSample;
+
+  return cachedSample;
 }
 
 function getSurfaceLayerNoise(meters, patchMeters, salt) {

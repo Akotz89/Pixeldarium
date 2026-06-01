@@ -10,6 +10,10 @@ function isFertile(x, y) {
 }
 
 function seedTerrain() {
+  if (typeof resetPlanetSurfaceChunkCache === "function") {
+    resetPlanetSurfaceChunkCache();
+  }
+
   world.terrain = [];
   world.planetTiles = [];
   world.fertileTiles = 0;

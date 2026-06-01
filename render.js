@@ -376,6 +376,7 @@ function drawPlanetReferenceGrid() {
   if (isGlobeRenderMode() && isPlanetLocalView()) {
     var view = getPlanetView();
     var scaleInfo = getPlanetCameraScaleInfo();
+    var cacheStats = getPlanetSurfaceCacheStats();
 
     ctx.save();
     ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
@@ -395,7 +396,8 @@ function drawPlanetReferenceGrid() {
       "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
         " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
         " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
-        " | " + getPlanetScaleLabel(),
+        " | " + getPlanetScaleLabel() +
+        " | cache " + cacheStats.chunks + " chunks / " + cacheStats.samples + " samples",
       28,
       canvas.height - 87
     );
