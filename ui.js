@@ -1328,8 +1328,12 @@ function inspectTile(tileX, tileY, shouldFocus, surfacePosition) {
   updateHud();
 }
 
-function zoomPlanetView(delta) {
-  if (!adjustPlanetZoom(delta)) {
+function zoomPlanetView(delta, anchorPoint) {
+  var didZoom = anchorPoint && typeof adjustPlanetZoomAtCanvasPoint === "function"
+    ? adjustPlanetZoomAtCanvasPoint(delta, anchorPoint.canvasX, anchorPoint.canvasY)
+    : adjustPlanetZoom(delta);
+
+  if (!didZoom) {
     return false;
   }
 
@@ -1553,13 +1557,9 @@ window.setupControls = function() {
       : null;
     var surfaceTile = surfacePosition ? getTileFromLatLon(surfacePosition.latitude, surfacePosition.longitude) : null;
 
-    if (typeof focusPlanetViewOnCanvasPoint === "function") {
-      focusPlanetViewOnCanvasPoint(point.canvasX, point.canvasY);
-    }
-
     var tile = surfaceTile || getTileFromCanvasEvent(event);
     inspectTile(tile.x, tile.y, false, surfacePosition);
-    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25);
+    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25, point);
   }, { passive: false });
 
   pauseButton.addEventListener("click", function() {

@@ -214,8 +214,57 @@ function setPlanetZoomLevel(zoomLevel) {
   return true;
 }
 
+function focusPlanetViewOnLatLonAtCanvasPoint(latitude, longitude, canvasX, canvasY) {
+  var scale = getPlanetViewScale();
+  var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
+  var sampleY = (Number(canvasY) || 0) / CONFIG.TILE_SIZE;
+  var desiredEastKm = (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample / 1000;
+  var desiredNorthKm = -(sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample / 1000;
+  var targetLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var centerLatitude = clamp(
+    targetLatitude - desiredNorthKm / getLatitudeDistanceKmPerDegree(),
+    -90,
+    90
+  );
+  var centerLongitude = normalizeLongitude(
+    (Number(longitude) || 0) - desiredEastKm / getLongitudeDistanceKmPerDegree(targetLatitude)
+  );
+
+  focusPlanetViewOnLatLon(centerLatitude, centerLongitude);
+  return getPlanetView();
+}
+
+function setPlanetZoomLevelAtCanvasPoint(zoomLevel, canvasX, canvasY) {
+  var anchoredLatLon = typeof getPlanetLatLonFromCanvasPoint === "function"
+    ? getPlanetLatLonFromCanvasPoint(canvasX, canvasY)
+    : null;
+
+  if (!setPlanetZoomLevel(zoomLevel)) {
+    return false;
+  }
+
+  if (anchoredLatLon && isPlanetLocalView()) {
+    focusPlanetViewOnLatLonAtCanvasPoint(
+      anchoredLatLon.latitude,
+      anchoredLatLon.longitude,
+      canvasX,
+      canvasY
+    );
+  }
+
+  return true;
+}
+
 function adjustPlanetZoom(delta) {
   return setPlanetZoomLevel(getPlanetView().zoomLevel + (Number(delta) || 0));
+}
+
+function adjustPlanetZoomAtCanvasPoint(delta, canvasX, canvasY) {
+  return setPlanetZoomLevelAtCanvasPoint(
+    getPlanetView().zoomLevel + (Number(delta) || 0),
+    canvasX,
+    canvasY
+  );
 }
 
 function getPlanetViewScale() {
