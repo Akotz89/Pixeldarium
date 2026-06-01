@@ -498,6 +498,58 @@ var lowLatitudeSnowVisual = getPlanetCloudlessSnowVisualAmount("grassland", lowL
 var polarSnowVisual = getPlanetCloudlessSnowVisualAmount("tundra", polarSnowSignal, 1, 0.75, 0.9);
 var oceanSnowVisual = getPlanetCloudlessSnowVisualAmount("ocean", polarSnowSignal, 1, 0, 0);
 var iceSnowVisual = getPlanetCloudlessSnowVisualAmount("ice", iceSnowSignal, 1, 0.3, 0.3);
+var mountainLandformIdentity = getPlanetGlobeLandformIdentity("grassland", {
+  elevation: 1.8,
+  moisture: 1.0,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  riverMouth: 0,
+  ridgeStrength: 0.95,
+  roughness: 0.8,
+  terrainSlope: 0.7,
+  snowSignal: 0.7
+}, { broad: 0.48, regional: 0.62, local: 0.55, fine: 0.58 }, { eastMeters: 120000, northMeters: 90000 }, 42);
+var desertLandformIdentity = getPlanetGlobeLandformIdentity("desert", {
+  elevation: 0.4,
+  moisture: 0.1,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  riverMouth: 0,
+  ridgeStrength: 0.1,
+  roughness: 0.2,
+  terrainSlope: 0.1,
+  snowSignal: 0
+}, { broad: 0.6, regional: 0.7, local: 0.55, fine: 0.45 }, { eastMeters: 300000, northMeters: 70000 }, 24);
+var deepBasinIdentity = getPlanetGlobeLandformIdentity("ocean", {
+  elevation: -2.6,
+  moisture: 1,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  riverMouth: 0,
+  ridgeStrength: 0,
+  roughness: 0.1,
+  terrainSlope: 0,
+  snowSignal: 0
+}, { broad: 0.5, regional: 0.48, local: 0.52, fine: 0.5 }, { eastMeters: 500000, northMeters: 100000 }, 0);
+var shelfIdentity = getPlanetGlobeLandformIdentity("ocean", {
+  elevation: -0.15,
+  moisture: 1,
+  coastFactor: 0.8,
+  shallowWater: 1,
+  shelfStrength: 0.8,
+  riverStrength: 0,
+  riverMouth: 0.2,
+  ridgeStrength: 0,
+  roughness: 0.1,
+  terrainSlope: 0,
+  snowSignal: 0
+}, { broad: 0.5, regional: 0.5, local: 0.5, fine: 0.5 }, { eastMeters: 520000, northMeters: 100000 }, 0);
 var lowLatitudeHighlandColor = getPlanetTileCompositedColor(lowLatitudeHighlandTile);
 var permanentIceColor = getPlanetTileCompositedColor(permanentIceTile);
 var materialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
@@ -530,6 +582,17 @@ assert.ok(polarSnowVisual > lowLatitudeSnowVisual + 0.08, "cloudless globe mater
 assert.ok(oceanSnowVisual < polarSnowVisual, "cloudless globe material should not whiten oceans like clouds");
 assert.ok(iceSnowVisual > polarSnowVisual, "permanent ice should remain visually brighter than tundra snow");
 assert.ok(colorLuminance(permanentIceColor) > colorLuminance(lowLatitudeHighlandColor) + 15, "non-ice highlands should stay darker than permanent ice");
+assert.strictEqual(mountainLandformIdentity.type, "mountain-highland", "globe landform identity should classify high relief land as mountains");
+assert.ok(mountainLandformIdentity.snowcap > 0, "globe mountain identity should expose bounded snowcap accents");
+assert.strictEqual(desertLandformIdentity.type, "dune-field", "globe landform identity should classify dry low relief desert as dunes");
+assert.strictEqual(deepBasinIdentity.type, "deep-basin", "globe landform identity should classify deep ocean basins");
+assert.strictEqual(shelfIdentity.type, "continental-shelf", "globe landform identity should classify shallow coasts as shelves");
+assert.ok(shelfIdentity.amount > deepBasinIdentity.amount, "shelf identity should carry stronger coastal material than deep ocean");
+[mountainLandformIdentity, desertLandformIdentity, deepBasinIdentity, shelfIdentity].forEach(function(identity) {
+  assert.ok(identity.amount >= 0 && identity.amount <= 0.26, "globe landform identity amount should stay bounded");
+  assert.ok(identity.snowcap >= 0 && identity.snowcap <= 0.16, "globe landform identity snowcap should stay bounded");
+  assertRgbBounds(getRgbFromHex(identity.color), "globe landform identity color");
+});
 assertNear(repeatedMaterialPixelNoise, materialPixelNoise, 1e-12, "material pixel noise should be deterministic");
 assert.ok(materialPixelNoise >= 0 && materialPixelNoise <= 1, "material pixel noise should be bounded");
 assert.ok(Math.abs(shiftedMaterialPixelNoise - materialPixelNoise) > 0.001, "material pixel noise should vary across the surface");
