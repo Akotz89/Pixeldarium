@@ -10,6 +10,9 @@ function updateHud() {
   var planetScaleInfo = getPlanetCameraScaleInfo();
   var planetCacheStats = getPlanetSurfaceCacheStats();
   var renderCacheStats = getLocalSurfaceRenderCacheStats();
+  var centerPyramidLineage = getPlanetSurfaceChunkLineage(
+    getPlanetLocalSurfaceAddress(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2)).address
+  );
 
   setElementClass(eraText, "hud-card hud-era");
   setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
@@ -31,6 +34,7 @@ function updateHud() {
     makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
     makeHudMetric("Surface Cache", planetCacheStats.chunks + "c/" + planetCacheStats.samples + "s"),
     makeHudMetric("Render Chunks", renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c " + renderCacheStats.hits + "h"),
+    makeHudMetric("Pyramid", centerPyramidLineage.length + " parents"),
     makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
@@ -1126,6 +1130,9 @@ function updateInspectPanel() {
   var planetScaleInfo = getPlanetCameraScaleInfo();
   var planetCacheStats = getPlanetSurfaceCacheStats();
   var renderCacheStats = getLocalSurfaceRenderCacheStats();
+  var inspectedPyramidLineage = isPlanetLocalView()
+    ? getPlanetSurfaceChunkLineage(getPlanetLocalSurfaceAddress(tileX, tileY).address)
+    : [];
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
@@ -1139,6 +1146,7 @@ function updateInspectPanel() {
     makeInspectChip("Surface Cache", planetCacheStats.chunks + " chunks / " + planetCacheStats.samples + " samples"),
     makeInspectChip("Surface Chunk", planetCacheStats.lastChunkKey),
     makeInspectChip("Render Chunks", renderCacheStats.lastVisibleChunks + " visible / " + renderCacheStats.chunks + " cached / " + renderCacheStats.hits + " hits"),
+    makeInspectChip("Pyramid", getPlanetSurfaceChunkLineageLabel(inspectedPyramidLineage)),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),

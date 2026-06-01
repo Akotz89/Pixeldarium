@@ -278,6 +278,7 @@ function buildLocalSurfaceRenderChunk(address) {
   return {
     key: getLocalSurfaceRenderChunkKey(address),
     chunkKey: address.chunkKey,
+    parentLineage: getPlanetSurfaceChunkLineage(address),
     canvas: chunkCanvas,
     width: chunkPixels,
     height: chunkPixels,
@@ -507,6 +508,10 @@ function drawPlanetReferenceGrid() {
     var scaleInfo = getPlanetCameraScaleInfo();
     var cacheStats = getPlanetSurfaceCacheStats();
     var renderCacheStats = getLocalSurfaceRenderCacheStats();
+    var visibleChunks = getPlanetVisibleSurfaceChunks(0);
+    var pyramidLabel = visibleChunks.length > 0
+      ? getPlanetSurfaceChunkLineageLabel(getPlanetSurfaceChunkLineage(visibleChunks[0].address))
+      : "-";
 
     ctx.save();
     ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
@@ -519,16 +524,17 @@ function drawPlanetReferenceGrid() {
     );
     drawPlanetScaleBar();
     ctx.fillStyle = "rgba(3, 4, 9, 0.54)";
-    ctx.fillRect(18, canvas.height - 104, 660, 24);
+    ctx.fillRect(18, canvas.height - 104, canvas.width - 36, 24);
     ctx.fillStyle = "rgba(220, 229, 255, 0.88)";
-    ctx.font = "14px Arial, Helvetica, sans-serif";
+    ctx.font = "12px Arial, Helvetica, sans-serif";
     ctx.fillText(
       "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
         " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
         " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
         " | " + getPlanetScaleLabel() +
         " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
-        " | render " + renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h",
+        " | render " + renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h" +
+        " | pyramid " + pyramidLabel,
       28,
       canvas.height - 87
     );

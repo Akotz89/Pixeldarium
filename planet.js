@@ -610,6 +610,58 @@ function makePlanetSurfaceChunkAddress(zoomLevelIndex, chunkX, chunkY) {
   };
 }
 
+function getPlanetSurfaceChunkCenterLatLon(address) {
+  return getPlanetSurfaceLatLonFromChunkAddress(
+    address,
+    address.chunkSamples / 2,
+    address.chunkSamples / 2
+  );
+}
+
+function getPlanetSurfaceChunkParentAddress(address, parentZoomLevelIndex) {
+  var targetZoomLevel = typeof parentZoomLevelIndex === "number"
+    ? parentZoomLevelIndex
+    : address.zoomLevel - 1;
+  var center = getPlanetSurfaceChunkCenterLatLon(address);
+
+  if (targetZoomLevel < 0 || targetZoomLevel >= address.zoomLevel) {
+    return null;
+  }
+
+  return getPlanetSurfaceSampleAddress(center.latitude, center.longitude, targetZoomLevel);
+}
+
+function getPlanetSurfaceChunkLineage(address) {
+  var lineage = [];
+
+  for (var zoomLevel = address.zoomLevel - 1; zoomLevel >= 0; zoomLevel--) {
+    var parentAddress = getPlanetSurfaceChunkParentAddress(address, zoomLevel);
+
+    if (parentAddress) {
+      lineage.push({
+        zoomLevel: parentAddress.zoomLevel,
+        scaleName: parentAddress.scaleName,
+        sampleMeters: parentAddress.sampleMeters,
+        chunkX: parentAddress.chunkX,
+        chunkY: parentAddress.chunkY,
+        chunkKey: parentAddress.chunkKey
+      });
+    }
+  }
+
+  return lineage;
+}
+
+function getPlanetSurfaceChunkLineageLabel(lineage) {
+  if (!Array.isArray(lineage) || lineage.length === 0) {
+    return "-";
+  }
+
+  return lineage.map(function(item) {
+    return item.scaleName + " " + item.chunkX + "," + item.chunkY;
+  }).join(" <- ");
+}
+
 function getPlanetLocalCanvasPoint(longitude, latitude) {
   var view = getPlanetView();
   var scale = getPlanetViewScale();
@@ -710,6 +762,7 @@ function getPlanetLocalSample(gridX, gridY) {
     surfaceSampleKey: cachedSample.surfaceSampleKey,
     surfaceChunkX: cachedSample.surfaceChunkX,
     surfaceChunkY: cachedSample.surfaceChunkY,
+    surfaceParentLineage: cachedSample.surfaceParentLineage,
     surfaceSampleX: cachedSample.surfaceSampleX,
     surfaceSampleY: cachedSample.surfaceSampleY,
     surfaceChunkLocalX: cachedSample.surfaceChunkLocalX,
@@ -814,6 +867,7 @@ function getPlanetSurfaceChunk(address) {
     chunkSamples: address.chunkSamples,
     chunkX: address.chunkX,
     chunkY: address.chunkY,
+    parentLineage: getPlanetSurfaceChunkLineage(address),
     samples: {}
   };
 
@@ -861,6 +915,7 @@ function getPlanetSurfaceChunkSample(latitude, longitude, tile) {
     surfaceSampleKey: address.sampleKey,
     surfaceChunkX: address.chunkX,
     surfaceChunkY: address.chunkY,
+    surfaceParentLineage: chunk.parentLineage,
     surfaceSampleX: address.sampleEast,
     surfaceSampleY: address.sampleNorth,
     surfaceChunkLocalX: address.localSampleX,
