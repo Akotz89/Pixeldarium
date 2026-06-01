@@ -911,6 +911,10 @@ function getPlanetGroundFeatureBlockMeters() {
   return 64;
 }
 
+function getPlanetGroundFeatureQueryBlockLimit() {
+  return 4096;
+}
+
 function getPlanetGroundFeatureTypeColor(type) {
   switch (type) {
     case "stream":
@@ -1103,7 +1107,7 @@ function getPlanetGroundFeatureDistanceMeters(feature, eastMeters, northMeters) 
   return Infinity;
 }
 
-function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, minNorthMeters, maxNorthMeters, blockMeters) {
+function getPlanetGroundFeatureQueryWindow(minEastMeters, maxEastMeters, minNorthMeters, maxNorthMeters, blockMeters) {
   var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
   var minEast = Math.min(Number(minEastMeters) || 0, Number(maxEastMeters) || 0);
   var maxEast = Math.max(Number(minEastMeters) || 0, Number(maxEastMeters) || 0);
@@ -1113,11 +1117,37 @@ function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, min
   var maxBlockEast = Math.floor(maxEast / normalizedBlockMeters) + 1;
   var minBlockNorth = Math.floor(minNorth / normalizedBlockMeters) - 1;
   var maxBlockNorth = Math.floor(maxNorth / normalizedBlockMeters) + 1;
+  var blockColumns = Math.max(0, maxBlockEast - minBlockEast + 1);
+  var blockRows = Math.max(0, maxBlockNorth - minBlockNorth + 1);
+
+  return {
+    blockMeters: normalizedBlockMeters,
+    minBlockEast: minBlockEast,
+    maxBlockEast: maxBlockEast,
+    minBlockNorth: minBlockNorth,
+    maxBlockNorth: maxBlockNorth,
+    blockCount: blockColumns * blockRows,
+    capped: blockColumns * blockRows > getPlanetGroundFeatureQueryBlockLimit()
+  };
+}
+
+function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, minNorthMeters, maxNorthMeters, blockMeters) {
+  var queryWindow = getPlanetGroundFeatureQueryWindow(
+    minEastMeters,
+    maxEastMeters,
+    minNorthMeters,
+    maxNorthMeters,
+    blockMeters
+  );
   var features = [];
 
-  for (var blockNorth = minBlockNorth; blockNorth <= maxBlockNorth; blockNorth++) {
-    for (var blockEast = minBlockEast; blockEast <= maxBlockEast; blockEast++) {
-      var blockFeatures = getPlanetGroundFeatureBlock(blockEast, blockNorth, normalizedBlockMeters);
+  if (queryWindow.capped) {
+    return features;
+  }
+
+  for (var blockNorth = queryWindow.minBlockNorth; blockNorth <= queryWindow.maxBlockNorth; blockNorth++) {
+    for (var blockEast = queryWindow.minBlockEast; blockEast <= queryWindow.maxBlockEast; blockEast++) {
+      var blockFeatures = getPlanetGroundFeatureBlock(blockEast, blockNorth, queryWindow.blockMeters);
 
       for (var i = 0; i < blockFeatures.length; i++) {
         features.push(blockFeatures[i]);
@@ -1189,6 +1219,24 @@ function getPlanetGroundFeatureDimensionLabel(feature) {
 function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
   var meters = getSurfaceMeterCoordinate(latitude, longitude);
   var radius = Math.max(8, Number(radiusMeters) || 48);
+  var queryWindow = getPlanetGroundFeatureQueryWindow(
+    meters.eastMeters - radius,
+    meters.eastMeters + radius,
+    meters.northMeters - radius,
+    meters.northMeters + radius
+  );
+
+  if (queryWindow.capped) {
+    return {
+      count: 0,
+      counts: {},
+      nearest: null,
+      capped: true,
+      blockCount: queryWindow.blockCount,
+      label: "zoom closer"
+    };
+  }
+
   var features = getPlanetGroundFeaturesForMeterBounds(
     meters.eastMeters - radius,
     meters.eastMeters + radius,
@@ -1205,6 +1253,8 @@ function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
     count: features.length,
     counts: counts,
     nearest: getNearestPlanetGroundFeature(latitude, longitude, radius),
+    capped: false,
+    blockCount: queryWindow.blockCount,
     label: Object.keys(counts).sort().map(function(type) {
       return type + " " + counts[type];
     }).join(", ") || "none"

@@ -1251,11 +1251,20 @@ function getInspectGroundFeatureLabel(tileX, tileY) {
   var latitude = surfacePosition ? surfacePosition.latitude : (tile ? tile.latitude : getPlanetLatitudeForTile(tileY));
   var longitude = surfacePosition ? surfacePosition.longitude : (tile ? tile.longitude : getPlanetLongitudeForTile(tileX));
   var scaleInfo = getPlanetCameraScaleInfo();
+
+  if (scaleInfo.metersPerSample > 25) {
+    return "available at Street scale";
+  }
+
   var summary = getPlanetGroundFeatureSummary(
     latitude,
     longitude,
     Math.max(32, scaleInfo.metersPerCanvasPixel * 90)
   );
+
+  if (summary.capped) {
+    return summary.label;
+  }
 
   if (!summary.nearest) {
     return summary.label;

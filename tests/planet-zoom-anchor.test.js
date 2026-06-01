@@ -188,6 +188,19 @@ assert.strictEqual(nearestRectFeature.id, rectFeature.id, "nearest footprint fea
 assertNear(nearestRectFeature.distanceMeters, 0, 1e-9, "nearest footprint distance");
 assert.ok(getPlanetGroundFeatureSummary(rectCenter.latitude, rectCenter.longitude, 16).nearest.id, "feature summary should include nearest feature");
 
+var broadSummary = getPlanetGroundFeatureSummary(34.2117, -77.7265, 500000);
+assert.strictEqual(broadSummary.capped, true, "broad feature summary should be capped");
+assert.strictEqual(broadSummary.count, 0, "capped feature summary should not enumerate features");
+assert.strictEqual(broadSummary.nearest, null, "capped feature summary should not search nearest features");
+
+var broadFeatures = getPlanetGroundFeaturesForMeterBounds(
+  featureCenter.eastMeters - 500000,
+  featureCenter.eastMeters + 500000,
+  featureCenter.northMeters - 500000,
+  featureCenter.northMeters + 500000
+);
+assert.deepStrictEqual(broadFeatures, [], "broad feature bounds query should return safely");
+
 var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
 var chunkBounds = getLocalSurfaceChunkMeterBounds(houseAddress);
 var chunkPoint = getLocalSurfaceChunkPointForMeters(
