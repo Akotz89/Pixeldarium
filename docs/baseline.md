@@ -80,15 +80,45 @@ The game tracks these metrics in the HUD (Status tab):
 5. Open Chrome DevTools → Performance → Record 10 seconds
 6. Note: JS heap size, total layout time, paint time
 
-### Expected Baseline Range (from code analysis)
+### Captured Runtime Baseline (2026-06-01, Chrome DevTools)
 
-| Metric | Expected Range | Notes |
-|--------|---------------|-------|
-| FPS | 55-60 | Capped by rAF, 60Hz monitor |
-| TPS | ~60 | CONFIG.TICKS_PER_SIM_UPDATE=12, SIM_UPDATE_INTERVAL_MS=200 |
-| Update ms | 1-15ms | Depends on population + settlement count |
-| Draw ms | 2-20ms | Depends on zoom level, chunk cache state |
-| JS Heap | 50-200MB | Planet surface chunks dominate |
+**Sample 1** — 1x speed, ~10 seconds in, Organisms era:
+
+| Metric | Value |
+|--------|-------|
+| FPS | 120 |
+| TPS | 4 |
+| Update ms | 0.30 |
+| Draw ms | 0.05 |
+| Max Update ms | 0.40 |
+| Max Draw ms | 0.20 |
+| Tick | 117 |
+| Organisms | 27 |
+| Food | 516 |
+| JS Heap | 26 MB used / 28 MB total |
+
+**Sample 2** — 5x speed, ~25 seconds in, Settlements era:
+
+| Metric | Value |
+|--------|-------|
+| FPS | 120 |
+| TPS | 26 |
+| Update ms | 0.97 |
+| Draw ms | 0.12 |
+| Max Update ms | 1.30 |
+| Max Draw ms | 0.40 |
+| Tick | 921 |
+| Organisms | 157 |
+| Food | 515 |
+| Settlements | 3 |
+| JS Heap | 26 MB used / 28 MB total |
+
+**Key observations:**
+- FPS runs at 120 (likely 120Hz display or uncapped rAF)
+- Update cost scales ~3x from 27→157 organisms (0.30→0.97ms)
+- Draw cost is negligible at default zoom (<0.2ms)
+- Memory is light at 26MB — well below expected 50-200MB (chunks not yet generated)
+- TPS at 1x is 4 (expected from CONFIG.SIM_UPDATE_INTERVAL_MS=200 with speed multiplier)
 
 ### Performance Bottleneck Areas (from code review)
 
