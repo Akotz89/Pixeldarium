@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/social-preview.png" alt="Pixeldarium — Planet-Scale Pixeldariumulation" width="800">
+  <img src="docs/screenshots/social-preview.png" alt="Pixeldarium — Planet-Scale Pixel Simulation" width="800">
 </p>
 
 <h1 align="center">🌍 Pixeldarium</h1>
@@ -26,9 +26,15 @@
 
 ## ✨ What Is This?
 
-Pixeldarium is a **planet-scale pixel simulation engine** inspired by [Songs of Syx](https://store.steampowered.com/app/1162750/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
+Pixeldarium is a **planet-scale pixel simulation engine** inspired by the large-population, systems-first spirit of [Songs of Syx](https://store.steampowered.com/app/1162750/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
 
 **No frameworks. No server. No build step.** Just open `index.html` and watch evolution unfold.
+
+---
+
+## 🎨 Visual Identity
+
+Pixeldarium uses a readable, simulation-first visual style: tiny pixel entities, layered terrain, zoom-dependent detail, and overlays that make emergent planetary history understandable at scale. The goal is not decorative complexity; it is clarity while thousands of systems move at once.
 
 ---
 
