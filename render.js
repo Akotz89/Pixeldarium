@@ -8,6 +8,8 @@ var localSurfaceRenderChunkCache = {
     generatedChunks: 0,
     evictions: 0,
     lastVisibleChunks: 0,
+    lastPendingChunks: 0,
+    lastGeneratedThisPass: 0,
     lastChunkKey: "-"
   }
 };
@@ -20,6 +22,10 @@ function getLocalSurfaceRenderChunkCacheLimit() {
   return Math.max(16, Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_CHUNK_CACHE_LIMIT) || 256));
 }
 
+function getLocalSurfaceRenderChunksPerPass() {
+  return Math.max(1, Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_CHUNKS_PER_PASS) || 32));
+}
+
 function resetLocalSurfaceRenderChunkCache() {
   localSurfaceRenderChunkCache = {
     chunks: {},
@@ -30,6 +36,8 @@ function resetLocalSurfaceRenderChunkCache() {
       generatedChunks: 0,
       evictions: 0,
       lastVisibleChunks: 0,
+      lastPendingChunks: 0,
+      lastGeneratedThisPass: 0,
       lastChunkKey: "-"
     }
   };
@@ -43,6 +51,8 @@ function getLocalSurfaceRenderCacheStats() {
     generatedChunks: localSurfaceRenderChunkCache.stats.generatedChunks,
     evictions: localSurfaceRenderChunkCache.stats.evictions,
     lastVisibleChunks: localSurfaceRenderChunkCache.stats.lastVisibleChunks,
+    lastPendingChunks: localSurfaceRenderChunkCache.stats.lastPendingChunks,
+    lastGeneratedThisPass: localSurfaceRenderChunkCache.stats.lastGeneratedThisPass,
     lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
   };
 }
@@ -287,7 +297,7 @@ function buildLocalSurfaceRenderChunk(address) {
   };
 }
 
-function getLocalSurfaceRenderChunk(address) {
+function getLocalSurfaceRenderChunk(address, allowGenerate) {
   var renderKey = getLocalSurfaceRenderChunkKey(address);
   var cachedChunk = localSurfaceRenderChunkCache.chunks[renderKey];
 
@@ -296,6 +306,10 @@ function getLocalSurfaceRenderChunk(address) {
   if (cachedChunk) {
     localSurfaceRenderChunkCache.stats.hits++;
     return cachedChunk;
+  }
+
+  if (allowGenerate === false) {
+    return null;
   }
 
   var renderChunk = buildLocalSurfaceRenderChunk(address);
@@ -394,18 +408,38 @@ function buildGlobeTerrainCache(tctx) {
 
 function buildLocalTerrainCache(tctx) {
   var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
+  var generatedThisPass = 0;
+  var pendingChunks = 0;
+  var chunksPerPass = getLocalSurfaceRenderChunksPerPass();
 
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
   localSurfaceRenderChunkCache.stats.lastVisibleChunks = visibleChunks.length;
+  localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = 0;
+  localSurfaceRenderChunkCache.stats.lastPendingChunks = 0;
 
   visibleChunks.forEach(function(visibleChunk) {
-    var renderChunk = getLocalSurfaceRenderChunk(visibleChunk.address);
+    var renderKey = getLocalSurfaceRenderChunkKey(visibleChunk.address);
+    var isCached = Boolean(localSurfaceRenderChunkCache.chunks[renderKey]);
+    var canGenerate = isCached || generatedThisPass < chunksPerPass;
+    var renderChunk = getLocalSurfaceRenderChunk(visibleChunk.address, canGenerate);
 
     if (renderChunk) {
       tctx.drawImage(renderChunk.canvas, visibleChunk.screenX, visibleChunk.screenY);
+      if (!isCached) {
+        generatedThisPass++;
+      }
+    } else {
+      pendingChunks++;
     }
   });
+
+  localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = generatedThisPass;
+  localSurfaceRenderChunkCache.stats.lastPendingChunks = pendingChunks;
+
+  if (pendingChunks > 0) {
+    world.needsRender = true;
+  }
 
   tctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
   tctx.lineWidth = 1;
@@ -447,6 +481,15 @@ function drawTerrain() {
   }
 
   ctx.drawImage(terrainCache, 0, 0);
+
+  if (
+    isGlobeRenderMode() &&
+    isPlanetLocalView() &&
+    localSurfaceRenderChunkCache.stats.lastPendingChunks > 0
+  ) {
+    terrainCache = null;
+    world.needsRender = true;
+  }
 }
 
 function drawPlanetScaleBar() {
@@ -533,7 +576,11 @@ function drawPlanetReferenceGrid() {
         " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
         " | " + getPlanetScaleLabel() +
         " | cache " + cacheStats.chunks + "c/" + cacheStats.samples + "s" +
-        " | render " + renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.hits + "h" +
+        " | render " + renderCacheStats.lastVisibleChunks + "v/" +
+          renderCacheStats.chunks + "c/" +
+          renderCacheStats.lastPendingChunks + "p/" +
+          renderCacheStats.lastGeneratedThisPass + "g/" +
+          renderCacheStats.hits + "h" +
         " | pyramid " + pyramidLabel,
       28,
       canvas.height - 87
