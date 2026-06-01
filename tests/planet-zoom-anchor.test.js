@@ -1653,6 +1653,11 @@ var repeatedGrassStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSa
 var waterStrataSwatches = getPlanetSurfaceStrataSwatches(texturedWaterSample, "#08365f");
 var rockStrataSwatches = getPlanetSurfaceStrataSwatches(slopedRockSample, "#665226");
 var coarseGrassStrataSwatches = getPlanetSurfaceStrataSwatches(coarseTexturedGrassSample, "#2f6531");
+var grassSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedGrassSample, "#2f6531");
+var repeatedGrassSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedGrassSample, "#2f6531");
+var waterSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedWaterSample, "#08365f");
+var rockSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(slopedRockSample, "#665226");
+var coarseGrassSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(coarseTexturedGrassSample, "#2f6531");
 var grassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var repeatedGrassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var waterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedWaterSample, "#08365f");
@@ -1670,6 +1675,7 @@ var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSam
 var alternateSeedSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedPatternSwatches = getPlanetSurfacePatternSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedGrassSample, "#2f6531");
 var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
@@ -1773,6 +1779,26 @@ grassStrataSwatches.concat(waterStrataSwatches).concat(rockStrataSwatches).forEa
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface strata width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface strata height should stay in cell");
   assert.ok(swatch.rotationRadians === undefined || (swatch.rotationRadians >= 0 && swatch.rotationRadians < Math.PI), "surface strata rotation should stay normalized");
+});
+assert.strictEqual(getPlanetSurfaceSubcellBasePatchSize(texturedGrassSample), 1, "meter samples should raster base cells at one screen pixel patches");
+assert.strictEqual(getPlanetSurfaceSubcellBasePatchSize(coarseTexturedGrassSample), 0, "coarse samples should skip subcell base rastering");
+assert.ok(grassSubcellBasePatches.length > 8, "close base raster should split meter cells into subcell patches");
+assert.deepStrictEqual(repeatedGrassSubcellBasePatches, grassSubcellBasePatches, "close base raster should be deterministic");
+assert.notDeepStrictEqual(alternateSeedSubcellBasePatches, grassSubcellBasePatches, "close base raster should vary by seed");
+assert.notStrictEqual(waterSubcellBasePatches[0].color, grassSubcellBasePatches[0].color, "base raster colors should vary by surface");
+assert.deepStrictEqual(coarseGrassSubcellBasePatches, [], "broad local samples should use single-fill base path");
+assert.ok(new Set(grassSubcellBasePatches.map(function(patch) { return patch.color; })).size > 1, "subcell base raster should vary color within a meter cell");
+assert.strictEqual(grassSubcellBasePatches.reduce(function(total, patch) {
+  return total + patch.width * patch.height;
+}, 0), CONFIG.TILE_SIZE * CONFIG.TILE_SIZE, "subcell base raster should cover the full cell");
+grassSubcellBasePatches.concat(waterSubcellBasePatches).concat(rockSubcellBasePatches).forEach(function(patch) {
+  assertRgbBounds(getRgbFromHex(patch.color), "subcell base patch");
+  assert.ok(patch.x >= 0 && patch.x < CONFIG.TILE_SIZE, "subcell base x should fit inside cell");
+  assert.ok(patch.y >= 0 && patch.y < CONFIG.TILE_SIZE, "subcell base y should fit inside cell");
+  assert.ok(patch.width >= 1 && patch.width <= CONFIG.TILE_SIZE, "subcell base width should fit inside cell");
+  assert.ok(patch.height >= 1 && patch.height <= CONFIG.TILE_SIZE, "subcell base height should fit inside cell");
+  assert.ok(patch.x + patch.width <= CONFIG.TILE_SIZE, "subcell base width should stay in cell");
+  assert.ok(patch.y + patch.height <= CONFIG.TILE_SIZE, "subcell base height should stay in cell");
 });
 assert.ok(grassNaturalElementSwatches.length > 0, "meter natural elements should render close-ground swatches");
 assert.ok(grassNaturalElementSwatches.length <= 6, "natural element swatch count should stay bounded");

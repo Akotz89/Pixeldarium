@@ -2284,6 +2284,113 @@ function drawSurfaceSwatch(tctx, swatch, screenX, screenY) {
   );
 }
 
+function getPlanetSurfaceSubcellBasePatchSize(sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+
+  if (CONFIG.TILE_SIZE < 5 || sampleMeters > 5) {
+    return 0;
+  }
+
+  return sampleMeters <= 1 ? 1 : 2;
+}
+
+function getPlanetSurfaceSubcellBasePatchColor(sample, baseColor, localX, localY) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var strata = detail.materialStrata || {};
+  var surface = detail.surface || "ground";
+  var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+  var noise = getDeterministicUnitNoise(
+    seedEast + localX * 17,
+    seedNorth - localY * 19,
+    getPlanetVisualSeedOffset() + 7103 + localX * 23 + localY * 29
+  );
+  var grain = getDeterministicUnitNoise(
+    seedEast - localY * 31,
+    seedNorth + localX * 37,
+    getPlanetVisualSeedOffset() + 7349 + localX * 11 + localY * 13
+  );
+  var roughness = clamp(Number(detail.roughness) || 0, 0, 1);
+  var slope = clamp(Number(detail.slope) || 0, 0, 1);
+  var granularity = clamp(Number(strata.granularity) || 0, 0, 1);
+  var organicCover = clamp(Number(strata.organicCover) || 0, 0, 1);
+  var rockExposure = clamp(Number(strata.rockExposure) || 0, 0, 1);
+  var wetness = clamp(Number(strata.wetness) || 0, 0, 1);
+  var shade = clamp(
+    0.45 +
+      (noise - 0.5) * (0.18 + granularity * 0.16 + roughness * 0.10) +
+      (grain - 0.5) * (0.10 + slope * 0.08),
+    0.18,
+    0.82
+  );
+  var color = shadeHexColor(baseColor, shade);
+  var tintAmount = clamp(0.04 + granularity * 0.08 + organicCover * 0.05 + rockExposure * 0.06 + wetness * 0.03, 0, 0.22);
+
+  if (strata.tintColor) {
+    color = blendHexColors(color, strata.tintColor, tintAmount);
+  }
+
+  if (surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    color = blendHexColors(color, noise > 0.55 ? "#8cccdc" : "#02152e", clamp(0.08 + wetness * 0.07, 0.08, 0.18));
+  } else if (surface === "rock" || surface === "stone" || surface === "ridge ice") {
+    color = blendHexColors(color, noise > 0.52 ? "#aaa798" : "#2b2d28", clamp(0.08 + rockExposure * 0.10, 0.08, 0.20));
+  } else if (surface === "sand" || surface === "dune") {
+    color = blendHexColors(color, noise > 0.52 ? "#d6bd78" : "#665329", clamp(0.08 + granularity * 0.08, 0.08, 0.18));
+  } else if (surface === "dense canopy" || surface === "woodland" || surface === "grass" || surface === "brush" || surface === "meadow" || surface === "clearing" || surface === "moss" || surface === "scrub") {
+    color = blendHexColors(color, noise > 0.52 ? "#7fa850" : "#122619", clamp(0.06 + organicCover * 0.10, 0.06, 0.20));
+  } else if (surface === "snow" || surface === "ice") {
+    color = blendHexColors(color, noise > 0.52 ? "#f8feff" : "#8dbed0", 0.12);
+  }
+
+  return color;
+}
+
+function getPlanetSurfaceSubcellBasePatches(sample, baseColor) {
+  var patchSize = getPlanetSurfaceSubcellBasePatchSize(sample);
+  var patches = [];
+
+  if (patchSize <= 0) {
+    return patches;
+  }
+
+  for (var y = 0; y < CONFIG.TILE_SIZE; y += patchSize) {
+    for (var x = 0; x < CONFIG.TILE_SIZE; x += patchSize) {
+      patches.push({
+        x: x,
+        y: y,
+        width: Math.min(patchSize, CONFIG.TILE_SIZE - x),
+        height: Math.min(patchSize, CONFIG.TILE_SIZE - y),
+        color: getPlanetSurfaceSubcellBasePatchColor(sample, baseColor, x, y)
+      });
+    }
+  }
+
+  return patches;
+}
+
+function drawSurfaceBaseCell(tctx, sample, baseColor, screenX, screenY) {
+  var patchSize = getPlanetSurfaceSubcellBasePatchSize(sample);
+
+  if (patchSize <= 0) {
+    tctx.fillStyle = baseColor;
+    tctx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+    return;
+  }
+
+  for (var y = 0; y < CONFIG.TILE_SIZE; y += patchSize) {
+    for (var x = 0; x < CONFIG.TILE_SIZE; x += patchSize) {
+      tctx.fillStyle = getPlanetSurfaceSubcellBasePatchColor(sample, baseColor, x, y);
+      tctx.fillRect(
+        screenX + x,
+        screenY + y,
+        Math.min(patchSize, CONFIG.TILE_SIZE - x),
+        Math.min(patchSize, CONFIG.TILE_SIZE - y)
+      );
+    }
+  }
+}
+
 function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
   var swatches = getPlanetSurfaceFinePixelSwatches(sample, baseColor)
     .concat(getPlanetSurfaceReliefAccentSwatches(sample, baseColor))
@@ -2341,8 +2448,7 @@ function buildLocalSurfaceRenderChunk(address) {
       var screenY = (address.chunkSamples - 1 - y) * CONFIG.TILE_SIZE;
       var baseColor = getPlanetSurfaceColor(sample);
 
-      chunkCtx.fillStyle = baseColor;
-      chunkCtx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+      drawSurfaceBaseCell(chunkCtx, sample, baseColor, screenX, screenY);
       drawSurfaceMicrotexture(chunkCtx, sample, baseColor, screenX, screenY);
       drawSurfaceMarker(chunkCtx, sample, screenX, screenY);
     }
