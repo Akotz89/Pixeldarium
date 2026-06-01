@@ -170,13 +170,19 @@ function getPlanetTileCompositedColor(tile) {
   var polar = clamp((absLatitude - 54) / 32, 0, 1);
   var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
   var dry = clamp(1 - moisture, 0, 1);
+  var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
+  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
+  var riverMouth = clamp(tile && Number.isFinite(Number(tile.riverMouth)) ? Number(tile.riverMouth) : 0, 0, 1);
   var color;
 
   if (biome === "ocean") {
-    var shallow = clamp((elevation - 0.18) / 0.34, 0, 1);
+    var shallow = Math.max(clamp((elevation - 0.18) / 0.34, 0, 1), shallowWater);
 
     color = blendHexColors("#031026", "#0a4f76", shallow);
     color = blendHexColors(color, "#2b6f87", shallow * 0.24);
+    color = blendHexColors(color, "#7fb7a7", shallowWater * 0.35);
+    color = blendHexColors(color, "#a3d7ca", riverMouth * 0.38);
     color = blendHexColors(color, "#d9edf4", polar * 0.22);
     return shadeHexColor(color, 0.48 + shallow * 0.22 + (1 - polar) * 0.05);
   }
@@ -199,6 +205,8 @@ function getPlanetTileCompositedColor(tile) {
     color = getPlanetBiomeColor(biome);
   }
 
+  color = blendHexColors(color, "#224f63", river * 0.45);
+  color = blendHexColors(color, "#b6b06a", coast * 0.18);
   color = blendHexColors(color, "#6f6a5c", highland * 0.28);
   color = blendHexColors(color, "#eef6f5", clamp((highland - 0.58) * 1.6 + polar * 0.55, 0, 0.58));
   return shadeHexColor(color, 0.42 + elevation * 0.16 + moisture * 0.07 - dry * 0.05);
@@ -226,6 +234,9 @@ function getPlanetSurfaceColor(sample) {
   var highland = clamp((heightMeters - 900) / 2600, 0, 1);
   var snowLine = biome === "ice" ? 0.35 : clamp((heightMeters - 1800) / 2200, 0, 1);
   var shadow = clamp(1 - (Number(detail.hillshade) || 0.5), 0, 1);
+  var river = sample && sample.tile ? clamp(Number(sample.tile.riverStrength) || 0, 0, 1) : 0;
+  var coast = sample && sample.tile ? clamp(Number(sample.tile.coastFactor) || 0, 0, 1) : 0;
+  var shallowWater = sample && sample.tile ? clamp(Number(sample.tile.shallowWater) || 0, 0, 1) : 0;
   var reliefShade = clamp(shade + highland * 0.08 - shadow * 0.10, 0, 1);
   var color;
 
@@ -257,6 +268,13 @@ function getPlanetSurfaceColor(sample) {
     color = "#e5f3f7";
   } else {
     color = baseColor;
+  }
+
+  if (biome === "ocean") {
+    color = blendHexColors(color, "#7fb7a7", shallowWater * 0.34);
+  } else {
+    color = blendHexColors(color, "#1d5265", river * 0.46);
+    color = blendHexColors(color, "#aaa05e", coast * 0.16);
   }
 
   color = blendHexColors(color, "#56544c", slope * 0.26);

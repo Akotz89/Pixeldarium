@@ -9,6 +9,149 @@ function isFertile(x, y) {
   return getTerrain(x, y) === CONFIG.TERRAIN_FERTILE;
 }
 
+function getTerrainNeighborTiles(tile) {
+  var neighbors = [];
+
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) {
+        continue;
+      }
+
+      neighbors.push({
+        dx: dx,
+        dy: dy,
+        tile: getPlanetTile(getWrappedWorldX(tile.x + dx), getClampedWorldY(tile.y + dy))
+      });
+    }
+  }
+
+  return neighbors;
+}
+
+function annotatePlanetHydrology() {
+  if (!Array.isArray(world.planetTiles) || world.planetTiles.length === 0) {
+    return;
+  }
+
+  var landTiles = [];
+  var totalLandAreaKm2 = 0;
+
+  for (var i = 0; i < world.planetTiles.length; i++) {
+    var tile = world.planetTiles[i];
+
+    if (!tile) {
+      continue;
+    }
+
+    tile.coastFactor = 0;
+    tile.shallowWater = 0;
+    tile.waterFlow = 0;
+    tile.riverStrength = 0;
+    tile.riverMouth = 0;
+    tile.flowDirectionX = 0;
+    tile.flowDirectionY = 0;
+
+    if (tile.biome !== "ocean") {
+      landTiles.push(tile);
+      totalLandAreaKm2 += Math.max(0, Number(tile.areaKm2) || 0);
+    }
+  }
+
+  for (var tileIndex = 0; tileIndex < world.planetTiles.length; tileIndex++) {
+    var currentTile = world.planetTiles[tileIndex];
+
+    if (!currentTile) {
+      continue;
+    }
+
+    var neighbors = getTerrainNeighborTiles(currentTile);
+    var waterNeighbors = 0;
+    var landNeighbors = 0;
+
+    for (var neighborIndex = 0; neighborIndex < neighbors.length; neighborIndex++) {
+      var neighborTile = neighbors[neighborIndex].tile;
+
+      if (!neighborTile) {
+        continue;
+      }
+
+      if (neighborTile.biome === "ocean") {
+        waterNeighbors++;
+      } else {
+        landNeighbors++;
+      }
+    }
+
+    if (currentTile.biome === "ocean") {
+      currentTile.shallowWater = clamp(landNeighbors / 8, 0, 1);
+      currentTile.coastFactor = currentTile.shallowWater;
+    } else {
+      currentTile.coastFactor = clamp(waterNeighbors / 8, 0, 1);
+    }
+  }
+
+  for (var landIndex = 0; landIndex < landTiles.length; landIndex++) {
+    var landTile = landTiles[landIndex];
+    var rainfall = clamp(Number(landTile.moisture) || 0, 0.08, 2.2);
+
+    landTile.waterFlow = Math.max(0, rainfall * Math.max(1, Number(landTile.areaKm2) || 1));
+  }
+
+  landTiles.sort(function(a, b) {
+    return (Number(b.elevation) || 0) - (Number(a.elevation) || 0);
+  });
+
+  for (var flowIndex = 0; flowIndex < landTiles.length; flowIndex++) {
+    var sourceTile = landTiles[flowIndex];
+    var sourceNeighbors = getTerrainNeighborTiles(sourceTile);
+    var lowestNeighbor = null;
+    var lowestOffset = { dx: 0, dy: 0 };
+    var sourceElevation = Number(sourceTile.elevation) || 0;
+
+    for (var sourceNeighborIndex = 0; sourceNeighborIndex < sourceNeighbors.length; sourceNeighborIndex++) {
+      var candidate = sourceNeighbors[sourceNeighborIndex].tile;
+
+      if (!candidate) {
+        continue;
+      }
+
+      if (!lowestNeighbor || (Number(candidate.elevation) || 0) < (Number(lowestNeighbor.elevation) || 0)) {
+        lowestNeighbor = candidate;
+        lowestOffset = {
+          dx: sourceNeighbors[sourceNeighborIndex].dx,
+          dy: sourceNeighbors[sourceNeighborIndex].dy
+        };
+      }
+    }
+
+    if (lowestNeighbor && (lowestNeighbor.biome === "ocean" || (Number(lowestNeighbor.elevation) || 0) < sourceElevation)) {
+      sourceTile.flowDirectionX = lowestOffset.dx;
+      sourceTile.flowDirectionY = lowestOffset.dy;
+
+      if (lowestNeighbor.biome === "ocean") {
+        sourceTile.riverMouth = 1;
+        lowestNeighbor.riverMouth = Math.max(Number(lowestNeighbor.riverMouth) || 0, 0.65);
+        lowestNeighbor.shallowWater = Math.max(Number(lowestNeighbor.shallowWater) || 0, 0.72);
+      } else {
+        lowestNeighbor.waterFlow += sourceTile.waterFlow;
+      }
+    }
+  }
+
+  var riverThreshold = Math.max(1, totalLandAreaKm2 * 0.00008);
+
+  for (var riverIndex = 0; riverIndex < landTiles.length; riverIndex++) {
+    var riverTile = landTiles[riverIndex];
+
+    riverTile.riverStrength = clamp((riverTile.waterFlow / riverThreshold - 1) / 6, 0, 1);
+    riverTile.riverMouth = Math.max(
+      Number(riverTile.riverMouth) || 0,
+      riverTile.coastFactor > 0 ? riverTile.riverStrength * riverTile.coastFactor : 0
+    );
+  }
+}
+
 function seedTerrain() {
   if (typeof resetPlanetSurfaceChunkCache === "function") {
     resetPlanetSurfaceChunkCache();
@@ -147,6 +290,7 @@ function seedTerrain() {
     }
   }
 
+  annotatePlanetHydrology();
   refreshPlanetSummary();
 }
 
