@@ -13,6 +13,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Akotz89/PixelSim/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/Akotz89/PixelSim/validate.yml?style=flat-square&label=CI&logo=github" alt="CI"></a>
+  <a href="https://github.com/Akotz89/PixelSim/releases/latest"><img src="https://img.shields.io/github/v/release/Akotz89/PixelSim?style=flat-square&color=58F06C" alt="Release"></a>
   <img src="https://img.shields.io/badge/Pure-HTML%2FCSS%2FJS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Pure JS">
   <img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen?style=flat-square" alt="Zero Dependencies">
   <img src="https://img.shields.io/badge/Build_Step-None-blue?style=flat-square" alt="No Build">
