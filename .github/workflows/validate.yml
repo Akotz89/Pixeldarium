@@ -1,0 +1,74 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  syntax:
+    name: JS Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate JS syntax
+        run: |
+          echo "=== PixelSim Syntax Validation ==="
+          FAIL=0
+          for f in config.js state.js utils.js planet.js terrain.js food.js \
+                   organisms.js settlements.js render-terrain-cache.js render.js \
+                   persistence.js ui.js main.js; do
+            if [ -f "$f" ]; then
+              printf "%s: " "$f"
+              if node --check "$f" 2>&1; then
+                echo "OK"
+              else
+                echo "FAIL"
+                FAIL=1
+              fi
+            fi
+          done
+
+          # Also check any files in js/ subdirectories
+          if [ -d "js" ]; then
+            echo ""
+            echo "--- JS Subdirectory Syntax Check ---"
+            find js -name "*.js" | sort | while read f; do
+              printf "%s: " "$f"
+              if node --check "$f" 2>&1; then
+                echo "OK"
+              else
+                echo "FAIL"
+                FAIL=1
+              fi
+            done
+          fi
+
+          if [ "$FAIL" -ne 0 ]; then
+            echo "::error::Syntax validation failed"
+            exit 1
+          fi
+          echo "=== All syntax checks passed ==="
+
+      - name: Check whitespace
+        run: |
+          if ! git diff --check HEAD~1 2>/dev/null; then
+            echo "::warning::Whitespace issues detected"
+          fi
+
+      - name: Check line endings
+        run: |
+          CRLF=$(grep -rlP '\r\n' *.js *.html *.css 2>/dev/null || true)
+          if [ -n "$CRLF" ]; then
+            echo "::error::CRLF line endings found in: $CRLF"
+            exit 1
+          fi
+          echo "All files use LF line endings"
