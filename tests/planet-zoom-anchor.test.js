@@ -1155,6 +1155,60 @@ assertNear(classifiedDetail.materialSignals.shelfStrength, detailTile.shelfStren
 assert.deepStrictEqual(repeatedClassifiedDetail, classifiedDetail, "surface material detail should be deterministic");
 assert.notStrictEqual(alternateClassifiedDetail.microNoise, classifiedDetail.microNoise, "surface material detail should vary by seed");
 assert.ok(["meadow", "brush", "grass", "snow"].indexOf(classifiedDetail.surface) >= 0, "grassland detail should classify as a grassland material");
+assert.ok(classifiedDetail.naturalElement, "meter surface detail should expose a natural micro-element");
+assert.notStrictEqual(classifiedDetail.naturalElement.type, "none", "meter surface detail should classify natural micro-elements");
+assert.ok(classifiedDetail.naturalElement.density > 0 && classifiedDetail.naturalElement.density <= 0.86, "natural micro-element density should be bounded");
+assert.ok(classifiedDetail.naturalElement.sizeMeters > 0 && classifiedDetail.naturalElement.sizeMeters <= 1, "natural micro-element size should stay inside a meter sample");
+assert.ok(classifiedDetail.naturalElement.alpha > 0 && classifiedDetail.naturalElement.alpha <= 0.42, "natural micro-element alpha should be bounded");
+assertRgbBounds(getRgbFromHex(classifiedDetail.naturalElement.color), "natural micro-element color");
+assert.notDeepStrictEqual(alternateClassifiedDetail.naturalElement, classifiedDetail.naturalElement, "natural micro-elements should vary by seed");
+assert.ok(["structure", "road", "track", "street", "house", "yard"].indexOf(classifiedDetail.naturalElement.type) < 0, "undeveloped planet micro-elements should stay natural");
+
+var broadNaturalElement = getPlanetSurfaceNaturalElement(34.2117, -77.7265, "grassland", baseGrassMaterial, {
+  sampleMeters: 25,
+  roughness: 0.2,
+  meter: 0.5,
+  micro: 0.5
+}, {
+  slope: 0.1,
+  aspect: 0
+});
+var waterNaturalElement = getPlanetSurfaceNaturalElement(34.2117, -77.7265, "ocean", {
+  surface: "open water",
+  signals: {
+    chop: 0.8,
+    wetness: 1,
+    surfaceRoughness: 0.2
+  }
+}, {
+  sampleMeters: 1,
+  roughness: 0.2,
+  meter: 0.4,
+  micro: 0.6
+}, {
+  slope: 0.05,
+  aspect: 0
+});
+var sandNaturalElement = getPlanetSurfaceNaturalElement(34.2117, -77.7265, "desert", {
+  surface: "sand",
+  signals: {
+    dryness: 1,
+    surfaceRoughness: 0.2,
+    wetness: 0
+  }
+}, {
+  sampleMeters: 1,
+  roughness: 0.2,
+  meter: 0.4,
+  micro: 0.6
+}, {
+  slope: 0.05,
+  aspect: 0
+});
+
+assert.strictEqual(broadNaturalElement.type, "none", "natural micro-elements should be gated off outside close samples");
+assert.strictEqual(waterNaturalElement.type, "water-ripple", "open water should classify natural element as ripples");
+assert.strictEqual(sandNaturalElement.type, "sand-ripple", "sand should classify natural element as ripples");
 
 fillPlanetTiles("grassland");
 var blendY = Math.floor(WORLD_HEIGHT / 2);
@@ -1399,7 +1453,15 @@ var texturedGrassSample = {
     surface: "grass",
     roughness: 0.62,
     slope: 0.34,
-    sampleMeters: 1
+    sampleMeters: 1,
+    naturalElement: {
+      type: "grass-blade",
+      density: 0.72,
+      sizeMeters: 0.56,
+      orientationRadians: 0.4,
+      color: "#8fcf71",
+      alpha: 0.30
+    }
   }
 };
 var texturedWaterSample = {
@@ -1411,7 +1473,15 @@ var texturedWaterSample = {
     surface: "open water",
     roughness: 0.62,
     slope: 0.34,
-    sampleMeters: 1
+    sampleMeters: 1,
+    naturalElement: {
+      type: "water-ripple",
+      density: 0.76,
+      sizeMeters: 0.62,
+      orientationRadians: 0.2,
+      color: "#9bd8e7",
+      alpha: 0.32
+    }
   }
 };
 var coarseTexturedGrassSample = Object.assign({}, texturedGrassSample, {
@@ -1444,6 +1514,14 @@ var slopedRockSample = {
     hillshade: 0.34,
     heightMeters: 1420,
     sampleMeters: 1,
+    naturalElement: {
+      type: "stone-chip",
+      density: 0.78,
+      sizeMeters: 0.64,
+      orientationRadians: 0.8,
+      color: "#c1b89f",
+      alpha: 0.32
+    },
     featureRelief: {
       roughnessBoost: 0.28
     }
@@ -1498,6 +1576,11 @@ var waterPatternSwatches = getPlanetSurfacePatternSwatches(texturedWaterSample, 
 var rockPatternSwatches = getPlanetSurfacePatternSwatches(slopedRockSample, "#665226");
 var coarseGrassPatternSwatches = getPlanetSurfacePatternSwatches(coarseTexturedGrassSample, "#2f6531");
 var featureGrassPatternSwatches = getPlanetSurfacePatternSwatches(featureTexturedGrassSample, "#2f6531");
+var grassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
+var waterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedWaterSample, "#08365f");
+var rockNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(slopedRockSample, "#665226");
+var coarseNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(coarseTexturedGrassSample, "#2f6531");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
@@ -1508,6 +1591,7 @@ var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGra
 var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedPatternSwatches = getPlanetSurfacePatternSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
@@ -1587,6 +1671,28 @@ grassPatternSwatches.concat(waterPatternSwatches).concat(rockPatternSwatches).fo
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface pattern height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface pattern width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface pattern height should stay in cell");
+});
+assert.ok(grassNaturalElementSwatches.length > 0, "meter natural elements should render close-ground swatches");
+assert.ok(grassNaturalElementSwatches.length <= 6, "natural element swatch count should stay bounded");
+assert.deepStrictEqual(repeatedGrassNaturalElementSwatches, grassNaturalElementSwatches, "natural element swatches should be deterministic");
+assert.notDeepStrictEqual(alternateSeedNaturalElementSwatches, grassNaturalElementSwatches, "natural element swatches should vary by seed");
+assert.strictEqual(grassNaturalElementSwatches[0].elementType, "grass-blade", "grass natural elements should render grass blades");
+assert.strictEqual(waterNaturalElementSwatches[0].elementType, "water-ripple", "water natural elements should render ripples");
+assert.strictEqual(rockNaturalElementSwatches[0].elementType, "stone-chip", "rock natural elements should render stone chips");
+assert.deepStrictEqual(coarseNaturalElementSwatches, [], "broad local samples should skip natural micro-elements");
+assert.notStrictEqual(waterNaturalElementSwatches[0].color, grassNaturalElementSwatches[0].color, "natural element color should vary by material");
+assert.ok(waterNaturalElementSwatches.some(function(swatch) { return swatch.width > swatch.height; }), "water natural elements should include ripple strips");
+assert.ok(grassNaturalElementSwatches.some(function(swatch) { return swatch.height >= swatch.width; }), "grass natural elements should include blade-like marks");
+grassNaturalElementSwatches.concat(waterNaturalElementSwatches).concat(rockNaturalElementSwatches).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "natural element swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.50, "natural element alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "natural element x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "natural element y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "natural element width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "natural element height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "natural element width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "natural element height should stay in cell");
+  assert.ok(["structure", "road", "track", "street", "house", "yard"].indexOf(swatch.elementType) < 0, "natural element swatches should not imply built infrastructure");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
 assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");

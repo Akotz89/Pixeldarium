@@ -2331,6 +2331,136 @@ function getPlanetSurfaceFeatureMarker(biome, lod, relief) {
   };
 }
 
+function getPlanetNaturalElementColor(type) {
+  switch (type) {
+    case "water-ripple":
+      return "#9bd8e7";
+    case "grass-blade":
+      return "#8fcf71";
+    case "leaf-litter":
+      return "#7a8f4d";
+    case "pebble":
+      return "#a9a18d";
+    case "stone-chip":
+      return "#c1b89f";
+    case "sand-ripple":
+      return "#d7bd78";
+    case "snow-crust":
+      return "#f6fdff";
+    case "ice-crack":
+      return "#8fc6dc";
+    case "moss-clump":
+      return "#78a66a";
+    default:
+      return "#d9e7ff";
+  }
+}
+
+function getPlanetNaturalElementType(surface, biome, signals, relief) {
+  var normalizedSurface = surface || "ground";
+  var normalizedBiome = biome || "unknown";
+  var surfaceRoughness = clamp(Number(signals && signals.surfaceRoughness) || 0, 0, 1);
+  var wetness = clamp(Number(signals && signals.wetness) || 0, 0, 1);
+  var slope = clamp(Number(relief && relief.slope) || 0, 0, 1);
+
+  if (normalizedSurface === "open water" || normalizedSurface === "deep water" || normalizedSurface === "whitecap") {
+    return "water-ripple";
+  }
+
+  if (normalizedSurface === "sand" || normalizedSurface === "dune") {
+    return "sand-ripple";
+  }
+
+  if (normalizedSurface === "rock" || normalizedSurface === "stone") {
+    return surfaceRoughness > 0.58 || slope > 0.20 ? "stone-chip" : "pebble";
+  }
+
+  if (normalizedSurface === "snow") {
+    return "snow-crust";
+  }
+
+  if (normalizedSurface === "ice" || normalizedSurface === "ridge ice") {
+    return "ice-crack";
+  }
+
+  if (normalizedSurface === "dense canopy" || normalizedSurface === "woodland") {
+    return "leaf-litter";
+  }
+
+  if (normalizedSurface === "moss" || normalizedSurface === "scrub") {
+    return "moss-clump";
+  }
+
+  if (normalizedSurface === "grass" || normalizedSurface === "brush" || normalizedSurface === "meadow" || normalizedSurface === "clearing") {
+    return wetness > 0.56 && normalizedBiome !== "desert" ? "grass-blade" : (surfaceRoughness > 0.58 ? "pebble" : "grass-blade");
+  }
+
+  if (normalizedBiome === "desert") {
+    return "sand-ripple";
+  }
+
+  return "pebble";
+}
+
+function getPlanetSurfaceNaturalElement(latitude, longitude, biome, material, lod, relief) {
+  var sampleMeters = Math.max(1, Number(lod && lod.sampleMeters) || 1);
+  var surface = material && material.surface ? material.surface : "ground";
+  var signals = material && material.signals ? material.signals : {};
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var elementNoise = getSurfaceLayerNoise(meters, Math.max(1, sampleMeters), 89);
+  var detailNoise = getSurfacePixelNoise(meters, Math.max(1, sampleMeters), 97);
+  var type = getPlanetNaturalElementType(surface, biome, signals, relief);
+  var density = 0;
+  var roughness = clamp(Number(signals.surfaceRoughness) || Number(lod && lod.roughness) || 0, 0, 1);
+  var wetness = clamp(Number(signals.wetness) || 0, 0, 1);
+  var slope = clamp(Number(relief && relief.slope) || 0, 0, 1);
+
+  if (sampleMeters > 5) {
+    return {
+      type: "none",
+      density: 0,
+      sizeMeters: 0,
+      orientationRadians: 0,
+      color: "#000000",
+      alpha: 0
+    };
+  }
+
+  density = clamp(
+    0.18 +
+      elementNoise * 0.22 +
+      detailNoise * 0.16 +
+      roughness * 0.18 +
+      wetness * 0.10 +
+      slope * 0.10,
+    0,
+    0.86
+  );
+
+  if (type === "water-ripple") {
+    density = clamp(density + (Number(signals.chop) || 0) * 0.18, 0, 0.88);
+  } else if (type === "sand-ripple") {
+    density = clamp(density + (Number(signals.dryness) || 0) * 0.14, 0, 0.88);
+  } else if (type === "leaf-litter") {
+    density = clamp(density + (Number(signals.canopyDensity) || 0) * 0.16, 0, 0.88);
+  } else if (type === "snow-crust" || type === "ice-crack") {
+    density = clamp(density + (Number(signals.snow) || 0) * 0.08, 0, 0.82);
+  }
+
+  return {
+    type: type,
+    density: density,
+    sizeMeters: clamp(0.12 + density * 0.62 + detailNoise * 0.18, 0.08, sampleMeters),
+    orientationRadians: normalizePlanetLineAngleRadians(
+      Number.isFinite(Number(relief && relief.aspect))
+        ? (Number(relief.aspect) * Math.PI / 180)
+        : elementNoise * Math.PI
+    ),
+    color: getPlanetNaturalElementColor(type),
+    alpha: clamp(0.12 + density * 0.28, 0.12, 0.42)
+  };
+}
+
 function getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
@@ -2649,6 +2779,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
     groundFeature,
     biome
   );
+  var naturalElement = getPlanetSurfaceNaturalElement(latitude, longitude, biome, material, lod, relief);
   var shade = clamp(
     0.12 + mixedNoise * 0.46 + lod.roughness * 0.16 + relief.hillshade * 0.26,
     0,
@@ -2676,6 +2807,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
     seaLevelDelta: lod.seaLevelDelta,
     highlandLift: lod.highlandLift,
     marker: marker,
+    naturalElement: naturalElement,
     meterNoise: lod.meter,
     microNoise: lod.micro,
     sampleMeters: lod.sampleMeters
