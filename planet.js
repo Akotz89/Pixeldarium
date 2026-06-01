@@ -507,12 +507,135 @@ function getPlanetGroundLod(latitude, longitude) {
   };
 }
 
+function getLatLonOffsetFromPoint(latitude, longitude, eastKm, northKm) {
+  var nextLatitude = clamp(
+    (Number(latitude) || 0) + (Number(northKm) || 0) / getLatitudeDistanceKmPerDegree(),
+    -90,
+    90
+  );
+  var nextLongitude = normalizeLongitude(
+    (Number(longitude) || 0) + (Number(eastKm) || 0) / getLongitudeDistanceKmPerDegree(nextLatitude)
+  );
+
+  return {
+    latitude: nextLatitude,
+    longitude: nextLongitude
+  };
+}
+
+function getBiomeReliefRangeMeters(biome) {
+  switch (biome) {
+    case "ocean":
+      return 90;
+    case "forest":
+      return 180;
+    case "grassland":
+      return 90;
+    case "desert":
+      return 220;
+    case "tundra":
+      return 160;
+    case "ice":
+      return 260;
+    default:
+      return 120;
+  }
+}
+
+function getBiomeBaseHeightMeters(biome, tile) {
+  var tileElevation = tile && Number.isFinite(Number(tile.elevation))
+    ? Math.tanh(Number(tile.elevation) / 2)
+    : 0;
+
+  if (biome === "ocean") {
+    return -4200 + tileElevation * 900;
+  }
+
+  if (biome === "ice") {
+    return 1100 + tileElevation * 1400;
+  }
+
+  if (biome === "desert") {
+    return 420 + tileElevation * 1250;
+  }
+
+  if (biome === "tundra") {
+    return 650 + tileElevation * 1050;
+  }
+
+  return 260 + tileElevation * 950;
+}
+
+function getPlanetSurfaceHeightMeters(latitude, longitude, tile) {
+  var biome = tile ? tile.biome : "unknown";
+  var lod = getPlanetGroundLod(latitude, longitude);
+  var reliefRangeMeters = getBiomeReliefRangeMeters(biome);
+  var landformMeters = (lod.elevation - 0.5) * reliefRangeMeters;
+  var roughMeters = (lod.ground - 0.5) * reliefRangeMeters * 0.22;
+  var microMeters = (lod.micro - 0.5) * reliefRangeMeters * 0.06;
+
+  if (biome === "ocean") {
+    return getBiomeBaseHeightMeters(biome, tile) +
+      (lod.landform - 0.5) * 520 +
+      roughMeters * 0.34 +
+      microMeters * 0.18;
+  }
+
+  return getBiomeBaseHeightMeters(biome, tile) + landformMeters + roughMeters + microMeters;
+}
+
+function getPlanetSurfaceRelief(latitude, longitude, tile) {
+  var scale = getPlanetViewScale();
+  var sampleMeters = Math.max(1, scale.metersPerSample);
+  var sampleKm = sampleMeters / 1000;
+  var centerHeight = getPlanetSurfaceHeightMeters(latitude, longitude, tile);
+  var east = getLatLonOffsetFromPoint(latitude, longitude, sampleKm, 0);
+  var west = getLatLonOffsetFromPoint(latitude, longitude, -sampleKm, 0);
+  var north = getLatLonOffsetFromPoint(latitude, longitude, 0, sampleKm);
+  var south = getLatLonOffsetFromPoint(latitude, longitude, 0, -sampleKm);
+  var heightEast = getPlanetSurfaceHeightMeters(east.latitude, east.longitude, tile);
+  var heightWest = getPlanetSurfaceHeightMeters(west.latitude, west.longitude, tile);
+  var heightNorth = getPlanetSurfaceHeightMeters(north.latitude, north.longitude, tile);
+  var heightSouth = getPlanetSurfaceHeightMeters(south.latitude, south.longitude, tile);
+  var dzdx = (heightEast - heightWest) / Math.max(1, sampleMeters * 2);
+  var dzdy = (heightNorth - heightSouth) / Math.max(1, sampleMeters * 2);
+  var normalX = -dzdx;
+  var normalY = -dzdy;
+  var normalZ = 1;
+  var normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ) || 1;
+  var lightX = -0.52;
+  var lightY = 0.58;
+  var lightZ = 0.63;
+  var lightLength = Math.sqrt(lightX * lightX + lightY * lightY + lightZ * lightZ) || 1;
+  var dot =
+    (normalX / normalLength) * (lightX / lightLength) +
+    (normalY / normalLength) * (lightY / lightLength) +
+    (normalZ / normalLength) * (lightZ / lightLength);
+  var slope = clamp(Math.atan(Math.sqrt(dzdx * dzdx + dzdy * dzdy)) / (Math.PI / 2), 0, 1);
+  var aspect = normalizeLongitude(Math.atan2(dzdy, dzdx) * 180 / Math.PI);
+  var hillshade = clamp(0.22 + Math.max(0, dot) * 0.78, 0, 1);
+
+  return {
+    heightMeters: centerHeight,
+    slope: slope,
+    aspect: aspect,
+    hillshade: hillshade,
+    dzdx: dzdx,
+    dzdy: dzdy
+  };
+}
+
 function getPlanetSurfaceDetail(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
+  var relief = getPlanetSurfaceRelief(latitude, longitude, tile);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
   var surface = "ground";
-  var shade = clamp(0.18 + mixedNoise * 0.64 + lod.roughness * 0.18, 0, 1);
+  var shade = clamp(
+    0.12 + mixedNoise * 0.46 + lod.roughness * 0.16 + relief.hillshade * 0.26,
+    0,
+    1
+  );
   var feature = "plain";
 
   if (biome === "ocean") {
@@ -541,6 +664,10 @@ function getPlanetSurfaceDetail(latitude, longitude, tile) {
     shade: shade,
     elevation: lod.elevation,
     roughness: lod.roughness,
+    heightMeters: relief.heightMeters,
+    slope: relief.slope,
+    aspect: relief.aspect,
+    hillshade: relief.hillshade,
     meterNoise: lod.meter,
     microNoise: lod.micro,
     sampleMeters: lod.sampleMeters

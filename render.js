@@ -92,9 +92,10 @@ function getPlanetSurfaceColor(sample) {
   }
 
   var shade = clamp(
-    (Number(detail.shade) || 0.5) * 0.74 +
-      (Number(detail.elevation) || 0.5) * 0.18 +
-      (Number(detail.roughness) || 0) * 0.08,
+    (Number(detail.shade) || 0.5) * 0.54 +
+      (Number(detail.elevation) || 0.5) * 0.12 +
+      (Number(detail.roughness) || 0) * 0.08 +
+      (Number(detail.hillshade) || 0.5) * 0.26,
     0,
     1
   );

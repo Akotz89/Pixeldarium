@@ -1208,6 +1208,8 @@ function getInspectSurfaceLabel(tileX, tileY) {
   return detail.surface + " / " + detail.feature +
     " elev " + Math.round(detail.elevation * 100) +
     " rough " + Math.round(detail.roughness * 100) +
+    " height " + Math.round(detail.heightMeters).toLocaleString() + "m" +
+    " shade " + Math.round(detail.hillshade * 100) +
     " @ " + detail.sampleMeters + "m";
 }
 
