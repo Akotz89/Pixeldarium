@@ -227,6 +227,30 @@ assert.strictEqual(fineFractionalScaleInfo.surfaceLodLevel, finalGroundZoomIndex
 assert.strictEqual(fineFractionalScaleInfo.surfaceSampleMeters, finalGroundZoom.metersPerSample, "camera scale info should expose selected surface sample size");
 
 world.planetView = {
+  zoomLevel: finalGroundZoomIndex,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var viewSurfaceMeters = getSurfaceMeterCoordinate(world.planetView.latitude, world.planetView.longitude);
+var centerSurfaceLatLon = getPlanetLatLonFromCanvasPoint(canvas.width / 2, canvas.height / 2);
+var centerSurfacePoint = getPlanetLocalCanvasPoint(centerSurfaceLatLon.longitude, centerSurfaceLatLon.latitude);
+var eastSurfaceLatLon = getPlanetLatLonFromCanvasPoint(canvas.width / 2 + CONFIG.TILE_SIZE * 10, canvas.height / 2);
+var eastSurfaceMeters = getSurfaceMeterCoordinate(eastSurfaceLatLon.latitude, eastSurfaceLatLon.longitude);
+var localCenterAddress = getPlanetLocalSurfaceAddress(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+var localCenterExpectedEastMeters = viewSurfaceMeters.eastMeters + finalGroundZoom.metersPerSample * 0.5;
+var localCenterExpectedNorthMeters = viewSurfaceMeters.northMeters - finalGroundZoom.metersPerSample * 0.5;
+
+assertNear(centerSurfaceLatLon.latitude, world.planetView.latitude, 1e-9, "meter projection center latitude");
+assertNear(centerSurfaceLatLon.longitude, world.planetView.longitude, 1e-9, "meter projection center longitude");
+assertNear(centerSurfacePoint.x, canvas.width / 2, 1e-6, "meter projection center x");
+assertNear(centerSurfacePoint.y, canvas.height / 2, 1e-6, "meter projection center y");
+assertNear(eastSurfaceMeters.eastMeters - viewSurfaceMeters.eastMeters, finalGroundZoom.metersPerSample * 10, 1e-6, "local canvas east offset should use surface meters");
+assertNear(eastSurfaceMeters.northMeters, viewSurfaceMeters.northMeters, 1e-6, "local canvas east offset should preserve north meters");
+assertNear(localCenterAddress.eastMeters, localCenterExpectedEastMeters, 1e-9, "local surface address east meters");
+assertNear(localCenterAddress.northMeters, localCenterExpectedNorthMeters, 1e-9, "local surface address north meters");
+
+world.planetView = {
   zoomLevel: 0.75,
   latitude: 8,
   longitude: -20
@@ -1444,6 +1468,8 @@ assert.strictEqual(explicitDetailSample.surfaceSampleMeters, detailZoom.metersPe
 assert.strictEqual(explicitDetailSample.detail.sampleMeters, detailZoom.metersPerSample, "explicit LOD detail should not inherit current view scale");
 
 var chunkRect = getPlanetSurfaceChunkScreenRect(meterChunkAddress);
+var meterChunkCenter = getPlanetSurfaceChunkCenterLatLon(meterChunkAddress);
+var meterChunkCenterPoint = getPlanetLocalCanvasPoint(meterChunkCenter.longitude, meterChunkCenter.latitude);
 var eastNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
   finalGroundZoomIndex,
   meterChunkAddress.chunkX + 1,
@@ -1455,6 +1481,8 @@ var northNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAd
   meterChunkAddress.chunkY + 1
 ));
 
+assertNear(meterChunkCenterPoint.x, chunkRect.x + chunkRect.width / 2, 1e-6, "meter chunk center x should align with chunk rect");
+assertNear(meterChunkCenterPoint.y, chunkRect.y + chunkRect.height / 2, 1e-6, "meter chunk center y should align with chunk rect");
 assertNear(chunkRect.x + chunkRect.width, eastNeighborRect.x, 1e-9, "adjacent chunk east edge continuity");
 assertNear(northNeighborRect.y + northNeighborRect.height, chunkRect.y, 1e-9, "adjacent chunk north edge continuity");
 

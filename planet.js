@@ -243,19 +243,14 @@ function focusPlanetViewOnLatLonAtCanvasPoint(latitude, longitude, canvasX, canv
   var scale = getPlanetViewScale();
   var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
   var sampleY = (Number(canvasY) || 0) / CONFIG.TILE_SIZE;
-  var desiredEastKm = (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample / 1000;
-  var desiredNorthKm = -(sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample / 1000;
-  var targetLatitude = clamp(Number(latitude) || 0, -90, 90);
-  var centerLatitude = clamp(
-    targetLatitude - desiredNorthKm / getLatitudeDistanceKmPerDegree(),
-    -90,
-    90
-  );
-  var centerLongitude = normalizeLongitude(
-    (Number(longitude) || 0) - desiredEastKm / getLongitudeDistanceKmPerDegree(targetLatitude)
-  );
+  var targetMeters = getSurfaceMeterCoordinate(latitude, longitude);
+  var centerMeters = {
+    eastMeters: targetMeters.eastMeters - (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample,
+    northMeters: targetMeters.northMeters + (sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample
+  };
+  var centerLatLon = getLatLonFromSurfaceMeterCoordinate(centerMeters.eastMeters, centerMeters.northMeters);
 
-  focusPlanetViewOnLatLon(centerLatitude, centerLongitude);
+  focusPlanetViewOnLatLon(centerLatLon.latitude, centerLatLon.longitude);
   return getPlanetView();
 }
 
@@ -478,19 +473,12 @@ function normalizeLongitude(longitude) {
 
 function getLatLonFromLocalOffset(eastKm, northKm) {
   var view = getPlanetView();
-  var latitude = clamp(
-    view.latitude + (Number(northKm) || 0) / getLatitudeDistanceKmPerDegree(),
-    -90,
-    90
-  );
-  var longitude = normalizeLongitude(
-    view.longitude + (Number(eastKm) || 0) / getLongitudeDistanceKmPerDegree(latitude)
-  );
+  var viewMeters = getSurfaceMeterCoordinate(view.latitude, view.longitude);
 
-  return {
-    latitude: latitude,
-    longitude: longitude
-  };
+  return getLatLonFromSurfaceMeterCoordinate(
+    viewMeters.eastMeters + (Number(eastKm) || 0) * 1000,
+    viewMeters.northMeters + (Number(northKm) || 0) * 1000
+  );
 }
 
 function getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters) {
@@ -513,10 +501,11 @@ function getPlanetLocalLatLonFromCanvasPoint(canvasX, canvasY) {
   var scale = getPlanetViewScale();
   var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
   var sampleY = (Number(canvasY) || 0) / CONFIG.TILE_SIZE;
-  var eastKm = (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample / 1000;
-  var northKm = -(sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample / 1000;
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var eastMeters = viewMeters.eastMeters + (sampleX - WORLD_WIDTH / 2) * scale.metersPerSample;
+  var northMeters = viewMeters.northMeters - (sampleY - WORLD_HEIGHT / 2) * scale.metersPerSample;
 
-  return getLatLonFromLocalOffset(eastKm, northKm);
+  return getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters);
 }
 
 function getPlanetLatLonFromCanvasPoint(canvasX, canvasY) {
@@ -776,15 +765,18 @@ function interpolateLongitudeDeg(fromLongitude, toLongitude, amount) {
 
 function getPlanetLocalSurfaceAddress(gridX, gridY) {
   var scale = getPlanetViewScale();
-  var eastKm = (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample / 1000;
-  var northKm = -(gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample / 1000;
-  var latLon = getLatLonFromLocalOffset(eastKm, northKm);
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var eastMeters = viewMeters.eastMeters + (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample;
+  var northMeters = viewMeters.northMeters - (gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample;
+  var latLon = getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters);
 
   return {
     latitude: latLon.latitude,
     longitude: latLon.longitude,
-    eastKm: eastKm,
-    northKm: northKm,
+    eastKm: (eastMeters - viewMeters.eastMeters) / 1000,
+    northKm: (northMeters - viewMeters.northMeters) / 1000,
+    eastMeters: eastMeters,
+    northMeters: northMeters,
     address: getPlanetSurfaceSampleAddress(latLon.latitude, latLon.longitude)
   };
 }
@@ -822,11 +814,10 @@ function makePlanetSurfaceChunkAddress(zoomLevelIndex, chunkX, chunkY) {
 }
 
 function getPlanetSurfaceChunkCenterLatLon(address) {
-  return getPlanetSurfaceLatLonFromChunkAddress(
-    address,
-    address.chunkSamples / 2,
-    address.chunkSamples / 2
-  );
+  var centerEastMeters = (address.sampleEast + address.chunkSamples / 2) * address.sampleMeters;
+  var centerNorthMeters = (address.sampleNorth + address.chunkSamples / 2) * address.sampleMeters;
+
+  return getLatLonFromSurfaceMeterCoordinate(centerEastMeters, centerNorthMeters);
 }
 
 function getPlanetSurfaceChunkParentAddress(address, parentZoomLevelIndex) {
@@ -874,15 +865,15 @@ function getPlanetSurfaceChunkLineageLabel(lineage) {
 }
 
 function getPlanetLocalCanvasPoint(longitude, latitude) {
-  var view = getPlanetView();
   var scale = getPlanetViewScale();
-  var eastKm = wrapPlanetLongitudeDelta((Number(longitude) || 0) - view.longitude) *
-    getLongitudeDistanceKmPerDegree(view.latitude);
-  var northKm = ((Number(latitude) || 0) - view.latitude) * getLatitudeDistanceKmPerDegree();
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var targetMeters = getSurfaceMeterCoordinate(latitude, longitude);
+  var eastMeters = targetMeters.eastMeters - viewMeters.eastMeters;
+  var northMeters = targetMeters.northMeters - viewMeters.northMeters;
 
   return {
-    x: canvas.width / 2 + (eastKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE,
-    y: canvas.height / 2 - (northKm * 1000 / scale.metersPerSample) * CONFIG.TILE_SIZE
+    x: canvas.width / 2 + (eastMeters / scale.metersPerSample) * CONFIG.TILE_SIZE,
+    y: canvas.height / 2 - (northMeters / scale.metersPerSample) * CONFIG.TILE_SIZE
   };
 }
 
