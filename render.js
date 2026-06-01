@@ -10,6 +10,9 @@ var localSurfaceRenderChunkCache = {
     lastVisibleChunks: 0,
     lastPendingChunks: 0,
     lastGeneratedThisPass: 0,
+    lastFallbackChunks: 0,
+    lastFallbackGeneratedThisPass: 0,
+    lastFallbackPendingChunks: 0,
     lastChunkKey: "-"
   }
 };
@@ -26,6 +29,10 @@ function getLocalSurfaceRenderChunksPerPass() {
   return Math.max(1, Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_CHUNKS_PER_PASS) || 32));
 }
 
+function getLocalSurfaceRenderFallbackChunksPerPass() {
+  return Math.max(0, Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_FALLBACK_CHUNKS_PER_PASS) || 8));
+}
+
 function resetLocalSurfaceRenderChunkCache() {
   localSurfaceRenderChunkCache = {
     chunks: {},
@@ -38,6 +45,9 @@ function resetLocalSurfaceRenderChunkCache() {
       lastVisibleChunks: 0,
       lastPendingChunks: 0,
       lastGeneratedThisPass: 0,
+      lastFallbackChunks: 0,
+      lastFallbackGeneratedThisPass: 0,
+      lastFallbackPendingChunks: 0,
       lastChunkKey: "-"
     }
   };
@@ -53,6 +63,9 @@ function getLocalSurfaceRenderCacheStats() {
     lastVisibleChunks: localSurfaceRenderChunkCache.stats.lastVisibleChunks,
     lastPendingChunks: localSurfaceRenderChunkCache.stats.lastPendingChunks,
     lastGeneratedThisPass: localSurfaceRenderChunkCache.stats.lastGeneratedThisPass,
+    lastFallbackChunks: localSurfaceRenderChunkCache.stats.lastFallbackChunks,
+    lastFallbackGeneratedThisPass: localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass,
+    lastFallbackPendingChunks: localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks,
     lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
   };
 }
@@ -332,6 +345,37 @@ function getLocalSurfaceRenderChunk(address, allowGenerate) {
   return renderChunk;
 }
 
+function getLocalSurfaceFallbackRenderChunk(address, allowGenerate) {
+  var lineage = getPlanetSurfaceChunkLineage(address);
+
+  for (var i = 0; i < lineage.length; i++) {
+    var parent = lineage[i];
+    var parentAddress = makePlanetSurfaceChunkAddress(parent.zoomLevel, parent.chunkX, parent.chunkY);
+    var renderKey = getLocalSurfaceRenderChunkKey(parentAddress);
+    var isCached = Boolean(localSurfaceRenderChunkCache.chunks[renderKey]);
+
+    if (!isCached && !allowGenerate) {
+      continue;
+    }
+
+    var renderChunk = getLocalSurfaceRenderChunk(parentAddress, isCached || allowGenerate);
+
+    if (renderChunk) {
+      return {
+        renderChunk: renderChunk,
+        address: parentAddress,
+        generated: !isCached
+      };
+    }
+
+    if (allowGenerate) {
+      break;
+    }
+  }
+
+  return null;
+}
+
 function drawPlanetShell(targetCtx) {
   var projection = getPlanetProjection();
   var gradient = targetCtx.createRadialGradient(
@@ -411,12 +455,21 @@ function buildLocalTerrainCache(tctx) {
   var generatedThisPass = 0;
   var pendingChunks = 0;
   var chunksPerPass = getLocalSurfaceRenderChunksPerPass();
+  var fallbackChunks = 0;
+  var fallbackGeneratedThisPass = 0;
+  var fallbackPendingChunks = 0;
+  var fallbackChunksPerPass = getLocalSurfaceRenderFallbackChunksPerPass();
+  var fallbackDraws = [];
+  var fineDraws = [];
 
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
   localSurfaceRenderChunkCache.stats.lastVisibleChunks = visibleChunks.length;
   localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = 0;
   localSurfaceRenderChunkCache.stats.lastPendingChunks = 0;
+  localSurfaceRenderChunkCache.stats.lastFallbackChunks = 0;
+  localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass = 0;
+  localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks = 0;
 
   visibleChunks.forEach(function(visibleChunk) {
     var renderKey = getLocalSurfaceRenderChunkKey(visibleChunk.address);
@@ -425,17 +478,56 @@ function buildLocalTerrainCache(tctx) {
     var renderChunk = getLocalSurfaceRenderChunk(visibleChunk.address, canGenerate);
 
     if (renderChunk) {
-      tctx.drawImage(renderChunk.canvas, visibleChunk.screenX, visibleChunk.screenY);
+      fineDraws.push({
+        canvas: renderChunk.canvas,
+        x: visibleChunk.screenX,
+        y: visibleChunk.screenY,
+        width: visibleChunk.width,
+        height: visibleChunk.height
+      });
       if (!isCached) {
         generatedThisPass++;
       }
     } else {
       pendingChunks++;
+      var fallback = getLocalSurfaceFallbackRenderChunk(
+        visibleChunk.address,
+        fallbackGeneratedThisPass < fallbackChunksPerPass
+      );
+
+      if (fallback) {
+        var fallbackRect = getPlanetSurfaceChunkScreenRect(fallback.address);
+        fallbackDraws.push({
+          canvas: fallback.renderChunk.canvas,
+          x: fallbackRect.x,
+          y: fallbackRect.y,
+          width: fallbackRect.width,
+          height: fallbackRect.height
+        });
+        fallbackChunks++;
+
+        if (fallback.generated) {
+          fallbackGeneratedThisPass++;
+        }
+      } else {
+        fallbackPendingChunks++;
+      }
     }
+  });
+
+  fallbackDraws.forEach(function(draw) {
+    tctx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
+  });
+
+  fineDraws.forEach(function(draw) {
+    tctx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
   });
 
   localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = generatedThisPass;
   localSurfaceRenderChunkCache.stats.lastPendingChunks = pendingChunks;
+  localSurfaceRenderChunkCache.stats.lastFallbackChunks = fallbackChunks;
+  localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass = fallbackGeneratedThisPass;
+  localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks = fallbackPendingChunks;
 
   if (pendingChunks > 0) {
     world.needsRender = true;
@@ -580,6 +672,8 @@ function drawPlanetReferenceGrid() {
           renderCacheStats.chunks + "c/" +
           renderCacheStats.lastPendingChunks + "p/" +
           renderCacheStats.lastGeneratedThisPass + "g/" +
+          renderCacheStats.lastFallbackChunks + "f/" +
+          renderCacheStats.lastFallbackGeneratedThisPass + "fg/" +
           renderCacheStats.hits + "h" +
         " | pyramid " + pyramidLabel,
       28,

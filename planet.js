@@ -676,19 +676,22 @@ function getPlanetLocalCanvasPoint(longitude, latitude) {
 }
 
 function getPlanetSurfaceChunkScreenRect(address) {
+  var currentScale = getPlanetViewScale();
+  var samplePixelSize = CONFIG.TILE_SIZE * (address.sampleMeters / Math.max(0.1, currentScale.metersPerSample));
   var topLeftLatLon = getPlanetSurfaceLatLonFromChunkAddress(
     address,
     0,
     address.chunkSamples - 1
   );
   var topLeftPoint = getPlanetLocalCanvasPoint(topLeftLatLon.longitude, topLeftLatLon.latitude);
-  var sizePixels = address.chunkSamples * CONFIG.TILE_SIZE;
+  var sizePixels = address.chunkSamples * samplePixelSize;
 
   return {
-    x: topLeftPoint.x - CONFIG.TILE_SIZE / 2,
-    y: topLeftPoint.y - CONFIG.TILE_SIZE / 2,
+    x: topLeftPoint.x - samplePixelSize / 2,
+    y: topLeftPoint.y - samplePixelSize / 2,
     width: sizePixels,
-    height: sizePixels
+    height: sizePixels,
+    samplePixelSize: samplePixelSize
   };
 }
 
