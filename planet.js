@@ -2193,7 +2193,73 @@ function getPlanetSurfaceFeatureMarker(biome, lod, relief) {
   };
 }
 
-function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief) {
+function getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod) {
+  var biome = tile && tile.biome ? tile.biome : "unknown";
+  var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
+  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var sampleMeters = Math.max(1, Number(lod && lod.sampleMeters) || 1);
+  var meters = {
+    eastMeters: Number(lod && lod.eastMeters) || 0,
+    northMeters: Number(lod && lod.northMeters) || 0
+  };
+  var tileBlend = Number.isFinite(Number(longitude)) && typeof getPlanetSurfaceTileBlend === "function"
+    ? getPlanetSurfaceTileBlend(latitude, longitude)
+    : null;
+  var biomeWeights = tileBlend && tileBlend.biomeWeights ? tileBlend.biomeWeights : {};
+  var oceanWeight = Number.isFinite(Number(biomeWeights.ocean))
+    ? clamp(Number(biomeWeights.ocean), 0, 1)
+    : (biome === "ocean" ? 1 : 0);
+  var landWeight = clamp(1 - oceanWeight, 0, 1);
+  var blendedEdge = clamp(Math.min(oceanWeight, landWeight) * 2, 0, 1);
+  var closeScale = clamp((30 - sampleMeters) / 29, 0, 1);
+  var shorelineStrength = clamp(Math.max(coast, shallowWater, blendedEdge) * closeScale, 0, 1);
+  var shorelineNoise = clamp(
+    getSurfaceLayerNoise(meters, Math.max(12, sampleMeters * 10), 71) * 0.68 +
+      getSurfacePixelNoise(meters, Math.max(1, sampleMeters * 3), 73) * 0.32,
+    0,
+    1
+  );
+  var beachBand = clamp(1 - Math.abs(shorelineNoise - 0.52) * 2.35, 0, 1);
+  var waterPocket = clamp(
+    shorelineStrength *
+      (
+        oceanWeight * 0.58 +
+        shallowWater * 0.36 +
+        coast * 0.18 +
+        Math.max(0, shorelineNoise - 0.52) * 0.72
+      ),
+    0,
+    1
+  );
+  var landPocket = clamp(
+    shorelineStrength *
+      (
+        landWeight * 0.58 +
+        coast * 0.14 +
+        Math.max(0, 0.52 - shorelineNoise) * 0.72
+      ),
+    0,
+    1
+  );
+
+  if (shorelineStrength <= 0) {
+    waterPocket = 0;
+    landPocket = 0;
+    beachBand = 0;
+  }
+
+  return {
+    strength: shorelineStrength,
+    noise: shorelineNoise,
+    oceanWeight: oceanWeight,
+    landWeight: landWeight,
+    beach: clamp(shorelineStrength * beachBand, 0, 1),
+    waterPocket: waterPocket,
+    landPocket: landPocket
+  };
+}
+
+function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longitude) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
   var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
   var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
@@ -2203,13 +2269,23 @@ function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief) {
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var snow = getPlanetSurfaceSnowSignal(tile, latitude);
   var surfaceRoughness = clamp(lod.roughness * 0.50 + relief.slope * 0.35 + tileRoughness * 0.15, 0, 1);
-  var wetness = clamp(moisture * 0.44 + river * 0.34 + coast * 0.16 + (1 - lod.ground) * 0.06, 0, 1);
+  var shoreline = getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod);
+  var wetness = clamp(
+    moisture * 0.44 +
+      river * 0.34 +
+      coast * 0.16 +
+      (1 - lod.ground) * 0.06 +
+      shoreline.waterPocket * 0.18 +
+      shoreline.beach * 0.04,
+    0,
+    1
+  );
   var canopyDensity = clamp(lod.canopy * 0.54 + moisture * 0.22 + lod.continental * 0.10 - relief.slope * 0.18 + (1 - ridge) * 0.08, 0, 1);
   var waterDepth = biome === "ocean"
-    ? clamp((-relief.heightMeters - 180) / 4200 - shallowWater * 0.32 + (1 - lod.landform) * 0.12, 0, 1)
-    : 0;
+    ? clamp((-relief.heightMeters - 180) / 4200 - Math.max(shallowWater, shoreline.landPocket) * 0.32 + (1 - lod.landform) * 0.12, 0, 1)
+    : clamp(shoreline.waterPocket * 0.18, 0, 1);
   var chop = biome === "ocean"
-    ? clamp(lod.ground * 0.38 + lod.micro * 0.32 + relief.slope * 0.20 + (1 - waterDepth) * 0.10, 0, 1)
+    ? clamp(lod.ground * 0.38 + lod.micro * 0.32 + relief.slope * 0.20 + (1 - waterDepth) * 0.10 + shoreline.waterPocket * 0.08, 0, 1)
     : 0;
   var dryness = clamp(1 - moisture + (1 - wetness) * 0.22, 0, 1);
 
@@ -2223,19 +2299,27 @@ function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief) {
     chop: chop,
     dryness: dryness,
     river: river,
-    coast: coast,
-    shallowWater: shallowWater,
-    ridge: ridge
+    coast: Math.max(coast, shoreline.strength),
+    shallowWater: Math.max(shallowWater, shoreline.waterPocket, shoreline.landPocket * 0.45),
+    ridge: ridge,
+    shorelineStrength: shoreline.strength,
+    shorelineNoise: shoreline.noise,
+    shorelineBeach: shoreline.beach,
+    shorelineWater: shoreline.waterPocket,
+    shorelineLand: shoreline.landPocket
   };
 }
 
-function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile) {
-  var signals = getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief);
+function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile, longitude) {
+  var signals = getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief, longitude);
   var surface = "ground";
   var feature = "plain";
 
   if (biome === "ocean") {
-    if (signals.chop > 0.78 && signals.waterDepth < 0.78) {
+    if (signals.shorelineBeach > 0.42 && signals.shorelineLand > signals.shorelineWater * 0.75) {
+      surface = "sand";
+      feature = "tidal flat";
+    } else if (signals.chop > 0.78 && signals.waterDepth < 0.78) {
       surface = "whitecap";
       feature = "surface chop";
     } else if (signals.waterDepth > 0.66) {
@@ -2246,7 +2330,13 @@ function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relie
       feature = signals.shallowWater > 0.44 || signals.coast > 0.44 ? "shoal water" : "swell";
     }
   } else if (biome === "forest") {
-    if (signals.canopyDensity < 0.30 && signals.wetness > 0.35) {
+    if (signals.shorelineWater > 0.60) {
+      surface = "open water";
+      feature = "shore pool";
+    } else if (signals.shorelineBeach > 0.44 && signals.snow < 0.34) {
+      surface = "sand";
+      feature = "shoreline";
+    } else if (signals.canopyDensity < 0.30 && signals.wetness > 0.35) {
       surface = "clearing";
       feature = "shadow gap";
     } else if (signals.canopyDensity > 0.66 && signals.surfaceRoughness < 0.62) {
@@ -2257,7 +2347,13 @@ function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relie
       feature = "understory";
     }
   } else if (biome === "grassland") {
-    if (signals.snow > 0.58) {
+    if (signals.shorelineWater > 0.60) {
+      surface = "open water";
+      feature = "shore pool";
+    } else if (signals.shorelineBeach > 0.44 && signals.snow < 0.34) {
+      surface = "sand";
+      feature = "beach";
+    } else if (signals.snow > 0.58) {
       surface = "snow";
       feature = "snow grass";
     } else if (signals.wetness > 0.58 && signals.surfaceRoughness < 0.52) {
@@ -2271,7 +2367,13 @@ function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relie
       feature = "field";
     }
   } else if (biome === "desert") {
-    if (signals.surfaceRoughness > 0.56 || relief.slope > 0.22 || signals.ridge > 0.58) {
+    if (signals.shorelineWater > 0.62) {
+      surface = "open water";
+      feature = "shore pool";
+    } else if (signals.shorelineBeach > 0.36) {
+      surface = "sand";
+      feature = "beach";
+    } else if (signals.surfaceRoughness > 0.56 || relief.slope > 0.22 || signals.ridge > 0.58) {
       surface = "rock";
       feature = "ridge";
     } else if (lod.landform > 0.58 && signals.dryness > 0.45) {
@@ -2282,7 +2384,10 @@ function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relie
       feature = "grit";
     }
   } else if (biome === "tundra") {
-    if (signals.snow > 0.52) {
+    if (signals.shorelineWater > 0.58) {
+      surface = "open water";
+      feature = "shore pool";
+    } else if (signals.snow > 0.52) {
       surface = "snow";
       feature = "snow crust";
     } else if (signals.surfaceRoughness > 0.50 || relief.slope > 0.20) {
@@ -2378,7 +2483,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
   var groundFeature = getPlanetSurfaceGroundFeatureInfluence(latitude, longitude, lod.sampleMeters);
   var material = applyPlanetGroundFeatureInfluenceToMaterial(
-    getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile),
+    getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile, longitude),
     groundFeature,
     biome
   );

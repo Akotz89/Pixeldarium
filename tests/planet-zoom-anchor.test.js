@@ -626,6 +626,78 @@ var roughIceMaterial = getPlanetLocalSurfaceMaterialClassification(82, "ice", ma
   elevation: 1.0
 });
 
+var savedShorelinePlanetTiles = world.planetTiles.map(function(tile) {
+  return tile ? Object.assign({}, tile) : tile;
+});
+var savedShorelineTerrain = world.terrain.slice();
+var savedShorelineSeedText = world.seedText;
+var savedShorelineRngState = world.rngState;
+
+setWorldSeed("PIXEL-2026");
+fillPlanetTiles("grassland");
+var coastY = Math.floor(WORLD_HEIGHT / 2);
+var coastLandX = Math.floor(WORLD_WIDTH / 2);
+var coastOceanX = coastLandX + 1;
+var coastLandTile = getPlanetTile(coastLandX, coastY);
+var coastOceanTile = getPlanetTile(coastOceanX, coastY);
+var coastLatitude = getPlanetLatitudeForTile(coastY);
+var coastBoundaryLongitude = (coastOceanX / WORLD_WIDTH) * 360 - 180;
+
+coastLandTile.biome = "grassland";
+coastLandTile.moisture = 1.3;
+coastLandTile.elevation = 0.1;
+coastLandTile.coastFactor = 1;
+coastLandTile.shallowWater = 0;
+coastLandTile.roughness = 0.2;
+coastLandTile.ridgeStrength = 0;
+coastOceanTile.biome = "ocean";
+coastOceanTile.moisture = 1;
+coastOceanTile.elevation = -0.5;
+coastOceanTile.coastFactor = 1;
+coastOceanTile.shallowWater = 1;
+coastOceanTile.roughness = 0.1;
+coastOceanTile.ridgeStrength = 0;
+
+var shorelineRefinement = getPlanetLocalShorelineRefinement(coastLatitude, coastBoundaryLongitude, coastLandTile, materialLod);
+var coastalLandMaterial = getPlanetLocalSurfaceMaterialClassification(
+  coastLatitude,
+  "grassland",
+  materialLod,
+  flatMaterialRelief,
+  coastLandTile,
+  coastBoundaryLongitude
+);
+var coastalOceanMaterial = getPlanetLocalSurfaceMaterialClassification(
+  coastLatitude,
+  "ocean",
+  materialLod,
+  Object.assign({}, flatMaterialRelief, { heightMeters: -120 }),
+  coastOceanTile,
+  coastBoundaryLongitude
+);
+var interiorLandMaterial = getPlanetLocalSurfaceMaterialClassification(
+  coastLatitude,
+  "grassland",
+  materialLod,
+  flatMaterialRelief,
+  {
+    biome: "grassland",
+    latitude: coastLatitude,
+    moisture: 1.2,
+    coastFactor: 0,
+    shallowWater: 0,
+    roughness: 0.1,
+    ridgeStrength: 0
+  },
+  coastBoundaryLongitude + getPlanetTileLongitudeStepDeg() * 8
+);
+setWorldSeed("PIXEL-2027");
+var alternateShorelineRefinement = getPlanetLocalShorelineRefinement(coastLatitude, coastBoundaryLongitude, coastLandTile, materialLod);
+world.planetTiles = savedShorelinePlanetTiles;
+world.terrain = savedShorelineTerrain;
+world.seedText = savedShorelineSeedText;
+world.rngState = savedShorelineRngState;
+
 assert.strictEqual(meadowMaterial.surface, "meadow", "wet smooth grassland should classify as meadow");
 assert.strictEqual(brushMaterial.surface, "brush", "dry rough grassland should classify as brush");
 assert.strictEqual(deepOceanMaterial.surface, "deep water", "deep ocean should classify by water depth");
@@ -633,7 +705,17 @@ assert.strictEqual(whitecapMaterial.surface, "whitecap", "shallow rough ocean sh
 assert.strictEqual(rockyDesertMaterial.surface, "rock", "rough desert should classify as rock");
 assert.strictEqual(polarTundraMaterial.surface, "snow", "polar high tundra should classify as snow");
 assert.strictEqual(roughIceMaterial.surface, "ridge ice", "rough ice should classify as ridge ice");
-[meadowMaterial, brushMaterial, deepOceanMaterial, whitecapMaterial, rockyDesertMaterial, polarTundraMaterial, roughIceMaterial].forEach(function(material) {
+assert.ok(shorelineRefinement.strength > 0.90, "shoreline refinement should activate at land/ocean tile blends");
+assert.ok(shorelineRefinement.oceanWeight > 0.20 && shorelineRefinement.landWeight > 0.20, "shoreline refinement should expose mixed land/ocean weights");
+assert.ok(shorelineRefinement.beach > 0.30, "shoreline refinement should expose a beach band");
+assert.notStrictEqual(alternateShorelineRefinement.noise, shorelineRefinement.noise, "shoreline refinement should vary by seed");
+assert.strictEqual(coastalLandMaterial.surface, "sand", "coastal land should refine into beach material near shoreline");
+assert.strictEqual(coastalLandMaterial.feature, "beach", "coastal land should expose beach feature");
+assert.strictEqual(coastalOceanMaterial.surface, "open water", "coastal ocean should remain shallow/open water");
+assert.strictEqual(coastalOceanMaterial.feature, "shoal water", "coastal ocean should expose shoal feature");
+assert.strictEqual(interiorLandMaterial.signals.shorelineStrength, 0, "interior land should not receive shoreline refinement");
+assert.strictEqual(interiorLandMaterial.signals.shorelineWater, 0, "interior land should not receive shoreline water pockets");
+[meadowMaterial, brushMaterial, deepOceanMaterial, whitecapMaterial, rockyDesertMaterial, polarTundraMaterial, roughIceMaterial, coastalLandMaterial, coastalOceanMaterial, interiorLandMaterial].forEach(function(material) {
   Object.keys(material.signals).forEach(function(key) {
     assert.ok(material.signals[key] >= 0 && material.signals[key] <= 1, "material signal " + key + " should be bounded");
   });
