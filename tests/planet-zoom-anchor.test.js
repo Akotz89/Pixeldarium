@@ -27,6 +27,7 @@ function makeElement() {
 const context = {
   assert,
   console,
+  window: {},
   document: {
     getElementById() {
       return makeElement();
@@ -38,7 +39,8 @@ const source = [
   "config.js",
   "state.js",
   "utils.js",
-  "planet.js"
+  "planet.js",
+  "render.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 vm.runInNewContext(`${source}
@@ -91,6 +93,17 @@ world.planetView = {
 
 assert.ok(adjustPlanetZoom(0.25), "center zoom should still work");
 assert.ok(!isPlanetLocalView(), "fractional globe zoom should remain globe-rendered below local threshold");
+
+world.planetView = {
+  zoomLevel: 2,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var gridInfo = getPlanetLocalReferenceGridInfo(140);
+assert.ok(gridInfo.distanceMeters > 0, "local grid should pick a real-world distance");
+assert.ok(gridInfo.pixelSpacing >= 72 && gridInfo.pixelSpacing <= 230, "local grid should stay glanceable");
+assert.ok(gridInfo.opacity > 0 && gridInfo.opacity <= 0.105, "local grid opacity should stay subdued");
 `, context);
 
 console.log("planet zoom anchor checks passed");

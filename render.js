@@ -532,23 +532,6 @@ function buildLocalTerrainCache(tctx) {
   if (pendingChunks > 0) {
     world.needsRender = true;
   }
-
-  tctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
-  tctx.lineWidth = 1;
-
-  for (var gridX = 0; gridX <= WORLD_WIDTH; gridX += 16) {
-    tctx.beginPath();
-    tctx.moveTo(gridX * CONFIG.TILE_SIZE, 0);
-    tctx.lineTo(gridX * CONFIG.TILE_SIZE, canvas.height);
-    tctx.stroke();
-  }
-
-  for (var gridY = 0; gridY <= WORLD_HEIGHT; gridY += 16) {
-    tctx.beginPath();
-    tctx.moveTo(0, gridY * CONFIG.TILE_SIZE);
-    tctx.lineTo(canvas.width, gridY * CONFIG.TILE_SIZE);
-    tctx.stroke();
-  }
 }
 
 function buildTerrainCache() {
@@ -582,6 +565,110 @@ function drawTerrain() {
     terrainCache = null;
     world.needsRender = true;
   }
+}
+
+function getPlanetLocalReferenceGridInfo(targetPixels) {
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var normalizedTargetPixels = Math.max(72, Number(targetPixels) || 140);
+  var distanceMeters = getNicePlanetDistanceMeters(scaleInfo.metersPerCanvasPixel * normalizedTargetPixels);
+  var pixelSpacing = distanceMeters / Math.max(0.001, scaleInfo.metersPerCanvasPixel);
+  var opacity = clamp(0.13 - scaleInfo.zoomValue * 0.018, 0.035, 0.105);
+
+  while (pixelSpacing < 72) {
+    distanceMeters *= 2;
+    pixelSpacing *= 2;
+  }
+
+  while (pixelSpacing > 230) {
+    distanceMeters /= 2;
+    pixelSpacing /= 2;
+  }
+
+  return {
+    distanceMeters: distanceMeters,
+    label: getPlanetDistanceLabel(distanceMeters),
+    pixelSpacing: pixelSpacing,
+    opacity: opacity
+  };
+}
+
+function drawPlanetLocalCurvatureOverlay() {
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var curvature = clamp(scaleInfo.footprintWidthKm / 9000, 0, 1);
+
+  if (curvature <= 0.02 || typeof ctx.createRadialGradient !== "function") {
+    return;
+  }
+
+  var centerX = canvas.width / 2;
+  var centerY = canvas.height / 2;
+  var gradient = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    Math.min(canvas.width, canvas.height) * 0.16,
+    centerX,
+    centerY,
+    Math.max(canvas.width, canvas.height) * 0.68
+  );
+
+  gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+  gradient.addColorStop(0.72, "rgba(0, 0, 0, " + (0.08 * curvature).toFixed(3) + ")");
+  gradient.addColorStop(1, "rgba(1, 3, 10, " + (0.42 * curvature).toFixed(3) + ")");
+
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "rgba(142, 160, 255, " + (0.12 * curvature).toFixed(3) + ")";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(
+    centerX,
+    canvas.height * (1.68 + (1 - curvature) * 0.48),
+    canvas.width * (1.12 + (1 - curvature) * 0.34),
+    Math.PI * 1.06,
+    Math.PI * 1.94
+  );
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPlanetLocalReferenceGrid() {
+  var grid = getPlanetLocalReferenceGridInfo(140);
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var view = getPlanetView();
+  var viewMeters = getSurfaceMeterCoordinate(view.latitude, view.longitude);
+  var metersPerPixel = Math.max(0.001, scaleInfo.metersPerCanvasPixel);
+  var minEast = viewMeters.eastMeters - (canvas.width / 2) * metersPerPixel;
+  var maxEast = viewMeters.eastMeters + (canvas.width / 2) * metersPerPixel;
+  var minNorth = viewMeters.northMeters - (canvas.height / 2) * metersPerPixel;
+  var maxNorth = viewMeters.northMeters + (canvas.height / 2) * metersPerPixel;
+  var eastStart = Math.floor(minEast / grid.distanceMeters) * grid.distanceMeters;
+  var northStart = Math.floor(minNorth / grid.distanceMeters) * grid.distanceMeters;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(220, 229, 255, " + grid.opacity.toFixed(3) + ")";
+  ctx.lineWidth = 1;
+
+  for (var east = eastStart; east <= maxEast; east += grid.distanceMeters) {
+    var x = canvas.width / 2 + (east - viewMeters.eastMeters) / metersPerPixel;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (var north = northStart; north <= maxNorth; north += grid.distanceMeters) {
+    var y = canvas.height / 2 - (north - viewMeters.northMeters) / metersPerPixel;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "rgba(220, 229, 255, " + Math.min(0.68, grid.opacity * 5).toFixed(3) + ")";
+  ctx.font = "11px Arial, Helvetica, sans-serif";
+  ctx.fillText("grid " + grid.label, canvas.width - 102, canvas.height - 25);
+  ctx.restore();
 }
 
 function drawPlanetScaleBar() {
@@ -649,6 +736,8 @@ function drawPlanetReferenceGrid() {
       : "-";
 
     ctx.save();
+    drawPlanetLocalCurvatureOverlay();
+    drawPlanetLocalReferenceGrid();
     ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(
