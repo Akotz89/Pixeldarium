@@ -476,6 +476,164 @@ var snowySurfaceColor = getPlanetSurfaceColor({
 assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
 assert.ok(colorDistance(snowySurfaceColor, dryLandColor) > 40, "high local terrain should receive snow tint");
 
+var materialLod = {
+  sampleMeters: 1,
+  northMeters: 0,
+  eastMeters: 0,
+  continental: 0.55,
+  landform: 0.62,
+  canopy: 0.72,
+  ground: 0.42,
+  meter: 0.46,
+  micro: 0.44,
+  elevation: 0.56,
+  roughness: 0.18
+};
+var flatMaterialRelief = {
+  heightMeters: 340,
+  slope: 0.04,
+  aspect: 0,
+  hillshade: 0.72,
+  dzdx: 0,
+  dzdy: 0
+};
+var roughMaterialRelief = {
+  heightMeters: 820,
+  slope: 0.38,
+  aspect: 0,
+  hillshade: 0.60,
+  dzdx: 0.2,
+  dzdy: 0.2
+};
+var meadowMaterial = getPlanetLocalSurfaceMaterialClassification(20, "grassland", materialLod, flatMaterialRelief, {
+  biome: "grassland",
+  latitude: 20,
+  moisture: 2.2,
+  riverStrength: 0.45,
+  coastFactor: 0,
+  roughness: 0,
+  ridgeStrength: 0,
+  elevation: 0.2
+});
+var brushMaterial = getPlanetLocalSurfaceMaterialClassification(20, "grassland", materialLod, roughMaterialRelief, {
+  biome: "grassland",
+  latitude: 20,
+  moisture: 0.25,
+  riverStrength: 0,
+  coastFactor: 0,
+  roughness: 1,
+  ridgeStrength: 0.8,
+  elevation: 0.6
+});
+var deepOceanMaterial = getPlanetLocalSurfaceMaterialClassification(0, "ocean", materialLod, {
+  heightMeters: -4200,
+  slope: 0.02,
+  aspect: 0,
+  hillshade: 0.50,
+  dzdx: 0,
+  dzdy: 0
+}, {
+  biome: "ocean",
+  latitude: 0,
+  moisture: 1,
+  shallowWater: 0,
+  coastFactor: 0,
+  elevation: -2
+});
+var whitecapMaterial = getPlanetLocalSurfaceMaterialClassification(0, "ocean", {
+  sampleMeters: 1,
+  northMeters: 0,
+  eastMeters: 0,
+  continental: 0.50,
+  landform: 0.52,
+  canopy: 0.50,
+  ground: 0.96,
+  meter: 0.50,
+  micro: 0.98,
+  elevation: 0.55,
+  roughness: 0.45
+}, {
+  heightMeters: -220,
+  slope: 0.42,
+  aspect: 0,
+  hillshade: 0.86,
+  dzdx: 0.4,
+  dzdy: 0.2
+}, {
+  biome: "ocean",
+  latitude: 0,
+  moisture: 1,
+  shallowWater: 0.8,
+  coastFactor: 0.4,
+  elevation: -0.1
+});
+var rockyDesertMaterial = getPlanetLocalSurfaceMaterialClassification(24, "desert", materialLod, roughMaterialRelief, {
+  biome: "desert",
+  latitude: 24,
+  moisture: 0.1,
+  roughness: 1,
+  ridgeStrength: 0.8,
+  elevation: 0.8
+});
+var polarTundraMaterial = getPlanetLocalSurfaceMaterialClassification(78, "tundra", materialLod, flatMaterialRelief, {
+  biome: "tundra",
+  latitude: 78,
+  moisture: 0.8,
+  roughness: 0.2,
+  ridgeStrength: 0.4,
+  highlandLift: 0.5,
+  elevation: 1.0
+});
+var roughIceMaterial = getPlanetLocalSurfaceMaterialClassification(82, "ice", materialLod, roughMaterialRelief, {
+  biome: "ice",
+  latitude: 82,
+  moisture: 0.8,
+  roughness: 1,
+  ridgeStrength: 0.8,
+  elevation: 1.0
+});
+
+assert.strictEqual(meadowMaterial.surface, "meadow", "wet smooth grassland should classify as meadow");
+assert.strictEqual(brushMaterial.surface, "brush", "dry rough grassland should classify as brush");
+assert.strictEqual(deepOceanMaterial.surface, "deep water", "deep ocean should classify by water depth");
+assert.strictEqual(whitecapMaterial.surface, "whitecap", "shallow rough ocean should classify as whitecap");
+assert.strictEqual(rockyDesertMaterial.surface, "rock", "rough desert should classify as rock");
+assert.strictEqual(polarTundraMaterial.surface, "snow", "polar high tundra should classify as snow");
+assert.strictEqual(roughIceMaterial.surface, "ridge ice", "rough ice should classify as ridge ice");
+[meadowMaterial, brushMaterial, deepOceanMaterial, whitecapMaterial, rockyDesertMaterial, polarTundraMaterial, roughIceMaterial].forEach(function(material) {
+  Object.keys(material.signals).forEach(function(key) {
+    assert.ok(material.signals[key] >= 0 && material.signals[key] <= 1, "material signal " + key + " should be bounded");
+  });
+});
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+var detailTile = {
+  biome: "grassland",
+  latitude: 34.2117,
+  moisture: 1.6,
+  elevation: 0.7,
+  riverStrength: 0.2,
+  coastFactor: 0,
+  roughness: 0.4,
+  ridgeStrength: 0.2,
+  highlandLift: 0.2
+};
+setWorldSeed("PIXEL-2026");
+var classifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
+var repeatedClassifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
+setWorldSeed("PIXEL-2027");
+var alternateClassifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
+setWorldSeed("PIXEL-2026");
+
+assert.ok(classifiedDetail.materialSignals, "surface detail should expose material signals");
+assert.deepStrictEqual(repeatedClassifiedDetail, classifiedDetail, "surface material detail should be deterministic");
+assert.notStrictEqual(alternateClassifiedDetail.microNoise, classifiedDetail.microNoise, "surface material detail should vary by seed");
+assert.ok(["meadow", "brush", "grass", "snow"].indexOf(classifiedDetail.surface) >= 0, "grassland detail should classify as a grassland material");
+
 var texturedGrassSample = {
   biome: "grassland",
   surfaceSampleX: 12045,

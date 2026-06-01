@@ -365,31 +365,6 @@ function getPlanetSurfaceRgbAtLatLon(latitude, longitude, tileRgbCache) {
   return mixRgb(top, bottom, yAmount);
 }
 
-function getPlanetSurfaceSnowSignal(tile, latitude) {
-  var biome = tile && tile.biome ? tile.biome : "unknown";
-  var absLatitude = Math.abs(Number(latitude) || 0);
-  var elevationValue = tile && Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
-  var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
-  var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
-  var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
-  var highlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) / 1.4 : 0, 0, 1);
-  var polarSnow = clamp((absLatitude - 62) / 24, 0, 1) * clamp((elevation - 0.44) / 0.34 + ridge * 0.20, 0, 1);
-  var mountainSnow =
-    clamp((elevation - 0.76) / 0.18, 0, 1) *
-    clamp(ridge * 0.52 + highlandLift * 0.38 + roughness * 0.10 - 0.26, 0, 1) *
-    clamp((absLatitude - 18) / 42, 0, 1);
-
-  if (biome === "ice") {
-    return clamp(0.78 + polarSnow * 0.20 + ridge * 0.08, 0, 1);
-  }
-
-  if (biome === "ocean") {
-    return clamp(polarSnow * 0.18, 0, 0.22);
-  }
-
-  return clamp(Math.max(polarSnow, mountainSnow), 0, 0.86);
-}
-
 function getPlanetMaterialPixelNoise(latitude, longitude, patchMeters, seedOffset) {
   var surfaceMeters = getSurfaceMeterCoordinate(latitude, longitude);
   var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
@@ -591,7 +566,10 @@ function getPlanetSurfaceColor(sample) {
   var heightMeters = Number(detail.heightMeters) || 0;
   var slope = clamp(Number(detail.slope) || 0, 0, 1);
   var highland = clamp((heightMeters - 900) / 2600, 0, 1);
-  var snowLine = biome === "ice" ? 0.35 : clamp((heightMeters - 1800) / 2200, 0, 1);
+  var materialSignals = detail.materialSignals || {};
+  var snowLine = Number.isFinite(Number(materialSignals.snow))
+    ? clamp(Number(materialSignals.snow), 0, 1)
+    : (biome === "ice" ? 0.35 : clamp((heightMeters - 1800) / 2200, 0, 1));
   var shadow = clamp(1 - (Number(detail.hillshade) || 0.5), 0, 1);
   var river = sample && sample.tile ? clamp(Number(sample.tile.riverStrength) || 0, 0, 1) : 0;
   var coast = sample && sample.tile ? clamp(Number(sample.tile.coastFactor) || 0, 0, 1) : 0;

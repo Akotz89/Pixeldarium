@@ -1524,6 +1524,31 @@ function getSurfacePixelNoise(meters, patchMeters, salt) {
   return getSurfaceCellNoise(cellEast, cellNorth, normalizedPatchMeters, salt);
 }
 
+function getPlanetSurfaceSnowSignal(tile, latitude) {
+  var biome = tile && tile.biome ? tile.biome : "unknown";
+  var absLatitude = Math.abs(Number(latitude) || 0);
+  var elevationValue = tile && Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
+  var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
+  var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
+  var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
+  var highlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) / 1.4 : 0, 0, 1);
+  var polarSnow = clamp((absLatitude - 62) / 24, 0, 1) * clamp((elevation - 0.44) / 0.34 + ridge * 0.20, 0, 1);
+  var mountainSnow =
+    clamp((elevation - 0.76) / 0.18, 0, 1) *
+    clamp(ridge * 0.52 + highlandLift * 0.38 + roughness * 0.10 - 0.26, 0, 1) *
+    clamp((absLatitude - 18) / 42, 0, 1);
+
+  if (biome === "ice") {
+    return clamp(0.78 + polarSnow * 0.20 + ridge * 0.08, 0, 1);
+  }
+
+  if (biome === "ocean") {
+    return clamp(polarSnow * 0.18, 0, 0.22);
+  }
+
+  return clamp(Math.max(polarSnow, mountainSnow), 0, 0.86);
+}
+
 function getPlanetGroundLod(latitude, longitude) {
   var scale = getPlanetViewScale();
   var meters = getSurfaceMeterCoordinate(latitude, longitude);
@@ -1735,46 +1760,148 @@ function getPlanetSurfaceFeatureMarker(biome, lod, relief) {
   };
 }
 
+function getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief) {
+  var biome = tile && tile.biome ? tile.biome : "unknown";
+  var moisture = clamp(tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) / 2.2 : 0.35, 0, 1);
+  var river = clamp(tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0, 0, 1);
+  var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
+  var shallowWater = clamp(tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0, 0, 1);
+  var tileRoughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
+  var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
+  var snow = getPlanetSurfaceSnowSignal(tile, latitude);
+  var surfaceRoughness = clamp(lod.roughness * 0.50 + relief.slope * 0.35 + tileRoughness * 0.15, 0, 1);
+  var wetness = clamp(moisture * 0.44 + river * 0.34 + coast * 0.16 + (1 - lod.ground) * 0.06, 0, 1);
+  var canopyDensity = clamp(lod.canopy * 0.54 + moisture * 0.22 + lod.continental * 0.10 - relief.slope * 0.18 + (1 - ridge) * 0.08, 0, 1);
+  var waterDepth = biome === "ocean"
+    ? clamp((-relief.heightMeters - 180) / 4200 - shallowWater * 0.32 + (1 - lod.landform) * 0.12, 0, 1)
+    : 0;
+  var chop = biome === "ocean"
+    ? clamp(lod.ground * 0.38 + lod.micro * 0.32 + relief.slope * 0.20 + (1 - waterDepth) * 0.10, 0, 1)
+    : 0;
+  var dryness = clamp(1 - moisture + (1 - wetness) * 0.22, 0, 1);
+
+  return {
+    moisture: moisture,
+    wetness: wetness,
+    snow: snow,
+    canopyDensity: canopyDensity,
+    surfaceRoughness: surfaceRoughness,
+    waterDepth: waterDepth,
+    chop: chop,
+    dryness: dryness,
+    river: river,
+    coast: coast,
+    shallowWater: shallowWater,
+    ridge: ridge
+  };
+}
+
+function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile) {
+  var signals = getPlanetLocalSurfaceMaterialSignals(latitude, tile, lod, relief);
+  var surface = "ground";
+  var feature = "plain";
+
+  if (biome === "ocean") {
+    if (signals.chop > 0.78 && signals.waterDepth < 0.78) {
+      surface = "whitecap";
+      feature = "surface chop";
+    } else if (signals.waterDepth > 0.66) {
+      surface = "deep water";
+      feature = "deep channel";
+    } else {
+      surface = "open water";
+      feature = signals.shallowWater > 0.44 || signals.coast > 0.44 ? "shoal water" : "swell";
+    }
+  } else if (biome === "forest") {
+    if (signals.canopyDensity < 0.30 && signals.wetness > 0.35) {
+      surface = "clearing";
+      feature = "shadow gap";
+    } else if (signals.canopyDensity > 0.66 && signals.surfaceRoughness < 0.62) {
+      surface = "dense canopy";
+      feature = "tree crown";
+    } else {
+      surface = "woodland";
+      feature = "understory";
+    }
+  } else if (biome === "grassland") {
+    if (signals.snow > 0.58) {
+      surface = "snow";
+      feature = "snow grass";
+    } else if (signals.wetness > 0.58 && signals.surfaceRoughness < 0.52) {
+      surface = "meadow";
+      feature = "swale";
+    } else if (signals.surfaceRoughness > 0.52 || signals.dryness > 0.62) {
+      surface = "brush";
+      feature = "tuft";
+    } else {
+      surface = "grass";
+      feature = "field";
+    }
+  } else if (biome === "desert") {
+    if (signals.surfaceRoughness > 0.56 || relief.slope > 0.22 || signals.ridge > 0.58) {
+      surface = "rock";
+      feature = "ridge";
+    } else if (lod.landform > 0.58 && signals.dryness > 0.45) {
+      surface = "dune";
+      feature = "wind streak";
+    } else {
+      surface = "sand";
+      feature = "grit";
+    }
+  } else if (biome === "tundra") {
+    if (signals.snow > 0.52) {
+      surface = "snow";
+      feature = "snow crust";
+    } else if (signals.surfaceRoughness > 0.50 || relief.slope > 0.20) {
+      surface = "stone";
+      feature = "frost stone";
+    } else if (signals.wetness > 0.48) {
+      surface = "moss";
+      feature = "moss pocket";
+    } else {
+      surface = "scrub";
+      feature = "low scrub";
+    }
+  } else if (biome === "ice") {
+    if (signals.surfaceRoughness > 0.48 || relief.slope > 0.18) {
+      surface = "ridge ice";
+      feature = "pressure ridge";
+    } else if (signals.snow > 0.84 && lod.micro < 0.52) {
+      surface = "snow";
+      feature = "powder";
+    } else {
+      surface = "ice";
+      feature = "crust";
+    }
+  }
+
+  return {
+    surface: surface,
+    feature: feature,
+    signals: signals
+  };
+}
+
 function getPlanetSurfaceDetail(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
   var relief = getPlanetSurfaceRelief(latitude, longitude, tile);
   var marker = getPlanetSurfaceFeatureMarker(biome, lod, relief);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
-  var surface = "ground";
+  var material = getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile);
   var shade = clamp(
     0.12 + mixedNoise * 0.46 + lod.roughness * 0.16 + relief.hillshade * 0.26,
     0,
     1
   );
-  var feature = "plain";
-
-  if (biome === "ocean") {
-    surface = mixedNoise > 0.78 ? "whitecap" : (mixedNoise < 0.18 ? "deep water" : "open water");
-    feature = lod.ground > 0.72 ? "surface chop" : (lod.landform < 0.24 ? "deep channel" : "swell");
-  } else if (biome === "forest") {
-    surface = mixedNoise > 0.70 ? "dense canopy" : (mixedNoise < 0.25 ? "clearing" : "woodland");
-    feature = lod.canopy > 0.68 ? "tree crown" : (lod.ground < 0.22 ? "shadow gap" : "understory");
-  } else if (biome === "grassland") {
-    surface = mixedNoise > 0.66 ? "brush" : (mixedNoise < 0.24 ? "meadow" : "grass");
-    feature = lod.meter > 0.74 ? "tuft" : (lod.landform < 0.30 ? "swale" : "field");
-  } else if (biome === "desert") {
-    surface = mixedNoise > 0.72 ? "rock" : (mixedNoise < 0.25 ? "dune" : "sand");
-    feature = lod.landform > 0.70 ? "ridge" : (lod.ground < 0.28 ? "wind streak" : "grit");
-  } else if (biome === "tundra") {
-    surface = mixedNoise > 0.68 ? "stone" : (mixedNoise < 0.30 ? "moss" : "scrub");
-    feature = lod.ground > 0.65 ? "frost stone" : (lod.meter < 0.25 ? "moss pocket" : "low scrub");
-  } else if (biome === "ice") {
-    surface = mixedNoise > 0.70 ? "ridge ice" : (mixedNoise < 0.25 ? "snow" : "ice");
-    feature = lod.landform > 0.66 ? "pressure ridge" : (lod.micro < 0.24 ? "powder" : "crust");
-  }
 
   return {
-    surface: surface,
-    feature: feature,
+    surface: material.surface,
+    feature: material.feature,
     shade: shade,
     elevation: lod.elevation,
     roughness: lod.roughness,
+    materialSignals: material.signals,
     heightMeters: relief.heightMeters,
     slope: relief.slope,
     aspect: relief.aspect,
