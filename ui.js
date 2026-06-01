@@ -1206,6 +1206,7 @@ function getInspectSurfaceLabel(tileX, tileY) {
   var detail = getPlanetSurfaceDetail(latitude, longitude, tile);
 
   return detail.surface + " / " + detail.feature +
+    " marker " + detail.marker.type +
     " elev " + Math.round(detail.elevation * 100) +
     " rough " + Math.round(detail.roughness * 100) +
     " height " + Math.round(detail.heightMeters).toLocaleString() + "m" +

@@ -155,6 +155,38 @@ function getPlanetSurfaceColor(sample) {
   return shadeHexColor(baseColor, shade);
 }
 
+function shouldDrawSurfaceMarker(sample) {
+  var detail = sample && sample.detail ? sample.detail : null;
+  var marker = detail && detail.marker ? detail.marker : null;
+
+  return Boolean(
+    marker &&
+    marker.intensity > 0.38 &&
+    detail.sampleMeters <= 100 &&
+    CONFIG.TILE_SIZE >= 4
+  );
+}
+
+function drawSurfaceMarker(tctx, sample, screenX, screenY) {
+  if (!shouldDrawSurfaceMarker(sample)) {
+    return;
+  }
+
+  var marker = sample.detail.marker;
+  var size = clamp(
+    Math.round(CONFIG.TILE_SIZE * clamp(Number(marker.size) || 0.25, 0.15, 0.86)),
+    1,
+    CONFIG.TILE_SIZE
+  );
+  var offsetX = Math.floor((CONFIG.TILE_SIZE - size) * clamp(sample.detail.meterNoise || 0, 0, 1));
+  var offsetY = Math.floor((CONFIG.TILE_SIZE - size) * clamp(sample.detail.microNoise || 0, 0, 1));
+
+  tctx.globalAlpha = clamp(0.18 + marker.intensity * 0.58, 0.18, 0.76);
+  tctx.fillStyle = marker.color;
+  tctx.fillRect(screenX + offsetX, screenY + offsetY, size, size);
+  tctx.globalAlpha = 1;
+}
+
 function drawPlanetShell(targetCtx) {
   var projection = getPlanetProjection();
   var gradient = targetCtx.createRadialGradient(
@@ -243,6 +275,7 @@ function buildLocalTerrainCache(tctx) {
 
       tctx.fillStyle = getPlanetSurfaceColor(sample);
       tctx.fillRect(screenX, screenY, CONFIG.TILE_SIZE, CONFIG.TILE_SIZE);
+      drawSurfaceMarker(tctx, sample, screenX, screenY);
     }
   }
 

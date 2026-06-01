@@ -625,10 +625,58 @@ function getPlanetSurfaceRelief(latitude, longitude, tile) {
   };
 }
 
+function getPlanetSurfaceFeatureMarker(biome, lod, relief) {
+  var type = "none";
+  var intensity = 0;
+  var color = "#ffffff";
+  var size = 0;
+  var markerSeed = clamp(lod.micro * 0.48 + lod.meter * 0.32 + relief.slope * 0.20, 0, 1);
+
+  if (biome === "ocean") {
+    intensity = markerSeed > 0.72 || relief.hillshade > 0.82 ? clamp(markerSeed * 0.78 + relief.hillshade * 0.22, 0, 1) : 0;
+    type = intensity > 0 ? "wave cap" : "swell";
+    color = "#c6f0ff";
+    size = 0.32 + intensity * 0.42;
+  } else if (biome === "forest") {
+    intensity = lod.canopy > 0.52 ? clamp(lod.canopy * 0.68 + lod.micro * 0.20 + relief.hillshade * 0.12, 0, 1) : 0;
+    type = intensity > 0.72 ? "canopy crown" : (intensity > 0 ? "leaf gap" : "understory");
+    color = intensity > 0.72 ? "#4f8f45" : "#193f20";
+    size = 0.26 + intensity * 0.58;
+  } else if (biome === "grassland") {
+    intensity = markerSeed > 0.58 ? clamp(markerSeed * 0.70 + lod.ground * 0.30, 0, 1) : 0;
+    type = intensity > 0.72 ? "grass tuft" : (intensity > 0 ? "field fleck" : "short grass");
+    color = "#9fdd5b";
+    size = 0.20 + intensity * 0.44;
+  } else if (biome === "desert") {
+    intensity = lod.ground > 0.62 || relief.slope > 0.18 ? clamp(lod.ground * 0.62 + relief.slope * 0.38, 0, 1) : 0;
+    type = intensity > 0.72 ? "rock fleck" : (intensity > 0 ? "sand grain" : "smooth sand");
+    color = intensity > 0.72 ? "#a99561" : "#c7a85a";
+    size = 0.18 + intensity * 0.50;
+  } else if (biome === "tundra") {
+    intensity = markerSeed > 0.54 ? clamp(markerSeed * 0.58 + relief.slope * 0.42, 0, 1) : 0;
+    type = intensity > 0.70 ? "frost stone" : (intensity > 0 ? "moss clump" : "scrub mat");
+    color = intensity > 0.70 ? "#8c9691" : "#6a875f";
+    size = 0.22 + intensity * 0.48;
+  } else if (biome === "ice") {
+    intensity = lod.micro < 0.28 || relief.slope > 0.16 ? clamp((1 - lod.micro) * 0.54 + relief.slope * 0.46, 0, 1) : 0;
+    type = intensity > 0.72 ? "ice ridge" : (intensity > 0 ? "snow crust" : "smooth ice");
+    color = intensity > 0.72 ? "#e8fbff" : "#b9dce8";
+    size = 0.22 + intensity * 0.54;
+  }
+
+  return {
+    type: type,
+    intensity: intensity,
+    color: color,
+    size: clamp(size, 0, 1)
+  };
+}
+
 function getPlanetSurfaceDetail(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
   var relief = getPlanetSurfaceRelief(latitude, longitude, tile);
+  var marker = getPlanetSurfaceFeatureMarker(biome, lod, relief);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
   var surface = "ground";
   var shade = clamp(
@@ -668,6 +716,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile) {
     slope: relief.slope,
     aspect: relief.aspect,
     hillshade: relief.hillshade,
+    marker: marker,
     meterNoise: lod.meter,
     microNoise: lod.micro,
     sampleMeters: lod.sampleMeters
