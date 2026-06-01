@@ -971,6 +971,71 @@ function getPlanetSurfaceColorWithTileBlend(sample, localColor) {
   return blendHexColorWithRgb(localColor, targetRgb, clamp(transitionStrength * 0.34 * strongSurfaceScale, 0, 0.34));
 }
 
+function getPlanetLocalTerrainBandTint(sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var materialSignals = detail.materialSignals || {};
+  var tile = sample && sample.tile ? sample.tile : {};
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var surface = detail.surface || "ground";
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var elevationSignal = tile && Number.isFinite(Number(tile.elevation))
+    ? Number(tile.elevation)
+    : ((Number.isFinite(Number(detail.elevation)) ? Number(detail.elevation) : 0.5) - 0.5) * 2;
+  var signals = {
+    elevation: elevationSignal,
+    moisture: tile && Number.isFinite(Number(tile.moisture))
+      ? Number(tile.moisture)
+      : clamp(Number.isFinite(Number(materialSignals.moisture)) ? Number(materialSignals.moisture) : 0.35, 0, 1) * 1.8,
+    ridgeStrength: Number.isFinite(Number(materialSignals.ridge))
+      ? Number(materialSignals.ridge)
+      : (tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0),
+    roughness: Number.isFinite(Number(materialSignals.surfaceRoughness))
+      ? Number(materialSignals.surfaceRoughness)
+      : (Number.isFinite(Number(detail.roughness)) ? Number(detail.roughness) : 0),
+    terrainSlope: Number.isFinite(Number(detail.slope)) ? Number(detail.slope) : 0,
+    terrainHillshade: Number.isFinite(Number(detail.hillshade)) ? Number(detail.hillshade) : 0.55,
+    coastFactor: Number.isFinite(Number(materialSignals.coast))
+      ? Number(materialSignals.coast)
+      : (tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0),
+    shallowWater: Number.isFinite(Number(materialSignals.shallowWater))
+      ? Number(materialSignals.shallowWater)
+      : (tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0),
+    shelfStrength: Number.isFinite(Number(materialSignals.shelfStrength))
+      ? Number(materialSignals.shelfStrength)
+      : (tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0),
+    riverStrength: Number.isFinite(Number(materialSignals.river))
+      ? Number(materialSignals.river)
+      : (tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0)
+  };
+  var noise = {
+    regional: Number.isFinite(Number(detail.meterNoise))
+      ? Number(detail.meterNoise)
+      : (Number.isFinite(Number(detail.elevation)) ? Number(detail.elevation) : 0.5),
+    fine: Number.isFinite(Number(detail.microNoise))
+      ? Number(detail.microNoise)
+      : (Number.isFinite(Number(detail.roughness)) ? Number(detail.roughness) : 0.5)
+  };
+  var band = getPlanetLandformTerrainBand(biome, signals, noise, Number(sample && sample.latitude) || Number(tile.latitude) || 0);
+  var strongSurfaceScale = 1;
+  var scaleAmount = sampleMeters <= 1 ? 0.68 : (sampleMeters <= 5 ? 0.54 : 0.38);
+
+  if (surface === "whitecap" || surface === "deep water" || surface === "ridge ice" || surface === "snow") {
+    strongSurfaceScale = 0.18;
+  } else if (surface === "open water" || surface === "rock" || surface === "stone" || surface === "ice") {
+    strongSurfaceScale = 0.46;
+  } else if (surface === "sand" || surface === "dune") {
+    strongSurfaceScale = 0.78;
+  }
+
+  return {
+    color: band.color,
+    amount: clamp(band.amount * scaleAmount * strongSurfaceScale, 0, 0.18),
+    relief: band.relief,
+    bandNoise: band.bandNoise,
+    surfaceScale: strongSurfaceScale
+  };
+}
+
 function getPlanetSurfaceColor(sample) {
   var biome = sample && sample.biome ? sample.biome : "unknown";
   var detail = sample && sample.detail ? sample.detail : null;
@@ -1041,6 +1106,8 @@ function getPlanetSurfaceColor(sample) {
 
   color = blendHexColors(color, "#56544c", slope * 0.26);
   color = blendHexColors(color, "#f1f6f4", snowLine * 0.48);
+  var terrainBandTint = getPlanetLocalTerrainBandTint(sample);
+  color = blendHexColors(color, terrainBandTint.color, terrainBandTint.amount);
   color = getPlanetSurfaceColorWithTileBlend(sample, color);
   return shadeHexColor(color, reliefShade);
 }

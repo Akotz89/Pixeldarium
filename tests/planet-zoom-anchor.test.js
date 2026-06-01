@@ -614,9 +614,128 @@ var snowySurfaceColor = getPlanetSurfaceColor({
     slope: 0.5
   }
 });
+var lowlandTerrainTintSample = {
+  biome: "grassland",
+  latitude: 20,
+  surfaceSampleMeters: 1,
+  tile: {
+    biome: "grassland",
+    latitude: 20,
+    moisture: 1.2,
+    elevation: 0.1,
+    ridgeStrength: 0.1,
+    roughness: 0.1,
+    coastFactor: 0,
+    riverStrength: 0
+  },
+  detail: {
+    surface: "grass",
+    shade: 0.55,
+    elevation: 0.52,
+    roughness: 0.12,
+    hillshade: 0.58,
+    heightMeters: 240,
+    slope: 0.04,
+    meterNoise: 0.42,
+    microNoise: 0.51,
+    sampleMeters: 1,
+    materialSignals: {
+      moisture: 0.54,
+      river: 0,
+      coast: 0,
+      shallowWater: 0,
+      ridge: 0.1,
+      surfaceRoughness: 0.12
+    }
+  }
+};
+var highlandTerrainTintSample = {
+  biome: "grassland",
+  latitude: 20,
+  surfaceSampleMeters: 1,
+  tile: {
+    biome: "grassland",
+    latitude: 20,
+    moisture: 1.0,
+    elevation: 1.8,
+    ridgeStrength: 0.9,
+    roughness: 0.8,
+    coastFactor: 0,
+    riverStrength: 0
+  },
+  detail: {
+    surface: "grass",
+    shade: 0.55,
+    elevation: 0.86,
+    roughness: 0.74,
+    hillshade: 0.28,
+    heightMeters: 1680,
+    slope: 0.62,
+    meterNoise: 0.62,
+    microNoise: 0.68,
+    sampleMeters: 1,
+    materialSignals: {
+      moisture: 0.45,
+      river: 0,
+      coast: 0,
+      shallowWater: 0,
+      ridge: 0.9,
+      surfaceRoughness: 0.74
+    }
+  }
+};
+var whitecapTerrainTintSample = {
+  biome: "ocean",
+  latitude: 0,
+  surfaceSampleMeters: 1,
+  tile: {
+    biome: "ocean",
+    latitude: 0,
+    moisture: 1,
+    elevation: -0.1,
+    shallowWater: 0.8,
+    shelfStrength: 0.8,
+    coastFactor: 0.4
+  },
+  detail: {
+    surface: "whitecap",
+    shade: 0.7,
+    elevation: 0.6,
+    roughness: 0.4,
+    hillshade: 0.8,
+    heightMeters: -80,
+    slope: 0.32,
+    meterNoise: 0.64,
+    microNoise: 0.82,
+    sampleMeters: 1,
+    materialSignals: {
+      moisture: 1,
+      shallowWater: 0.8,
+      shelfStrength: 0.8,
+      coast: 0.4,
+      surfaceRoughness: 0.42
+    }
+  }
+};
+var lowlandTerrainTint = getPlanetLocalTerrainBandTint(lowlandTerrainTintSample);
+var repeatedLowlandTerrainTint = getPlanetLocalTerrainBandTint(lowlandTerrainTintSample);
+var highlandTerrainTint = getPlanetLocalTerrainBandTint(highlandTerrainTintSample);
+var whitecapTerrainTint = getPlanetLocalTerrainBandTint(whitecapTerrainTintSample);
+var lowlandTerrainTintColor = getPlanetSurfaceColor(lowlandTerrainTintSample);
+var highlandTerrainTintColor = getPlanetSurfaceColor(highlandTerrainTintSample);
 
 assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
 assert.ok(colorDistance(snowySurfaceColor, dryLandColor) > 40, "high local terrain should receive snow tint");
+assert.deepStrictEqual(repeatedLowlandTerrainTint, lowlandTerrainTint, "local terrain-band tint should be deterministic");
+assert.ok(highlandTerrainTint.relief > lowlandTerrainTint.relief + 0.45, "local terrain-band tint should respond to relief");
+assert.ok(highlandTerrainTint.amount > lowlandTerrainTint.amount, "local terrain-band tint should strengthen on rough highlands");
+assert.ok(whitecapTerrainTint.amount < highlandTerrainTint.amount * 0.45, "strong local water surfaces should be protected from terrain-band over-blending");
+assert.ok(colorDistance(lowlandTerrainTintColor, highlandTerrainTintColor) > 20, "local terrain-band color should vary with landform context");
+[lowlandTerrainTint, highlandTerrainTint, whitecapTerrainTint].forEach(function(tint) {
+  assert.ok(tint.amount >= 0 && tint.amount <= 0.18, "local terrain-band tint amount should stay bounded");
+  assert.ok(tint.relief >= 0 && tint.relief <= 1, "local terrain-band relief should stay bounded");
+  assert.ok(tint.bandNoise >= 0 && tint.bandNoise <= 1, "local terrain-band noise should stay bounded");
+});
 
 var materialLod = {
   sampleMeters: 1,
