@@ -165,6 +165,28 @@ assert.deepStrictEqual(stableGroundFeatures, groundFeatures, "ground features sh
 assert.notDeepStrictEqual(shiftedGroundFeatures, groundFeatures, "ground features should vary by meter-space bounds");
 assert.ok(groundFeatures.some(function(feature) { return feature.shape === "line"; }), "ground features should include linear detail");
 assert.ok(groundFeatures.some(function(feature) { return feature.shape === "rect"; }), "ground features should include footprint detail");
+assert.ok(groundFeatures.every(function(feature) { return /^GF:/.test(feature.id); }), "ground features should have stable ids");
+
+var lineFeature = groundFeatures.filter(function(feature) { return feature.shape === "line"; })[0];
+var lineMidpoint = getLatLonFromSurfaceMeterCoordinate(
+  (lineFeature.east1 + lineFeature.east2) / 2,
+  (lineFeature.north1 + lineFeature.north2) / 2
+);
+var nearestLineFeature = getNearestPlanetGroundFeature(lineMidpoint.latitude, lineMidpoint.longitude, 16);
+
+assert.ok(nearestLineFeature, "nearest feature query should find a line feature");
+assert.strictEqual(nearestLineFeature.id, lineFeature.id, "nearest line feature id should match");
+assertNear(nearestLineFeature.distanceMeters, 0, 1e-9, "nearest line distance");
+assert.ok(getPlanetGroundFeatureDimensionLabel(nearestLineFeature).indexOf("m") > 0, "nearest line should have dimensions");
+
+var rectFeature = groundFeatures.filter(function(feature) { return feature.shape === "rect"; })[0];
+var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);
+var nearestRectFeature = getNearestPlanetGroundFeature(rectCenter.latitude, rectCenter.longitude, 16);
+
+assert.ok(nearestRectFeature, "nearest feature query should find a footprint feature");
+assert.strictEqual(nearestRectFeature.id, rectFeature.id, "nearest footprint feature id should match");
+assertNear(nearestRectFeature.distanceMeters, 0, 1e-9, "nearest footprint distance");
+assert.ok(getPlanetGroundFeatureSummary(rectCenter.latitude, rectCenter.longitude, 16).nearest.id, "feature summary should include nearest feature");
 
 var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
 var chunkBounds = getLocalSurfaceChunkMeterBounds(houseAddress);

@@ -1257,7 +1257,15 @@ function getInspectGroundFeatureLabel(tileX, tileY) {
     Math.max(32, scaleInfo.metersPerCanvasPixel * 90)
   );
 
-  return summary.label;
+  if (!summary.nearest) {
+    return summary.label;
+  }
+
+  return "nearest " + summary.nearest.type +
+    " " + summary.nearest.id +
+    " " + getPlanetDistanceLabel(summary.nearest.distanceMeters) +
+    " " + getPlanetGroundFeatureDimensionLabel(summary.nearest) +
+    " | nearby " + summary.label;
 }
 
 function getInspectSurfacePosition(tileX, tileY) {

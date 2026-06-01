@@ -926,6 +926,27 @@ function getPlanetGroundFeatureTypeColor(type) {
   }
 }
 
+function getPlanetGroundFeatureId(blockEast, blockNorth, type, localIndex) {
+  return [
+    "GF",
+    Math.round(Number(blockEast) || 0),
+    Math.round(Number(blockNorth) || 0),
+    String(type || "feature"),
+    Math.round(Number(localIndex) || 0)
+  ].join(":");
+}
+
+function appendPlanetGroundFeature(features, blockEast, blockNorth, feature) {
+  var localIndex = features.length;
+
+  feature.blockEast = Math.round(Number(blockEast) || 0);
+  feature.blockNorth = Math.round(Number(blockNorth) || 0);
+  feature.localIndex = localIndex;
+  feature.id = getPlanetGroundFeatureId(blockEast, blockNorth, feature.type, localIndex);
+  features.push(feature);
+  return feature;
+}
+
 function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
   var centerEast = (Number(blockEast) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
@@ -954,7 +975,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
     var dx = Math.cos(angle) * length / 2;
     var dy = Math.sin(angle) * length / 2;
 
-    features.push({
+    appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: type,
       shape: "line",
       biome: biome,
@@ -984,7 +1005,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
     var clearingWidth = normalizedBlockMeters * (0.18 + clearingSeed * 0.20);
     var clearingHeight = normalizedBlockMeters * (0.12 + getDeterministicUnitNoise(blockEast, blockNorth, 149) * 0.18);
 
-    features.push({
+    appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: "clearing",
       shape: "rect",
       biome: biome,
@@ -1002,7 +1023,7 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
     var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18;
     var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14;
 
-    features.push({
+    appendPlanetGroundFeature(features, blockEast, blockNorth, {
       type: "structure",
       shape: "rect",
       biome: biome,
@@ -1017,6 +1038,69 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   }
 
   return features;
+}
+
+function getPointToSegmentDistanceMeters(pointEast, pointNorth, lineEast1, lineNorth1, lineEast2, lineNorth2) {
+  var dx = (Number(lineEast2) || 0) - (Number(lineEast1) || 0);
+  var dy = (Number(lineNorth2) || 0) - (Number(lineNorth1) || 0);
+  var lengthSquared = dx * dx + dy * dy;
+
+  if (lengthSquared <= 0) {
+    var pointDx = (Number(pointEast) || 0) - (Number(lineEast1) || 0);
+    var pointDy = (Number(pointNorth) || 0) - (Number(lineNorth1) || 0);
+
+    return Math.sqrt(pointDx * pointDx + pointDy * pointDy);
+  }
+
+  var amount = clamp(
+    (((Number(pointEast) || 0) - (Number(lineEast1) || 0)) * dx +
+      ((Number(pointNorth) || 0) - (Number(lineNorth1) || 0)) * dy) / lengthSquared,
+    0,
+    1
+  );
+  var nearestEast = (Number(lineEast1) || 0) + amount * dx;
+  var nearestNorth = (Number(lineNorth1) || 0) + amount * dy;
+  var nearestDx = (Number(pointEast) || 0) - nearestEast;
+  var nearestDy = (Number(pointNorth) || 0) - nearestNorth;
+
+  return Math.sqrt(nearestDx * nearestDx + nearestDy * nearestDy);
+}
+
+function getPointToRotatedRectDistanceMeters(pointEast, pointNorth, feature) {
+  var rotation = -(Number(feature.rotation) || 0);
+  var cos = Math.cos(rotation);
+  var sin = Math.sin(rotation);
+  var localEast = ((Number(pointEast) || 0) - (Number(feature.east) || 0)) * cos -
+    ((Number(pointNorth) || 0) - (Number(feature.north) || 0)) * sin;
+  var localNorth = ((Number(pointEast) || 0) - (Number(feature.east) || 0)) * sin +
+    ((Number(pointNorth) || 0) - (Number(feature.north) || 0)) * cos;
+  var outsideEast = Math.max(Math.abs(localEast) - (Number(feature.widthMeters) || 0) / 2, 0);
+  var outsideNorth = Math.max(Math.abs(localNorth) - (Number(feature.heightMeters) || 0) / 2, 0);
+
+  return Math.sqrt(outsideEast * outsideEast + outsideNorth * outsideNorth);
+}
+
+function getPlanetGroundFeatureDistanceMeters(feature, eastMeters, northMeters) {
+  if (!feature) {
+    return Infinity;
+  }
+
+  if (feature.shape === "line") {
+    return getPointToSegmentDistanceMeters(
+      eastMeters,
+      northMeters,
+      feature.east1,
+      feature.north1,
+      feature.east2,
+      feature.north2
+    );
+  }
+
+  if (feature.shape === "rect") {
+    return getPointToRotatedRectDistanceMeters(eastMeters, northMeters, feature);
+  }
+
+  return Infinity;
 }
 
 function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, minNorthMeters, maxNorthMeters, blockMeters) {
@@ -1044,6 +1128,64 @@ function getPlanetGroundFeaturesForMeterBounds(minEastMeters, maxEastMeters, min
   return features;
 }
 
+function getNearestPlanetGroundFeature(latitude, longitude, radiusMeters) {
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var radius = Math.max(1, Number(radiusMeters) || 48);
+  var features = getPlanetGroundFeaturesForMeterBounds(
+    meters.eastMeters - radius,
+    meters.eastMeters + radius,
+    meters.northMeters - radius,
+    meters.northMeters + radius
+  );
+  var nearest = null;
+  var nearestDistance = Infinity;
+
+  for (var i = 0; i < features.length; i++) {
+    var distance = getPlanetGroundFeatureDistanceMeters(features[i], meters.eastMeters, meters.northMeters);
+
+    if (distance < nearestDistance) {
+      nearest = features[i];
+      nearestDistance = distance;
+    }
+  }
+
+  if (!nearest || nearestDistance > radius) {
+    return null;
+  }
+
+  var result = {};
+
+  for (var key in nearest) {
+    if (Object.prototype.hasOwnProperty.call(nearest, key)) {
+      result[key] = nearest[key];
+    }
+  }
+
+  result.distanceMeters = nearestDistance;
+  return result;
+}
+
+function getPlanetGroundFeatureDimensionLabel(feature) {
+  if (!feature) {
+    return "-";
+  }
+
+  if (feature.shape === "line") {
+    var dx = (Number(feature.east2) || 0) - (Number(feature.east1) || 0);
+    var dy = (Number(feature.north2) || 0) - (Number(feature.north1) || 0);
+    var lengthMeters = Math.sqrt(dx * dx + dy * dy);
+
+    return Math.round(lengthMeters) + "m x " + (Number(feature.widthMeters) || 0).toFixed(1) + "m";
+  }
+
+  if (feature.shape === "rect") {
+    return Math.round(Number(feature.widthMeters) || 0) + "m x " +
+      Math.round(Number(feature.heightMeters) || 0) + "m";
+  }
+
+  return "-";
+}
+
 function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
   var meters = getSurfaceMeterCoordinate(latitude, longitude);
   var radius = Math.max(8, Number(radiusMeters) || 48);
@@ -1062,6 +1204,7 @@ function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
   return {
     count: features.length,
     counts: counts,
+    nearest: getNearestPlanetGroundFeature(latitude, longitude, radius),
     label: Object.keys(counts).sort().map(function(type) {
       return type + " " + counts[type];
     }).join(", ") || "none"
