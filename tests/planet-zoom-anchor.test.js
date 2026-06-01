@@ -93,6 +93,52 @@ function assertRgbBounds(rgb, label) {
   assert.ok(rgb.blue >= 0 && rgb.blue <= 255, label + " blue should be bounded");
 }
 
+function summarizeGeneratedPlanet(seedText) {
+  setWorldSeed(seedText);
+  seedTerrain();
+
+  var totalAreaKm2 = 0;
+  var waterAreaKm2 = 0;
+  var biomeCounts = {};
+  var minElevation = Infinity;
+  var maxElevation = -Infinity;
+  var maxRidge = 0;
+  var signature = [];
+
+  for (var i = 0; i < world.planetTiles.length; i++) {
+    var tile = world.planetTiles[i];
+    var areaKm2 = Number(tile.areaKm2) || 0;
+
+    totalAreaKm2 += areaKm2;
+    biomeCounts[tile.biome] = (biomeCounts[tile.biome] || 0) + 1;
+    minElevation = Math.min(minElevation, Number(tile.elevation) || 0);
+    maxElevation = Math.max(maxElevation, Number(tile.elevation) || 0);
+    maxRidge = Math.max(maxRidge, Number(tile.ridgeStrength) || 0);
+
+    if (tile.biome === "ocean") {
+      waterAreaKm2 += areaKm2;
+    }
+
+    if (i % 233 === 0) {
+      signature.push([
+        tile.biome,
+        Math.round((Number(tile.elevation) || 0) * 1000),
+        Math.round((Number(tile.moisture) || 0) * 1000),
+        Math.round((Number(tile.ridgeStrength) || 0) * 1000)
+      ].join(":"));
+    }
+  }
+
+  return {
+    waterAreaPercent: totalAreaKm2 > 0 ? waterAreaKm2 / totalAreaKm2 * 100 : 0,
+    biomeCount: Object.keys(biomeCounts).length,
+    biomeCounts: biomeCounts,
+    elevationRange: maxElevation - minElevation,
+    maxRidge: maxRidge,
+    signature: signature
+  };
+}
+
 CONFIG.PLANET_RENDER_MODE = "globe";
 
 var zoomLevels = getPlanetZoomLevels();
@@ -118,6 +164,17 @@ assert.strictEqual(CONFIG.PLANET_REFERENCE_GRID, false, "planet reference grid s
 assert.strictEqual(CONFIG.PLANET_GLOBE_ENTITY_MARKERS, false, "globe-scale entity markers should be hidden by default");
 assert.strictEqual(CONFIG.SHOW_SCANLINES, false, "scanline overlay should be hidden by default");
 assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud overlay should be disabled while tuning surface readability");
+
+var generatedPlanet = summarizeGeneratedPlanet("PIXEL-2026");
+var repeatedGeneratedPlanet = summarizeGeneratedPlanet("PIXEL-2026");
+var alternateGeneratedPlanet = summarizeGeneratedPlanet("PIXEL-2027");
+
+assertNear(generatedPlanet.waterAreaPercent, CONFIG.PLANET_TARGET_WATER_PERCENT, 2, "generated planet water area");
+assert.ok(generatedPlanet.biomeCount >= 4, "generated planet should include multiple biome classes");
+assert.ok(generatedPlanet.elevationRange > 1.2, "generated planet should have meaningful elevation range");
+assert.ok(generatedPlanet.maxRidge > 0.55, "generated planet should include mountain ridge signal");
+assert.deepStrictEqual(repeatedGeneratedPlanet.signature, generatedPlanet.signature, "generated planet should be deterministic for a seed");
+assert.notDeepStrictEqual(alternateGeneratedPlanet.signature, generatedPlanet.signature, "generated planet should vary by seed");
 
 world.planetView = {
   zoomLevel: 4,
@@ -228,6 +285,17 @@ var plainLandColor = getPlanetTileCompositedColor({
   riverStrength: 0,
   terrainHillshade: 0.55
 });
+var ridgeLandColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 20,
+  moisture: 1.2,
+  elevation: 1.1,
+  riverStrength: 0,
+  ridgeStrength: 1,
+  roughness: 1,
+  terrainSlope: 0.8,
+  terrainHillshade: 0.72
+});
 var litSlopeColor = getPlanetTileCompositedColor({
   biome: "grassland",
   latitude: 20,
@@ -256,6 +324,7 @@ assert.ok(colorLuminance(shallowOceanColor) > colorLuminance(deepOceanColor), "s
 assert.ok(colorDistance(lushLandColor, dryLandColor) > 50, "lush and dry land colors should diverge");
 assert.ok(colorLuminance(highIceColor) > colorLuminance(lushLandColor), "ice/high latitude terrain should read brighter than forest");
 assert.ok(colorDistance(riverLandColor, plainLandColor) > 20, "river corridors should alter land color");
+assert.ok(colorDistance(ridgeLandColor, plainLandColor) > 25, "ridge signals should alter land color");
 assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
 

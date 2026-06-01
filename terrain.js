@@ -191,6 +191,66 @@ function annotatePlanetTerrainRelief() {
   }
 }
 
+function smoothTerrainNoiseAmount(amount) {
+  var t = clamp(Number(amount) || 0, 0, 1);
+
+  return t * t * (3 - 2 * t);
+}
+
+function getWrappedTerrainNoiseCellX(cellX, columnCount) {
+  var normalizedColumnCount = Math.max(1, Math.round(Number(columnCount) || 1));
+
+  return ((Math.round(Number(cellX) || 0) % normalizedColumnCount) + normalizedColumnCount) % normalizedColumnCount;
+}
+
+function getTerrainValueNoise(x, y, scale, seedOffset) {
+  var normalizedScale = Math.max(1, Number(scale) || 1);
+  var columnCount = Math.max(1, Math.ceil(WORLD_WIDTH / normalizedScale));
+  var rowCount = Math.max(1, Math.ceil(WORLD_HEIGHT / normalizedScale));
+  var xCell = (Number(x) || 0) / normalizedScale;
+  var yCell = (Number(y) || 0) / normalizedScale;
+  var x0 = Math.floor(xCell);
+  var y0 = Math.floor(yCell);
+  var x1 = x0 + 1;
+  var y1 = y0 + 1;
+  var xAmount = smoothTerrainNoiseAmount(xCell - x0);
+  var yAmount = smoothTerrainNoiseAmount(yCell - y0);
+  var seed = Math.round(Number(seedOffset) || 0);
+  var topLeft = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y0, 0, rowCount - 1), seed);
+  var topRight = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y0, 0, rowCount - 1), seed);
+  var bottomLeft = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y1, 0, rowCount - 1), seed);
+  var bottomRight = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y1, 0, rowCount - 1), seed);
+  var top = topLeft + (topRight - topLeft) * xAmount;
+  var bottom = bottomLeft + (bottomRight - bottomLeft) * xAmount;
+
+  return top + (bottom - top) * yAmount;
+}
+
+function getTerrainFractalNoise(x, y, scale, seedOffset, octaves, persistence) {
+  var normalizedOctaves = Math.max(1, Math.round(Number(octaves) || 1));
+  var normalizedPersistence = clamp(Number(persistence) || 0.5, 0.1, 0.9);
+  var value = 0;
+  var amplitude = 1;
+  var amplitudeTotal = 0;
+  var currentScale = Math.max(1, Number(scale) || 1);
+
+  for (var octave = 0; octave < normalizedOctaves; octave++) {
+    value += getTerrainValueNoise(x, y, currentScale, seedOffset + octave * 101) * amplitude;
+    amplitudeTotal += amplitude;
+    amplitude *= normalizedPersistence;
+    currentScale = Math.max(1, currentScale * 0.52);
+  }
+
+  return amplitudeTotal > 0 ? value / amplitudeTotal : 0.5;
+}
+
+function getTerrainRidgedNoise(x, y, scale, seedOffset) {
+  var base = getTerrainFractalNoise(x, y, scale, seedOffset, 4, 0.54);
+  var ridge = 1 - Math.abs(base * 2 - 1);
+
+  return clamp(ridge * ridge * 1.35, 0, 1);
+}
+
 function seedTerrain() {
   if (typeof resetPlanetSurfaceChunkCache === "function") {
     resetPlanetSurfaceChunkCache();
@@ -207,6 +267,7 @@ function seedTerrain() {
   const tileSeeds = [];
   const targetWaterRatio = clamp((Number(CONFIG.PLANET_TARGET_WATER_PERCENT) || 71) / 100, 0.05, 0.95);
   const targetFertileLandRatio = clamp((Number(CONFIG.PLANET_TARGET_FERTILE_LAND_PERCENT) || 42) / 100, 0.05, 0.95);
+  const seedOffset = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
   let totalPlanetAreaKm2 = 0;
 
   for (let y = 0; y < WORLD_HEIGHT; y++) {
@@ -215,16 +276,35 @@ function seedTerrain() {
       const areaKm2 = getPlanetTileAreaKm2(latitude);
       const absLatitude = Math.abs(latitude);
       const tropicalBand = Math.max(0, 1 - absLatitude / 58);
+      const stormBand = Math.max(0, 1 - Math.abs(absLatitude - 52) / 26);
+      const subtropicalDryBand = Math.max(0, 1 - Math.abs(absLatitude - 28) / 18);
       const polarBand = clamp((absLatitude - 62) / 28, 0, 1);
-      const continentWave =
-        Math.sin(x * 0.035) +
-        Math.cos(y * 0.052) +
-        Math.sin((x + y) * 0.024) +
-        Math.cos((x - y) * 0.018);
-      const localVariation = randomUnit() * 1.15 - 0.35;
-      const elevation = continentWave + localVariation - polarBand * 0.15;
-      const moisture = tropicalBand * 1.05 + Math.sin((x - y) * 0.045) * 0.32 + randomUnit() * 0.5;
-      const fertilityScore = moisture + elevation * 0.28 - polarBand * 1.55;
+      const continental = getTerrainFractalNoise(x, y, 74, seedOffset + 1201, 5, 0.58);
+      const shelf = getTerrainFractalNoise(x, y, 38, seedOffset + 2203, 4, 0.55);
+      const basin = getTerrainFractalNoise(x, y, 17, seedOffset + 3209, 3, 0.50);
+      const ridge = getTerrainRidgedNoise(x, y, 33, seedOffset + 4211);
+      const roughness = getTerrainFractalNoise(x, y, 8, seedOffset + 5227, 3, 0.48);
+      const highlandLift = Math.pow(ridge, 2.25) * clamp(0.42 + continental * 0.78, 0, 1.15);
+      const elevation =
+        (continental - 0.5) * 2.35 +
+        (shelf - 0.5) * 0.78 +
+        (basin - 0.5) * 0.32 +
+        (roughness - 0.5) * 0.16 +
+        highlandLift * 1.18 -
+        polarBand * 0.10;
+      const moistureNoise = getTerrainFractalNoise(x, y, 46, seedOffset + 6233, 4, 0.56);
+      const rainShadow = clamp(ridge * 0.42 + highlandLift * 0.30, 0, 0.58);
+      const moisture = clamp(
+        tropicalBand * 0.88 +
+          stormBand * 0.46 +
+          moistureNoise * 0.70 -
+          subtropicalDryBand * 0.44 -
+          rainShadow +
+          0.12,
+        0,
+        2.2
+      );
+      const fertilityScore = moisture + elevation * 0.23 - polarBand * 1.55 - highlandLift * 0.18;
       const tileSeed = {
         x,
         y,
@@ -234,6 +314,9 @@ function seedTerrain() {
         moisture,
         fertilityScore,
         elevation,
+        ridge,
+        roughness,
+        highlandLift,
         areaKm2
       };
 
@@ -315,14 +398,20 @@ function seedTerrain() {
       : CONFIG.TERRAIN_BARREN;
 
     world.terrain.push(terrain);
-    world.planetTiles.push(makePlanetTile(
+
+    const planetTile = makePlanetTile(
       tileSeed.x,
       tileSeed.y,
       biome,
       tileSeed.fertilityScore,
       tileSeed.moisture,
       tileSeed.elevation
-    ));
+    );
+
+    planetTile.ridgeStrength = tileSeed.ridge;
+    planetTile.roughness = tileSeed.roughness;
+    planetTile.highlandLift = tileSeed.highlandLift;
+    world.planetTiles.push(planetTile);
 
     if (terrain === CONFIG.TERRAIN_FERTILE) {
       world.fertileTiles++;

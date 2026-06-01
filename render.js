@@ -386,6 +386,8 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
   var coast = clamp(Number(tile.coastFactor) || 0, 0, 1);
   var shallowWater = clamp(Number(tile.shallowWater) || 0, 0, 1);
   var river = clamp(Number(tile.riverStrength) || 0, 0, 1);
+  var ridge = clamp(Number(tile.ridgeStrength) || 0, 0, 1);
+  var roughness = clamp(Number(tile.roughness) || 0, 0, 1);
   var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.04 + (micro - 0.5) * 0.035;
 
   if (biome === "ocean") {
@@ -416,8 +418,9 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
 
   color = blendRgbWithHex(color, "#244f63", river * 0.18);
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
-  color = blendRgbWithHex(color, "#e8f4f3", clamp(highland * 0.12 + polar * 0.08, 0, 0.18));
-  return clampRgb(shadeRgb(color, clamp(0.50 + texture + highland * 0.035 - (1 - moisture) * 0.02, 0, 1)));
+  color = blendRgbWithHex(color, "#7b796b", clamp(ridge * 0.13 + roughness * 0.04, 0, 0.17));
+  color = blendRgbWithHex(color, "#e8f4f3", clamp(highland * 0.12 + ridge * 0.08 + polar * 0.08, 0, 0.24));
+  return clampRgb(shadeRgb(color, clamp(0.50 + texture + highland * 0.035 + ridge * 0.022 - (1 - moisture) * 0.02, 0, 1)));
 }
 
 function getPlanetTileCompositedColor(tile) {
@@ -436,6 +439,8 @@ function getPlanetTileCompositedColor(tile) {
   var riverMouth = clamp(tile && Number.isFinite(Number(tile.riverMouth)) ? Number(tile.riverMouth) : 0, 0, 1);
   var terrainSlope = clamp(tile && Number.isFinite(Number(tile.terrainSlope)) ? Number(tile.terrainSlope) : 0, 0, 1);
   var terrainHillshade = clamp(tile && Number.isFinite(Number(tile.terrainHillshade)) ? Number(tile.terrainHillshade) : 0.55, 0, 1);
+  var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
+  var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var color;
 
   if (biome === "ocean") {
@@ -469,12 +474,12 @@ function getPlanetTileCompositedColor(tile) {
 
   color = blendHexColors(color, "#224f63", river * 0.45);
   color = blendHexColors(color, "#b6b06a", coast * 0.18);
-  color = blendHexColors(color, "#6d6a60", terrainSlope * 0.26);
-  color = blendHexColors(color, "#6f6a5c", highland * 0.28);
-  color = blendHexColors(color, "#eef6f5", clamp((highland - 0.58) * 1.6 + polar * 0.55, 0, 0.58));
+  color = blendHexColors(color, "#6d6a60", clamp(terrainSlope * 0.22 + roughness * 0.08, 0, 0.30));
+  color = blendHexColors(color, "#6f6a5c", clamp(highland * 0.24 + ridge * 0.20, 0, 0.36));
+  color = blendHexColors(color, "#eef6f5", clamp((highland - 0.58) * 1.6 + ridge * 0.18 + polar * 0.55, 0, 0.64));
   return shadeHexColor(
     color,
-    clamp(0.28 + terrainHillshade * 0.42 + elevation * 0.12 + moisture * 0.05 - dry * 0.05, 0, 1)
+    clamp(0.28 + terrainHillshade * 0.40 + elevation * 0.12 + moisture * 0.05 + ridge * 0.035 - dry * 0.05, 0, 1)
   );
 }
 
