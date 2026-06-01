@@ -72,6 +72,21 @@ function fillPlanetTiles(biome) {
 
 CONFIG.PLANET_RENDER_MODE = "globe";
 
+var zoomLevels = getPlanetZoomLevels();
+var finalGroundZoomIndex = zoomLevels.length - 1;
+var finalGroundZoom = getPlanetZoomLevel(finalGroundZoomIndex);
+var streetZoom = zoomLevels.filter(function(level) {
+  return level.name === "Street" && level.metersPerSample === 25;
+})[0];
+var yardZoom = zoomLevels.filter(function(level) {
+  return level.name === "Yard" && level.metersPerSample === 5;
+})[0];
+
+assert.ok(streetZoom, "zoom ladder should include street scale");
+assert.ok(yardZoom, "zoom ladder should include yard scale");
+assert.strictEqual(finalGroundZoom.name, "House", "final ground zoom should remain House");
+assert.strictEqual(finalGroundZoom.metersPerSample, 1, "final ground zoom should remain 1 m/sample");
+
 world.planetView = {
   zoomLevel: 4,
   latitude: 34.2117,
@@ -151,7 +166,7 @@ assert.notDeepStrictEqual(shiftedGroundFeatures, groundFeatures, "ground feature
 assert.ok(groundFeatures.some(function(feature) { return feature.shape === "line"; }), "ground features should include linear detail");
 assert.ok(groundFeatures.some(function(feature) { return feature.shape === "rect"; }), "ground features should include footprint detail");
 
-var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, 5);
+var houseAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265, finalGroundZoomIndex);
 var chunkBounds = getLocalSurfaceChunkMeterBounds(houseAddress);
 var chunkPoint = getLocalSurfaceChunkPointForMeters(
   houseAddress,

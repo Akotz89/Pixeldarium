@@ -187,6 +187,8 @@ const CONFIG = {
     { name: "Region", metersPerSample: 5000, chunkKm: 200 },
     { name: "Local", metersPerSample: 1000, chunkKm: 40 },
     { name: "Neighborhood", metersPerSample: 100, chunkKm: 4 },
+    { name: "Street", metersPerSample: 25, chunkKm: 1 },
+    { name: "Yard", metersPerSample: 5, chunkKm: 0.25 },
     { name: "House", metersPerSample: 1, chunkKm: 0.25 }
   ],
   PLANET_SURFACE_CHUNK_SAMPLES: 32,
