@@ -733,40 +733,195 @@ function getPlanetSurfaceMicrotextureAccent(sample, baseColor, amount) {
   return blendHexColors(baseColor, accent, clamp(0.14 + normalizedAmount * 0.22, 0, 0.42));
 }
 
-function getPlanetSurfaceMicrotextureSwatches(sample, baseColor) {
+function getPlanetSurfaceTextureStrength(sample) {
   var detail = sample && sample.detail ? sample.detail : {};
   var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
-  var strength = clamp(
+  var featureRelief = detail.featureRelief || {};
+  var groundFeature = detail.groundFeature || null;
+  var surface = detail.surface || "ground";
+  var closeScaleBoost = sampleMeters <= 5 ? 0.24 : sampleMeters <= 25 ? 0.12 : 0;
+  var calmSurfacePenalty = surface === "deep water" || surface === "snow" || surface === "ice" ? 0.06 : 0;
+
+  return clamp(
     0.12 +
       (Number(detail.roughness) || 0) * 0.28 +
       (Number(detail.slope) || 0) * 0.18 +
-      (sampleMeters <= 5 ? 0.24 : sampleMeters <= 25 ? 0.12 : 0),
+      (Number(featureRelief.roughnessBoost) || 0) * 0.18 +
+      (groundFeature ? clamp(Number(groundFeature.influence) || 0, 0, 1) * 0.10 : 0) +
+      closeScaleBoost -
+      calmSurfacePenalty,
     0,
-    0.64
+    0.74
   );
+}
+
+function getPlanetSurfaceTextureSwatchCount(sample, strength) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var normalizedStrength = clamp(Number(strength) || 0, 0, 1);
+
+  if (sampleMeters > 25 || CONFIG.TILE_SIZE < 4 || normalizedStrength <= 0.14) {
+    return 0;
+  }
+
+  return clamp(
+    Math.round((sampleMeters <= 5 ? 4 : 2) + normalizedStrength * (sampleMeters <= 5 ? 5 : 3)),
+    1,
+    sampleMeters <= 5 ? 9 : 5
+  );
+}
+
+function getPlanetSurfaceTextureSwatchShape(sample, noise, index) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var surface = detail.surface || "ground";
+  var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
+  var maxSize = Math.max(1, CONFIG.TILE_SIZE - 1);
+  var smallSize = clamp(Math.round(CONFIG.TILE_SIZE * (0.16 + normalizedNoise * 0.20)), 1, maxSize);
+  var wideSize = clamp(Math.round(CONFIG.TILE_SIZE * (0.34 + normalizedNoise * 0.30)), 1, maxSize);
+  var thinSize = clamp(Math.round(CONFIG.TILE_SIZE * (0.14 + normalizedNoise * 0.12)), 1, maxSize);
+
+  if (surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    return {
+      width: wideSize,
+      height: thinSize
+    };
+  }
+
+  if (surface === "grass" || surface === "brush" || surface === "meadow" || surface === "clearing") {
+    return {
+      width: index % 2 === 0 ? smallSize : clamp(smallSize + 1, 1, maxSize),
+      height: smallSize
+    };
+  }
+
+  if (surface === "rock" || surface === "stone" || surface === "ridge ice") {
+    return {
+      width: clamp(smallSize + 1, 1, maxSize),
+      height: clamp(smallSize + (index % 2), 1, maxSize)
+    };
+  }
+
+  if (surface === "sand" || surface === "dune") {
+    return {
+      width: wideSize,
+      height: 1
+    };
+  }
+
+  return {
+    width: smallSize,
+    height: smallSize
+  };
+}
+
+function getPlanetSurfaceMicrotextureSwatches(sample, baseColor) {
+  var strength = getPlanetSurfaceTextureStrength(sample);
+  var swatchCount = getPlanetSurfaceTextureSwatchCount(sample, strength);
   var swatches = [];
   var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
   var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
 
-  if (strength <= 0.14 || CONFIG.TILE_SIZE < 4) {
+  if (swatchCount <= 0) {
     return swatches;
   }
 
-  for (var i = 0; i < 3; i++) {
-    var noise = getDeterministicUnitNoise(seedEast + i * 13, seedNorth - i * 17, getPlanetVisualSeedOffset() + i * 29 + sampleMeters);
+  for (var i = 0; i < swatchCount; i++) {
+    var noise = getDeterministicUnitNoise(seedEast + i * 13, seedNorth - i * 17, getPlanetVisualSeedOffset() + i * 29 + swatchCount);
+    var shape;
+    var maxX;
+    var maxY;
 
-    if (noise > strength + 0.30) {
+    if (i > 0 && noise > strength + 0.38) {
       continue;
     }
 
-    var size = clamp(Math.round(CONFIG.TILE_SIZE * (0.22 + noise * 0.22)), 1, Math.max(1, CONFIG.TILE_SIZE - 2));
+    shape = getPlanetSurfaceTextureSwatchShape(sample, noise, i);
+    maxX = Math.max(1, CONFIG.TILE_SIZE - shape.width + 1);
+    maxY = Math.max(1, CONFIG.TILE_SIZE - shape.height + 1);
 
     swatches.push({
-      x: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 701 + i) * Math.max(1, CONFIG.TILE_SIZE - size + 1)),
-      y: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 811 + i) * Math.max(1, CONFIG.TILE_SIZE - size + 1)),
-      size: size,
+      x: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 701 + i) * maxX),
+      y: Math.floor(getDeterministicUnitNoise(seedEast, seedNorth, 811 + i) * maxY),
+      size: Math.max(shape.width, shape.height),
+      width: shape.width,
+      height: shape.height,
       color: getPlanetSurfaceMicrotextureAccent(sample, baseColor, noise),
-      alpha: clamp(0.18 + strength * 0.48 + noise * 0.18, 0.18, 0.72)
+      alpha: clamp(0.14 + strength * 0.42 + noise * 0.16, 0.16, 0.68)
+    });
+  }
+
+  return swatches;
+}
+
+function getPlanetSurfaceEdgeAccentSwatches(sample, baseColor) {
+  var tileBlend = sample && sample.tileBlend ? sample.tileBlend : null;
+  var transitionStrength = getPlanetSurfaceBiomeTransitionStrength(sample);
+  var detail = sample && sample.detail ? sample.detail : {};
+  var featureInfluence = detail.groundFeature ? clamp(Number(detail.groundFeature.influence) || 0, 0, 1) : 0;
+  var featureRelief = detail.featureRelief || {};
+  var reliefEdge = clamp((Number(featureRelief.roughnessBoost) || 0) * 0.24 + featureInfluence * 0.16, 0, 0.28);
+  var edgeStrength = clamp(transitionStrength * 0.55 + reliefEdge, 0, 0.52);
+  var targetRgb;
+  var targetColor;
+  var swatches = [];
+  var xAmount = tileBlend ? clamp(Number(tileBlend.xAmount) || 0, 0, 1) : 0.5;
+  var yAmount = tileBlend ? clamp(Number(tileBlend.yAmount) || 0, 0, 1) : 0.5;
+  var edgeSize = Math.max(1, Math.floor(CONFIG.TILE_SIZE * 0.22));
+
+  if (CONFIG.TILE_SIZE < 4 || edgeStrength <= 0.06) {
+    return swatches;
+  }
+
+  targetRgb = getPlanetSurfaceTileBlendRgb(tileBlend);
+  targetColor = targetRgb
+    ? blendHexColorWithRgb(baseColor, targetRgb, clamp(edgeStrength * 0.72, 0, 0.36))
+    : shadeHexColor(baseColor, 0.50 + edgeStrength * 0.28);
+
+  if (xAmount < 0.34 || featureInfluence > 0.62) {
+    swatches.push({
+      x: 0,
+      y: 0,
+      width: edgeSize,
+      height: CONFIG.TILE_SIZE,
+      size: CONFIG.TILE_SIZE,
+      color: targetColor,
+      alpha: clamp(0.10 + edgeStrength * 0.34, 0.10, 0.38)
+    });
+  }
+
+  if (xAmount > 0.66 || featureInfluence > 0.72) {
+    swatches.push({
+      x: CONFIG.TILE_SIZE - edgeSize,
+      y: 0,
+      width: edgeSize,
+      height: CONFIG.TILE_SIZE,
+      size: CONFIG.TILE_SIZE,
+      color: targetColor,
+      alpha: clamp(0.10 + edgeStrength * 0.30, 0.10, 0.36)
+    });
+  }
+
+  if (yAmount < 0.34) {
+    swatches.push({
+      x: 0,
+      y: 0,
+      width: CONFIG.TILE_SIZE,
+      height: edgeSize,
+      size: CONFIG.TILE_SIZE,
+      color: targetColor,
+      alpha: clamp(0.09 + edgeStrength * 0.28, 0.09, 0.34)
+    });
+  }
+
+  if (yAmount > 0.66) {
+    swatches.push({
+      x: 0,
+      y: CONFIG.TILE_SIZE - edgeSize,
+      width: CONFIG.TILE_SIZE,
+      height: edgeSize,
+      size: CONFIG.TILE_SIZE,
+      color: targetColor,
+      alpha: clamp(0.09 + edgeStrength * 0.28, 0.09, 0.34)
     });
   }
 
@@ -806,14 +961,20 @@ function drawSurfaceMarker(tctx, sample, screenX, screenY) {
 }
 
 function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
-  var swatches = getPlanetSurfaceMicrotextureSwatches(sample, baseColor);
+  var swatches = getPlanetSurfaceEdgeAccentSwatches(sample, baseColor)
+    .concat(getPlanetSurfaceMicrotextureSwatches(sample, baseColor));
 
   for (var i = 0; i < swatches.length; i++) {
     var swatch = swatches[i];
 
     tctx.globalAlpha = clamp(Number(swatch.alpha) || 0.24, 0, 0.82);
     tctx.fillStyle = swatch.color;
-    tctx.fillRect(screenX + swatch.x, screenY + swatch.y, swatch.size, swatch.size);
+    tctx.fillRect(
+      screenX + swatch.x,
+      screenY + swatch.y,
+      Number(swatch.width) || swatch.size,
+      Number(swatch.height) || swatch.size
+    );
   }
 
   tctx.globalAlpha = 1;

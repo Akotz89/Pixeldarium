@@ -839,11 +839,30 @@ var texturedWaterSample = {
     sampleMeters: 1
   }
 };
+var coarseTexturedGrassSample = Object.assign({}, texturedGrassSample, {
+  surfaceSampleMeters: 100,
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    sampleMeters: 100
+  })
+});
+var featureTexturedGrassSample = Object.assign({}, texturedGrassSample, {
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    groundFeature: {
+      type: "ridge",
+      influence: 1
+    },
+    featureRelief: {
+      roughnessBoost: 0.7
+    }
+  })
+});
 
 setWorldSeed("PIXEL-2026");
 var grassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
 var repeatedGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
 var waterMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedWaterSample, "#08365f");
+var coarseGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(coarseTexturedGrassSample, "#2f6531");
+var featureGrassMicrotexture = getPlanetSurfaceMicrotextureSwatches(featureTexturedGrassSample, "#2f6531");
 setWorldSeed("PIXEL-2027");
 var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGrassSample, "#2f6531");
 setWorldSeed("PIXEL-2026");
@@ -852,11 +871,54 @@ assert.ok(grassMicrotexture.length > 0, "local surface microtexture should add s
 assert.deepStrictEqual(repeatedGrassMicrotexture, grassMicrotexture, "local surface microtexture should be deterministic");
 assert.notDeepStrictEqual(alternateSeedMicrotexture, grassMicrotexture, "local surface microtexture should vary by seed");
 assert.notStrictEqual(waterMicrotexture[0].color, grassMicrotexture[0].color, "microtexture color should vary by surface");
+assert.deepStrictEqual(coarseGrassMicrotexture, [], "broad local samples should not spend render work on microtexture swatches");
+assert.ok(featureGrassMicrotexture.length >= grassMicrotexture.length, "feature relief should strengthen close-ground microtexture");
 grassMicrotexture.concat(waterMicrotexture).forEach(function(swatch) {
   assertRgbBounds(getRgbFromHex(swatch.color), "microtexture swatch");
   assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "microtexture x should fit inside cell");
   assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "microtexture y should fit inside cell");
   assert.ok(swatch.size >= 1 && swatch.size <= CONFIG.TILE_SIZE, "microtexture size should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "microtexture width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "microtexture height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "microtexture width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "microtexture height should stay in cell");
+});
+
+var edgeAccentSample = Object.assign({}, boundarySample, {
+  surfaceSampleMeters: 1,
+  detail: Object.assign({}, boundarySample.detail, {
+    sampleMeters: 1,
+    groundFeature: {
+      type: "stream",
+      influence: 0.7
+    },
+    featureRelief: {
+      roughnessBoost: 0.2
+    }
+  })
+});
+var edgeAccents = getPlanetSurfaceEdgeAccentSwatches(edgeAccentSample, blendedBoundaryColor);
+var repeatedEdgeAccents = getPlanetSurfaceEdgeAccentSwatches(edgeAccentSample, blendedBoundaryColor);
+var flatEdgeAccents = getPlanetSurfaceEdgeAccentSwatches({
+  biome: "grassland",
+  detail: {
+    surface: "grass",
+    sampleMeters: 1
+  }
+}, "#2f6531");
+
+assert.ok(edgeAccents.length > 0, "local surface edge accents should soften material/feature seams");
+assert.deepStrictEqual(repeatedEdgeAccents, edgeAccents, "local surface edge accents should be deterministic");
+assert.deepStrictEqual(flatEdgeAccents, [], "flat samples without seams or features should skip edge accents");
+edgeAccents.forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "edge accent swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.52, "edge accent alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "edge accent x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "edge accent y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "edge accent width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "edge accent height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "edge accent width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "edge accent height should stay in cell");
 });
 
 setWorldSeed("PIXEL-2026");
