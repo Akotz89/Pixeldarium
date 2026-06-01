@@ -235,7 +235,7 @@ function getPlanetGlobeRasterScale(width, height) {
   var maxSize = Math.max(240, Number(CONFIG.PLANET_GLOBE_RASTER_MAX_SIZE) || 720);
   var largestSize = Math.max(1, Number(width) || 1, Number(height) || 1);
 
-  return clamp(maxSize / largestSize, 0.45, 1);
+  return clamp(maxSize / largestSize, 0.56, 1);
 }
 
 function getPlanetLatLonFromProjectedPoint(projection, canvasX, canvasY) {
@@ -514,6 +514,44 @@ function getPlanetMaterialPixelNoise(latitude, longitude, patchMeters, seedOffse
   return Math.round(clamp(smoothNoise, 0, 1) * quantizedSteps) / quantizedSteps;
 }
 
+function getPlanetImageryWarpedLatLon(latitude, longitude) {
+  var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
+  var normalizedLongitude = normalizeLongitude(longitude);
+  var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
+  var longitudeStep = typeof getPlanetTileLongitudeStepDeg === "function" ? getPlanetTileLongitudeStepDeg() : 360 / Math.max(1, WORLD_WIDTH);
+  var latitudeStep = typeof getPlanetTileLatitudeStepDeg === "function" ? getPlanetTileLatitudeStepDeg() : 180 / Math.max(1, WORLD_HEIGHT);
+  var broadEast = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 190000, 1181) - 0.5;
+  var broadNorth = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 170000, 1213) - 0.5;
+  var localEast = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 72000, 1249) - 0.5;
+  var localNorth = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 68000, 1283) - 0.5;
+  var latitudeFalloff = clamp(1 - Math.abs(normalizedLatitude) / 88, 0.35, 1);
+  var warpScale = 0.34 * latitudeFalloff;
+
+  return {
+    latitude: clamp(normalizedLatitude + (broadNorth * 0.70 + localNorth * 0.30) * latitudeStep * warpScale, -90, 90),
+    longitude: normalizeLongitude(normalizedLongitude + (broadEast * 0.68 + localEast * 0.32) * longitudeStep * warpScale)
+  };
+}
+
+function getPlanetPixelArtQuantizedRgb(rgb, latitude, longitude) {
+  var color = clampRgb(rgb);
+  var surfaceMeters = getSurfaceMeterCoordinate(latitude, longitude);
+  var dither = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2400, 1543) - 0.5;
+  var grain = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 820, 1567) - 0.5;
+  var step = 4;
+  var offset = (dither * 3.0) + (grain * 1.4);
+
+  function quantizeChannel(value, bias) {
+    return clamp(Math.round((Number(value) + offset + bias) / step) * step, 0, 255);
+  }
+
+  return {
+    red: quantizeChannel(color.red, 0.5),
+    green: quantizeChannel(color.green, 0),
+    blue: quantizeChannel(color.blue, -0.5)
+  };
+}
+
 function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
   var coarse = getPlanetMaterialPixelNoise(latitude, longitude, 18000, 503);
@@ -759,14 +797,15 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
 function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
   var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
   var normalizedLongitude = normalizeLongitude(longitude);
-  var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
+  var warped = getPlanetImageryWarpedLatLon(normalizedLatitude, normalizedLongitude);
+  var surfaceMeters = getSurfaceMeterCoordinate(warped.latitude, warped.longitude);
   var broad = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 260000, 17);
   var regional = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 82000, 31);
   var local = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 26000, 47);
   var fine = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 8200, 59);
   var micro = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2600, 67);
-  var baseColor = clampRgb(getPlanetSurfaceRgbAtLatLon(normalizedLatitude, normalizedLongitude, tileRgbCache));
-  var signals = getPlanetImageryBlendSignals(normalizedLatitude, normalizedLongitude);
+  var baseColor = clampRgb(getPlanetSurfaceRgbAtLatLon(warped.latitude, warped.longitude, tileRgbCache));
+  var signals = getPlanetImageryBlendSignals(warped.latitude, warped.longitude);
   var biomeWeights = signals.biomeWeights || {};
   var biomeNames = Object.keys(biomeWeights);
   var noise = {
@@ -800,8 +839,8 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
       surfaceMeters,
       noise,
       texture,
-      normalizedLatitude,
-      normalizedLongitude
+      warped.latitude,
+      warped.longitude
     );
     mixed.red += candidate.red * weight;
     mixed.green += candidate.green * weight;
@@ -810,23 +849,27 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
   });
 
   if (totalWeight <= 0) {
-    return getPlanetImageryBiomeRgb(
-      baseColor,
-      signals.dominantBiome || "unknown",
-      signals,
-      surfaceMeters,
-      noise,
-      texture,
-      normalizedLatitude,
-      normalizedLongitude
+    return getPlanetPixelArtQuantizedRgb(
+      getPlanetImageryBiomeRgb(
+        baseColor,
+        signals.dominantBiome || "unknown",
+        signals,
+        surfaceMeters,
+        noise,
+        texture,
+        warped.latitude,
+        warped.longitude
+      ),
+      warped.latitude,
+      warped.longitude
     );
   }
 
-  return clampRgb({
+  return getPlanetPixelArtQuantizedRgb({
     red: mixed.red / totalWeight,
     green: mixed.green / totalWeight,
     blue: mixed.blue / totalWeight
-  });
+  }, warped.latitude, warped.longitude);
 }
 
 function getPlanetTileCompositedColor(tile) {
@@ -2369,7 +2412,7 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
 
   surfaceCtx.putImageData(image, 0, 0);
   targetCtx.save();
-  targetCtx.imageSmoothingEnabled = false;
+  targetCtx.imageSmoothingEnabled = rasterScale < 0.98;
   targetCtx.drawImage(surfaceCanvas, minX, minY, width, height);
   targetCtx.restore();
   return true;

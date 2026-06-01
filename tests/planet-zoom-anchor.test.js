@@ -503,6 +503,10 @@ var permanentIceColor = getPlanetTileCompositedColor(permanentIceTile);
 var materialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
 var repeatedMaterialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
 var shiftedMaterialPixelNoise = getPlanetMaterialPixelNoise(12.3, 20.3, 6200, 607);
+var imageryWarp = getPlanetImageryWarpedLatLon(12.1, 20.1);
+var repeatedImageryWarp = getPlanetImageryWarpedLatLon(12.1, 20.1);
+var shiftedImageryWarp = getPlanetImageryWarpedLatLon(12.4, 20.4);
+var quantizedPixelArtRgb = getPlanetPixelArtQuantizedRgb({ red: 61.2, green: 92.8, blue: 67.4 }, 12.1, 20.1);
 var forestMaterialAccent = applyPlanetMaterialPixelAccents({ red: 60, green: 90, blue: 65 }, 12.1, 20.1, {
   biome: "forest",
   moisture: 1.4,
@@ -529,6 +533,16 @@ assert.ok(colorLuminance(permanentIceColor) > colorLuminance(lowLatitudeHighland
 assertNear(repeatedMaterialPixelNoise, materialPixelNoise, 1e-12, "material pixel noise should be deterministic");
 assert.ok(materialPixelNoise >= 0 && materialPixelNoise <= 1, "material pixel noise should be bounded");
 assert.ok(Math.abs(shiftedMaterialPixelNoise - materialPixelNoise) > 0.001, "material pixel noise should vary across the surface");
+assert.deepStrictEqual(repeatedImageryWarp, imageryWarp, "globe imagery coordinate warp should be deterministic");
+assert.ok(imageryWarp.latitude >= -90 && imageryWarp.latitude <= 90, "globe imagery coordinate warp latitude should be bounded");
+assert.ok(imageryWarp.longitude >= -180 && imageryWarp.longitude <= 180, "globe imagery coordinate warp longitude should be bounded");
+assert.ok(Math.abs(imageryWarp.latitude - 12.1) <= getPlanetTileLatitudeStepDeg() * 0.18, "globe imagery coordinate warp should stay sub-tile");
+assert.ok(Math.abs(normalizeLongitude(imageryWarp.longitude - 20.1)) <= getPlanetTileLongitudeStepDeg() * 0.18, "globe imagery coordinate warp should stay sub-tile");
+assert.ok(Math.abs(shiftedImageryWarp.latitude - imageryWarp.latitude) > 0.00001 || Math.abs(normalizeLongitude(shiftedImageryWarp.longitude - imageryWarp.longitude)) > 0.00001, "globe imagery coordinate warp should vary across the surface");
+assertRgbBounds(quantizedPixelArtRgb, "pixel-art quantized imagery");
+assert.strictEqual(quantizedPixelArtRgb.red % 4, 0, "pixel-art quantized red channel should use small palette steps");
+assert.strictEqual(quantizedPixelArtRgb.green % 4, 0, "pixel-art quantized green channel should use small palette steps");
+assert.strictEqual(quantizedPixelArtRgb.blue % 4, 0, "pixel-art quantized blue channel should use small palette steps");
 assertRgbBounds(forestMaterialAccent, "forest material accent");
 assertRgbBounds(desertMaterialAccent, "desert material accent");
 assert.ok(rgbDistance(forestMaterialAccent, desertMaterialAccent) > 4, "material accents should vary by biome");
@@ -551,7 +565,7 @@ var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
 assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
 assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.85, "oversized globe raster should downsample for responsiveness");
 assert.strictEqual(getPlanetGlobeRasterScale(480, 360), 1, "small globe raster should keep native resolution");
-assert.ok(getPlanetGlobeRasterScale(5000, 3000) >= 0.45, "large globe raster should not downsample into oversized square cells");
+assert.ok(getPlanetGlobeRasterScale(5000, 3000) >= 0.56, "large globe raster should not downsample into oversized square cells");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) >= 0, "smooth imagery noise should stay bounded");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) <= 1, "smooth imagery noise should stay bounded");
 
