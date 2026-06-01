@@ -446,34 +446,104 @@ function getQuantizedSurfaceNoise(latitude, longitude, metersPerPatch) {
   return getDeterministicUnitNoise(cellLatitude, cellLongitude, patchMeters);
 }
 
+function getSurfaceMeterCoordinate(latitude, longitude) {
+  return {
+    northMeters: (Number(latitude) || 0) * getLatitudeDistanceKmPerDegree() * 1000,
+    eastMeters: normalizeLongitude(longitude) * getLongitudeDistanceKmPerDegree(latitude) * 1000
+  };
+}
+
+function getSurfaceLayerNoise(meters, patchMeters, salt) {
+  var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
+  var cellEast = Math.floor(meters.eastMeters / normalizedPatchMeters);
+  var cellNorth = Math.floor(meters.northMeters / normalizedPatchMeters);
+
+  return getDeterministicUnitNoise(
+    cellEast + (Number(salt) || 0) * 17,
+    cellNorth - (Number(salt) || 0) * 23,
+    normalizedPatchMeters + (Number(salt) || 0) * 31
+  );
+}
+
+function getPlanetGroundLod(latitude, longitude) {
+  var scale = getPlanetViewScale();
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var sampleMeters = Math.max(1, scale.metersPerSample);
+  var continental = getSurfaceLayerNoise(meters, Math.max(1000, sampleMeters * 48), 1);
+  var landform = getSurfaceLayerNoise(meters, Math.max(160, sampleMeters * 24), 2);
+  var canopy = getSurfaceLayerNoise(meters, Math.max(30, sampleMeters * 10), 3);
+  var ground = getSurfaceLayerNoise(meters, Math.max(6, sampleMeters * 3), 4);
+  var meter = getSurfaceLayerNoise(meters, Math.max(1, sampleMeters), 5);
+  var micro = getSurfaceLayerNoise(meters, 1, 6);
+  var elevation = clamp(
+    continental * 0.34 +
+      landform * 0.28 +
+      canopy * 0.16 +
+      ground * 0.14 +
+      meter * 0.08,
+    0,
+    1
+  );
+  var roughness = clamp(
+    Math.abs(landform - ground) * 0.58 +
+      Math.abs(ground - meter) * 0.30 +
+      Math.abs(meter - micro) * 0.12,
+    0,
+    1
+  );
+
+  return {
+    sampleMeters: sampleMeters,
+    northMeters: meters.northMeters,
+    eastMeters: meters.eastMeters,
+    continental: continental,
+    landform: landform,
+    canopy: canopy,
+    ground: ground,
+    meter: meter,
+    micro: micro,
+    elevation: elevation,
+    roughness: roughness
+  };
+}
+
 function getPlanetSurfaceDetail(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
-  var scale = getPlanetViewScale();
-  var coarseNoise = getQuantizedSurfaceNoise(latitude, longitude, Math.max(8, scale.metersPerSample * 9));
-  var fineNoise = getQuantizedSurfaceNoise(latitude + 0.0007, longitude - 0.0009, Math.max(1, scale.metersPerSample * 2));
-  var mixedNoise = coarseNoise * 0.62 + fineNoise * 0.38;
+  var lod = getPlanetGroundLod(latitude, longitude);
+  var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
   var surface = "ground";
-  var shade = mixedNoise;
+  var shade = clamp(0.18 + mixedNoise * 0.64 + lod.roughness * 0.18, 0, 1);
+  var feature = "plain";
 
   if (biome === "ocean") {
-    surface = mixedNoise > 0.78 ? "wave" : (mixedNoise < 0.18 ? "deep water" : "open water");
+    surface = mixedNoise > 0.78 ? "whitecap" : (mixedNoise < 0.18 ? "deep water" : "open water");
+    feature = lod.ground > 0.72 ? "surface chop" : (lod.landform < 0.24 ? "deep channel" : "swell");
   } else if (biome === "forest") {
-    surface = mixedNoise > 0.70 ? "canopy" : (mixedNoise < 0.25 ? "clearing" : "woodland");
+    surface = mixedNoise > 0.70 ? "dense canopy" : (mixedNoise < 0.25 ? "clearing" : "woodland");
+    feature = lod.canopy > 0.68 ? "tree crown" : (lod.ground < 0.22 ? "shadow gap" : "understory");
   } else if (biome === "grassland") {
     surface = mixedNoise > 0.66 ? "brush" : (mixedNoise < 0.24 ? "meadow" : "grass");
+    feature = lod.meter > 0.74 ? "tuft" : (lod.landform < 0.30 ? "swale" : "field");
   } else if (biome === "desert") {
     surface = mixedNoise > 0.72 ? "rock" : (mixedNoise < 0.25 ? "dune" : "sand");
+    feature = lod.landform > 0.70 ? "ridge" : (lod.ground < 0.28 ? "wind streak" : "grit");
   } else if (biome === "tundra") {
     surface = mixedNoise > 0.68 ? "stone" : (mixedNoise < 0.30 ? "moss" : "scrub");
+    feature = lod.ground > 0.65 ? "frost stone" : (lod.meter < 0.25 ? "moss pocket" : "low scrub");
   } else if (biome === "ice") {
     surface = mixedNoise > 0.70 ? "ridge ice" : (mixedNoise < 0.25 ? "snow" : "ice");
+    feature = lod.landform > 0.66 ? "pressure ridge" : (lod.micro < 0.24 ? "powder" : "crust");
   }
 
   return {
     surface: surface,
+    feature: feature,
     shade: shade,
-    coarseNoise: coarseNoise,
-    fineNoise: fineNoise
+    elevation: lod.elevation,
+    roughness: lod.roughness,
+    meterNoise: lod.meter,
+    microNoise: lod.micro,
+    sampleMeters: lod.sampleMeters
   };
 }
 

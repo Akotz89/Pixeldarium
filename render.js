@@ -91,35 +91,67 @@ function getPlanetSurfaceColor(sample) {
     return baseColor;
   }
 
-  if (detail.surface === "wave") {
-    return shadeHexColor("#0a3558", detail.shade);
+  var shade = clamp(
+    (Number(detail.shade) || 0.5) * 0.74 +
+      (Number(detail.elevation) || 0.5) * 0.18 +
+      (Number(detail.roughness) || 0) * 0.08,
+    0,
+    1
+  );
+
+  if (detail.surface === "whitecap") {
+    return shadeHexColor("#9ed8f0", shade);
+  }
+
+  if (detail.surface === "open water") {
+    return shadeHexColor("#0a3558", shade);
   }
 
   if (detail.surface === "deep water") {
-    return shadeHexColor("#031026", detail.shade);
+    return shadeHexColor("#031026", shade);
   }
 
   if (detail.surface === "clearing" || detail.surface === "meadow") {
-    return shadeHexColor("#2e6835", detail.shade);
+    return shadeHexColor("#2e6835", shade);
   }
 
-  if (detail.surface === "canopy") {
-    return shadeHexColor("#0c331d", detail.shade);
+  if (detail.surface === "dense canopy") {
+    return shadeHexColor("#0a2a18", shade);
+  }
+
+  if (detail.surface === "woodland") {
+    return shadeHexColor("#123f23", shade);
+  }
+
+  if (detail.surface === "brush") {
+    return shadeHexColor("#346337", shade);
+  }
+
+  if (detail.surface === "grass") {
+    return shadeHexColor("#23552d", shade);
   }
 
   if (detail.surface === "rock" || detail.surface === "stone") {
-    return shadeHexColor("#4b4b43", detail.shade);
+    return shadeHexColor("#4b4b43", shade);
   }
 
   if (detail.surface === "dune" || detail.surface === "sand") {
-    return shadeHexColor("#755f2d", detail.shade);
+    return shadeHexColor("#755f2d", shade);
+  }
+
+  if (detail.surface === "scrub" || detail.surface === "moss") {
+    return shadeHexColor("#334739", shade);
+  }
+
+  if (detail.surface === "ridge ice" || detail.surface === "ice") {
+    return shadeHexColor("#9cc8d8", shade);
   }
 
   if (detail.surface === "snow") {
-    return shadeHexColor("#c9e2ee", detail.shade);
+    return shadeHexColor("#d9edf4", shade);
   }
 
-  return shadeHexColor(baseColor, detail.shade);
+  return shadeHexColor(baseColor, shade);
 }
 
 function drawPlanetShell(targetCtx) {

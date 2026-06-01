@@ -52,6 +52,7 @@ function clearWorld() {
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
   world.inspectedTile = null;
+  world.inspectedSurface = null;
   world.ecosystemSummary = null;
   world.ecosystemHistory = [];
   world.simulationAlerts = [];

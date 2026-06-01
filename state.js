@@ -100,6 +100,7 @@ const world = {
   maxUpdateMs: 0,
   maxDrawMs: 0,
   inspectedTile: null,
+  inspectedSurface: null,
   ecosystemSummary: null,
   ecosystemHistory: [],
   simulationAlerts: [],

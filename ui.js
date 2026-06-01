@@ -1120,6 +1120,7 @@ function updateInspectPanel() {
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
     makeInspectChip("Lat/Lon", planetTile ? planetTile.latitude.toFixed(1) + " / " + planetTile.longitude.toFixed(1) : "-"),
+    makeInspectChip("Surface Lat/Lon", getInspectSurfacePositionLabel(tileX, tileY)),
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
     makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
@@ -1199,11 +1200,46 @@ function getInspectSurfaceLabel(tileX, tileY) {
   }
 
   var tile = getPlanetTile(tileX, tileY);
-  var latitude = tile ? tile.latitude : getPlanetLatitudeForTile(tileY);
-  var longitude = tile ? tile.longitude : getPlanetLongitudeForTile(tileX);
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+  var latitude = surfacePosition ? surfacePosition.latitude : (tile ? tile.latitude : getPlanetLatitudeForTile(tileY));
+  var longitude = surfacePosition ? surfacePosition.longitude : (tile ? tile.longitude : getPlanetLongitudeForTile(tileX));
   var detail = getPlanetSurfaceDetail(latitude, longitude, tile);
 
-  return detail.surface + " " + Math.round(detail.shade * 100) + "%";
+  return detail.surface + " / " + detail.feature +
+    " elev " + Math.round(detail.elevation * 100) +
+    " rough " + Math.round(detail.roughness * 100) +
+    " @ " + detail.sampleMeters + "m";
+}
+
+function getInspectSurfacePosition(tileX, tileY) {
+  var surfacePosition = world.inspectedSurface;
+
+  if (
+    surfacePosition &&
+    Number.isFinite(Number(surfacePosition.latitude)) &&
+    Number.isFinite(Number(surfacePosition.longitude))
+  ) {
+    var surfaceTile = getTileFromLatLon(surfacePosition.latitude, surfacePosition.longitude);
+
+    if (surfaceTile.x === tileX && surfaceTile.y === tileY) {
+      return {
+        latitude: clamp(Number(surfacePosition.latitude), -90, 90),
+        longitude: normalizeLongitude(surfacePosition.longitude)
+      };
+    }
+  }
+
+  return null;
+}
+
+function getInspectSurfacePositionLabel(tileX, tileY) {
+  var surfacePosition = getInspectSurfacePosition(tileX, tileY);
+
+  if (!surfacePosition) {
+    return "-";
+  }
+
+  return surfacePosition.latitude.toFixed(5) + " / " + surfacePosition.longitude.toFixed(5);
 }
 
 var planetDragState = {
@@ -1239,11 +1275,21 @@ function getTileFromCanvasEvent(event) {
   };
 }
 
-function inspectTile(tileX, tileY, shouldFocus) {
+function getSurfacePositionFromCanvasEvent(event) {
+  if (typeof getPlanetLatLonFromCanvasPoint !== "function") {
+    return null;
+  }
+
+  var point = getCanvasPointFromEvent(event);
+  return getPlanetLatLonFromCanvasPoint(point.canvasX, point.canvasY);
+}
+
+function inspectTile(tileX, tileY, shouldFocus, surfacePosition) {
   world.inspectedTile = {
     x: clamp(tileX, 0, WORLD_WIDTH - 1),
     y: clamp(tileY, 0, WORLD_HEIGHT - 1)
   };
+  world.inspectedSurface = surfacePosition || null;
 
   if (shouldFocus !== false && !isPlanetLocalView()) {
     focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);
@@ -1462,8 +1508,9 @@ window.setupControls = function() {
       return;
     }
 
+    var surfacePosition = getSurfacePositionFromCanvasEvent(event);
     var tile = getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y, !isPlanetLocalView());
+    inspectTile(tile.x, tile.y, !isPlanetLocalView(), surfacePosition);
   });
 
   canvas.addEventListener("wheel", function(event) {
@@ -1472,13 +1519,17 @@ window.setupControls = function() {
     }
 
     var point = getCanvasPointFromEvent(event);
+    var surfacePosition = typeof getPlanetLatLonFromCanvasPoint === "function"
+      ? getPlanetLatLonFromCanvasPoint(point.canvasX, point.canvasY)
+      : null;
+    var surfaceTile = surfacePosition ? getTileFromLatLon(surfacePosition.latitude, surfacePosition.longitude) : null;
 
     if (typeof focusPlanetViewOnCanvasPoint === "function") {
       focusPlanetViewOnCanvasPoint(point.canvasX, point.canvasY);
     }
 
-    var tile = getTileFromCanvasEvent(event);
-    inspectTile(tile.x, tile.y, false);
+    var tile = surfaceTile || getTileFromCanvasEvent(event);
+    inspectTile(tile.x, tile.y, false, surfacePosition);
     zoomPlanetView(event.deltaY < 0 ? 1 : -1);
   }, { passive: false });
 
