@@ -26,7 +26,7 @@
 
 ## ✨ What Is This?
 
-PixelSim is a **planet-scale pixel simulation engine** inspired by [Song of Syx](https://store.steampowered.com/app/1702850/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
+PixelSim is a **planet-scale pixel simulation engine** inspired by [Songs of Syx](https://store.steampowered.com/app/1162750/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
 
 **No frameworks. No server. No build step.** Just open `index.html` and watch evolution unfold.
 
