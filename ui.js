@@ -7,6 +7,7 @@ function updateHud() {
     : 0;
   var estimatedIndividuals = world.organisms.length * Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1));
   var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
+  var planetScaleInfo = getPlanetCameraScaleInfo();
 
   setElementClass(eraText, "hud-card hud-era");
   setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
@@ -22,8 +23,10 @@ function updateHud() {
     makeHudMetric("Food", world.food.length),
     makeHudMetric("Water", waterPercent + "%"),
     makeHudMetric("Fertile Land", fertilePercent + "%"),
-    makeHudMetric("Scale", world.planetSummary ? world.planetSummary.equatorKmPerTile.toFixed(0) + " km/tile" : "-"),
     makeHudMetric("Zoom", getPlanetScaleLabel()),
+    makeHudMetric("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
+    makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
+    makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
     makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
     makeHudMetric("FPS", world.fps.toFixed(1)),
     makeHudMetric("TPS", world.tps.toFixed(1)),
@@ -1116,6 +1119,7 @@ function updateInspectPanel() {
   var organism = getNearestOrganismToTile(tileX, tileY);
   var settlement = getNearestSettlementToTile(tileX, tileY);
   var localContext = getLocalInspectContext(tileX, tileY);
+  var planetScaleInfo = getPlanetCameraScaleInfo();
   var detailChips = [
     makeInspectChip("Terrain", terrainName),
     makeInspectChip("Food", hasFood ? "yes" : "no"),
@@ -1123,6 +1127,9 @@ function updateInspectPanel() {
     makeInspectChip("Surface Lat/Lon", getInspectSurfacePositionLabel(tileX, tileY)),
     makeInspectChip("Tile Area", planetTile ? Math.round(planetTile.areaKm2).toLocaleString() + " km2" : "-"),
     makeInspectChip("Zoom Scale", getPlanetScaleLabel()),
+    makeInspectChip("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
+    makeInspectChip("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
+    makeInspectChip("Camera Alt", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
     makeInspectChip("Chunk", planetTile ? getPlanetChunkKeyForTile(tileX, tileY) : "-"),
     makeInspectChip("Surface", getInspectSurfaceLabel(tileX, tileY)),
     makeInspectChip("Local", "R" + localContext.radius + " " + localContext.localPressure),

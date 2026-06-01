@@ -262,8 +262,6 @@ function buildGlobeTerrainCache(tctx) {
 }
 
 function buildLocalTerrainCache(tctx) {
-  var footprint = getPlanetLocalViewFootprint();
-
   tctx.fillStyle = "#01030a";
   tctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -295,18 +293,6 @@ function buildLocalTerrainCache(tctx) {
     tctx.lineTo(canvas.width, gridY * CONFIG.TILE_SIZE);
     tctx.stroke();
   }
-
-  tctx.fillStyle = "rgba(3, 4, 9, 0.54)";
-  tctx.fillRect(18, canvas.height - 70, 510, 26);
-  tctx.fillStyle = "rgba(220, 229, 255, 0.88)";
-  tctx.font = "14px Arial, Helvetica, sans-serif";
-  tctx.fillText(
-    getPlanetScaleLabel() + " | view " +
-      footprint.widthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " x " +
-      footprint.heightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km",
-    28,
-    canvas.height - 52
-  );
 }
 
 function buildTerrainCache() {
@@ -333,13 +319,63 @@ function drawTerrain() {
   ctx.drawImage(terrainCache, 0, 0);
 }
 
+function drawPlanetScaleBar() {
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var scaleBar = getPlanetScaleBar(Math.min(260, canvas.width * 0.18));
+  var barWidth = clamp(scaleBar.pixelWidth, 80, 320);
+  var x = 24;
+  var y = canvas.height - 58;
+  var label = scaleBar.label + " | " +
+    getPlanetDistanceLabel(scaleInfo.metersPerCanvasPixel) + "/px | alt " +
+    getPlanetDistanceLabel(scaleInfo.approximateAltitudeKm * 1000);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(3, 4, 9, 0.68)";
+  ctx.strokeStyle = "rgba(147, 161, 255, 0.42)";
+  ctx.lineWidth = 1;
+
+  if (typeof ctx.roundRect === "function") {
+    ctx.beginPath();
+    ctx.roundRect(x - 12, y - 34, Math.max(300, barWidth + 112), 52, 8);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillRect(x - 12, y - 34, Math.max(300, barWidth + 112), 52);
+    ctx.strokeRect(x - 12, y - 34, Math.max(300, barWidth + 112), 52);
+  }
+
+  ctx.strokeStyle = "rgba(236, 242, 255, 0.94)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + barWidth, y);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 8);
+  ctx.lineTo(x, y + 8);
+  ctx.moveTo(x + barWidth, y - 8);
+  ctx.lineTo(x + barWidth, y + 8);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(236, 242, 255, 0.96)";
+  ctx.font = "bold 14px Arial, Helvetica, sans-serif";
+  ctx.fillText(scaleBar.label, x, y - 14);
+
+  ctx.fillStyle = "rgba(190, 205, 238, 0.9)";
+  ctx.font = "12px Arial, Helvetica, sans-serif";
+  ctx.fillText(label, x + barWidth + 16, y + 5);
+  ctx.restore();
+}
+
 function drawPlanetReferenceGrid() {
   var lonStep = Math.max(10, Math.round(Number(CONFIG.PLANET_GRID_DEGREES) || 30));
   var latStep = lonStep;
 
   if (isGlobeRenderMode() && isPlanetLocalView()) {
     var view = getPlanetView();
-    var footprint = getPlanetLocalViewFootprint();
+    var scaleInfo = getPlanetCameraScaleInfo();
 
     ctx.save();
     ctx.strokeStyle = "rgba(112, 240, 208, 0.42)";
@@ -350,16 +386,18 @@ function drawPlanetReferenceGrid() {
       24,
       24
     );
+    drawPlanetScaleBar();
     ctx.fillStyle = "rgba(3, 4, 9, 0.54)";
-    ctx.fillRect(18, canvas.height - 38, 610, 24);
+    ctx.fillRect(18, canvas.height - 104, 660, 24);
     ctx.fillStyle = "rgba(220, 229, 255, 0.88)";
     ctx.font = "14px Arial, Helvetica, sans-serif";
     ctx.fillText(
       "focus " + view.latitude.toFixed(4) + ", " + view.longitude.toFixed(4) +
-        " | footprint " + footprint.widthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
-        " x " + footprint.heightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km",
+        " | footprint " + scaleInfo.footprintWidthKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) +
+        " x " + scaleInfo.footprintHeightKm.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " km" +
+        " | " + getPlanetScaleLabel(),
       28,
-      canvas.height - 21
+      canvas.height - 87
     );
     ctx.restore();
     return;

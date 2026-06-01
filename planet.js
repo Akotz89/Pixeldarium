@@ -188,6 +188,84 @@ function getPlanetLocalViewFootprint() {
   };
 }
 
+function getPlanetDistanceLabel(meters) {
+  var normalizedMeters = Math.max(0, Number(meters) || 0);
+
+  if (normalizedMeters >= 1000000) {
+    return (normalizedMeters / 1000000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " Mm";
+  }
+
+  if (normalizedMeters >= 1000) {
+    return (normalizedMeters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " km";
+  }
+
+  if (normalizedMeters >= 1) {
+    return normalizedMeters.toLocaleString(undefined, { maximumFractionDigits: 0 }) + " m";
+  }
+
+  return (normalizedMeters * 100).toLocaleString(undefined, { maximumFractionDigits: 0 }) + " cm";
+}
+
+function getPlanetCameraScaleInfo() {
+  var view = getPlanetView();
+  var scale = getPlanetViewScale();
+  var footprint = getPlanetLocalViewFootprint();
+  var verticalFovRadians = 45 * Math.PI / 180;
+  var metersPerCanvasPixel = scale.metersPerSample / Math.max(1, CONFIG.TILE_SIZE);
+  var approximateAltitudeKm = footprint.heightKm / (2 * Math.tan(verticalFovRadians / 2));
+
+  return {
+    zoomLevel: scale.index,
+    scaleName: scale.name,
+    latitude: view.latitude,
+    longitude: view.longitude,
+    metersPerSample: scale.metersPerSample,
+    metersPerCanvasPixel: metersPerCanvasPixel,
+    footprintWidthKm: footprint.widthKm,
+    footprintHeightKm: footprint.heightKm,
+    approximateAltitudeKm: Math.max(0.001, approximateAltitudeKm)
+  };
+}
+
+function getNicePlanetDistanceMeters(targetMeters) {
+  var normalizedTarget = Math.max(0.01, Number(targetMeters) || 1);
+  var exponent = Math.floor(Math.log10(normalizedTarget));
+  var bestDistance = 1;
+  var bestScore = Infinity;
+  var bases = [1, 2, 5, 10];
+
+  for (var offset = -1; offset <= 1; offset++) {
+    var magnitude = Math.pow(10, exponent + offset);
+
+    for (var i = 0; i < bases.length; i++) {
+      var distance = bases[i] * magnitude;
+      var score = Math.abs(Math.log(distance / normalizedTarget));
+
+      if (score < bestScore) {
+        bestDistance = distance;
+        bestScore = score;
+      }
+    }
+  }
+
+  return Math.max(0.01, bestDistance);
+}
+
+function getPlanetScaleBar(targetPixels) {
+  var scaleInfo = getPlanetCameraScaleInfo();
+  var normalizedTargetPixels = Math.max(80, Number(targetPixels) || 220);
+  var targetMeters = normalizedTargetPixels * scaleInfo.metersPerCanvasPixel;
+  var distanceMeters = getNicePlanetDistanceMeters(targetMeters);
+  var pixelWidth = distanceMeters / Math.max(0.001, scaleInfo.metersPerCanvasPixel);
+
+  return {
+    distanceMeters: distanceMeters,
+    label: getPlanetDistanceLabel(distanceMeters),
+    pixelWidth: pixelWidth,
+    metersPerCanvasPixel: scaleInfo.metersPerCanvasPixel
+  };
+}
+
 function getLongitudeDistanceKmPerDegree(latitude) {
   return Math.max(0.001, (getPlanetCircumferenceKm() / 360) * getPlanetLatitudeScale(latitude));
 }
