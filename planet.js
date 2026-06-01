@@ -14,6 +14,17 @@ var planetSurfaceChunkCache = {
   }
 };
 
+var planetGroundFeatureBlockCache = {
+  blocks: {},
+  order: [],
+  stats: {
+    hits: 0,
+    misses: 0,
+    evictions: 0,
+    lastBlockKey: "-"
+  }
+};
+
 function getPlanetRadiusKm() {
   return Math.max(1, Number(CONFIG.PLANET_RADIUS_KM) || 6371);
 }
@@ -1008,6 +1019,33 @@ function getPlanetGroundFeatureQueryBlockLimit() {
   return 4096;
 }
 
+function getPlanetGroundFeatureBlockCacheLimit() {
+  return 2048;
+}
+
+function resetPlanetGroundFeatureBlockCache() {
+  planetGroundFeatureBlockCache = {
+    blocks: {},
+    order: [],
+    stats: {
+      hits: 0,
+      misses: 0,
+      evictions: 0,
+      lastBlockKey: "-"
+    }
+  };
+}
+
+function getPlanetGroundFeatureBlockCacheStats() {
+  return {
+    blocks: planetGroundFeatureBlockCache.order.length,
+    hits: planetGroundFeatureBlockCache.stats.hits,
+    misses: planetGroundFeatureBlockCache.stats.misses,
+    evictions: planetGroundFeatureBlockCache.stats.evictions,
+    lastBlockKey: planetGroundFeatureBlockCache.stats.lastBlockKey
+  };
+}
+
 function getPlanetGroundFeatureTypeColor(type) {
   switch (type) {
     case "stream":
@@ -1094,6 +1132,24 @@ function getPlanetGroundFeaturePatchPoints(blockEast, blockNorth, seed, radiusX,
 
 function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var normalizedBlockMeters = Math.max(16, Number(blockMeters) || getPlanetGroundFeatureBlockMeters());
+  var normalizedBlockEast = Math.round(Number(blockEast) || 0);
+  var normalizedBlockNorth = Math.round(Number(blockNorth) || 0);
+  var seedOffset = getPlanetGroundFeatureSeedOffset();
+  var cacheKey = [
+    seedOffset,
+    Math.round(normalizedBlockMeters * 100) / 100,
+    normalizedBlockEast,
+    normalizedBlockNorth
+  ].join(":");
+  var cachedBlock = planetGroundFeatureBlockCache.blocks[cacheKey];
+
+  planetGroundFeatureBlockCache.stats.lastBlockKey = cacheKey;
+
+  if (cachedBlock) {
+    planetGroundFeatureBlockCache.stats.hits++;
+    return cachedBlock;
+  }
+
   var centerEast = (Number(blockEast) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
   var centerNorth = (Number(blockNorth) || 0) * normalizedBlockMeters + normalizedBlockMeters / 2;
   var center = getLatLonFromSurfaceMeterCoordinate(centerEast, centerNorth);
@@ -1111,7 +1167,6 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var highlandLift = clamp(tile && Number.isFinite(Number(tile.highlandLift)) ? Number(tile.highlandLift) / 1.4 : 0, 0, 1);
   var features = [];
-  var seedOffset = getPlanetGroundFeatureSeedOffset();
   var naturalSeed = getDeterministicUnitNoise(blockEast, blockNorth, 41 + seedOffset);
   var ridgeSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73 + seedOffset);
   var rockSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109 + seedOffset);
@@ -1199,6 +1254,16 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       color: getPlanetGroundFeatureTypeColor("rockfield"),
       alpha: 0.20
     });
+  }
+
+  planetGroundFeatureBlockCache.stats.misses++;
+  planetGroundFeatureBlockCache.blocks[cacheKey] = features;
+  planetGroundFeatureBlockCache.order.push(cacheKey);
+
+  while (planetGroundFeatureBlockCache.order.length > getPlanetGroundFeatureBlockCacheLimit()) {
+    var evictedKey = planetGroundFeatureBlockCache.order.shift();
+    delete planetGroundFeatureBlockCache.blocks[evictedKey];
+    planetGroundFeatureBlockCache.stats.evictions++;
   }
 
   return features;
@@ -1353,6 +1418,59 @@ function getNearestPlanetGroundFeature(latitude, longitude, radiusMeters) {
 
   result.distanceMeters = nearestDistance;
   return result;
+}
+
+function getPlanetGroundFeatureInfluenceRadius(feature, sampleMeters) {
+  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || 1);
+  var baseRadius = clamp(normalizedSampleMeters * 3 + 6, 8, 48);
+
+  if (!feature) {
+    return baseRadius;
+  }
+
+  if (feature.shape === "line") {
+    return Math.max(baseRadius, (Number(feature.widthMeters) || 1) / 2 + normalizedSampleMeters * 2 + 3);
+  }
+
+  if (feature.shape === "rect") {
+    return Math.max(baseRadius, normalizedSampleMeters * 2 + 6);
+  }
+
+  return baseRadius;
+}
+
+function getPlanetSurfaceGroundFeatureInfluence(latitude, longitude, sampleMeters) {
+  var normalizedSampleMeters = Math.max(1, Number(sampleMeters) || 1);
+  var queryRadius = clamp(normalizedSampleMeters * 4 + 12, 16, 64);
+  var nearest = normalizedSampleMeters <= 25
+    ? getNearestPlanetGroundFeature(latitude, longitude, queryRadius)
+    : null;
+  var influenceRadius;
+  var influence;
+
+  if (!nearest) {
+    return null;
+  }
+
+  influenceRadius = getPlanetGroundFeatureInfluenceRadius(nearest, normalizedSampleMeters);
+  influence = clamp(1 - (Number(nearest.distanceMeters) || 0) / Math.max(1, influenceRadius), 0, 1);
+
+  if (influence <= 0.01) {
+    return null;
+  }
+
+  return {
+    id: nearest.id,
+    type: nearest.type,
+    shape: nearest.shape,
+    biome: nearest.biome,
+    distanceMeters: Number(nearest.distanceMeters) || 0,
+    influenceRadiusMeters: influenceRadius,
+    influence: influence,
+    color: nearest.color,
+    widthMeters: nearest.widthMeters,
+    heightMeters: nearest.heightMeters
+  };
 }
 
 function getPlanetGroundFeatureDimensionLabel(feature) {
@@ -1958,13 +2076,73 @@ function getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relie
   };
 }
 
+function applyPlanetGroundFeatureInfluenceToMaterial(material, groundFeature, biome) {
+  var result = {
+    surface: material.surface,
+    feature: material.feature,
+    signals: {}
+  };
+  var type = groundFeature && groundFeature.type ? groundFeature.type : "";
+  var influence = groundFeature ? clamp(Number(groundFeature.influence) || 0, 0, 1) : 0;
+
+  Object.keys(material.signals || {}).forEach(function(key) {
+    result.signals[key] = material.signals[key];
+  });
+
+  if (!groundFeature || influence <= 0) {
+    return result;
+  }
+
+  result.groundFeature = groundFeature;
+
+  if (type === "stream") {
+    result.signals.wetness = Math.max(result.signals.wetness || 0, clamp(0.58 + influence * 0.38, 0, 1));
+    result.signals.chop = Math.max(result.signals.chop || 0, influence * 0.42);
+    result.surface = influence > 0.58 ? "open water" : (biome === "tundra" ? "moss" : "meadow");
+    result.feature = "stream channel";
+  } else if (type === "wetland") {
+    result.signals.wetness = Math.max(result.signals.wetness || 0, clamp(0.62 + influence * 0.32, 0, 1));
+    result.surface = biome === "tundra" ? "moss" : "meadow";
+    result.feature = "wetland";
+  } else if (type === "meadow" || type === "clearing") {
+    result.signals.wetness = Math.max(result.signals.wetness || 0, clamp(0.36 + influence * 0.24, 0, 1));
+    result.signals.canopyDensity = Math.min(result.signals.canopyDensity || 0, clamp(0.38 - influence * 0.18, 0, 1));
+    result.surface = type === "clearing" ? "clearing" : "meadow";
+    result.feature = type;
+  } else if (type === "ridge") {
+    result.signals.surfaceRoughness = Math.max(result.signals.surfaceRoughness || 0, clamp(0.55 + influence * 0.34, 0, 1));
+    result.surface = biome === "ice" ? "ridge ice" : (biome === "tundra" ? "stone" : "rock");
+    result.feature = "ridge";
+  } else if (type === "swale") {
+    result.signals.wetness = Math.max(result.signals.wetness || 0, clamp(0.44 + influence * 0.26, 0, 1));
+    result.surface = biome === "forest" ? "clearing" : (biome === "tundra" ? "moss" : "meadow");
+    result.feature = "swale";
+  } else if (type === "rockfield") {
+    result.signals.surfaceRoughness = Math.max(result.signals.surfaceRoughness || 0, clamp(0.60 + influence * 0.30, 0, 1));
+    result.surface = biome === "tundra" ? "stone" : "rock";
+    result.feature = "rockfield";
+  } else if (type === "reef" || type === "shoal") {
+    result.signals.waterDepth = Math.min(result.signals.waterDepth || 0.45, clamp(0.34 - influence * 0.24, 0, 1));
+    result.signals.shallowWater = Math.max(result.signals.shallowWater || 0, clamp(0.58 + influence * 0.34, 0, 1));
+    result.surface = "open water";
+    result.feature = type === "reef" ? "reef shelf" : "shoal water";
+  }
+
+  return result;
+}
+
 function getPlanetSurfaceDetail(latitude, longitude, tile) {
   var biome = tile ? tile.biome : "unknown";
   var lod = getPlanetGroundLod(latitude, longitude);
   var relief = getPlanetSurfaceRelief(latitude, longitude, tile);
   var marker = getPlanetSurfaceFeatureMarker(biome, lod, relief);
   var mixedNoise = clamp(lod.elevation * 0.64 + lod.ground * 0.22 + lod.micro * 0.14, 0, 1);
-  var material = getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile);
+  var groundFeature = getPlanetSurfaceGroundFeatureInfluence(latitude, longitude, lod.sampleMeters);
+  var material = applyPlanetGroundFeatureInfluenceToMaterial(
+    getPlanetLocalSurfaceMaterialClassification(latitude, biome, lod, relief, tile),
+    groundFeature,
+    biome
+  );
   var shade = clamp(
     0.12 + mixedNoise * 0.46 + lod.roughness * 0.16 + relief.hillshade * 0.26,
     0,
@@ -1978,6 +2156,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile) {
     elevation: lod.elevation,
     roughness: lod.roughness,
     materialSignals: material.signals,
+    groundFeature: material.groundFeature || null,
     heightMeters: relief.heightMeters,
     slope: relief.slope,
     aspect: relief.aspect,

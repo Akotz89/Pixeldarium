@@ -606,6 +606,56 @@ assert.strictEqual(roughIceMaterial.surface, "ridge ice", "rough ice should clas
   });
 });
 
+var baseGrassMaterial = {
+  surface: "grass",
+  feature: "field",
+  signals: {
+    moisture: 0.42,
+    wetness: 0.34,
+    snow: 0,
+    canopyDensity: 0.25,
+    surfaceRoughness: 0.22,
+    waterDepth: 0,
+    chop: 0,
+    dryness: 0.40,
+    river: 0,
+    coast: 0,
+    shallowWater: 0,
+    ridge: 0
+  }
+};
+var streamAdjustedMaterial = applyPlanetGroundFeatureInfluenceToMaterial(baseGrassMaterial, {
+  id: "GF:test:stream",
+  type: "stream",
+  shape: "line",
+  distanceMeters: 0,
+  influenceRadiusMeters: 16,
+  influence: 1
+}, "grassland");
+var ridgeAdjustedMaterial = applyPlanetGroundFeatureInfluenceToMaterial(baseGrassMaterial, {
+  id: "GF:test:ridge",
+  type: "ridge",
+  shape: "line",
+  distanceMeters: 0,
+  influenceRadiusMeters: 16,
+  influence: 1
+}, "grassland");
+var reefAdjustedMaterial = applyPlanetGroundFeatureInfluenceToMaterial(deepOceanMaterial, {
+  id: "GF:test:reef",
+  type: "reef",
+  shape: "line",
+  distanceMeters: 0,
+  influenceRadiusMeters: 16,
+  influence: 1
+}, "ocean");
+
+assert.strictEqual(streamAdjustedMaterial.surface, "open water", "stream influence should alter local sample material");
+assert.ok(streamAdjustedMaterial.signals.wetness > baseGrassMaterial.signals.wetness, "stream influence should increase wetness");
+assert.strictEqual(ridgeAdjustedMaterial.surface, "rock", "ridge influence should alter local sample material");
+assert.ok(ridgeAdjustedMaterial.signals.surfaceRoughness > baseGrassMaterial.signals.surfaceRoughness, "ridge influence should increase roughness");
+assert.strictEqual(reefAdjustedMaterial.surface, "open water", "reef influence should keep ocean sample shallow/open");
+assert.ok(reefAdjustedMaterial.signals.shallowWater > deepOceanMaterial.signals.shallowWater, "reef influence should increase shallow-water signal");
+
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
   latitude: 34.2117,
@@ -839,10 +889,19 @@ blockTile.ridgeStrength = 0;
 blockTile.roughness = 0;
 blockTile.highlandLift = 0;
 
+resetPlanetGroundFeatureBlockCache();
 var wetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+var repeatedWetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+var groundFeatureCacheStats = getPlanetGroundFeatureBlockCacheStats();
+setWorldSeed("PIXEL-2027");
+var alternateSeedWetBlockFeatures = getPlanetGroundFeatureBlock(0, 0, getPlanetGroundFeatureBlockMeters());
+setWorldSeed("PIXEL-2026");
 
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "stream"; }), "wet land blocks should generate stream detail");
 assert.ok(wetBlockFeatures.some(function(feature) { return feature.type === "wetland"; }), "wet land blocks should generate wetland patches");
+assert.deepStrictEqual(repeatedWetBlockFeatures, wetBlockFeatures, "cached ground feature blocks should be deterministic");
+assert.ok(groundFeatureCacheStats.hits >= 1, "ground feature block cache should record repeated hits");
+assert.notDeepStrictEqual(alternateSeedWetBlockFeatures, wetBlockFeatures, "ground feature blocks should vary by seed");
 assert.ok(wetBlockFeatures.filter(function(feature) { return feature.shape === "line"; }).every(function(feature) {
   return Array.isArray(feature.bends) && feature.bends.length >= 3;
 }), "line features should include deterministic bend metadata");
@@ -906,11 +965,29 @@ var lineMidpoint = getLatLonFromSurfaceMeterCoordinate(
   (lineFeature.north1 + lineFeature.north2) / 2
 );
 var nearestLineFeature = getNearestPlanetGroundFeature(lineMidpoint.latitude, lineMidpoint.longitude, 16);
+var lineDx = lineFeature.east2 - lineFeature.east1;
+var lineDy = lineFeature.north2 - lineFeature.north1;
+var lineLength = Math.sqrt(lineDx * lineDx + lineDy * lineDy) || 1;
+var lineNormalEast = -lineDy / lineLength;
+var lineNormalNorth = lineDx / lineLength;
+var centerFeatureInfluence = getPlanetSurfaceGroundFeatureInfluence(lineMidpoint.latitude, lineMidpoint.longitude, 1);
+var outerFeatureInfluencePoint = getLatLonFromSurfaceMeterCoordinate(
+  (lineFeature.east1 + lineFeature.east2) / 2 + lineNormalEast * 12,
+  (lineFeature.north1 + lineFeature.north2) / 2 + lineNormalNorth * 12
+);
+var outerFeatureInfluence = getPlanetSurfaceGroundFeatureInfluence(outerFeatureInfluencePoint.latitude, outerFeatureInfluencePoint.longitude, 1);
 
 assert.ok(nearestLineFeature, "nearest feature query should find a line feature");
 assert.strictEqual(nearestLineFeature.id, lineFeature.id, "nearest line feature id should match");
 assertNear(nearestLineFeature.distanceMeters, 0, 1e-9, "nearest line distance");
 assert.ok(getPlanetGroundFeatureDimensionLabel(nearestLineFeature).indexOf("m") > 0, "nearest line should have dimensions");
+assert.ok(centerFeatureInfluence, "local surface samples should receive nearest ground feature influence");
+assert.strictEqual(centerFeatureInfluence.id, lineFeature.id, "feature influence should preserve nearest feature id");
+assert.ok(centerFeatureInfluence.influence > 0.90, "feature influence should be strongest at feature center");
+assert.ok(
+  (outerFeatureInfluence ? outerFeatureInfluence.influence : 0) < centerFeatureInfluence.influence,
+  "feature influence should fall off with distance"
+);
 
 var rectFeature = groundFeatures.filter(function(feature) { return feature.shape === "rect"; })[0];
 var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);

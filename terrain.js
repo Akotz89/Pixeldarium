@@ -260,6 +260,10 @@ function seedTerrain() {
     resetLocalSurfaceRenderChunkCache();
   }
 
+  if (typeof resetPlanetGroundFeatureBlockCache === "function") {
+    resetPlanetGroundFeatureBlockCache();
+  }
+
   world.terrain = [];
   world.planetTiles = [];
   world.fertileTiles = 0;
