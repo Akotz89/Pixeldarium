@@ -494,6 +494,10 @@ var permanentIceTile = {
 var lowLatitudeSnowSignal = getPlanetSurfaceSnowSignal(lowLatitudeHighlandTile, lowLatitudeHighlandTile.latitude);
 var polarSnowSignal = getPlanetSurfaceSnowSignal(polarHighlandTile, polarHighlandTile.latitude);
 var iceSnowSignal = getPlanetSurfaceSnowSignal(permanentIceTile, permanentIceTile.latitude);
+var lowLatitudeSnowVisual = getPlanetCloudlessSnowVisualAmount("grassland", lowLatitudeSnowSignal, 0, 1, 1);
+var polarSnowVisual = getPlanetCloudlessSnowVisualAmount("tundra", polarSnowSignal, 1, 0.75, 0.9);
+var oceanSnowVisual = getPlanetCloudlessSnowVisualAmount("ocean", polarSnowSignal, 1, 0, 0);
+var iceSnowVisual = getPlanetCloudlessSnowVisualAmount("ice", iceSnowSignal, 1, 0.3, 0.3);
 var lowLatitudeHighlandColor = getPlanetTileCompositedColor(lowLatitudeHighlandTile);
 var permanentIceColor = getPlanetTileCompositedColor(permanentIceTile);
 var materialPixelNoise = getPlanetMaterialPixelNoise(12.1, 20.1, 6200, 607);
@@ -517,6 +521,10 @@ var desertMaterialAccent = applyPlanetMaterialPixelAccents({ red: 60, green: 90,
 assert.ok(lowLatitudeSnowSignal < 0.35, "low-latitude non-ice highlands should not become broad snow/cloud cover");
 assert.ok(polarSnowSignal > lowLatitudeSnowSignal + 0.15, "polar highlands should carry more snow signal than low-latitude highlands");
 assert.ok(iceSnowSignal > polarSnowSignal, "ice biome should remain the brightest permanent snow/ice signal");
+assert.ok(lowLatitudeSnowVisual < 0.08, "cloudless globe material should not render low-latitude highlands as foggy snow");
+assert.ok(polarSnowVisual > lowLatitudeSnowVisual + 0.08, "cloudless globe material should keep polar snow visually distinct");
+assert.ok(oceanSnowVisual < polarSnowVisual, "cloudless globe material should not whiten oceans like clouds");
+assert.ok(iceSnowVisual > polarSnowVisual, "permanent ice should remain visually brighter than tundra snow");
 assert.ok(colorLuminance(permanentIceColor) > colorLuminance(lowLatitudeHighlandColor) + 15, "non-ice highlands should stay darker than permanent ice");
 assertNear(repeatedMaterialPixelNoise, materialPixelNoise, 1e-12, "material pixel noise should be deterministic");
 assert.ok(materialPixelNoise >= 0 && materialPixelNoise <= 1, "material pixel noise should be bounded");
@@ -543,6 +551,7 @@ var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
 assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
 assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.85, "oversized globe raster should downsample for responsiveness");
 assert.strictEqual(getPlanetGlobeRasterScale(480, 360), 1, "small globe raster should keep native resolution");
+assert.ok(getPlanetGlobeRasterScale(5000, 3000) >= 0.45, "large globe raster should not downsample into oversized square cells");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) >= 0, "smooth imagery noise should stay bounded");
 assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) <= 1, "smooth imagery noise should stay bounded");
 

@@ -235,7 +235,7 @@ function getPlanetGlobeRasterScale(width, height) {
   var maxSize = Math.max(240, Number(CONFIG.PLANET_GLOBE_RASTER_MAX_SIZE) || 720);
   var largestSize = Math.max(1, Number(width) || 1, Number(height) || 1);
 
-  return clamp(maxSize / largestSize, 0.25, 1);
+  return clamp(maxSize / largestSize, 0.45, 1);
 }
 
 function getPlanetLatLonFromProjectedPoint(projection, canvasX, canvasY) {
@@ -522,11 +522,17 @@ function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
+  var absLatitude = Math.abs(Number(latitude) || 0);
+  var elevationValue = tile && Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
+  var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
+  var highland = clamp((elevation - 0.58) / 0.34, 0, 1);
+  var polar = clamp((absLatitude - 54) / 32, 0, 1);
   var shallowWater = clamp(Math.max(
     tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0,
     tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0
   ), 0, 1);
   var snowSignal = getPlanetSurfaceSnowSignal(tile, latitude);
+  var snowVisual = getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
   var material = color;
 
   if (biome === "ocean") {
@@ -552,7 +558,7 @@ function applyPlanetMaterialPixelAccents(color, latitude, longitude, tile) {
   material = blendRgbWithHex(material, "#68655a", clamp(ridge * 0.08 + roughness * 0.05, 0, 0.15));
 
   if (biome !== "ice") {
-    material = blendRgbWithHex(material, "#e6f2f3", clamp(snowSignal * 0.32, 0, 0.34));
+    material = blendRgbWithHex(material, "#e6f2f3", clamp(snowVisual * 0.72, 0, 0.18));
   }
 
   return clampRgb(shadeRgb(material, clamp(0.94 + (coarse - 0.5) * 0.10 + (fine - 0.5) * 0.08, 0.84, 1.08)));
@@ -578,6 +584,28 @@ function makePlanetImagerySignalTile(biome, signals, latitude) {
   };
 }
 
+function getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge) {
+  var normalizedSnow = clamp(Number(snowSignal) || 0, 0, 1);
+  var normalizedPolar = clamp(Number(polar) || 0, 0, 1);
+  var normalizedHighland = clamp(Number(highland) || 0, 0, 1);
+  var normalizedRidge = clamp(Number(ridge) || 0, 0, 1);
+  var mountainGate = clamp(normalizedHighland * 0.52 + normalizedRidge * 0.28 + normalizedPolar * 0.48, 0, 1);
+
+  if (biome === "ice") {
+    return clamp(0.13 + normalizedSnow * 0.20 + normalizedPolar * 0.08, 0, 0.38);
+  }
+
+  if (biome === "ocean") {
+    return clamp(normalizedSnow * normalizedPolar * 0.055, 0, 0.08);
+  }
+
+  if (biome === "tundra") {
+    return clamp(normalizedSnow * mountainGate * 0.22 + normalizedPolar * 0.035, 0, 0.22);
+  }
+
+  return clamp(normalizedSnow * mountainGate * 0.15, 0, 0.16);
+}
+
 function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, noise, texture, normalizedLatitude, normalizedLongitude) {
   var color = clampRgb(baseColor);
   var broad = noise ? clamp(Number(noise.broad) || 0, 0, 1) : 0.5;
@@ -601,6 +629,17 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   var reliefBand = clamp(highland * 0.38 + ridge * 0.34 + roughness * 0.16 + regional * 0.12, 0, 1);
   var weathering = clamp((broad - 0.5) * 0.34 + (local - 0.5) * 0.22 + (fine - 0.5) * 0.14 + 0.5, 0, 1);
   var terrainGrain = clamp((regional - 0.5) * 0.36 + (fine - 0.5) * 0.28 + (micro - 0.5) * 0.18 + 0.5, 0, 1);
+  var snowVisual = getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
+  var terrainShade = clamp(
+    0.50 +
+      texture * 0.68 +
+      (signals.terrainHillshade - 0.5) * 0.20 +
+      ridge * 0.035 +
+      highland * 0.025 -
+      reliefBand * 0.018,
+    0,
+    1
+  );
 
   if (biome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
@@ -612,9 +651,9 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     color = blendRgbWithHex(color, "#06405f", clamp((1 - depth) * 0.10 + current * 0.04, 0, 0.14));
     color = blendRgbWithHex(color, "#0d7894", clamp(shelf * 0.26 + gyre * 0.035, 0, 0.30));
     color = blendRgbWithHex(color, "#8ccfc2", clamp(shelf * coast * 0.24, 0, 0.24));
-    color = blendRgbWithHex(color, "#d9edf4", clamp(snowSignal * 0.12, 0, 0.10));
+    color = blendRgbWithHex(color, "#d9edf4", snowVisual);
     return applyPlanetMaterialPixelAccents(
-      clampRgb(shadeRgb(color, clamp(0.48 + texture * 0.58 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
+      clampRgb(shadeRgb(color, clamp(terrainShade - 0.02 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
       normalizedLatitude,
       normalizedLongitude,
       signalTile
@@ -636,7 +675,7 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
     color = blendRgbWithHex(color, "#5f6154", clamp(reliefBand * 0.12 + roughness * 0.04, 0, 0.18));
   } else if (biome === "tundra") {
     color = blendRgbWithHex(color, "#788777", clamp(0.06 + polar * 0.09 + terrainGrain * 0.05, 0, 0.18));
-    color = blendRgbWithHex(color, "#dce5df", clamp(polar * 0.10 + highland * 0.08 + snowSignal * 0.08, 0, 0.22));
+    color = blendRgbWithHex(color, "#dce5df", clamp(polar * 0.08 + highland * 0.045 + snowVisual * 0.50, 0, 0.18));
     color = blendRgbWithHex(color, "#555e5b", clamp(reliefBand * 0.08, 0, 0.12));
   } else if (biome === "ice") {
     color = blendRgbWithHex(color, "#f3fbff", clamp(0.14 + polar * 0.15 + broad * 0.06, 0, 0.32));
@@ -647,9 +686,9 @@ function getPlanetImageryBiomeRgb(baseColor, biome, signals, surfaceMeters, nois
   color = blendRgbWithHex(color, "#244f63", river * 0.18);
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
   color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.13 + roughness * 0.05, 0, 0.24));
-  color = blendRgbWithHex(color, "#e8f4f3", clamp(snowSignal * 0.30, 0, 0.34));
+  color = blendRgbWithHex(color, "#e8f4f3", snowVisual);
   return applyPlanetMaterialPixelAccents(
-    clampRgb(shadeRgb(color, clamp(0.50 + texture * 0.82 + highland * 0.035 + ridge * 0.025 - (1 - moisture) * 0.02, 0, 1))),
+    clampRgb(shadeRgb(color, clamp(terrainShade - (1 - moisture) * 0.02, 0, 1))),
     normalizedLatitude,
     normalizedLongitude,
     signalTile
@@ -751,6 +790,7 @@ function getPlanetTileCompositedColor(tile) {
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var snowSignal = getPlanetSurfaceSnowSignal(tile, latitude);
+  var snowVisual = getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
   var color;
 
   if (biome === "ocean") {
@@ -786,7 +826,11 @@ function getPlanetTileCompositedColor(tile) {
   color = blendHexColors(color, "#b6b06a", coast * 0.18);
   color = blendHexColors(color, "#6d6a60", clamp(terrainSlope * 0.22 + roughness * 0.08, 0, 0.30));
   color = blendHexColors(color, "#6f6a5c", clamp(highland * 0.20 + ridge * 0.18, 0, 0.32));
-  color = blendHexColors(color, "#eef6f5", clamp(snowSignal * 0.58, 0, 0.62));
+  color = blendHexColors(
+    color,
+    "#eef6f5",
+    biome === "ice" ? clamp(snowSignal * 0.42, 0, 0.52) : clamp(snowVisual * 0.85, 0, 0.22)
+  );
   return shadeHexColor(
     color,
     clamp(0.28 + terrainHillshade * 0.40 + elevation * 0.12 + moisture * 0.05 + ridge * 0.035 - dry * 0.05, 0, 1)
@@ -1813,10 +1857,10 @@ function drawPlanetAtmosphereOverlay(targetCtx) {
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
   targetCtx.clip();
 
-  limbGradient.addColorStop(0, "rgba(255, 255, 255, 0.025)");
-  limbGradient.addColorStop(0.58, "rgba(86, 176, 255, 0.012)");
-  limbGradient.addColorStop(0.84, "rgba(54, 148, 255, 0.04)");
-  limbGradient.addColorStop(1, "rgba(4, 14, 34, 0.28)");
+  limbGradient.addColorStop(0, "rgba(255, 255, 255, 0.010)");
+  limbGradient.addColorStop(0.58, "rgba(86, 176, 255, 0.006)");
+  limbGradient.addColorStop(0.84, "rgba(54, 148, 255, 0.024)");
+  limbGradient.addColorStop(1, "rgba(4, 14, 34, 0.20)");
   targetCtx.globalCompositeOperation = "screen";
   targetCtx.fillStyle = limbGradient;
   targetCtx.fillRect(
@@ -1922,16 +1966,16 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
       var visibility = clamp(Number(latLon.visibility) || 0, 0, 1);
       var nx = (screenX - projection.centerX) / Math.max(1, projection.radius);
       var ny = (projection.centerY - screenY) / Math.max(1, projection.radius);
-      var daylight = clamp(0.48 + visibility * 0.56 - nx * 0.08 + ny * 0.04, 0.20, 1.05);
+      var daylight = clamp(0.50 + visibility * 0.54 - nx * 0.07 + ny * 0.035, 0.20, 1.05);
       var limb = clamp(Math.pow(1 - visibility, 1.7), 0, 1);
       var red = rgb.red * daylight;
       var green = rgb.green * daylight;
       var blue = rgb.blue * daylight;
       var index = (py * rasterWidth + px) * 4;
 
-      red = red + (62 - red) * limb * 0.20;
-      green = green + (150 - green) * limb * 0.24;
-      blue = blue + (220 - blue) * limb * 0.32;
+      red = red + (42 - red) * limb * 0.08;
+      green = green + (112 - green) * limb * 0.11;
+      blue = blue + (176 - blue) * limb * 0.16;
 
       data[index] = clamp(red, 0, 255);
       data[index + 1] = clamp(green, 0, 255);
