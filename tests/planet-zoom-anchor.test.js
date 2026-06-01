@@ -70,6 +70,17 @@ function fillPlanetTiles(biome) {
   }
 }
 
+function colorDistance(fromHex, toHex) {
+  var from = getRgbFromHex(fromHex);
+  var to = getRgbFromHex(toHex);
+  return Math.abs(from.red - to.red) + Math.abs(from.green - to.green) + Math.abs(from.blue - to.blue);
+}
+
+function colorLuminance(hexColor) {
+  var rgb = getRgbFromHex(hexColor);
+  return rgb.red * 0.2126 + rgb.green * 0.7152 + rgb.blue * 0.0722;
+}
+
 CONFIG.PLANET_RENDER_MODE = "globe";
 
 var zoomLevels = getPlanetZoomLevels();
@@ -137,6 +148,81 @@ var gridInfo = getPlanetLocalReferenceGridInfo(140);
 assert.ok(gridInfo.distanceMeters > 0, "local grid should pick a real-world distance");
 assert.ok(gridInfo.pixelSpacing >= 72 && gridInfo.pixelSpacing <= 230, "local grid should stay glanceable");
 assert.ok(gridInfo.opacity > 0 && gridInfo.opacity <= 0.105, "local grid opacity should stay subdued");
+
+var deepOceanColor = getPlanetTileCompositedColor({
+  biome: "ocean",
+  latitude: 0,
+  moisture: 1,
+  elevation: -3
+});
+var shallowOceanColor = getPlanetTileCompositedColor({
+  biome: "ocean",
+  latitude: 0,
+  moisture: 1,
+  elevation: -0.2
+});
+var lushLandColor = getPlanetTileCompositedColor({
+  biome: "forest",
+  latitude: 12,
+  moisture: 1.8,
+  elevation: 0.2
+});
+var dryLandColor = getPlanetTileCompositedColor({
+  biome: "desert",
+  latitude: 18,
+  moisture: 0.1,
+  elevation: 0.2
+});
+var highIceColor = getPlanetTileCompositedColor({
+  biome: "ice",
+  latitude: 78,
+  moisture: 0.8,
+  elevation: 2.4
+});
+
+assert.ok(colorLuminance(shallowOceanColor) > colorLuminance(deepOceanColor), "shallow ocean should be lighter than deep ocean");
+assert.ok(colorDistance(lushLandColor, dryLandColor) > 50, "lush and dry land colors should diverge");
+assert.ok(colorLuminance(highIceColor) > colorLuminance(lushLandColor), "ice/high latitude terrain should read brighter than forest");
+
+var deepWaterSurfaceColor = getPlanetSurfaceColor({
+  biome: "ocean",
+  detail: {
+    surface: "deep water",
+    shade: 0.4,
+    elevation: 0.2,
+    roughness: 0.1,
+    hillshade: 0.5,
+    heightMeters: -4200,
+    slope: 0.02
+  }
+});
+var shallowWaterSurfaceColor = getPlanetSurfaceColor({
+  biome: "ocean",
+  detail: {
+    surface: "open water",
+    shade: 0.55,
+    elevation: 0.6,
+    roughness: 0.12,
+    hillshade: 0.65,
+    heightMeters: -200,
+    slope: 0.04
+  }
+});
+var snowySurfaceColor = getPlanetSurfaceColor({
+  biome: "tundra",
+  detail: {
+    surface: "stone",
+    shade: 0.55,
+    elevation: 0.8,
+    roughness: 0.4,
+    hillshade: 0.82,
+    heightMeters: 3600,
+    slope: 0.5
+  }
+});
+
+assert.ok(colorLuminance(shallowWaterSurfaceColor) > colorLuminance(deepWaterSurfaceColor), "local shallow water should be lighter than deep water");
+assert.ok(colorLuminance(snowySurfaceColor) > colorLuminance(dryLandColor), "high local terrain should receive snow tint");
 
 fillPlanetTiles("grassland");
 
