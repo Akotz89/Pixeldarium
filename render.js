@@ -13,6 +13,7 @@ var localSurfaceRenderChunkCache = {
     lastFallbackChunks: 0,
     lastFallbackGeneratedThisPass: 0,
     lastFallbackPendingChunks: 0,
+    lastPlaceholderChunks: 0,
     lastChunkKey: "-"
   }
 };
@@ -48,6 +49,7 @@ function resetLocalSurfaceRenderChunkCache() {
       lastFallbackChunks: 0,
       lastFallbackGeneratedThisPass: 0,
       lastFallbackPendingChunks: 0,
+      lastPlaceholderChunks: 0,
       lastChunkKey: "-"
     }
   };
@@ -66,6 +68,7 @@ function getLocalSurfaceRenderCacheStats() {
     lastFallbackChunks: localSurfaceRenderChunkCache.stats.lastFallbackChunks,
     lastFallbackGeneratedThisPass: localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass,
     lastFallbackPendingChunks: localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks,
+    lastPlaceholderChunks: localSurfaceRenderChunkCache.stats.lastPlaceholderChunks,
     lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
   };
 }
@@ -1243,6 +1246,27 @@ function getLocalSurfaceFallbackRenderChunk(address, allowGenerate) {
   return null;
 }
 
+function getLocalSurfacePlaceholderDraw(address) {
+  if (!address) {
+    return null;
+  }
+
+  var center = getPlanetSurfaceChunkCenterLatLon(address);
+  var rect = getPlanetSurfaceChunkScreenRect(address);
+  var rgb = getPlanetImageryRgbAtLatLon(center.latitude, center.longitude);
+  var color = getHexFromRgb(rgb.red, rgb.green, rgb.blue);
+
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    color: color,
+    sampleMeters: address.sampleMeters,
+    chunkKey: address.chunkKey
+  };
+}
+
 function drawPlanetShell(targetCtx) {
   var projection = getPlanetProjection();
   var gradient = targetCtx.createRadialGradient(
@@ -1532,6 +1556,7 @@ function buildLocalTerrainCache(tctx) {
   var fallbackPendingChunks = 0;
   var fallbackChunksPerPass = getLocalSurfaceRenderFallbackChunksPerPass();
   var fallbackDraws = [];
+  var placeholderDraws = [];
   var fineDraws = [];
 
   tctx.fillStyle = "#01030a";
@@ -1542,6 +1567,7 @@ function buildLocalTerrainCache(tctx) {
   localSurfaceRenderChunkCache.stats.lastFallbackChunks = 0;
   localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass = 0;
   localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks = 0;
+  localSurfaceRenderChunkCache.stats.lastPlaceholderChunks = 0;
 
   visibleChunks.forEach(function(visibleChunk) {
     var renderKey = getLocalSurfaceRenderChunkKey(visibleChunk.address);
@@ -1583,8 +1609,18 @@ function buildLocalTerrainCache(tctx) {
         }
       } else {
         fallbackPendingChunks++;
+        var placeholder = getLocalSurfacePlaceholderDraw(visibleChunk.address);
+
+        if (placeholder) {
+          placeholderDraws.push(placeholder);
+        }
       }
     }
+  });
+
+  placeholderDraws.forEach(function(draw) {
+    tctx.fillStyle = draw.color;
+    tctx.fillRect(draw.x, draw.y, draw.width, draw.height);
   });
 
   fallbackDraws.forEach(function(draw) {
@@ -1600,6 +1636,7 @@ function buildLocalTerrainCache(tctx) {
   localSurfaceRenderChunkCache.stats.lastFallbackChunks = fallbackChunks;
   localSurfaceRenderChunkCache.stats.lastFallbackGeneratedThisPass = fallbackGeneratedThisPass;
   localSurfaceRenderChunkCache.stats.lastFallbackPendingChunks = fallbackPendingChunks;
+  localSurfaceRenderChunkCache.stats.lastPlaceholderChunks = placeholderDraws.length;
 
   if (pendingChunks > 0) {
     world.needsRender = true;

@@ -1250,15 +1250,29 @@ var fractionalMeterEastRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceC
   fractionalMeterAddress.chunkX + 1,
   fractionalMeterAddress.chunkY
 ));
+var placeholderDraw = getLocalSurfacePlaceholderDraw(fractionalMeterChunkAddress);
+var repeatedPlaceholderDraw = getLocalSurfacePlaceholderDraw(fractionalMeterChunkAddress);
+var placeholderRgb = getRgbFromHex(placeholderDraw.color);
 
 assert.strictEqual(fractionalMeterAddress.sampleMeters, 1, "fractional near-final zoom should address meter chunks");
 assertNear(fractionalMeterRect.x + fractionalMeterRect.width, fractionalMeterEastRect.x, 1e-9, "fractional meter chunks should stay edge-continuous");
+assert.deepStrictEqual(repeatedPlaceholderDraw, placeholderDraw, "pending chunk placeholders should be deterministic");
+assertNear(placeholderDraw.x, fractionalMeterRect.x, 1e-9, "placeholder x should match chunk rect");
+assertNear(placeholderDraw.y, fractionalMeterRect.y, 1e-9, "placeholder y should match chunk rect");
+assertNear(placeholderDraw.width, fractionalMeterRect.width, 1e-9, "placeholder width should match chunk rect");
+assertNear(placeholderDraw.height, fractionalMeterRect.height, 1e-9, "placeholder height should match chunk rect");
+assertRgbBounds(placeholderRgb, "placeholder draw color");
+assert.ok(placeholderDraw.color !== "#01030a", "placeholder draw should not fall back to blank background color");
+assert.strictEqual(placeholderDraw.chunkKey, fractionalMeterChunkAddress.chunkKey, "placeholder draw should preserve chunk identity");
 
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
   latitude: 34.2117,
   longitude: -77.7265
 };
+
+resetLocalSurfaceRenderChunkCache();
+assert.strictEqual(getLocalSurfaceRenderCacheStats().lastPlaceholderChunks, 0, "render cache stats should expose placeholder fallback count");
 
 var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
 assert.ok(visibleChunks.length > 1, "meter zoom should enumerate multiple visible chunks");
