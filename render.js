@@ -207,6 +207,13 @@ function getPlanetGlobeSampleSize(projection, multiplier) {
   return Math.max(3, Math.ceil(Math.max(longitudeSpacing, latitudeSpacing) * normalizedMultiplier));
 }
 
+function getPlanetGlobeRasterScale(width, height) {
+  var maxSize = Math.max(240, Number(CONFIG.PLANET_GLOBE_RASTER_MAX_SIZE) || 720);
+  var largestSize = Math.max(1, Number(width) || 1, Number(height) || 1);
+
+  return clamp(maxSize / largestSize, 0.25, 1);
+}
+
 function getPlanetLatLonFromProjectedPoint(projection, canvasX, canvasY) {
   var radius = Math.max(1, Number(projection && projection.radius) || 1);
   var x = ((Number(canvasX) || 0) - (Number(projection.centerX) || 0)) / radius;
@@ -702,15 +709,16 @@ function drawPlanetShell(targetCtx) {
 function drawPlanetCloudLayer(targetCtx) {
   var projection = getPlanetProjection();
   var sampleSize = getPlanetGlobeSampleSize(projection, 1.35);
-  var stride = 2;
+  var stride = 4;
   var cloudSeed = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 997 : 0;
+  var maxCloudAlpha = clamp(Number(CONFIG.PLANET_CLOUD_ALPHA) || 0.11, 0, 0.22);
 
   targetCtx.save();
   targetCtx.beginPath();
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
   targetCtx.clip();
   targetCtx.globalCompositeOperation = "screen";
-  targetCtx.filter = "blur(" + Math.max(2, Math.round(sampleSize * 0.36)) + "px)";
+  targetCtx.filter = "blur(" + Math.max(4, Math.round(sampleSize * 0.58)) + "px)";
 
   for (var y = 0; y < WORLD_HEIGHT; y += stride) {
     for (var x = 0; x < WORLD_WIDTH; x += stride) {
@@ -727,9 +735,9 @@ function drawPlanetCloudLayer(targetCtx) {
       }
 
       var light = getPlanetAtmosphericLight(point);
-      var cloudSize = sampleSize * stride * (1.55 + opacity * 0.82);
+      var cloudSize = sampleSize * stride * (1.85 + opacity * 0.92);
 
-      targetCtx.globalAlpha = clamp(opacity * (0.26 + light * 0.46), 0, 0.34);
+      targetCtx.globalAlpha = clamp(opacity * (0.10 + light * 0.24), 0, maxCloudAlpha);
       targetCtx.fillStyle = light > 0.52 ? "#f6fbff" : "#b6cce2";
       targetCtx.fillRect(
         point.x - cloudSize / 2,
@@ -850,22 +858,25 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
   var maxY = Math.min(canvas.height, Math.ceil(projection.centerY + projection.radius + 1));
   var width = Math.max(1, maxX - minX);
   var height = Math.max(1, maxY - minY);
+  var rasterScale = getPlanetGlobeRasterScale(width, height);
+  var rasterWidth = Math.max(1, Math.ceil(width * rasterScale));
+  var rasterHeight = Math.max(1, Math.ceil(height * rasterScale));
   var surfaceCanvas = document.createElement("canvas");
   var surfaceCtx;
   var image;
   var data;
   var tileRgbCache = buildGlobeTileRgbCache();
 
-  surfaceCanvas.width = width;
-  surfaceCanvas.height = height;
+  surfaceCanvas.width = rasterWidth;
+  surfaceCanvas.height = rasterHeight;
   surfaceCtx = surfaceCanvas.getContext("2d");
-  image = surfaceCtx.createImageData(width, height);
+  image = surfaceCtx.createImageData(rasterWidth, rasterHeight);
   data = image.data;
 
-  for (var py = 0; py < height; py++) {
-    for (var px = 0; px < width; px++) {
-      var screenX = minX + px + 0.5;
-      var screenY = minY + py + 0.5;
+  for (var py = 0; py < rasterHeight; py++) {
+    for (var px = 0; px < rasterWidth; px++) {
+      var screenX = minX + (px + 0.5) / rasterScale;
+      var screenY = minY + (py + 0.5) / rasterScale;
       var latLon = getPlanetLatLonFromProjectedPoint(projection, screenX, screenY);
 
       if (!latLon) {
@@ -881,7 +892,7 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
       var red = rgb.red * daylight;
       var green = rgb.green * daylight;
       var blue = rgb.blue * daylight;
-      var index = (py * width + px) * 4;
+      var index = (py * rasterWidth + px) * 4;
 
       red = red + (62 - red) * limb * 0.20;
       green = green + (150 - green) * limb * 0.24;
@@ -895,7 +906,11 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
   }
 
   surfaceCtx.putImageData(image, 0, 0);
-  targetCtx.drawImage(surfaceCanvas, minX, minY);
+  targetCtx.save();
+  targetCtx.imageSmoothingEnabled = true;
+  targetCtx.imageSmoothingQuality = "high";
+  targetCtx.drawImage(surfaceCanvas, minX, minY, width, height);
+  targetCtx.restore();
   return true;
 }
 

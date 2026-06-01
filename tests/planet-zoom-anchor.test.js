@@ -256,6 +256,8 @@ assert.ok(Math.abs(seededCloudSample - cloudSample) > 0.01, "cloud opacity shoul
 var sampleProjection = { radius: 610 };
 var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
 assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
+assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.6, "oversized globe raster should downsample for responsiveness");
+assert.strictEqual(getPlanetGlobeRasterScale(480, 360), 1, "small globe raster should keep native resolution");
 
 var globeSurfaceRgb = getPlanetSurfaceRgbAtLatLon(0, 0);
 assert.ok(globeSurfaceRgb.red >= 0 && globeSurfaceRgb.red <= 255, "globe surface red should be bounded");

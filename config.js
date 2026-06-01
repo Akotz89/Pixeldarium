@@ -181,6 +181,8 @@ const CONFIG = {
   PLANET_VIEW_LATITUDE_DEG: 8,
   PLANET_GRID_DEGREES: 30,
   PLANET_ZOOM_LEVEL: 0,
+  PLANET_GLOBE_RASTER_MAX_SIZE: 720,
+  PLANET_CLOUD_ALPHA: 0.11,
   PLANET_ZOOM_LEVELS: [
     { name: "Globe", metersPerSample: 125000, chunkKm: 4000 },
     { name: "Continent", metersPerSample: 25000, chunkKm: 1000 },
