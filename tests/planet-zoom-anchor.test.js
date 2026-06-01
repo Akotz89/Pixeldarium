@@ -930,6 +930,18 @@ var roughIceMaterial = getPlanetLocalSurfaceMaterialClassification(82, "ice", ma
   ridgeStrength: 0.8,
   elevation: 1.0
 });
+var meadowStrata = getPlanetSurfaceMaterialStrata(20, 20, "grassland", meadowMaterial, materialLod, flatMaterialRelief);
+var brushStrata = getPlanetSurfaceMaterialStrata(20, 20, "grassland", brushMaterial, materialLod, roughMaterialRelief);
+var deepOceanStrata = getPlanetSurfaceMaterialStrata(0, 0, "ocean", deepOceanMaterial, materialLod, {
+  heightMeters: -4200,
+  slope: 0.02,
+  aspect: 0,
+  hillshade: 0.50,
+  dzdx: 0,
+  dzdy: 0
+});
+var rockyDesertStrata = getPlanetSurfaceMaterialStrata(24, 24, "desert", rockyDesertMaterial, materialLod, roughMaterialRelief);
+var repeatedMeadowStrata = getPlanetSurfaceMaterialStrata(20, 20, "grassland", meadowMaterial, materialLod, flatMaterialRelief);
 
 var savedShorelinePlanetTiles = world.planetTiles.map(function(tile) {
   return tile ? Object.assign({}, tile) : tile;
@@ -1010,6 +1022,23 @@ assert.strictEqual(whitecapMaterial.surface, "whitecap", "shallow rough ocean sh
 assert.strictEqual(rockyDesertMaterial.surface, "rock", "rough desert should classify as rock");
 assert.strictEqual(polarTundraMaterial.surface, "snow", "polar high tundra should classify as snow");
 assert.strictEqual(roughIceMaterial.surface, "ridge ice", "rough ice should classify as ridge ice");
+assert.deepStrictEqual(repeatedMeadowStrata, meadowStrata, "surface material strata should be deterministic");
+assert.strictEqual(meadowStrata.primary, "loam", "wet meadow should expose loam strata");
+assert.strictEqual(meadowStrata.secondary, "clay", "wet meadow should expose clay sublayer");
+assert.ok(meadowStrata.organicCover > brushStrata.organicCover, "wet meadow should carry more organic cover than dry brush");
+assert.ok(brushStrata.rockExposure > meadowStrata.rockExposure, "dry rough brush should expose more rock than meadow");
+assert.strictEqual(deepOceanStrata.primary, "water", "deep ocean should expose water strata");
+assert.strictEqual(deepOceanStrata.secondary, "basalt-silt", "deep ocean should expose basin sediment strata");
+assert.ok(deepOceanStrata.wetness === 1, "ocean strata should be fully wet");
+assert.ok(rockyDesertStrata.primary === "bedrock" || rockyDesertStrata.primary === "scree", "rocky desert should expose rock strata");
+[meadowStrata, brushStrata, deepOceanStrata, rockyDesertStrata].forEach(function(strata) {
+  assert.ok(strata.wetness >= 0 && strata.wetness <= 1, "strata wetness should be bounded");
+  assert.ok(strata.granularity >= 0 && strata.granularity <= 1, "strata granularity should be bounded");
+  assert.ok(strata.organicCover >= 0 && strata.organicCover <= 1, "strata organic cover should be bounded");
+  assert.ok(strata.rockExposure >= 0 && strata.rockExposure <= 1, "strata rock exposure should be bounded");
+  assert.ok(strata.depthMix >= 0 && strata.depthMix <= 1, "strata depth mix should be bounded");
+  assertRgbBounds(getRgbFromHex(strata.tintColor), "strata tint color");
+});
 assert.ok(shorelineRefinement.strength > 0.90, "shoreline refinement should activate at land/ocean tile blends");
 assert.ok(shorelineRefinement.oceanWeight > 0.20 && shorelineRefinement.landWeight > 0.20, "shoreline refinement should expose mixed land/ocean weights");
 assert.ok(shorelineRefinement.beach > 0.30, "shoreline refinement should expose a beach band");
@@ -1146,6 +1175,7 @@ setWorldSeed("PIXEL-2026");
 
 assert.ok(classifiedDetail.materialSignals, "surface detail should expose material signals");
 assert.ok(classifiedDetail.regionalContext, "surface detail should expose regional context");
+assert.ok(classifiedDetail.materialStrata, "surface detail should expose material strata");
 assertNear(classifiedDetail.continentShape, detailTile.continentShape, 1e-12, "surface detail should preserve continent signal");
 assertNear(classifiedDetail.plateInfluence, detailTile.plateInfluence, 1e-12, "surface detail should preserve plate signal");
 assertNear(classifiedDetail.islandArc, detailTile.islandArc, 1e-12, "surface detail should preserve island arc signal");
@@ -1161,6 +1191,10 @@ assert.ok(classifiedDetail.naturalElement.density > 0 && classifiedDetail.natura
 assert.ok(classifiedDetail.naturalElement.sizeMeters > 0 && classifiedDetail.naturalElement.sizeMeters <= 1, "natural micro-element size should stay inside a meter sample");
 assert.ok(classifiedDetail.naturalElement.alpha > 0 && classifiedDetail.naturalElement.alpha <= 0.42, "natural micro-element alpha should be bounded");
 assertRgbBounds(getRgbFromHex(classifiedDetail.naturalElement.color), "natural micro-element color");
+assert.ok(classifiedDetail.materialStrata.primary, "material strata should expose primary substrate");
+assert.ok(classifiedDetail.materialStrata.secondary, "material strata should expose secondary layer");
+assert.ok(classifiedDetail.materialStrata.granularity >= 0 && classifiedDetail.materialStrata.granularity <= 1, "classified detail strata granularity should be bounded");
+assertRgbBounds(getRgbFromHex(classifiedDetail.materialStrata.tintColor), "classified detail strata tint color");
 assert.notDeepStrictEqual(alternateClassifiedDetail.naturalElement, classifiedDetail.naturalElement, "natural micro-elements should vary by seed");
 assert.ok(["structure", "road", "track", "street", "house", "yard"].indexOf(classifiedDetail.naturalElement.type) < 0, "undeveloped planet micro-elements should stay natural");
 
@@ -1461,6 +1495,16 @@ var texturedGrassSample = {
       orientationRadians: 0.4,
       color: "#8fcf71",
       alpha: 0.30
+    },
+    materialStrata: {
+      primary: "topsoil",
+      secondary: "root-mat",
+      wetness: 0.42,
+      granularity: 0.46,
+      organicCover: 0.62,
+      rockExposure: 0.18,
+      depthMix: 0.54,
+      tintColor: "#4f5636"
     }
   }
 };
@@ -1481,6 +1525,16 @@ var texturedWaterSample = {
       orientationRadians: 0.2,
       color: "#9bd8e7",
       alpha: 0.32
+    },
+    materialStrata: {
+      primary: "water",
+      secondary: "shelf-sediment",
+      wetness: 1,
+      granularity: 0.34,
+      organicCover: 0,
+      rockExposure: 0.12,
+      depthMix: 0.42,
+      tintColor: "#5d8f86"
     }
   }
 };
@@ -1528,6 +1582,16 @@ var slopedRockSample = {
       orientationRadians: 0.8,
       color: "#c1b89f",
       alpha: 0.32
+    },
+    materialStrata: {
+      primary: "bedrock",
+      secondary: "mineral-vein",
+      wetness: 0.05,
+      granularity: 0.76,
+      organicCover: 0.04,
+      rockExposure: 0.88,
+      depthMix: 0.62,
+      tintColor: "#8e8a7b"
     },
     featureRelief: {
       roughnessBoost: 0.28
@@ -1583,6 +1647,12 @@ var waterPatternSwatches = getPlanetSurfacePatternSwatches(texturedWaterSample, 
 var rockPatternSwatches = getPlanetSurfacePatternSwatches(slopedRockSample, "#665226");
 var coarseGrassPatternSwatches = getPlanetSurfacePatternSwatches(coarseTexturedGrassSample, "#2f6531");
 var featureGrassPatternSwatches = getPlanetSurfacePatternSwatches(featureTexturedGrassSample, "#2f6531");
+var grassStrataTint = getPlanetSurfaceMaterialStrataTint(texturedGrassSample);
+var grassStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSample, "#2f6531");
+var waterStrataSwatches = getPlanetSurfaceStrataSwatches(texturedWaterSample, "#08365f");
+var rockStrataSwatches = getPlanetSurfaceStrataSwatches(slopedRockSample, "#665226");
+var coarseGrassStrataSwatches = getPlanetSurfaceStrataSwatches(coarseTexturedGrassSample, "#2f6531");
 var grassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var repeatedGrassNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var waterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedWaterSample, "#08365f");
@@ -1599,6 +1669,7 @@ var alternateSeedMicrotexture = getPlanetSurfaceMicrotextureSwatches(texturedGra
 var alternateSeedFinePixels = getPlanetSurfaceFinePixelSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedSilhouetteBreakup = getPlanetSurfaceSilhouetteBreakupSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedPatternSwatches = getPlanetSurfacePatternSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
@@ -1679,6 +1750,29 @@ grassPatternSwatches.concat(waterPatternSwatches).concat(rockPatternSwatches).fo
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface pattern height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface pattern width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface pattern height should stay in cell");
+});
+assert.ok(grassStrataTint.amount > 0 && grassStrataTint.amount <= 0.18, "material strata tint should alter close surface color within bounds");
+assertRgbBounds(getRgbFromHex(grassStrataTint.color), "material strata tint");
+assert.ok(grassStrataSwatches.length > 0, "close surface strata should add layered material swatches");
+assert.ok(grassStrataSwatches.length <= 7, "surface strata swatch count should stay bounded");
+assert.deepStrictEqual(repeatedGrassStrataSwatches, grassStrataSwatches, "surface strata swatches should be deterministic");
+assert.notDeepStrictEqual(alternateSeedStrataSwatches, grassStrataSwatches, "surface strata swatches should vary by seed");
+assert.strictEqual(grassStrataSwatches[0].strataPrimary, "topsoil", "grass strata swatches should preserve primary substrate");
+assert.strictEqual(waterStrataSwatches[0].strataPrimary, "water", "water strata swatches should preserve water substrate");
+assert.strictEqual(rockStrataSwatches[0].strataPrimary, "bedrock", "rock strata swatches should preserve bedrock substrate");
+assert.deepStrictEqual(coarseGrassStrataSwatches, [], "broad local samples should skip strata swatches");
+assert.ok(waterStrataSwatches.some(function(swatch) { return swatch.width > swatch.height; }), "water strata should include sediment streaks");
+assert.ok(rockStrataSwatches.some(function(swatch) { return swatch.width !== swatch.height; }), "rock strata should include fracture-like layers");
+grassStrataSwatches.concat(waterStrataSwatches).concat(rockStrataSwatches).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "surface strata swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.42, "surface strata alpha should stay subdued");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "surface strata x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "surface strata y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "surface strata width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface strata height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface strata width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface strata height should stay in cell");
+  assert.ok(swatch.rotationRadians === undefined || (swatch.rotationRadians >= 0 && swatch.rotationRadians < Math.PI), "surface strata rotation should stay normalized");
 });
 assert.ok(grassNaturalElementSwatches.length > 0, "meter natural elements should render close-ground swatches");
 assert.ok(grassNaturalElementSwatches.length <= 6, "natural element swatch count should stay bounded");

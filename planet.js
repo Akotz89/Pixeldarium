@@ -2461,6 +2461,113 @@ function getPlanetSurfaceNaturalElement(latitude, longitude, biome, material, lo
   };
 }
 
+function getPlanetSurfaceStrataTintColor(primary, secondary, surface) {
+  var normalizedPrimary = primary || "soil";
+  var normalizedSecondary = secondary || "";
+
+  if (normalizedPrimary === "water") {
+    return normalizedSecondary === "shelf-sediment" ? "#5d8f86" : "#244a62";
+  }
+
+  if (normalizedPrimary === "sand" || normalizedPrimary === "sandy-soil") {
+    return normalizedSecondary === "gravel" ? "#a88d57" : "#c2a763";
+  }
+
+  if (normalizedPrimary === "bedrock" || normalizedPrimary === "scree") {
+    return normalizedSecondary === "mineral-vein" ? "#8e8a7b" : "#66675e";
+  }
+
+  if (normalizedPrimary === "ice" || normalizedPrimary === "frost") {
+    return surface === "snow" ? "#edf8fb" : "#a9d4e1";
+  }
+
+  if (normalizedPrimary === "peat" || normalizedPrimary === "humus") {
+    return "#3a4a2c";
+  }
+
+  if (normalizedPrimary === "topsoil" || normalizedPrimary === "loam") {
+    return normalizedSecondary === "clay" ? "#706447" : "#4f5636";
+  }
+
+  return "#6c6552";
+}
+
+function getPlanetSurfaceMaterialStrata(latitude, longitude, biome, material, lod, relief) {
+  var sampleMeters = Math.max(1, Number(lod && lod.sampleMeters) || 1);
+  var surface = material && material.surface ? material.surface : "ground";
+  var signals = material && material.signals ? material.signals : {};
+  var meters = getSurfaceMeterCoordinate(latitude, longitude);
+  var layerNoise = getSurfaceLayerNoise(meters, Math.max(1, sampleMeters * 7), 109);
+  var grainNoise = getSurfacePixelNoise(meters, Math.max(1, sampleMeters * 2), 127);
+  var wetness = clamp(Number(signals.wetness) || 0, 0, 1);
+  var dryness = clamp(Number(signals.dryness) || 0, 0, 1);
+  var roughness = clamp(Number(signals.surfaceRoughness) || Number(lod && lod.roughness) || 0, 0, 1);
+  var slope = clamp(Number(relief && relief.slope) || 0, 0, 1);
+  var canopy = clamp(Number(signals.canopyDensity) || 0, 0, 1);
+  var snow = clamp(Number(signals.snow) || 0, 0, 1);
+  var shallowWater = clamp(Number(signals.shallowWater) || 0, 0, 1);
+  var coast = clamp(Number(signals.coast) || 0, 0, 1);
+  var primary = "loam";
+  var secondary = layerNoise > 0.56 ? "clay" : "silt";
+  var organicCover = clamp(canopy * 0.46 + wetness * 0.18 + (biome === "forest" ? 0.28 : 0) + (surface === "moss" ? 0.18 : 0), 0, 1);
+  var rockExposure = clamp(roughness * 0.44 + slope * 0.36 + (Number(signals.ridge) || 0) * 0.24, 0, 1);
+  var granularity = clamp(0.22 + roughness * 0.34 + dryness * 0.18 + grainNoise * 0.22, 0, 1);
+  var depthMix = clamp(layerNoise * 0.64 + grainNoise * 0.36, 0, 1);
+
+  if (surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    primary = "water";
+    secondary = shallowWater > 0.36 || coast > 0.34 ? "shelf-sediment" : "basalt-silt";
+    organicCover = 0;
+    rockExposure = clamp(shallowWater * 0.22 + roughness * 0.18, 0, 0.42);
+    granularity = clamp(0.10 + shallowWater * 0.30 + grainNoise * 0.18, 0, 0.48);
+    wetness = 1;
+  } else if (surface === "sand" || surface === "dune") {
+    primary = "sand";
+    secondary = rockExposure > 0.46 || layerNoise > 0.68 ? "gravel" : "silt";
+    organicCover = clamp(organicCover * 0.22, 0, 0.24);
+    granularity = clamp(0.54 + dryness * 0.22 + grainNoise * 0.20 + rockExposure * 0.10, 0, 1);
+  } else if (surface === "rock" || surface === "stone" || surface === "ridge ice") {
+    primary = surface === "ridge ice" ? "ice" : (rockExposure > 0.62 ? "bedrock" : "scree");
+    secondary = surface === "ridge ice" ? "frost" : (layerNoise > 0.54 ? "mineral-vein" : "weathered-soil");
+    organicCover = clamp(organicCover * 0.18, 0, 0.20);
+    rockExposure = clamp(0.50 + rockExposure * 0.48, 0, 1);
+    granularity = clamp(0.38 + roughness * 0.28 + grainNoise * 0.22, 0, 1);
+  } else if (surface === "snow" || surface === "ice") {
+    primary = surface === "snow" ? "frost" : "ice";
+    secondary = snow > 0.66 ? "snowpack" : "permafrost";
+    organicCover = 0;
+    rockExposure = clamp(rockExposure * (surface === "snow" ? 0.18 : 0.36), 0, 0.42);
+    granularity = clamp(0.12 + roughness * 0.16 + grainNoise * 0.18, 0, 0.48);
+  } else if (surface === "dense canopy" || surface === "woodland") {
+    primary = "humus";
+    secondary = canopy > 0.62 ? "leaf-litter" : "topsoil";
+    organicCover = clamp(0.46 + canopy * 0.42 + wetness * 0.08, 0, 1);
+    rockExposure = clamp(rockExposure * 0.38, 0, 0.46);
+    granularity = clamp(0.18 + roughness * 0.18 + grainNoise * 0.18, 0, 0.62);
+  } else if (surface === "moss" || surface === "scrub") {
+    primary = biome === "tundra" ? "peat" : "topsoil";
+    secondary = biome === "tundra" || snow > 0.28 ? "permafrost" : "root-mat";
+    organicCover = clamp(0.30 + wetness * 0.26 + canopy * 0.18, 0, 0.82);
+    rockExposure = clamp(rockExposure * 0.62, 0, 0.72);
+  } else if (surface === "grass" || surface === "brush" || surface === "meadow" || surface === "clearing") {
+    primary = wetness > 0.62 ? "loam" : (dryness > 0.58 ? "sandy-soil" : "topsoil");
+    secondary = wetness > 0.62 ? "clay" : (rockExposure > 0.42 ? "gravel" : "root-mat");
+    organicCover = clamp(0.24 + wetness * 0.24 + canopy * 0.16 + (surface === "meadow" ? 0.18 : 0), 0, 0.86);
+    rockExposure = clamp(rockExposure * (surface === "brush" ? 0.82 : 0.56), 0, 0.76);
+  }
+
+  return {
+    primary: primary,
+    secondary: secondary,
+    wetness: wetness,
+    granularity: granularity,
+    organicCover: organicCover,
+    rockExposure: rockExposure,
+    depthMix: depthMix,
+    tintColor: getPlanetSurfaceStrataTintColor(primary, secondary, surface)
+  };
+}
+
 function getPlanetLocalShorelineRefinement(latitude, longitude, tile, lod) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
@@ -2780,6 +2887,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
     biome
   );
   var naturalElement = getPlanetSurfaceNaturalElement(latitude, longitude, biome, material, lod, relief);
+  var materialStrata = getPlanetSurfaceMaterialStrata(latitude, longitude, biome, material, lod, relief);
   var shade = clamp(
     0.12 + mixedNoise * 0.46 + lod.roughness * 0.16 + relief.hillshade * 0.26,
     0,
@@ -2800,6 +2908,7 @@ function getPlanetSurfaceDetail(latitude, longitude, tile, sampleMetersOverride)
     hillshade: relief.hillshade,
     featureRelief: relief.featureRelief,
     regionalContext: lod.regional,
+    materialStrata: materialStrata,
     continentShape: lod.continentShape,
     plateInfluence: lod.plateInfluence,
     islandArc: lod.islandArc,

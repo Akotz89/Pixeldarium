@@ -1166,6 +1166,48 @@ function getPlanetLocalTerrainBandTint(sample) {
   };
 }
 
+function getPlanetSurfaceMaterialStrataTint(sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var strata = detail.materialStrata || null;
+  var surface = detail.surface || "ground";
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var closeScale = sampleMeters <= 1 ? 1 : (sampleMeters <= 5 ? 0.72 : (sampleMeters <= 25 ? 0.34 : 0));
+  var strongSurfaceScale = 1;
+  var amount;
+
+  if (!strata || closeScale <= 0) {
+    return {
+      color: "#000000",
+      amount: 0
+    };
+  }
+
+  if (surface === "whitecap" || surface === "deep water" || surface === "snow" || surface === "ice") {
+    strongSurfaceScale = 0.38;
+  } else if (surface === "open water" || surface === "ridge ice") {
+    strongSurfaceScale = 0.58;
+  } else if (surface === "rock" || surface === "stone" || surface === "sand" || surface === "dune") {
+    strongSurfaceScale = 0.86;
+  }
+
+  amount = clamp(
+    (
+      0.05 +
+        (Number(strata.granularity) || 0) * 0.05 +
+        (Number(strata.organicCover) || 0) * 0.04 +
+        (Number(strata.rockExposure) || 0) * 0.04 +
+        (Number(strata.depthMix) || 0) * 0.03
+    ) * closeScale * strongSurfaceScale,
+    0,
+    0.18
+  );
+
+  return {
+    color: strata.tintColor || "#6c6552",
+    amount: amount
+  };
+}
+
 function getPlanetSurfaceColor(sample) {
   var biome = sample && sample.biome ? sample.biome : "unknown";
   var detail = sample && sample.detail ? sample.detail : null;
@@ -1238,6 +1280,8 @@ function getPlanetSurfaceColor(sample) {
   color = blendHexColors(color, "#f1f6f4", snowLine * 0.48);
   var terrainBandTint = getPlanetLocalTerrainBandTint(sample);
   color = blendHexColors(color, terrainBandTint.color, terrainBandTint.amount);
+  var strataTint = getPlanetSurfaceMaterialStrataTint(sample);
+  color = blendHexColors(color, strataTint.color, strataTint.amount);
   color = getPlanetSurfaceColorWithTileBlend(sample, color);
   return shadeHexColor(color, reliefShade);
 }
@@ -1740,6 +1784,163 @@ function getPlanetSurfacePatternSwatches(sample, baseColor) {
   return swatches;
 }
 
+function getPlanetSurfaceStrataSwatchAccent(sample, baseColor, noise) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var strata = detail.materialStrata || {};
+  var primary = strata.primary || "soil";
+  var secondary = strata.secondary || "";
+  var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
+  var target = normalizedNoise > 0.52 ? "#8b8062" : "#302a22";
+
+  if (primary === "water") {
+    target = secondary === "shelf-sediment"
+      ? (normalizedNoise > 0.52 ? "#87b8a8" : "#18394d")
+      : (normalizedNoise > 0.52 ? "#5f8fb0" : "#05162d");
+  } else if (primary === "sand" || primary === "sandy-soil") {
+    target = secondary === "gravel"
+      ? (normalizedNoise > 0.52 ? "#c8ad71" : "#675129")
+      : (normalizedNoise > 0.52 ? "#d4bd79" : "#77602d");
+  } else if (primary === "bedrock" || primary === "scree") {
+    target = secondary === "mineral-vein"
+      ? (normalizedNoise > 0.52 ? "#bbb6a2" : "#373933")
+      : (normalizedNoise > 0.52 ? "#8f8e82" : "#272923");
+  } else if (primary === "ice" || primary === "frost") {
+    target = normalizedNoise > 0.52 ? "#f5fdff" : "#83b8cc";
+  } else if (primary === "humus" || primary === "peat") {
+    target = normalizedNoise > 0.52 ? "#566339" : "#1b2115";
+  } else if (primary === "topsoil" || primary === "loam") {
+    target = secondary === "root-mat"
+      ? (normalizedNoise > 0.52 ? "#718046" : "#26321e")
+      : (normalizedNoise > 0.52 ? "#756b4d" : "#2f2b20");
+  }
+
+  return blendHexColors(baseColor, target, clamp(0.16 + normalizedNoise * 0.18, 0.16, 0.38));
+}
+
+function getPlanetSurfaceStrataSwatchShape(strata, noise, index) {
+  var primary = strata && strata.primary ? strata.primary : "soil";
+  var secondary = strata && strata.secondary ? strata.secondary : "";
+  var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
+  var maxSize = Math.max(1, CONFIG.TILE_SIZE - 1);
+  var shortSize = 1;
+  var midSize = clamp(Math.round(CONFIG.TILE_SIZE * (0.18 + normalizedNoise * 0.18)), 1, maxSize);
+  var longSize = clamp(Math.round(CONFIG.TILE_SIZE * (0.44 + normalizedNoise * 0.28)), 1, maxSize);
+
+  if (primary === "water" || primary === "sand" || primary === "sandy-soil") {
+    return {
+      width: longSize,
+      height: shortSize
+    };
+  }
+
+  if (primary === "bedrock" || primary === "scree" || secondary === "mineral-vein") {
+    return index % 2 === 0
+      ? { width: shortSize, height: longSize }
+      : { width: longSize, height: shortSize };
+  }
+
+  if (primary === "humus" || primary === "peat" || secondary === "root-mat" || secondary === "leaf-litter") {
+    return {
+      width: midSize,
+      height: clamp(midSize + (index % 2), 1, maxSize)
+    };
+  }
+
+  if (primary === "ice" || primary === "frost") {
+    return {
+      width: clamp(midSize + 1, 1, maxSize),
+      height: shortSize
+    };
+  }
+
+  return {
+    width: midSize,
+    height: midSize
+  };
+}
+
+function getPlanetSurfaceStrataSwatchRotation(sample, strata, noise, index) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var primary = strata && strata.primary ? strata.primary : "soil";
+  var base = Number.isFinite(Number(detail.aspect))
+    ? (Number(detail.aspect) * Math.PI / 180)
+    : 0;
+  var jitter = (clamp(Number(noise) || 0, 0, 1) - 0.5) * Math.PI * 0.12;
+
+  if (primary === "water" || primary === "sand" || primary === "sandy-soil" || primary === "ice" || primary === "frost") {
+    return normalizePlanetLineAngleRadians(base + Math.PI * 0.5 + jitter);
+  }
+
+  if (primary === "bedrock" || primary === "scree") {
+    return normalizePlanetLineAngleRadians(base + jitter + (index % 2) * Math.PI * 0.5);
+  }
+
+  return 0;
+}
+
+function getPlanetSurfaceStrataSwatches(sample, baseColor) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var strata = detail.materialStrata || null;
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+  var swatches = [];
+  var strength;
+  var count;
+  var typeSeed;
+
+  if (!strata || sampleMeters > 5 || CONFIG.TILE_SIZE < 4) {
+    return swatches;
+  }
+
+  strength = clamp(
+    0.12 +
+      (Number(strata.granularity) || 0) * 0.24 +
+      (Number(strata.organicCover) || 0) * 0.18 +
+      (Number(strata.rockExposure) || 0) * 0.22 +
+      (Number(strata.wetness) || 0) * 0.06,
+    0,
+    0.78
+  );
+  count = strength <= 0.14 ? 0 : clamp(Math.round(1 + strength * (sampleMeters <= 1 ? 6 : 4)), 1, sampleMeters <= 1 ? 7 : 5);
+
+  if (count <= 0) {
+    return swatches;
+  }
+
+  typeSeed = String(strata.primary || "").split("").reduce(function(total, character) {
+    return total + character.charCodeAt(0);
+  }, 0) + String(strata.secondary || "").split("").reduce(function(total, character) {
+    return total + character.charCodeAt(0);
+  }, 0);
+
+  for (var i = 0; i < count; i++) {
+    var noise = getDeterministicUnitNoise(seedEast + i * 41, seedNorth - i * 43, getPlanetVisualSeedOffset() + typeSeed + 6101 + i * 29);
+    var shape = getPlanetSurfaceStrataSwatchShape(strata, noise, i);
+    var maxX = Math.max(1, CONFIG.TILE_SIZE - shape.width + 1);
+    var maxY = Math.max(1, CONFIG.TILE_SIZE - shape.height + 1);
+
+    if (i > 0 && noise > strength + 0.46) {
+      continue;
+    }
+
+    swatches.push({
+      x: Math.floor(getDeterministicUnitNoise(seedEast - i * 17, seedNorth + i * 19, getPlanetVisualSeedOffset() + typeSeed + 6221 + i) * maxX),
+      y: Math.floor(getDeterministicUnitNoise(seedEast + i * 23, seedNorth - i * 29, getPlanetVisualSeedOffset() + typeSeed + 6359 + i) * maxY),
+      width: shape.width,
+      height: shape.height,
+      size: Math.max(shape.width, shape.height),
+      color: getPlanetSurfaceStrataSwatchAccent(sample, baseColor, noise),
+      alpha: clamp(0.08 + strength * 0.20 + noise * 0.10, 0.10, 0.42),
+      rotationRadians: getPlanetSurfaceStrataSwatchRotation(sample, strata, noise, i),
+      strataPrimary: strata.primary,
+      strataSecondary: strata.secondary
+    });
+  }
+
+  return swatches;
+}
+
 function getPlanetSurfaceNaturalElementShape(elementType, noise, index) {
   var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
   var maxSize = Math.max(1, CONFIG.TILE_SIZE - 1);
@@ -2088,6 +2289,7 @@ function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
     .concat(getPlanetSurfaceReliefAccentSwatches(sample, baseColor))
     .concat(getPlanetSurfaceEdgeAccentSwatches(sample, baseColor))
     .concat(getPlanetSurfaceSilhouetteBreakupSwatches(sample, baseColor))
+    .concat(getPlanetSurfaceStrataSwatches(sample, baseColor))
     .concat(getPlanetSurfacePatternSwatches(sample, baseColor))
     .concat(getPlanetSurfaceNaturalElementSwatches(sample, baseColor))
     .concat(getPlanetSurfaceMicrotextureSwatches(sample, baseColor));
