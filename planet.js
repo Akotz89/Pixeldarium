@@ -101,6 +101,20 @@ function getPlanetZoomAnchorIndex(zoomLevel) {
   return clamp(Math.floor(Number(zoomLevel) || 0), 0, levels.length - 1);
 }
 
+function getPlanetSurfaceLodZoomIndex(zoomLevel) {
+  var levels = getPlanetZoomLevels();
+  var normalizedZoom = clamp(Number(zoomLevel) || 0, 0, levels.length - 1);
+  var lowerIndex = Math.floor(normalizedZoom);
+  var upperIndex = Math.ceil(normalizedZoom);
+  var zoomFraction = normalizedZoom - lowerIndex;
+
+  if (lowerIndex === upperIndex || lowerIndex < 1) {
+    return lowerIndex;
+  }
+
+  return zoomFraction + 1e-9 >= 0.55 ? upperIndex : lowerIndex;
+}
+
 function getPlanetInterpolatedZoomLevel(zoomLevel) {
   var levels = getPlanetZoomLevels();
   var normalizedZoom = clamp(Number(zoomLevel) || 0, 0, levels.length - 1);
@@ -337,6 +351,7 @@ function getPlanetDistanceLabel(meters) {
 function getPlanetCameraScaleInfo() {
   var view = getPlanetView();
   var scale = getPlanetViewScale();
+  var surfaceLod = getPlanetZoomLevel(getPlanetSurfaceLodZoomIndex(view.zoomLevel));
   var footprint = getPlanetLocalViewFootprint();
   var verticalFovRadians = 45 * Math.PI / 180;
   var metersPerCanvasPixel = scale.metersPerSample / Math.max(1, CONFIG.TILE_SIZE);
@@ -348,6 +363,9 @@ function getPlanetCameraScaleInfo() {
     zoomFraction: scale.zoomFraction,
     anchorLevel: scale.anchorIndex,
     anchorName: scale.anchorName,
+    surfaceLodLevel: surfaceLod.index,
+    surfaceLodName: surfaceLod.name,
+    surfaceSampleMeters: surfaceLod.metersPerSample,
     scaleName: scale.name,
     latitude: view.latitude,
     longitude: view.longitude,
@@ -773,7 +791,7 @@ function getPlanetLocalSurfaceAddress(gridX, gridY) {
 
 function makePlanetSurfaceChunkAddress(zoomLevelIndex, chunkX, chunkY) {
   var scale = getPlanetZoomLevel(
-    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetZoomAnchorIndex(getPlanetView().zoomLevel)
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetSurfaceLodZoomIndex(getPlanetView().zoomLevel)
   );
   var chunkSamples = getPlanetSurfaceChunkSampleCount();
   var sampleMeters = Math.max(0.1, scale.metersPerSample);
@@ -917,7 +935,7 @@ function getPlanetVisibleSurfaceChunks(guardSamples) {
 
   for (var chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
     for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-      var address = makePlanetSurfaceChunkAddress(getPlanetZoomAnchorIndex(getPlanetView().zoomLevel), chunkX, chunkY);
+      var address = makePlanetSurfaceChunkAddress(samplePoints[0].zoomLevel, chunkX, chunkY);
       var screenRect = getPlanetSurfaceChunkScreenRect(address);
 
       if (
@@ -1631,7 +1649,7 @@ function getPlanetGroundFeatureSummary(latitude, longitude, radiusMeters) {
 
 function getPlanetSurfaceSampleAddress(latitude, longitude, zoomLevelIndex) {
   var scale = getPlanetZoomLevel(
-    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetZoomAnchorIndex(getPlanetView().zoomLevel)
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetSurfaceLodZoomIndex(getPlanetView().zoomLevel)
   );
   var chunkSamples = getPlanetSurfaceChunkSampleCount();
   var meters = getSurfaceMeterCoordinate(latitude, longitude);

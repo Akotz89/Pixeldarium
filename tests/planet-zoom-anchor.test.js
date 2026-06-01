@@ -150,12 +150,16 @@ var detailZoom = zoomLevels.filter(function(level) {
 var groundZoom = zoomLevels.filter(function(level) {
   return level.name === "Ground" && level.metersPerSample === 5;
 })[0];
+var detailZoomIndex = zoomLevels.indexOf(detailZoom);
+var groundZoomIndex = zoomLevels.indexOf(groundZoom);
 var developedPlaceLabels = zoomLevels.filter(function(level) {
   return ["Neighborhood", "Street", "Yard", "House"].indexOf(level.name) >= 0;
 });
 
 assert.ok(detailZoom, "zoom ladder should include detail scale");
 assert.ok(groundZoom, "zoom ladder should include ground scale");
+assert.ok(detailZoomIndex >= 0, "detail zoom should have an index");
+assert.ok(groundZoomIndex >= 0, "ground zoom should have an index");
 assert.strictEqual(finalGroundZoom.name, "Meter", "final ground zoom should remain Meter");
 assert.strictEqual(finalGroundZoom.metersPerSample, 1, "final ground zoom should remain 1 m/sample");
 assert.deepStrictEqual(developedPlaceLabels, [], "undeveloped planet zoom labels should not imply built infrastructure");
@@ -192,6 +196,35 @@ assertNear(getPlanetView().zoomLevel, 4.25, 1e-12, "fractional zoom");
 var localAfter = getPlanetLatLonFromCanvasPoint(cursorX, cursorY);
 assertNear(localAfter.latitude, localBefore.latitude, 1e-9, "anchored local latitude");
 assertNear(localAfter.longitude, localBefore.longitude, 1e-9, "anchored local longitude");
+
+assert.strictEqual(getPlanetSurfaceLodZoomIndex(0.75), 0, "globe transition should keep globe surface LOD below local zoom");
+assert.strictEqual(getPlanetSurfaceLodZoomIndex(detailZoomIndex - 0.46), detailZoomIndex - 1, "surface LOD should hold lower detail before threshold");
+assert.strictEqual(getPlanetSurfaceLodZoomIndex(detailZoomIndex - 0.45), detailZoomIndex, "surface LOD should switch finer before the integer zoom");
+assert.strictEqual(getPlanetSurfaceLodZoomIndex(finalGroundZoomIndex - 0.45), finalGroundZoomIndex, "surface LOD should preselect meter detail near final zoom");
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex - 0.46,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var coarseFractionalAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265);
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex - 0.45,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var fineFractionalAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265);
+var fineFractionalScaleInfo = getPlanetCameraScaleInfo();
+
+assert.strictEqual(coarseFractionalAddress.zoomLevel, groundZoomIndex, "pre-threshold fractional zoom should keep ground LOD");
+assert.strictEqual(coarseFractionalAddress.sampleMeters, groundZoom.metersPerSample, "pre-threshold fractional zoom should keep ground sample size");
+assert.strictEqual(fineFractionalAddress.zoomLevel, finalGroundZoomIndex, "near-final fractional zoom should use meter LOD");
+assert.strictEqual(fineFractionalAddress.sampleMeters, finalGroundZoom.metersPerSample, "near-final fractional zoom should use meter samples");
+assert.strictEqual(fineFractionalScaleInfo.surfaceLodLevel, finalGroundZoomIndex, "camera scale info should expose selected surface LOD");
+assert.strictEqual(fineFractionalScaleInfo.surfaceSampleMeters, finalGroundZoom.metersPerSample, "camera scale info should expose selected surface sample size");
 
 world.planetView = {
   zoomLevel: 0.75,
@@ -1198,6 +1231,34 @@ var northNeighborRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAd
 
 assertNear(chunkRect.x + chunkRect.width, eastNeighborRect.x, 1e-9, "adjacent chunk east edge continuity");
 assertNear(northNeighborRect.y + northNeighborRect.height, chunkRect.y, 1e-9, "adjacent chunk north edge continuity");
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex - 0.45,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
+
+var fractionalMeterAddress = getPlanetSurfaceSampleAddress(34.2117, -77.7265);
+var fractionalMeterChunkAddress = makePlanetSurfaceChunkAddress(
+  fractionalMeterAddress.zoomLevel,
+  fractionalMeterAddress.chunkX,
+  fractionalMeterAddress.chunkY
+);
+var fractionalMeterRect = getPlanetSurfaceChunkScreenRect(fractionalMeterChunkAddress);
+var fractionalMeterEastRect = getPlanetSurfaceChunkScreenRect(makePlanetSurfaceChunkAddress(
+  fractionalMeterAddress.zoomLevel,
+  fractionalMeterAddress.chunkX + 1,
+  fractionalMeterAddress.chunkY
+));
+
+assert.strictEqual(fractionalMeterAddress.sampleMeters, 1, "fractional near-final zoom should address meter chunks");
+assertNear(fractionalMeterRect.x + fractionalMeterRect.width, fractionalMeterEastRect.x, 1e-9, "fractional meter chunks should stay edge-continuous");
+
+world.planetView = {
+  zoomLevel: finalGroundZoomIndex,
+  latitude: 34.2117,
+  longitude: -77.7265
+};
 
 var visibleChunks = getPlanetVisibleSurfaceChunks(getPlanetSurfaceChunkSampleCount());
 assert.ok(visibleChunks.length > 1, "meter zoom should enumerate multiple visible chunks");
