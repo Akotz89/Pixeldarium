@@ -117,6 +117,7 @@ assert.strictEqual(CONFIG.PLANET_DEBUG_OVERLAY, false, "verbose planet debug ove
 assert.strictEqual(CONFIG.PLANET_REFERENCE_GRID, false, "planet reference grid should be hidden by default");
 assert.strictEqual(CONFIG.PLANET_GLOBE_ENTITY_MARKERS, false, "globe-scale entity markers should be hidden by default");
 assert.strictEqual(CONFIG.SHOW_SCANLINES, false, "scanline overlay should be hidden by default");
+assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud overlay should be disabled while tuning surface readability");
 
 world.planetView = {
   zoomLevel: 4,
@@ -274,8 +275,10 @@ assert.ok(Math.abs(seededCloudSample - cloudSample) > 0.01, "cloud opacity shoul
 var sampleProjection = { radius: 610 };
 var globeSampleSize = getPlanetGlobeSampleSize(sampleProjection, 1);
 assert.ok(globeSampleSize >= 10, "globe samples should overlap projected tile spacing");
-assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.6, "oversized globe raster should downsample for responsiveness");
+assert.ok(getPlanetGlobeRasterScale(1600, 1220) < 0.85, "oversized globe raster should downsample for responsiveness");
 assert.strictEqual(getPlanetGlobeRasterScale(480, 360), 1, "small globe raster should keep native resolution");
+assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) >= 0, "smooth imagery noise should stay bounded");
+assert.ok(getPlanetSmoothMeterNoise(999, 999, 1000, 7) <= 1, "smooth imagery noise should stay bounded");
 
 var globeSurfaceRgb = getPlanetSurfaceRgbAtLatLon(0, 0);
 assert.ok(globeSurfaceRgb.red >= 0 && globeSurfaceRgb.red <= 255, "globe surface red should be bounded");
@@ -391,8 +394,9 @@ assert.ok(groundFeatures.length > 0, "ground feature layer should generate featu
 assert.deepStrictEqual(stableGroundFeatures, groundFeatures, "ground features should be deterministic");
 assert.notDeepStrictEqual(shiftedGroundFeatures, groundFeatures, "ground features should vary by meter-space bounds");
 assert.ok(groundFeatures.some(function(feature) { return feature.shape === "line"; }), "ground features should include linear detail");
-assert.ok(groundFeatures.some(function(feature) { return feature.shape === "rect"; }), "ground features should include footprint detail");
+assert.ok(groundFeatures.some(function(feature) { return feature.shape === "rect"; }), "ground features should include natural area patches");
 assert.ok(groundFeatures.every(function(feature) { return /^GF:/.test(feature.id); }), "ground features should have stable ids");
+assert.ok(groundFeatures.every(function(feature) { return feature.type !== "track" && feature.type !== "structure"; }), "undeveloped ground features should not imply built infrastructure");
 
 var lineFeature = groundFeatures.filter(function(feature) { return feature.shape === "line"; })[0];
 var lineMidpoint = getLatLonFromSurfaceMeterCoordinate(
@@ -410,9 +414,9 @@ var rectFeature = groundFeatures.filter(function(feature) { return feature.shape
 var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);
 var nearestRectFeature = getNearestPlanetGroundFeature(rectCenter.latitude, rectCenter.longitude, 16);
 
-assert.ok(nearestRectFeature, "nearest feature query should find a footprint feature");
-assert.strictEqual(nearestRectFeature.id, rectFeature.id, "nearest footprint feature id should match");
-assertNear(nearestRectFeature.distanceMeters, 0, 1e-9, "nearest footprint distance");
+assert.ok(nearestRectFeature, "nearest feature query should find an area patch");
+assert.strictEqual(nearestRectFeature.id, rectFeature.id, "nearest area patch feature id should match");
+assertNear(nearestRectFeature.distanceMeters, 0, 1e-9, "nearest area patch distance");
 assert.ok(getPlanetGroundFeatureSummary(rectCenter.latitude, rectCenter.longitude, 16).nearest.id, "feature summary should include nearest feature");
 
 var broadSummary = getPlanetGroundFeatureSummary(34.2117, -77.7265, 500000);

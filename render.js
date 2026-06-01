@@ -304,6 +304,32 @@ function getPlanetMeterNoise(eastMeters, northMeters, patchMeters, seedOffset) {
   );
 }
 
+function smoothPlanetNoiseAmount(amount) {
+  var t = clamp(Number(amount) || 0, 0, 1);
+
+  return t * t * (3 - 2 * t);
+}
+
+function getPlanetSmoothMeterNoise(eastMeters, northMeters, patchMeters, seedOffset) {
+  var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
+  var normalizedSeed = Math.round(Number(seedOffset) || 0) + getPlanetVisualSeedOffset();
+  var eastCell = (Number(eastMeters) || 0) / normalizedPatchMeters;
+  var northCell = (Number(northMeters) || 0) / normalizedPatchMeters;
+  var x0 = Math.floor(eastCell);
+  var y0 = Math.floor(northCell);
+  var xAmount = smoothPlanetNoiseAmount(eastCell - x0);
+  var yAmount = smoothPlanetNoiseAmount(northCell - y0);
+  var seed = Math.round(normalizedPatchMeters) + normalizedSeed;
+  var topLeft = getDeterministicUnitNoise(x0, y0, seed);
+  var topRight = getDeterministicUnitNoise(x0 + 1, y0, seed);
+  var bottomLeft = getDeterministicUnitNoise(x0, y0 + 1, seed);
+  var bottomRight = getDeterministicUnitNoise(x0 + 1, y0 + 1, seed);
+  var top = topLeft + (topRight - topLeft) * xAmount;
+  var bottom = bottomLeft + (bottomRight - bottomLeft) * xAmount;
+
+  return top + (bottom - top) * yAmount;
+}
+
 function getPlanetTileRgb(tileX, tileY, tileRgbCache) {
   var x = getWrappedWorldX(tileX);
   var y = getClampedWorldY(tileY);
@@ -346,10 +372,11 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
   var tile = getPlanetTile(tilePosition.x, tilePosition.y) || {};
   var biome = tile.biome || "unknown";
   var surfaceMeters = getSurfaceMeterCoordinate(normalizedLatitude, normalizedLongitude);
-  var broad = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 280000, 17);
-  var regional = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 90000, 31);
-  var local = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 28000, 47);
-  var fine = getPlanetMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 9000, 59);
+  var broad = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 260000, 17);
+  var regional = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 82000, 31);
+  var local = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 26000, 47);
+  var fine = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 8200, 59);
+  var micro = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2600, 67);
   var color = clampRgb(getPlanetSurfaceRgbAtLatLon(normalizedLatitude, normalizedLongitude, tileRgbCache));
   var elevationValue = Number.isFinite(Number(tile.elevation)) ? Number(tile.elevation) : 0;
   var elevation = clamp((Math.tanh(elevationValue / 2) + 1) / 2, 0, 1);
@@ -359,7 +386,7 @@ function getPlanetImageryRgbAtLatLon(latitude, longitude, tileRgbCache) {
   var coast = clamp(Number(tile.coastFactor) || 0, 0, 1);
   var shallowWater = clamp(Number(tile.shallowWater) || 0, 0, 1);
   var river = clamp(Number(tile.riverStrength) || 0, 0, 1);
-  var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.035;
+  var texture = (broad - 0.5) * 0.10 + (regional - 0.5) * 0.08 + (local - 0.5) * 0.06 + (fine - 0.5) * 0.04 + (micro - 0.5) * 0.035;
 
   if (biome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
@@ -669,9 +696,9 @@ function drawLocalSurfaceGroundFeatureRect(targetCtx, address, feature) {
   targetCtx.fillStyle = feature.color || "#d9e7ff";
   targetCtx.fillRect(-width / 2, -height / 2, width, height);
 
-  if (feature.type === "structure") {
-    targetCtx.globalAlpha = clamp((Number(feature.alpha) || 0.18) + 0.18, 0, 0.82);
-    targetCtx.strokeStyle = "rgba(3, 4, 9, 0.82)";
+  if (feature.type === "rockfield") {
+    targetCtx.globalAlpha = clamp((Number(feature.alpha) || 0.18) + 0.04, 0, 0.44);
+    targetCtx.strokeStyle = "rgba(230, 218, 188, 0.26)";
     targetCtx.lineWidth = 1;
     targetCtx.strokeRect(-width / 2, -height / 2, width, height);
   }
@@ -805,14 +832,19 @@ function drawPlanetCloudLayer(targetCtx) {
   var sampleSize = getPlanetGlobeSampleSize(projection, 1.35);
   var stride = 6;
   var cloudSeed = typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 997 : 0;
-  var maxCloudAlpha = clamp(Number(CONFIG.PLANET_CLOUD_ALPHA) || 0.11, 0, 0.22);
+  var configuredCloudAlpha = Number(CONFIG.PLANET_CLOUD_ALPHA);
+  var maxCloudAlpha = clamp(Number.isFinite(configuredCloudAlpha) ? configuredCloudAlpha : 0.11, 0, 0.22);
+
+  if (maxCloudAlpha <= 0) {
+    return;
+  }
 
   targetCtx.save();
   targetCtx.beginPath();
   targetCtx.arc(projection.centerX, projection.centerY, projection.radius, 0, Math.PI * 2);
   targetCtx.clip();
   targetCtx.globalCompositeOperation = "screen";
-  targetCtx.filter = "blur(" + Math.max(4, Math.round(sampleSize * 0.58)) + "px)";
+  targetCtx.filter = "blur(" + Math.max(2, Math.round(sampleSize * 0.28)) + "px)";
 
   for (var y = 0; y < WORLD_HEIGHT; y += stride) {
     for (var x = 0; x < WORLD_WIDTH; x += stride) {
@@ -824,14 +856,14 @@ function drawPlanetCloudLayer(targetCtx) {
 
       var opacity = getPlanetCloudOpacity(point.tile.latitude, point.tile.longitude, cloudSeed);
 
-      if (opacity <= 0.09) {
+      if (opacity <= 0.18) {
         continue;
       }
 
       var light = getPlanetAtmosphericLight(point);
-      var cloudSize = sampleSize * stride * (1.85 + opacity * 0.92);
+      var cloudSize = sampleSize * stride * (1.20 + opacity * 0.60);
 
-      targetCtx.globalAlpha = clamp(opacity * (0.05 + light * 0.12), 0, maxCloudAlpha);
+      targetCtx.globalAlpha = clamp(opacity * (0.035 + light * 0.075), 0, maxCloudAlpha);
       targetCtx.fillStyle = light > 0.52 ? "#f6fbff" : "#b6cce2";
       targetCtx.fillRect(
         point.x - cloudSize / 2,
@@ -1001,8 +1033,7 @@ function drawGlobeSurfaceRaster(targetCtx, projection) {
 
   surfaceCtx.putImageData(image, 0, 0);
   targetCtx.save();
-  targetCtx.imageSmoothingEnabled = true;
-  targetCtx.imageSmoothingQuality = "high";
+  targetCtx.imageSmoothingEnabled = false;
   targetCtx.drawImage(surfaceCanvas, minX, minY, width, height);
   targetCtx.restore();
   return true;

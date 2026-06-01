@@ -938,10 +938,16 @@ function getPlanetGroundFeatureTypeColor(type) {
   switch (type) {
     case "stream":
       return "#7ec8ff";
-    case "track":
-      return "#d7c28b";
-    case "structure":
-      return "#d8e0df";
+    case "reef":
+      return "#8ed7c9";
+    case "ridge":
+      return "#b9b081";
+    case "swale":
+      return "#6fa778";
+    case "rockfield":
+      return "#a99d8a";
+    case "meadow":
+      return "#8fcf71";
     case "clearing":
       return "#8fcf71";
     default:
@@ -983,9 +989,9 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
   var openBiome = biome === "grassland" || biome === "desert" || biome === "tundra";
   var features = [];
   var naturalSeed = getDeterministicUnitNoise(blockEast, blockNorth, 41);
-  var pathSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73);
-  var structureSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109);
-  var clearingSeed = getDeterministicUnitNoise(blockEast, blockNorth, 131);
+  var ridgeSeed = getDeterministicUnitNoise(blockEast, blockNorth, 73);
+  var rockSeed = getDeterministicUnitNoise(blockEast, blockNorth, 109);
+  var meadowSeed = getDeterministicUnitNoise(blockEast, blockNorth, 131);
 
   function makeLine(type, seed, widthMeters, alpha) {
     var angle = getDeterministicUnitNoise(blockEast, blockNorth, seed + 7) * Math.PI;
@@ -1014,22 +1020,22 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
 
   if (biome === "ocean") {
     if (naturalSeed > 0.46) {
-      makeLine("stream", 211, 1.2 + naturalSeed * 2.4, 0.16);
+      makeLine("reef", 211, 1.2 + naturalSeed * 2.4, 0.14);
     }
   } else if (landBiome && naturalSeed > 0.34) {
-    makeLine(forestBiome ? "clearing" : "track", 223, 0.7 + naturalSeed * 1.8, forestBiome ? 0.16 : 0.22);
+    makeLine(forestBiome ? "swale" : "ridge", 223, 0.7 + naturalSeed * 1.8, forestBiome ? 0.16 : 0.20);
   }
 
-  if (landBiome && pathSeed > 0.72) {
-    makeLine("track", 307, openBiome ? 2.6 : 1.4, openBiome ? 0.34 : 0.22);
+  if (landBiome && ridgeSeed > 0.72) {
+    makeLine(openBiome ? "ridge" : "swale", 307, openBiome ? 2.6 : 1.4, openBiome ? 0.24 : 0.18);
   }
 
-  if (landBiome && clearingSeed > 0.82) {
-    var clearingWidth = normalizedBlockMeters * (0.18 + clearingSeed * 0.20);
+  if (landBiome && meadowSeed > 0.82) {
+    var clearingWidth = normalizedBlockMeters * (0.18 + meadowSeed * 0.20);
     var clearingHeight = normalizedBlockMeters * (0.12 + getDeterministicUnitNoise(blockEast, blockNorth, 149) * 0.18);
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
-      type: "clearing",
+      type: "meadow",
       shape: "rect",
       biome: biome,
       east: centerEast + (getDeterministicUnitNoise(blockEast, blockNorth, 151) - 0.5) * normalizedBlockMeters * 0.46,
@@ -1037,17 +1043,17 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       widthMeters: clearingWidth,
       heightMeters: clearingHeight,
       rotation: getDeterministicUnitNoise(blockEast, blockNorth, 163) * Math.PI,
-      color: getPlanetGroundFeatureTypeColor("clearing"),
-      alpha: 0.16
+      color: getPlanetGroundFeatureTypeColor("meadow"),
+      alpha: 0.13
     });
   }
 
-  if (openBiome && structureSeed > 0.88) {
+  if (openBiome && rockSeed > 0.88) {
     var widthMeters = 7 + getDeterministicUnitNoise(blockEast, blockNorth, 173) * 18;
     var heightMeters = 6 + getDeterministicUnitNoise(blockEast, blockNorth, 181) * 14;
 
     appendPlanetGroundFeature(features, blockEast, blockNorth, {
-      type: "structure",
+      type: "rockfield",
       shape: "rect",
       biome: biome,
       east: centerEast + (getDeterministicUnitNoise(blockEast, blockNorth, 191) - 0.5) * normalizedBlockMeters * 0.52,
@@ -1055,8 +1061,8 @@ function getPlanetGroundFeatureBlock(blockEast, blockNorth, blockMeters) {
       widthMeters: widthMeters,
       heightMeters: heightMeters,
       rotation: getDeterministicUnitNoise(blockEast, blockNorth, 197) * Math.PI,
-      color: getPlanetGroundFeatureTypeColor("structure"),
-      alpha: 0.52
+      color: getPlanetGroundFeatureTypeColor("rockfield"),
+      alpha: 0.20
     });
   }
 
