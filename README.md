@@ -1,37 +1,37 @@
 <p align="center">
-  <img src="docs/screenshots/social-preview.png" alt="PixelSim — Planet-Scale Pixel Simulation" width="800">
+  <img src="docs/screenshots/social-preview.png" alt="Pixeldarium — Planet-Scale Pixeldariumulation" width="800">
 </p>
 
-<h1 align="center">🌍 PixelSim</h1>
+<h1 align="center">🌍 Pixeldarium</h1>
 
 <p align="center">
   <strong>Watch a primordial planet evolve from simple organisms to galactic civilization — all in your browser.</strong>
 </p>
 
 <p align="center">
-  <a href="https://akotz89.github.io/PixelSim/"><img src="https://img.shields.io/badge/▶_Play_Now-GitHub_Pages-58F06C?style=for-the-badge&logo=github" alt="Play Now"></a>
+  <a href="https://akotz89.github.io/Pixeldarium/"><img src="https://img.shields.io/badge/▶_Play_Now-GitHub_Pages-58F06C?style=for-the-badge&logo=github" alt="Play Now"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Akotz89/PixelSim/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/Akotz89/PixelSim/validate.yml?style=flat-square&label=CI&logo=github" alt="CI"></a>
-  <a href="https://github.com/Akotz89/PixelSim/releases/latest"><img src="https://img.shields.io/github/v/release/Akotz89/PixelSim?style=flat-square&color=58F06C" alt="Release"></a>
+  <a href="https://github.com/Akotz89/Pixeldarium/actions/workflows/validate.yml"><img src="https://img.shields.io/github/actions/workflow/status/Akotz89/Pixeldarium/validate.yml?style=flat-square&label=CI&logo=github" alt="CI"></a>
+  <a href="https://github.com/Akotz89/Pixeldarium/releases/latest"><img src="https://img.shields.io/github/v/release/Akotz89/Pixeldarium?style=flat-square&color=58F06C" alt="Release"></a>
   <img src="https://img.shields.io/badge/Pure-HTML%2FCSS%2FJS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Pure JS">
   <img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen?style=flat-square" alt="Zero Dependencies">
   <img src="https://img.shields.io/badge/Build_Step-None-blue?style=flat-square" alt="No Build">
   <img src="https://img.shields.io/badge/Protocol-file%3A%2F%2F-purple?style=flat-square" alt="file:// compatible">
-  <img src="https://img.shields.io/github/last-commit/Akotz89/PixelSim?style=flat-square&color=orange" alt="Last Commit">
+  <img src="https://img.shields.io/github/last-commit/Akotz89/Pixeldarium?style=flat-square&color=orange" alt="Last Commit">
 </p>
 
 ---
 
 ## ✨ What Is This?
 
-PixelSim is a **planet-scale pixel simulation engine** inspired by [Songs of Syx](https://store.steampowered.com/app/1162750/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
+Pixeldarium is a **planet-scale pixel simulation engine** inspired by [Songs of Syx](https://store.steampowered.com/app/1162750/Songs_of_Syx/). It procedurally generates an Earth-scale planet and simulates the full arc of civilization — from the first self-replicating organisms through tribal settlements, space programs, and galactic empires.
 
 **No frameworks. No server. No build step.** Just open `index.html` and watch evolution unfold.
 
 <p align="center">
-  <img src="docs/screenshots/globe-view.png" alt="PixelSim Globe View" width="700">
+  <img src="docs/screenshots/globe-view.png" alt="Pixeldarium Globe View" width="700">
   <br>
   <em>Procedurally generated planet with 8-level zoom — from orbit to 1-meter ground detail</em>
 </p>
@@ -42,13 +42,13 @@ PixelSim is a **planet-scale pixel simulation engine** inspired by [Songs of Syx
 
 ```bash
 # Clone
-git clone https://github.com/Akotz89/PixelSim.git
+git clone https://github.com/Akotz89/Pixeldarium.git
 
 # Open in browser — that's it
-open PixelSim/index.html
+open Pixeldarium/index.html
 ```
 
-> **Or play instantly:** [akotz89.github.io/PixelSim](https://akotz89.github.io/PixelSim/)
+> **Or play instantly:** [akotz89.github.io/Pixeldarium](https://akotz89.github.io/Pixeldarium/)
 
 ### Requirements
 
@@ -102,7 +102,7 @@ open PixelSim/index.html
 
 ## 🏗️ Architecture
 
-PixelSim is built with a deliberate set of architectural decisions designed for performance, simplicity, and zero-dependency operation:
+Pixeldarium is built with a deliberate set of architectural decisions designed for performance, simplicity, and zero-dependency operation:
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -117,7 +117,7 @@ PixelSim is built with a deliberate set of architectural decisions designed for 
 ### Project Structure
 
 ```
-PixelSim/
+Pixeldarium/
 ├── index.html              # Entry point
 ├── style.css               # Full UI styling
 ├── config.js               # All simulation constants
@@ -183,20 +183,20 @@ node tests/food-index.test.js
 
 ### Architecture Documentation
 
-Full planning artifacts are in `skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/`:
+Full planning artifacts are in `skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/`:
 
 | Document | Description |
 |----------|-------------|
-| [Game Design Document](skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/gdd.md) | 40KB — 12 epochs, 5 design pillars |
-| [Architecture Blueprint](skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/game-architecture.md) | 33KB — 7 decisions, 8 patterns |
-| [Epic Overview](skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/epics.md) | 14 epics across 5 phases |
-| [Decision Log](skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/decision-log.md) | Architecture decision rationale |
+| [Game Design Document](skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/gdd.md) | 40KB — 12 epochs, 5 design pillars |
+| [Architecture Blueprint](skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/game-architecture.md) | 33KB — 7 decisions, 8 patterns |
+| [Epic Overview](skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/epics.md) | 14 epics across 5 phases |
+| [Decision Log](skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/decision-log.md) | Architecture decision rationale |
 
 ---
 
 ## 🤖 AI Agent Integration
 
-PixelSim is designed for AI-assisted development. See [`AGENTS.md`](AGENTS.md) for:
+Pixeldarium is designed for AI-assisted development. See [`AGENTS.md`](AGENTS.md) for:
 - Mandatory architecture decisions (D1–D7)
 - Coding conventions and error philosophy
 - File structure targets
@@ -218,7 +218,7 @@ Phase 4: Cosmos ━━━━━━━━━━━━━━━━━━ N-body, o
 Phase 5: Endgame ━━━━━━━━━━━━━━━━━ Transcendence, audio, UI polish
 ```
 
-> Development is tracked in [Linear](https://linear.app/openclaw-mock-up/project/pixelsim-fd2791715086) under the Azyrra team.
+> Development is tracked in [Linear](https://linear.app/openclaw-mock-up/project/pixeldarium-fd2791715086) under the Azyrra team.
 
 ---
 

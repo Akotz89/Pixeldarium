@@ -1,4 +1,4 @@
-# PixelSim — Pre-Restructure Baseline
+# Pixeldarium — Pre-Restructure Baseline
 
 **Captured**: 2026-06-01  
 **Commit**: `da3416c` (main, post-merge of spherical-mechanics branch)  
@@ -152,7 +152,7 @@ main.js: OK
 
 - **Branch**: main
 - **Commit**: da3416c
-- **Remote**: https://github.com/Akotz89/PixelSim.git
+- **Remote**: https://github.com/Akotz89/Pixeldarium.git
 - **Clean working tree**: Yes (post-merge)
 - **Total merged PRs**: 79 + 1 direct merge
 - **CI**: GitHub Pages auto-deploy on main push

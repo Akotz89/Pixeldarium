@@ -1,4 +1,4 @@
-name: Deploy PixelSim to GitHub Pages
+name: Deploy Pixeldarium to GitHub Pages
 
 on:
   push:

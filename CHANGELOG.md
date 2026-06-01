@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to PixelSim will be documented in this file.
+All notable changes to Pixeldarium will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 - `readme.txt` (replaced by `README.md`)
-- Stale remote branch `aaronkotz89/pixelsim-spherical-mechanics`
+- Stale remote branch `aaronkotz89/pixeldarium-spherical-mechanics`
 
 ## [0.1.0] — 2026-06-01
 
@@ -47,5 +47,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-[Unreleased]: https://github.com/Akotz89/PixelSim/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Akotz89/PixelSim/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Akotz89/Pixeldarium/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Akotz89/Pixeldarium/releases/tag/v0.1.0

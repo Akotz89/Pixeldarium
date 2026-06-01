@@ -1,12 +1,12 @@
 name: ✨ Feature Request
-description: Suggest a new feature or improvement for PixelSim
+description: Suggest a new feature or improvement for Pixeldarium
 title: "[Feature] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have an idea for PixelSim? We'd love to hear it!
+        Have an idea for Pixeldarium? We'd love to hear it!
 
   - type: textarea
     id: description

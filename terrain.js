@@ -1,4 +1,4 @@
-// Pixel Sim Engine - terrain.js
+// Pixeldarium - terrain.js
 // Terrain generation and fertile land helpers.
 
 function getTerrain(x, y) {

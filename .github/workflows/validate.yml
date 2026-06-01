@@ -21,7 +21,7 @@ jobs:
 
       - name: Validate JS syntax
         run: |
-          echo "=== PixelSim Syntax Validation ==="
+          echo "=== Pixeldarium Syntax Validation ==="
           FAIL=0
           for f in config.js state.js utils.js planet.js terrain.js food.js \
                    organisms.js settlements.js render-terrain-cache.js render.js \

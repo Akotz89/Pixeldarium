@@ -1,8 +1,8 @@
 blank_issues: false
 contact_links:
   - name: 📖 Documentation
-    url: https://github.com/Akotz89/PixelSim/tree/main/docs
+    url: https://github.com/Akotz89/Pixeldarium/tree/main/docs
     about: Check the docs directory for architecture details and baselines
-  - name: 🎮 Play PixelSim
-    url: https://akotz89.github.io/PixelSim/
+  - name: 🎮 Play Pixeldarium
+    url: https://akotz89.github.io/Pixeldarium/
     about: Try the latest deployed version on GitHub Pages

@@ -2,7 +2,7 @@
 
 ## Scope
 
-PixelSim is a client-side browser application with no server component.
+Pixeldarium is a client-side browser application with no server component.
 It runs entirely in the user's browser and stores data only in local
 IndexedDB. There is no backend, no authentication, and no network requests.
 
@@ -12,7 +12,7 @@ If you discover a security issue (e.g., XSS via save file injection,
 prototype pollution), please report it responsibly:
 
 1. **Do not open a public issue**
-2. Email: [use GitHub private vulnerability reporting](https://github.com/Akotz89/PixelSim/security/advisories/new)
+2. Email: [use GitHub private vulnerability reporting](https://github.com/Akotz89/Pixeldarium/security/advisories/new)
 3. Include:
    - Description of the vulnerability
    - Steps to reproduce

@@ -1,12 +1,12 @@
-# Contributing to PixelSim
+# Contributing to Pixeldarium
 
-Thanks for your interest in contributing to PixelSim! This guide covers everything
+Thanks for your interest in contributing to Pixeldarium! This guide covers everything
 you need to know to make a successful contribution.
 
 ## 🚦 Before You Start
 
 1. **Read [`AGENTS.md`](AGENTS.md)** — Contains all mandatory architecture decisions (D1–D7)
-2. **Check [Linear](https://linear.app/openclaw-mock-up/project/pixelsim-fd2791715086)** — See if the work is already tracked
+2. **Check [Linear](https://linear.app/openclaw-mock-up/project/pixeldarium-fd2791715086)** — See if the work is already tracked
 3. **Open an issue first** — Discuss significant changes before implementing
 
 ## 🏗️ Architecture Rules
@@ -30,8 +30,8 @@ These are non-negotiable. PRs that violate them will be rejected.
 ### Setup
 
 ```bash
-git clone https://github.com/Akotz89/PixelSim.git
-cd PixelSim
+git clone https://github.com/Akotz89/Pixeldarium.git
+cd Pixeldarium
 # No install step — there are no dependencies!
 ```
 
@@ -83,7 +83,7 @@ js/persist/ — save, load, migrate
 
 ## 🐛 Reporting Bugs
 
-Use the [bug report template](https://github.com/Akotz89/PixelSim/issues/new?template=bug_report.yml).
+Use the [bug report template](https://github.com/Akotz89/Pixeldarium/issues/new?template=bug_report.yml).
 Include:
 - Steps to reproduce
 - Browser and version
@@ -92,7 +92,7 @@ Include:
 
 ## 💡 Feature Requests
 
-Use the [feature request template](https://github.com/Akotz89/PixelSim/issues/new?template=feature_request.yml).
+Use the [feature request template](https://github.com/Akotz89/Pixeldarium/issues/new?template=feature_request.yml).
 
 ## 📏 Code Style
 

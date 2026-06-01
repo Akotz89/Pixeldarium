@@ -1,6 +1,6 @@
 function normalizeSeedText(seedValue) {
   var seedText = String(seedValue == null ? "" : seedValue).trim();
-  return seedText || String(CONFIG.DEFAULT_SEED || "PIXELSIM");
+  return seedText || String(CONFIG.DEFAULT_SEED || "PIXELDARIUM");
 }
 
 function hashSeedText(seedText) {

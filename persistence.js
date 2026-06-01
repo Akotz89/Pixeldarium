@@ -1,23 +1,23 @@
-const PIXELSIM_DB_NAME = "pixelsim";
-const PIXELSIM_DB_VERSION = 1;
-const PIXELSIM_SAVE_STORE = "saves";
-const PIXELSIM_SAVE_ID = "latest";
-const PIXELSIM_SAVE_VERSION = 1;
+const PIXELDARIUM_DB_NAME = "pixeldarium";
+const PIXELDARIUM_DB_VERSION = 1;
+const PIXELDARIUM_SAVE_STORE = "saves";
+const PIXELDARIUM_SAVE_ID = "latest";
+const PIXELDARIUM_SAVE_VERSION = 1;
 
-function openPixelSimDatabase() {
+function openPixeldariumDatabase() {
   return new Promise(function(resolve, reject) {
     if (!window.indexedDB) {
       reject(new Error("IndexedDB is not available"));
       return;
     }
 
-    var request = window.indexedDB.open(PIXELSIM_DB_NAME, PIXELSIM_DB_VERSION);
+    var request = window.indexedDB.open(PIXELDARIUM_DB_NAME, PIXELDARIUM_DB_VERSION);
 
     request.onupgradeneeded = function(event) {
       var db = event.target.result;
 
-      if (!db.objectStoreNames.contains(PIXELSIM_SAVE_STORE)) {
-        db.createObjectStore(PIXELSIM_SAVE_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(PIXELDARIUM_SAVE_STORE)) {
+        db.createObjectStore(PIXELDARIUM_SAVE_STORE, { keyPath: "id" });
       }
     };
 
@@ -384,8 +384,8 @@ function createWorldSaveData() {
   }
 
   return {
-    id: PIXELSIM_SAVE_ID,
-    version: PIXELSIM_SAVE_VERSION,
+    id: PIXELDARIUM_SAVE_ID,
+    version: PIXELDARIUM_SAVE_VERSION,
     savedAt: new Date().toISOString(),
     worldWidth: WORLD_WIDTH,
     worldHeight: WORLD_HEIGHT,
@@ -607,11 +607,11 @@ function createWorldSaveData() {
 }
 
 function saveWorldToIndexedDB() {
-  return openPixelSimDatabase().then(function(db) {
+  return openPixeldariumDatabase().then(function(db) {
     return new Promise(function(resolve, reject) {
       var saveData = createWorldSaveData();
-      var transaction = db.transaction(PIXELSIM_SAVE_STORE, "readwrite");
-      var store = transaction.objectStore(PIXELSIM_SAVE_STORE);
+      var transaction = db.transaction(PIXELDARIUM_SAVE_STORE, "readwrite");
+      var store = transaction.objectStore(PIXELDARIUM_SAVE_STORE);
 
       transaction.oncomplete = function() {
         db.close();
@@ -629,11 +629,11 @@ function saveWorldToIndexedDB() {
 }
 
 function validateWorldSaveData(saveData) {
-  if (!saveData || saveData.id !== PIXELSIM_SAVE_ID) {
-    throw new Error("No PixelSim save found");
+  if (!saveData || saveData.id !== PIXELDARIUM_SAVE_ID) {
+    throw new Error("No Pixeldarium save found");
   }
 
-  if (saveData.version !== PIXELSIM_SAVE_VERSION) {
+  if (saveData.version !== PIXELDARIUM_SAVE_VERSION) {
     throw new Error("Unsupported save version");
   }
 
@@ -1891,11 +1891,11 @@ function applyWorldSaveData(saveData) {
 }
 
 function loadWorldFromIndexedDB() {
-  return openPixelSimDatabase().then(function(db) {
+  return openPixeldariumDatabase().then(function(db) {
     return new Promise(function(resolve, reject) {
-      var transaction = db.transaction(PIXELSIM_SAVE_STORE, "readonly");
-      var store = transaction.objectStore(PIXELSIM_SAVE_STORE);
-      var request = store.get(PIXELSIM_SAVE_ID);
+      var transaction = db.transaction(PIXELDARIUM_SAVE_STORE, "readonly");
+      var store = transaction.objectStore(PIXELDARIUM_SAVE_STORE);
+      var request = store.get(PIXELDARIUM_SAVE_ID);
 
       request.onsuccess = function(event) {
         try {
@@ -1925,7 +1925,7 @@ function exportWorldToJsonFile() {
   var link = document.createElement("a");
 
   link.href = url;
-  link.download = "pixelsim-world-tick-" + world.tick + ".json";
+  link.download = "pixeldarium-world-tick-" + world.tick + ".json";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

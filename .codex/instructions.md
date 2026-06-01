@@ -1,4 +1,4 @@
-# PixelSim — Codex Project Instructions
+# Pixeldarium — Codex Project Instructions
 
 ## Validation
 
@@ -46,7 +46,7 @@ Current version: 1. Do not change save format without version bump.
 
 ## Linear Integration
 
-- All work tracked under AZR team, PixelSim project
+- All work tracked under AZR team, Pixeldarium project
 - Branch naming: `aaronkotz89/azr-NNN-description`
 - Epics: AZR-254 to AZR-267
 - Stories: AZR-268 to AZR-339

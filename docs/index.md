@@ -1,4 +1,4 @@
-# PixelSim Documentation Index
+# Pixeldarium Documentation Index
 
 ## In-Repo Documentation
 
@@ -11,15 +11,15 @@
 
 ## Planning Artifacts
 
-All planning documents live in `skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/`:
+All planning documents live in `skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/`:
 
 | Document | Size | Description |
 |----------|------|-------------|
-| [GDD](../../skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/gdd.md) | 40KB | Game Design Document — 12 epochs, 5 pillars, Song of Syx inspiration |
-| [Architecture](../../skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/game-architecture.md) | 33KB | Architecture blueprint — 7 decisions (D1-D7), 8 patterns, 45+ file structure |
-| [Story Specs](../../skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/linear-stories.md) | 38KB | Full specifications for all 72 stories |
-| [Epics](../../skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/epics.md) | 11KB | 14 epic overview with phase mapping and blocking graph |
-| [Decision Log](../../skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/decision-log.md) | 14KB | Architecture decision rationale |
+| [GDD](../../skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/gdd.md) | 40KB | Game Design Document — 12 epochs, 5 pillars, Song of Syx inspiration |
+| [Architecture](../../skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/game-architecture.md) | 33KB | Architecture blueprint — 7 decisions (D1-D7), 8 patterns, 45+ file structure |
+| [Story Specs](../../skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/linear-stories.md) | 38KB | Full specifications for all 72 stories |
+| [Epics](../../skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/epics.md) | 11KB | 14 epic overview with phase mapping and blocking graph |
+| [Decision Log](../../skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/decision-log.md) | 14KB | Architecture decision rationale |
 
 ## Configuration
 
@@ -33,7 +33,7 @@ All planning documents live in `skills/planning-artifacts/gdds/gdd-PixelSim-2026
 
 ## Linear Project
 
-- **Project:** [PixelSim](https://linear.app/openclaw-mock-up/project/pixelsim-fd2791715086)
+- **Project:** [Pixeldarium](https://linear.app/openclaw-mock-up/project/pixeldarium-fd2791715086)
 - **Team:** Azyrra (AZR)
 - **Epics:** AZR-254 to AZR-267 (14 epics, E0-E13)
 - **Stories:** AZR-268 to AZR-339 (72 stories)

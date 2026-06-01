@@ -1,10 +1,10 @@
 #!/bin/bash
-# PixelSim Codex validation script
+# Pixeldarium Codex validation script
 # Run this before committing or opening a PR.
 
 set -e
 
-echo "=== PixelSim Validation ==="
+echo "=== Pixeldarium Validation ==="
 echo ""
 
 # 1. Syntax check all JS files

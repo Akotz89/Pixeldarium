@@ -1,8 +1,8 @@
-# PixelSim Save Format — Version 1
+# Pixeldarium Save Format — Version 1
 
-**Current version**: `PIXELSIM_SAVE_VERSION = 1` (persistence.js line 5)  
+**Current version**: `PIXELDARIUM_SAVE_VERSION = 1` (persistence.js line 5)  
 **Config reference**: `CONFIG.SAVE_FORMAT_VERSION = 1` (config.js)  
-**Storage**: IndexedDB database `pixelsim`, object store `saves`, key `latest`  
+**Storage**: IndexedDB database `pixeldarium`, object store `saves`, key `latest`  
 **Export**: JSON file download via Export JSON button
 
 ## Save Envelope

@@ -1,4 +1,4 @@
-// Pixel Sim Engine - planet.js
+// Pixeldarium - planet.js
 // Earth-scale projection helpers for the planet-sized simulation map.
 
 var planetSurfaceChunkCache = {

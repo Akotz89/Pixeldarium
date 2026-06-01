@@ -1,8 +1,8 @@
-# PixelSim — Agent Instructions
+# Pixeldarium — Agent Instructions
 
 ## Project Identity
 
-PixelSim is a planet-scale pixel simulation engine. Song of Syx-inspired,
+Pixeldarium is a planet-scale pixel simulation engine. Song of Syx-inspired,
 running primordial→galactic civilization in pure HTML/CSS/JS. No frameworks,
 no server, runs from `file://` protocol.
 
@@ -83,7 +83,7 @@ degradation. The debug panel (`#debug-output`) must show the full error.
 
 ## Planning Artifacts
 
-All planning documents: `skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/`
+All planning documents: `skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-01/`
 - `gdd.md` — Game Design Document
 - `game-architecture.md` — Architecture blueprint
 - `linear-stories.md` — Story specifications
@@ -92,7 +92,7 @@ All planning documents: `skills/planning-artifacts/gdds/gdd-PixelSim-2026-06-01/
 
 ## Linear Integration
 
-- Project: PixelSim (AZR team)
+- Project: Pixeldarium (AZR team)
 - Epics: AZR-254 to AZR-267 (E0-E13)
 - Stories: AZR-268 to AZR-339
 - Branch naming: `aaronkotz89/azr-NNN-title`
