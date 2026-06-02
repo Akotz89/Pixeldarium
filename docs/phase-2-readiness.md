@@ -8,6 +8,8 @@ AZR-353 reconciles the current Pixeldarium repo with the Phase 2 Linear scope be
 
 This is also the gate for AZR-357. Food and organism runtime shards should not move blindly while Phase 2 is still deciding typed-array traits, representative organisms, microbial modeling, and watcher-facing biology outcomes.
 
+AZR-361 records the chosen aggregate-population plus representative-organism model in `docs/biological-model-decision.md`.
+
 ## Current Code Evidence
 
 Current repo state:
@@ -33,7 +35,7 @@ AZR-257 E3 Biological Simulation children:
 | AZR-286 E3-S3 Food web mechanics | Backlog | Missing | Food indexing and organism food seeking exist. Predator/prey, trophic levels, energy transfer, and food-web metrics are missing. |
 | AZR-287 E3-S4 Terrain-driven evolution | Backlog | Partial foundation, needs watcher criteria | Terrain affinity and terrain mismatch costs exist. Biome-specific trait pressure, geographic isolation, and event outputs are missing. |
 | AZR-288 E3-S5 Speciation events | Backlog | Partial foundation, needs split | Lineages and divergence scoring exist. `speciesId`, reproductive isolation, species events, and species-level UI are missing. |
-| AZR-350 E3-S5 Representative organisms | Backlog | Missing decision gate | This should become the biological model gate before AZR-357 moves runtime shards. It must decide detailed representatives vs aggregate populations and how both persist/render. |
+| AZR-350 E3-S5 Representative organisms | Backlog | Decision recorded, implementation pending | `docs/biological-model-decision.md` chooses aggregate populations as authoritative and representative organisms as watchable facades. Runtime implementation is still pending. |
 | AZR-289 E3-S6 Mass extinction modeling | Backlog | Missing | Current extinction only handles all-organisms-dead state. Catastrophe event types, survival checks, adaptive radiation, and overlay/timeline output are missing. |
 
 AZR-258 E4 Primordial + Microbial children:
@@ -43,7 +45,7 @@ AZR-258 E4 Primordial + Microbial children:
 | AZR-290 E4-S1 Geological simulation | Done | Implemented foundation | `PS.layers.geology` now defines deterministic tectonic plates, drift, collision/subduction boundaries, hotspots, volcanism, erosion/sediment, continental formation, and tile annotations. Covered by `tests/geology-layer.test.js`. |
 | AZR-291 E4-S2 Atmospheric chemistry | Done | Implemented foundation | `PS.layers.atmosphere` now tracks gas composition, volcanic outgassing, photosynthetic oxygen, greenhouse temperature, ozone formation, oxygen stress, and persistence-safe state. Covered by `tests/atmosphere-layer.test.js` and persistence parity assertions. |
 | AZR-292 E4-S3 Abiogenesis mechanics | Backlog | Missing | No chemical complexity state, abiogenesis threshold, epoch transition, or first-life event contract exists. |
-| AZR-293 E4-S4 Microbial simulation | Backlog | Needs model decision | The issue is experimental. It should decide agent vs field vs population modeling before implementation issues depend on it. |
+| AZR-293 E4-S4 Microbial simulation | Backlog | Model direction recorded, experiments pending | `docs/biological-model-decision.md` recommends a field/population hybrid for microbial life; AZR-293 still needs prototype/evaluation evidence before implementation. |
 | AZR-294 E4-S5 Deep time visualization | Backlog | Missing | No geological-era timeline or click-to-era navigation exists. Should depend on time/event contracts. |
 
 AZR-259 E9 Observation Tools children:
@@ -80,15 +82,15 @@ The Phase 2 backlog needs stronger visible outcomes before implementation starts
 
 ## Readiness Decisions
 
-1. Do not move AZR-357 food/organism runtime shards yet. Phase 2 biology still needs a model decision for representative organisms, aggregate populations, species IDs, and trait storage.
+1. Do not move AZR-357 food/organism runtime shards until the AZR-361 decision is reflected in tests. `docs/biological-model-decision.md` chooses aggregate populations as authoritative, representative organisms as watchable facades, and stable population/species/representative IDs before migration.
 2. Start Phase 2 implementation with always-on system foundations, not body-plan features:
    - `PS.layers.geology`
    - `PS.layers.atmosphere`
    - epoch update contract
    - milestone event payload contract
-3. Treat AZR-350 and AZR-293 as explicit decision gates:
-   - AZR-350 decides the representative-organism + aggregate-population contract.
-   - AZR-293 decides the microbial simulation model.
+3. Treat AZR-350 and AZR-293 as explicit implementation gates:
+   - AZR-350 follows the recorded representative-organism + aggregate-population contract.
+   - AZR-293 should validate the recorded field/population microbial direction with prototype evidence.
 4. Connect E10 and E9 before deep biology features:
    - event detection should feed timeline, spotlight, notifications, and observation panels.
    - biology/geology events should become watcher-visible outputs, not internal-only state.
@@ -99,14 +101,14 @@ The Phase 2 backlog needs stronger visible outcomes before implementation starts
 AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 
 - AZR-360: Phase 2 foundation contract for always-on layers, epoch lifecycle, and milestone events.
-- AZR-361: Biological model gate for representative organisms and aggregate populations before AZR-357 moves food/organism runtime.
+- AZR-361: Biological model gate for representative organisms and aggregate populations before AZR-357 moves food/organism runtime. Decision recorded in `docs/biological-model-decision.md`.
 - AZR-362: Watcher event contract connecting timeline, spotlight, overlays, and observation panels. Implemented in `PS.events` and covered by `tests/watcher-event-contract.test.js`.
 
 ## Recommended Implementation Order
 
-1. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
+1. AZR-350 and AZR-293 validation: convert the recorded model direction into runtime acceptance criteria and microbial prototype evidence.
 2. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
-3. AZR-357: migrate food/organism runtime shards after the biological model contract is stable and tests cover the selected model.
+3. AZR-357: migrate food/organism runtime shards after aggregate/representative tests cover the selected model.
 4. AZR-358: migrate settlement/civilization runtime shards after civilization progression tests are in place.
 5. AZR-359: migrate main loop last.
 

@@ -97,18 +97,21 @@ Runtime scripts:
 - `js/legacy/organisms/part-02.js`
 - `js/legacy/organisms/part-03.js`
 
-Decision: retain temporarily until Phase 2 readiness resolves the biological simulation direction. AZR-353 and E3/E4 issues may change the model enough that a path-only migration would create churn.
+Decision: retain temporarily until AZR-357 can implement the AZR-361 model decision. `docs/biological-model-decision.md` chooses aggregate population records as authoritative and representative organisms as detailed watcher-facing facades. A path-only migration would preserve the wrong ownership boundary.
 
 Target shape:
 
-- `js/sim/food.js`, `js/sim/organisms.js`, and `js/sim/evolution.js` own behavior.
-- Typed-array or representative-organism work should not be blocked by migrated wrapper names.
+- `js/sim/food.js`, `js/sim/organisms.js`, and `js/sim/evolution.js` own public behavior.
+- Aggregate biology records own population/species scale.
+- Representative organism facades own inspectable local behavior.
+- Typed-array fields include stable species, population, and representative IDs before migration is marked complete.
 
 Verification:
 
 - `tests/food-index.test.js`
 - `tests/spatial-index.test.js`
 - Future E3/E4 trait/food-web tests.
+- New aggregate population and representative organism persistence tests.
 
 ## Settlements
 
@@ -161,7 +164,7 @@ Verification:
 
 ## Next Implementation Order
 
-1. Food/organisms after AZR-361/AZR-350/AZR-293 settle the biological model contract.
+1. Food/organisms after AZR-357 has tests for the AZR-361 aggregate/representative model contract.
 2. Settlements after civilization progression tests and settlement model follow-up are in place.
 3. Main loop last, after the other runtime surfaces are stable.
 
