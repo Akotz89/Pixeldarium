@@ -27,7 +27,9 @@ function makeElement() {
 const context = {
   assert,
   console,
-  window: {},
+  window: {
+    addEventListener() {}
+  },
   document: {
     getElementById() {
       return makeElement();
@@ -36,12 +38,24 @@ const context = {
 };
 
 const source = [
+  "js/core/namespace.js",
   "config.js",
-  "state.js",
-  "utils.js",
-  "planet.js",
-  "terrain.js",
-  "food.js"
+  "js/legacy/state/part-01.js",
+  "js/legacy/utils/part-01.js",
+  "js/core/math.js",
+  "js/core/world-grid.js",
+  "js/core/planet-metrics.js",
+  "js/legacy/planet/part-01.js",
+  "js/legacy/planet/part-02.js",
+  "js/legacy/planet/part-03.js",
+  "js/render/camera.js",
+  "js/render/globe.js",
+  "js/render/surface-address.js",
+  "js/render/surface-cache.js",
+  "js/legacy/terrain/part-01.js",
+  "js/legacy/terrain/part-02.js",
+  "js/legacy/food/part-01.js",
+  "js/legacy/food/part-02.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 vm.runInNewContext(`${source}

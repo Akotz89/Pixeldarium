@@ -1,0 +1,313 @@
+
+function compareSimulationAlerts(left, right) {
+  if (left.priority !== right.priority) {
+    return left.priority - right.priority;
+  }
+
+  var leftSeverity = getSimulationAlertSeverityRank(left.severity);
+  var rightSeverity = getSimulationAlertSeverityRank(right.severity);
+
+  if (leftSeverity !== rightSeverity) {
+    return leftSeverity - rightSeverity;
+  }
+
+  return left.order - right.order;
+}
+
+function addSimulationAlert(alerts, severity, label, detail, priority) {
+  var nextAlert = makeSimulationAlert(severity, label, detail, priority);
+  nextAlert.order = alerts.length;
+
+  for (var i = 0; i < alerts.length; i++) {
+    if (alerts[i].label === nextAlert.label) {
+      if (compareSimulationAlerts(nextAlert, alerts[i]) < 0) {
+        nextAlert.order = alerts[i].order;
+        alerts[i] = nextAlert;
+      }
+
+      return;
+    }
+  }
+
+  alerts.push(nextAlert);
+}
+
+function rankSimulationAlerts(alerts) {
+  return alerts.slice().sort(compareSimulationAlerts).map(function(alert) {
+    return {
+      severity: alert.severity,
+      label: alert.label,
+      detail: alert.detail,
+      priority: alert.priority
+    };
+  });
+}
+
+function refreshSimulationAlerts() {
+  var alerts = [];
+  var ecosystemSummary = world.ecosystemSummary || refreshEcosystemSummary();
+  var settlementSummary = world.settlementSummary || (
+    typeof refreshSettlementSummaryCache === "function" ? refreshSettlementSummaryCache() : null
+  );
+  var earlySummary = !settlementSummary && typeof refreshEarlyProgressionSummaryCache === "function"
+    ? refreshEarlyProgressionSummaryCache()
+    : null;
+
+  if (world.isExtinct) {
+    addSimulationAlert(alerts, "danger", "Extinction", "restart available", 0);
+  } else if (ecosystemSummary.pressure === "starving") {
+    addSimulationAlert(alerts, "danger", "Food stress", "energy " + ecosystemSummary.averageEnergy.toFixed(1), 10);
+  } else if (ecosystemSummary.pressure === "crowded") {
+    addSimulationAlert(alerts, "warning", "Crowding", ecosystemSummary.population + "/" + CONFIG.MAX_ORGANISMS, 35);
+  } else if (ecosystemSummary.pressure === "strained") {
+    addSimulationAlert(alerts, "warning", "Strained", "food/org " + ecosystemSummary.foodPerOrganism.toFixed(2), 35);
+  }
+
+  if (!world.isExtinct && ecosystemSummary.populationBalance === "crashing") {
+    addSimulationAlert(alerts, "danger", "Population crash", String(world.populationDeltaThisTick), 12);
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.reproductionScarcityPressure >= 0.55
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Birth throttle",
+      Math.round(ecosystemSummary.reproductionScarcityPressure * 100) + "% scarce",
+      34
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.resourceBalance === "draining") {
+    addSimulationAlert(alerts, "warning", "Food draining", String(ecosystemSummary.foodNetThisTick), 28);
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRecoveryPressure >= 0.55 &&
+    ecosystemSummary.foodRecoveryAttempts > 0
+  ) {
+    addSimulationAlert(
+      alerts,
+      "ready",
+      "Regrowth push",
+      Math.round(ecosystemSummary.foodRecoveryPressure * 100) + "% x" + ecosystemSummary.foodRecoveryAttempts,
+      56
+    );
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRunwayTicks >= 0 &&
+    ecosystemSummary.foodRunwayTicks <= 20
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Food runway",
+      formatFoodRunway(ecosystemSummary.foodRunwayTicks),
+      22
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.momentum === "draining") {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Flow worsening",
+      formatEcosystemTrendDelta(ecosystemSummary.trend, "foodNetDelta") + " food net",
+      27
+    );
+  }
+
+  if (
+    !world.isExtinct &&
+    ecosystemSummary.foodRunwayTicks >= 0 &&
+    ecosystemSummary.foodRunwayTicks <= 40 &&
+    ecosystemSummary.trend &&
+    ecosystemSummary.trend.foodRunwayDelta <= -8
+  ) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Runway shrinking",
+      formatEcosystemTrendDelta(ecosystemSummary.trend, "foodRunwayDelta") + " ticks",
+      25
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.stabilityScore <= 20) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Low stability",
+      ecosystemSummary.recoveryAction + " - " + formatEcosystemStabilityFactorScore(ecosystemSummary.stabilityProfile),
+      24
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.trend && ecosystemSummary.trend.stabilityDelta <= -12) {
+    addSimulationAlert(
+      alerts,
+      "warning",
+      "Stability falling",
+      formatMilestoneSignedNumber(ecosystemSummary.trend.stabilityDelta) + " - " + ecosystemSummary.recoveryAction,
+      26
+    );
+  }
+
+  if (!world.isExtinct && ecosystemSummary.momentum === "recovering") {
+    addSimulationAlert(
+      alerts,
+      "ready",
+      "Recovery improving",
+      formatMilestoneSignedNumber(ecosystemSummary.trend.stabilityDelta) + " stability",
+      58
+    );
+  }
+
+  if (earlySummary && earlySummary.settlementReady) {
+    addSimulationAlert(alerts, "ready", "Settlement ready", "top " + earlySummary.topActive + "/" + earlySummary.populationTarget, 60);
+  }
+
+  if (world.spaceProgramReady) {
+    addSimulationAlert(alerts, "ready", "Launch ready", world.spaceProgramProgress.toFixed(1) + "/" + CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD, 62);
+  }
+
+  if (world.planetarySurveyReady) {
+    addSimulationAlert(alerts, "ready", "Survey ready", world.planetarySurveyProgress.toFixed(1), 64);
+  }
+
+  if (world.probeMissionReady) {
+    addSimulationAlert(alerts, "ready", "Probe ready", world.probeMissionProgress.toFixed(1), 66);
+  }
+
+  if (alerts.length === 0) {
+    addSimulationAlert(alerts, "info", "Nominal", ecosystemSummary.pressure + " stability " + ecosystemSummary.stabilityScore + "/100", 90);
+  }
+
+  world.simulationAlerts = rankSimulationAlerts(alerts).slice(0, 5);
+  return world.simulationAlerts;
+}
+
+function syncLifecycleState() {
+  var population = Array.isArray(world.organisms) ? world.organisms.length : 0;
+
+  if (population <= 0) {
+    if (!world.isExtinct) {
+      world.isExtinct = true;
+      world.extinctionTick = world.tick;
+    }
+
+    world.isPaused = true;
+    world.needsRender = true;
+    return;
+  }
+
+  if (world.isExtinct) {
+    world.isExtinct = false;
+    world.extinctionTick = 0;
+    world.needsRender = true;
+  }
+}
+
+function seedWorld() {
+  clearWorld();
+  seedTerrain();
+
+  if (typeof buildTerrainCache === "function") {
+    buildTerrainCache();
+  }
+
+  var centerX = Math.floor(WORLD_WIDTH / 2);
+  var centerY = Math.floor(WORLD_HEIGHT / 2);
+
+  for (var i = 0; i < CONFIG.STARTING_ORGANISMS; i++) {
+    world.organisms.push(makeOrganism(
+      centerX + randomInt(41) - 20,
+      centerY + randomInt(41) - 20
+    ));
+  }
+
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
+  for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
+    var position = randomFoodPosition();
+    addFoodAt(position.x, position.y);
+  }
+
+  refreshEcosystemSummary();
+  syncLifecycleState();
+  recordEcosystemHistorySample(true);
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(true);
+  }
+
+  recordSimulationEvent("seed", "Simulation seeded", world.organisms.length + " organisms seed " + world.seedText);
+  refreshSimulationAlerts();
+}
+
+function updateWorld() {
+  world.tick++;
+  world.needsRender = true;
+  resetPopulationFlowCounters();
+  resetFoodFlowCounters();
+  var milestoneSnapshot = getSimulationMilestoneSnapshot();
+  growFood();
+
+  var organismsAtStartOfTick = world.organisms.length;
+
+  for (var i = 0; i < organismsAtStartOfTick; i++) {
+    updateOrganism(world.organisms[i]);
+  }
+
+  removeDeadOrganisms();
+  trimOrganismPopulation();
+  world.populationDeltaThisTick = world.organisms.length - organismsAtStartOfTick;
+
+  if (typeof refreshLineageRegistry === "function") {
+    refreshLineageRegistry();
+  }
+
+  refreshEcosystemSummary();
+  syncLifecycleState();
+  recordEcosystemHistorySample(!milestoneSnapshot.isExtinct && world.isExtinct);
+
+  if (!world.isExtinct && typeof updateSettlements === "function") {
+    updateSettlements();
+  }
+
+  recordSimulationMilestones(milestoneSnapshot);
+
+  if (typeof recordTraitHistorySample === "function") {
+    recordTraitHistorySample(false);
+  }
+
+  refreshSimulationAlerts();
+}
+
+function setSimulationPaused(isPaused) {
+  if (world.isExtinct) {
+    return false;
+  }
+
+  var nextPaused = Boolean(isPaused);
+
+  if (world.isPaused === nextPaused) {
+    return false;
+  }
+
+  world.isPaused = nextPaused;
+  world.needsRender = true;
+
+  if (typeof syncControlStates === "function") {
+    syncControlStates();
+  }
+
+  return true;
+}

@@ -74,6 +74,14 @@ degradation. The debug panel (`#debug-output`) must show the full error.
 - Browser-based smoke tests for runtime verification
 - Tests must verify deterministic behavior for same seed
 
+## Antigravity Command Safety
+
+Antigravity `run_command` must not use inline WSL/bash loops such as
+`wsl ... bash -c "for f in ...; do node --check $f; done"`. That command
+shape is fragile because Windows/PowerShell layers can expand bash variables
+before WSL receives them. Put multi-step bash bodies in a checked-in or scratch
+`.sh` file and run `wsl -d Ubuntu-24.04 -- bash /mnt/c/.../script.sh`.
+
 ## Constraints
 
 - Must work from `file://` protocol (no server required)

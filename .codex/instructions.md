@@ -7,6 +7,11 @@ Run `bash .codex/setup.sh` before committing. It checks:
 - `git diff --check` (whitespace errors)
 - Line ending consistency (must be LF)
 
+Do not run inline WSL/bash loops through Antigravity `run_command`. If a
+validation command needs shell variables, loops, multiline bodies, or multiple
+commands, write it to a `.sh` file first and run that script with
+`wsl -d Ubuntu-24.04 -- bash /mnt/c/.../script.sh`.
+
 ## Architecture Constraints
 
 Read [AGENTS.md](../AGENTS.md) for the 7 mandatory architecture decisions (D1-D7).

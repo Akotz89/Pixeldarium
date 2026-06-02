@@ -1,0 +1,233 @@
+PS.render = PS.render || {};
+PS.render.surface = PS.render.surface || {};
+
+PS.render.surface.getLocalAddress = function (gridX, gridY) {
+  var scale = getPlanetViewScale();
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var eastMeters = viewMeters.eastMeters + (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample;
+  var northMeters = viewMeters.northMeters - (gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample;
+  var latLon = getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters);
+
+  return {
+    latitude: latLon.latitude,
+    longitude: latLon.longitude,
+    eastKm: (eastMeters - viewMeters.eastMeters) / 1000,
+    northKm: (northMeters - viewMeters.northMeters) / 1000,
+    eastMeters: eastMeters,
+    northMeters: northMeters,
+    address: PS.render.surface.getSampleAddress(latLon.latitude, latLon.longitude)
+  };
+};
+
+PS.render.surface.makeChunkAddress = function (zoomLevelIndex, chunkX, chunkY) {
+  var scale = getPlanetZoomLevel(
+    typeof zoomLevelIndex === "number" ? zoomLevelIndex : getPlanetSurfaceLodZoomIndex(getPlanetView().zoomLevel)
+  );
+  var chunkSamples = PS.render.surface.getChunkSampleCount();
+  var sampleMeters = Math.max(0.1, scale.metersPerSample);
+  var normalizedChunkX = Math.round(Number(chunkX) || 0);
+  var normalizedChunkY = Math.round(Number(chunkY) || 0);
+  var chunkKey = [
+    scale.index,
+    sampleMeters,
+    chunkSamples,
+    normalizedChunkX,
+    normalizedChunkY
+  ].join(":");
+
+  return {
+    zoomLevel: scale.index,
+    scaleName: scale.name,
+    sampleMeters: sampleMeters,
+    chunkSamples: chunkSamples,
+    sampleEast: normalizedChunkX * chunkSamples,
+    sampleNorth: normalizedChunkY * chunkSamples,
+    chunkX: normalizedChunkX,
+    chunkY: normalizedChunkY,
+    localSampleX: 0,
+    localSampleY: 0,
+    chunkKey: chunkKey,
+    sampleKey: "0:0"
+  };
+};
+
+PS.render.surface.getChunkCenterLatLon = function (address) {
+  var centerEastMeters = (address.sampleEast + address.chunkSamples / 2) * address.sampleMeters;
+  var centerNorthMeters = (address.sampleNorth + address.chunkSamples / 2) * address.sampleMeters;
+
+  return getLatLonFromSurfaceMeterCoordinate(centerEastMeters, centerNorthMeters);
+};
+
+PS.render.surface.getChunkParentAddress = function (address, parentZoomLevelIndex) {
+  var targetZoomLevel = typeof parentZoomLevelIndex === "number"
+    ? parentZoomLevelIndex
+    : address.zoomLevel - 1;
+  var center = PS.render.surface.getChunkCenterLatLon(address);
+
+  if (targetZoomLevel < 0 || targetZoomLevel >= address.zoomLevel) {
+    return null;
+  }
+
+  return PS.render.surface.getSampleAddress(center.latitude, center.longitude, targetZoomLevel);
+};
+
+PS.render.surface.getChunkLineage = function (address) {
+  var lineage = [];
+
+  for (var zoomLevel = address.zoomLevel - 1; zoomLevel >= 0; zoomLevel--) {
+    var parentAddress = PS.render.surface.getChunkParentAddress(address, zoomLevel);
+
+    if (parentAddress) {
+      lineage.push({
+        zoomLevel: parentAddress.zoomLevel,
+        scaleName: parentAddress.scaleName,
+        sampleMeters: parentAddress.sampleMeters,
+        chunkX: parentAddress.chunkX,
+        chunkY: parentAddress.chunkY,
+        chunkKey: parentAddress.chunkKey
+      });
+    }
+  }
+
+  return lineage;
+};
+
+PS.render.surface.getChunkLineageLabel = function (lineage) {
+  if (!Array.isArray(lineage) || lineage.length === 0) {
+    return "-";
+  }
+
+  return lineage.map(function (item) {
+    return item.scaleName + " " + item.chunkX + "," + item.chunkY;
+  }).join(" <- ");
+};
+
+PS.render.surface.getChunkScreenRect = function (address) {
+  var currentScale = getPlanetViewScale();
+  var samplePixelSize = CONFIG.TILE_SIZE * (address.sampleMeters / Math.max(0.1, currentScale.metersPerSample));
+  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var minEastMeters = address.sampleEast * address.sampleMeters;
+  var maxNorthMeters = (address.sampleNorth + address.chunkSamples) * address.sampleMeters;
+  var sizePixels = address.chunkSamples * samplePixelSize;
+
+  return {
+    x: canvas.width / 2 + ((minEastMeters - viewMeters.eastMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
+    y: canvas.height / 2 - ((maxNorthMeters - viewMeters.northMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
+    width: sizePixels,
+    height: sizePixels,
+    samplePixelSize: samplePixelSize
+  };
+};
+
+PS.render.surface.getChunkScreenPriority = function (screenRect) {
+  var centerX = (Number(screenRect.x) || 0) + (Number(screenRect.width) || 0) / 2;
+  var centerY = (Number(screenRect.y) || 0) + (Number(screenRect.height) || 0) / 2;
+  var deltaX = centerX - canvas.width / 2;
+  var deltaY = centerY - canvas.height / 2;
+
+  return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+};
+
+PS.render.surface.getChunkPriorityScore = function (screenRect) {
+  var priorityDistance = PS.render.surface.getChunkScreenPriority(screenRect);
+  var panVector = getPlanetViewPanVector();
+  var centerX = (Number(screenRect.x) || 0) + (Number(screenRect.width) || 0) / 2;
+  var centerY = (Number(screenRect.y) || 0) + (Number(screenRect.height) || 0) / 2;
+  var deltaX = centerX - canvas.width / 2;
+  var deltaNorthPixels = canvas.height / 2 - centerY;
+  var aheadPixels = deltaX * panVector.eastUnit + deltaNorthPixels * panVector.northUnit;
+  var directionalBoost = panVector.magnitude > 0
+    ? clamp(aheadPixels / Math.max(1, Math.max(canvas.width, canvas.height) * 0.42), 0, 1) * Math.max(CONFIG.TILE_SIZE, Math.min(canvas.width, canvas.height) * 0.16)
+    : 0;
+
+  return Math.max(0, priorityDistance - directionalBoost);
+};
+
+PS.render.surface.getVisibleChunks = function (guardSamples, maxChunks) {
+  var normalizedGuardSamples = Math.max(1, Math.round(Number(guardSamples) || 1));
+  var visibleChunkLimit = Math.max(
+    1,
+    Math.round(Number(maxChunks) || PS.render.surface.getVisibleChunkLimit())
+  );
+
+  if (world.isCameraInteracting) {
+    visibleChunkLimit = Math.min(
+      visibleChunkLimit,
+      Math.max(16, Math.round(Number(CONFIG.PLANET_SURFACE_INTERACTIVE_VISIBLE_CHUNK_LIMIT) || 96))
+    );
+  }
+
+  var samplePoints = [
+    PS.render.surface.getLocalAddress(-normalizedGuardSamples, -normalizedGuardSamples).address,
+    PS.render.surface.getLocalAddress(WORLD_WIDTH + normalizedGuardSamples, -normalizedGuardSamples).address,
+    PS.render.surface.getLocalAddress(-normalizedGuardSamples, WORLD_HEIGHT + normalizedGuardSamples).address,
+    PS.render.surface.getLocalAddress(WORLD_WIDTH + normalizedGuardSamples, WORLD_HEIGHT + normalizedGuardSamples).address
+  ];
+  var minChunkX = samplePoints[0].chunkX;
+  var maxChunkX = samplePoints[0].chunkX;
+  var minChunkY = samplePoints[0].chunkY;
+  var maxChunkY = samplePoints[0].chunkY;
+  var visibleChunks = [];
+
+  for (var i = 1; i < samplePoints.length; i++) {
+    minChunkX = Math.min(minChunkX, samplePoints[i].chunkX);
+    maxChunkX = Math.max(maxChunkX, samplePoints[i].chunkX);
+    minChunkY = Math.min(minChunkY, samplePoints[i].chunkY);
+    maxChunkY = Math.max(maxChunkY, samplePoints[i].chunkY);
+  }
+
+  for (var chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+    for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+      var address = PS.render.surface.makeChunkAddress(samplePoints[0].zoomLevel, chunkX, chunkY);
+      var screenRect = PS.render.surface.getChunkScreenRect(address);
+
+      if (
+        screenRect.x > canvas.width + CONFIG.TILE_SIZE ||
+        screenRect.x + screenRect.width < -CONFIG.TILE_SIZE ||
+        screenRect.y > canvas.height + CONFIG.TILE_SIZE ||
+        screenRect.y + screenRect.height < -CONFIG.TILE_SIZE
+      ) {
+        continue;
+      }
+
+      visibleChunks.push({
+        address: address,
+        screenX: screenRect.x,
+        screenY: screenRect.y,
+        width: screenRect.width,
+        height: screenRect.height,
+        priorityDistance: PS.render.surface.getChunkScreenPriority(screenRect),
+        priorityScore: PS.render.surface.getChunkPriorityScore(screenRect)
+      });
+    }
+  }
+
+  visibleChunks.sort(function (a, b) {
+    if (a.priorityScore !== b.priorityScore) {
+      return a.priorityScore - b.priorityScore;
+    }
+
+    if (a.priorityDistance !== b.priorityDistance) {
+      return a.priorityDistance - b.priorityDistance;
+    }
+
+    if (a.address.chunkY !== b.address.chunkY) {
+      return a.address.chunkY - b.address.chunkY;
+    }
+
+    return a.address.chunkX - b.address.chunkX;
+  });
+
+  var totalCandidateChunks = visibleChunks.length;
+  visibleChunks.totalCandidateChunks = totalCandidateChunks;
+  visibleChunks.workingSetLimit = visibleChunkLimit;
+
+  if (visibleChunks.length > visibleChunkLimit) {
+    visibleChunks = visibleChunks.slice(0, visibleChunkLimit);
+    visibleChunks.totalCandidateChunks = totalCandidateChunks;
+    visibleChunks.workingSetLimit = visibleChunkLimit;
+  }
+
+  visibleChunks.culledChunks = Math.max(0, visibleChunks.totalCandidateChunks - visibleChunks.length);
+  return visibleChunks;
+};

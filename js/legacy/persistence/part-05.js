@@ -1,0 +1,253 @@
+
+function applyWorldSaveData(saveData) {
+  validateWorldSaveData(saveData);
+  applySaveConfig(saveData.config);
+
+  world.tick = Number(saveData.tick);
+  world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
+  world.era = String(saveData.era || "Organisms");
+  world.isExtinct = Boolean(saveData.isExtinct);
+  world.extinctionTick = Math.max(0, Math.round(restoreNumber(saveData.extinctionTick, 0)));
+  world.birthsThisTick = 0;
+  world.deathsThisTick = 0;
+  world.populationDeltaThisTick = 0;
+  world.totalBirths = Math.max(0, Math.round(restoreNumber(saveData.totalBirths, 0)));
+  world.totalDeaths = Math.max(0, Math.round(restoreNumber(saveData.totalDeaths, 0)));
+  world.foodSpawnedThisTick = 0;
+  world.foodConsumedThisTick = 0;
+  world.foodHarvestedThisTick = 0;
+  world.totalFoodSpawned = Math.max(0, Math.round(restoreNumber(saveData.totalFoodSpawned, 0)));
+  world.totalFoodConsumed = Math.max(0, Math.round(restoreNumber(saveData.totalFoodConsumed, 0)));
+  world.totalFoodHarvested = Math.max(0, Math.round(restoreNumber(saveData.totalFoodHarvested, 0)));
+  world.seedText = normalizeSeedText(saveData.seedText);
+  world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
+  restoreCameraState(saveData.camera);
+  world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
+  world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
+  world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
+  world.nextOrbitalAssetId = Math.max(1, Math.round(restoreNumber(saveData.nextOrbitalAssetId, 1)));
+  world.nextPlanetaryBodyId = Math.max(1, Math.round(restoreNumber(saveData.nextPlanetaryBodyId, 1)));
+  world.nextProbeMissionId = Math.max(1, Math.round(restoreNumber(saveData.nextProbeMissionId, 1)));
+  world.nextStarSystemId = Math.max(1, Math.round(restoreNumber(saveData.nextStarSystemId, 1)));
+  world.nextInterstellarFleetId = Math.max(1, Math.round(restoreNumber(saveData.nextInterstellarFleetId, 1)));
+  world.nextEmpireSectorId = Math.max(1, Math.round(restoreNumber(saveData.nextEmpireSectorId, 1)));
+  world.colonyNetworkScore = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkScore, 0)));
+  world.colonyNetworkColonies = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkColonies, 0)));
+  world.colonyNetworkActiveRoutes = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkActiveRoutes, 0)));
+  world.colonyNetworkClaimedTiles = Math.max(0, Math.round(restoreNumber(saveData.colonyNetworkClaimedTiles, 0)));
+  world.spaceProgramProgress = Math.max(0, restoreNumber(saveData.spaceProgramProgress, 0));
+  world.orbitalLaunches = Math.max(0, Math.round(restoreNumber(saveData.orbitalLaunches, 0)));
+  world.lastSpaceProgramTick = Math.max(0, Math.round(restoreNumber(saveData.lastSpaceProgramTick, 0)));
+  world.spaceProgramReady = Boolean(saveData.spaceProgramReady);
+  world.orbitalInfrastructureScore = Math.max(0, Math.round(restoreNumber(saveData.orbitalInfrastructureScore, 0)));
+  world.orbitalPlatformReady = Boolean(saveData.orbitalPlatformReady);
+  world.planetarySurveyProgress = Math.max(0, restoreNumber(saveData.planetarySurveyProgress, 0));
+  world.planetarySurveyReady = Boolean(saveData.planetarySurveyReady);
+  world.lastPlanetarySurveyTick = Math.max(0, Math.round(restoreNumber(saveData.lastPlanetarySurveyTick, 0)));
+  world.probeMissionProgress = Math.max(0, restoreNumber(saveData.probeMissionProgress, 0));
+  world.probeMissionReady = Boolean(saveData.probeMissionReady);
+  world.lastProbeMissionTick = Math.max(0, Math.round(restoreNumber(saveData.lastProbeMissionTick, 0)));
+  world.starMapProgress = Math.max(0, restoreNumber(saveData.starMapProgress, 0));
+  world.starMapReady = Boolean(saveData.starMapReady);
+  world.lastStarMapTick = Math.max(0, Math.round(restoreNumber(saveData.lastStarMapTick, 0)));
+  world.galacticInfluenceProgress = Math.max(0, restoreNumber(saveData.galacticInfluenceProgress, 0));
+  world.galacticInfluenceReady = Boolean(saveData.galacticInfluenceReady);
+  world.galacticClaimedSystems = Math.max(0, Math.round(restoreNumber(saveData.galacticClaimedSystems, 0)));
+  world.lastGalacticInfluenceTick = Math.max(0, Math.round(restoreNumber(saveData.lastGalacticInfluenceTick, 0)));
+  world.interstellarFleetProgress = Math.max(0, restoreNumber(saveData.interstellarFleetProgress, 0));
+  world.interstellarFleetReady = Boolean(saveData.interstellarFleetReady);
+  world.interstellarFleetActive = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetActive, 0)));
+  world.interstellarFleetCompleted = Math.max(0, Math.round(restoreNumber(saveData.interstellarFleetCompleted, 0)));
+  world.lastInterstellarFleetTick = Math.max(0, Math.round(restoreNumber(saveData.lastInterstellarFleetTick, 0)));
+  world.empireSectorProgress = Math.max(0, restoreNumber(saveData.empireSectorProgress, 0));
+  world.empireSectorReady = Boolean(saveData.empireSectorReady);
+  world.empireSectorCount = Math.max(0, Math.round(restoreNumber(saveData.empireSectorCount, 0)));
+  world.lastEmpireSectorTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireSectorTick, 0)));
+  world.empireLegacyProgress = Math.max(0, restoreNumber(saveData.empireLegacyProgress, 0));
+  world.empireLegacyLevel = Math.max(0, Math.round(restoreNumber(saveData.empireLegacyLevel, 0)));
+  world.empireLegacyReady = Boolean(saveData.empireLegacyReady);
+  world.empireLegacyComplete = Boolean(saveData.empireLegacyComplete);
+  world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
+  world.lineages = restoreLineages(saveData.lineages);
+  world.settlements = restoreSettlements(saveData.settlements);
+  world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);
+  rebuildSettlementIndexes();
+  world.orbitalAssets = restoreOrbitalAssets(saveData.orbitalAssets);
+  world.planetaryBodies = restorePlanetaryBodies(saveData.planetaryBodies);
+  rebuildPlanetaryBodyIndexes();
+  world.probeMissions = restoreProbeMissions(saveData.probeMissions);
+  world.starSystems = restoreStarSystems(saveData.starSystems);
+  rebuildStarSystemIndexes();
+  world.interstellarFleets = restoreInterstellarFleets(saveData.interstellarFleets);
+  world.empireSectors = restoreEmpireSectors(saveData.empireSectors);
+  rebuildEmpireSectorIndexes();
+  world.terrain = saveData.terrain.slice();
+  world.fertileTiles = countFertileTiles();
+  world.food = saveData.food.map(restoreFood);
+  rebuildFoodPositions();
+  world.organisms = saveData.organisms.map(restoreOrganism);
+  refreshLineageRegistry();
+  world.isExtinct = world.organisms.length === 0;
+
+  if (world.isExtinct) {
+    world.extinctionTick = Math.max(0, world.extinctionTick || world.tick);
+    world.isPaused = true;
+  } else {
+    world.extinctionTick = 0;
+  }
+
+  if (typeof ensureOutpostRoutes === "function") {
+    ensureOutpostRoutes();
+  }
+
+  if (typeof updateColonyNetworkState === "function") {
+    var networkSummary = updateColonyNetworkState();
+
+    if (typeof updateSpaceProgramReadiness === "function") {
+      updateSpaceProgramReadiness(networkSummary);
+    }
+  }
+
+  if (typeof updateOrbitalInfrastructureState === "function") {
+    updateOrbitalInfrastructureState();
+  }
+
+  if (typeof updatePlanetarySurveyReadiness === "function") {
+    updatePlanetarySurveyReadiness();
+  }
+
+  if (typeof updateProbeMissionReadiness === "function") {
+    updateProbeMissionReadiness();
+  }
+
+  if (typeof updateStarMapReadiness === "function") {
+    updateStarMapReadiness();
+  }
+
+  if (typeof updateGalacticInfluenceReadiness === "function") {
+    updateGalacticInfluenceReadiness();
+  }
+
+  if (typeof updateInterstellarFleetReadiness === "function") {
+    updateInterstellarFleetReadiness();
+  }
+
+  if (typeof updateEmpireSectorReadiness === "function") {
+    updateEmpireSectorReadiness();
+  }
+
+  if (typeof updateEmpireLegacyReadiness === "function") {
+    updateEmpireLegacyReadiness();
+  }
+
+  world.traitHistory = restoreTraitHistory(saveData.traitHistory);
+  world.ecosystemHistory = restoreEcosystemHistory(saveData.ecosystemHistory);
+  world.eventLog = restoreSimulationEvents(saveData.eventLog);
+  world.ecosystemSummary = null;
+
+  if (typeof refreshEcosystemSummary === "function") {
+    refreshEcosystemSummary();
+  }
+
+  world.interpolation = 0;
+  world.fps = 0;
+  world.tps = 0;
+  world.updateMs = 0;
+  world.drawMs = 0;
+  world.maxUpdateMs = 0;
+  world.maxDrawMs = 0;
+
+  if (typeof buildTerrainCache === "function") {
+    buildTerrainCache();
+  }
+
+  drawWorld();
+  updateHud();
+}
+
+function restoreCameraState(cameraState) {
+  var maxZoom = typeof getPlanetZoomLevels === "function" ? getPlanetZoomLevels().length - 1 : 0;
+  var camera = cameraState || {};
+
+  world.planetView = {
+    zoomLevel: clamp(restoreNumber(camera.zoomLevel, Number(CONFIG.PLANET_ZOOM_LEVEL) || 0), 0, Math.max(0, maxZoom)),
+    latitude: clamp(restoreNumber(camera.latitude, Number(CONFIG.PLANET_VIEW_LATITUDE_DEG) || 0), -90, 90),
+    longitude: normalizeLongitude(restoreNumber(camera.longitude, Number(CONFIG.PLANET_VIEW_LONGITUDE_DEG) || 0)),
+    panEastMeters: restoreNumber(camera.panEastMeters, 0),
+    panNorthMeters: restoreNumber(camera.panNorthMeters, 0)
+  };
+}
+
+function loadWorldFromIndexedDB() {
+  return openPixeldariumDatabase().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var transaction = db.transaction(PIXELDARIUM_SAVE_STORE, "readonly");
+      var store = transaction.objectStore(PIXELDARIUM_SAVE_STORE);
+      var request = store.get(PIXELDARIUM_SAVE_ID);
+
+      request.onsuccess = function(event) {
+        try {
+          var saveData = event.target.result;
+          applyWorldSaveData(saveData);
+          db.close();
+          resolve(saveData);
+        } catch (error) {
+          db.close();
+          reject(error);
+        }
+      };
+
+      request.onerror = function() {
+        db.close();
+        reject(new Error(request.error ? request.error.message : "Could not load world"));
+      };
+    });
+  });
+}
+
+function exportWorldToJsonFile() {
+  var saveData = createWorldSaveData();
+  var json = JSON.stringify(saveData, null, 2);
+  var blob = new Blob([json], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+
+  link.href = url;
+  link.download = "pixeldarium-world-tick-" + world.tick + ".json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 0);
+
+  return saveData;
+}
+
+function importWorldFromJsonFile(file) {
+  return new Promise(function(resolve, reject) {
+    if (!file) {
+      reject(new Error("No JSON file selected"));
+      return;
+    }
+
+    var reader = new FileReader();
+
+    reader.onload = function(event) {
+      try {
+        var saveData = JSON.parse(event.target.result);
+        applyWorldSaveData(saveData);
+        resolve(saveData);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error(reader.error ? reader.error.message : "Could not read JSON file"));
+    };
+
+    reader.readAsText(file);
+  });
+}
