@@ -58,6 +58,11 @@ const foodGrowthValue = document.getElementById("food-growth-value");
 const seedInput = document.getElementById("seed-input");
 const seedRandomButton = document.getElementById("seed-random-button");
 const controlsPanel = document.getElementById("controls");
+const spotlightPanel = document.getElementById("spotlight-panel");
+const spotlightTitle = document.getElementById("spotlight-title");
+const spotlightDetail = document.getElementById("spotlight-detail");
+const spotlightInvestigateButton = document.getElementById("spotlight-investigate-button");
+const spotlightDismissButton = document.getElementById("spotlight-dismiss-button");
 
 canvas.width = CONFIG.CANVAS_WIDTH;
 canvas.height = CONFIG.CANVAS_HEIGHT;
@@ -133,6 +138,14 @@ const world = {
   },
   milestonesReached: {},
   spotlightEvent: null,
+  spotlightState: {
+    active: false,
+    previousSpeed: null,
+    startedTick: 0,
+    expiresAt: 0,
+    autoPan: true,
+    slowdown: true
+  },
   nextLineageId: 1,
   lineages: {},
   nextSettlementId: 1,

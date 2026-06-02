@@ -13,6 +13,9 @@ The modern UI modules currently loaded are:
 - `js/ui/controls.js`
 - `js/ui/notifications.js`
 - `js/ui/touch.js`
+- `js/ui/spotlight.js`
+- `js/ui/observation-overlays.js`
+- `js/ui/timeline.js`
 - `js/ui/foundation.js`
 - `js/ui/summary.js`
 - `js/ui/history-summary.js`
@@ -26,7 +29,7 @@ AZR-271, `E0-S4: Decompose ui.js + create js/debug/ infrastructure`, was scoped 
 
 That scope was a decomposition/facade milestone. It did not explicitly require retiring every `js/legacy/ui` runtime file from `index.html`.
 
-Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinished architecture work in the UI lane. The remaining work should be tracked separately as legacy UI runtime retirement, not hidden under the completed AZR-271 record.
+Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinished architecture work in the UI lane. The remaining work should be tracked separately as UI module cleanup and legacy runtime migration, not hidden under the completed AZR-271 record.
 
 ## Remaining UI Lane Work
 
@@ -37,6 +40,8 @@ Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinishe
 5. Split the migrated `js/ui/interaction.js` helpers into focused camera, inspect, persistence-status, keyboard, and pointer-input modules where useful.
 6. Split the migrated `js/ui/setup.js` bootstrap/event binding into focused setup modules where useful.
 7. Keep static-browser and `file://` compatibility, root JS limited to `config.js`, and each JS module under 500 lines.
+
+The loaded legacy runtime work that remains is no longer UI-specific. It is tracked in `docs/legacy-runtime-assessment.md` under food/organisms, settlements, and main loop migration.
 
 ## Recent Correction
 

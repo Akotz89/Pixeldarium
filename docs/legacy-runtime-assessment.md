@@ -161,12 +161,9 @@ Verification:
 
 ## Next Implementation Order
 
-1. State/utils.
-2. Planet/terrain/render low-risk wrappers with existing render tests.
-3. Persistence with expanded parity tests.
-4. Food/organisms after Phase 2 readiness.
-5. Settlements after civilization model follow-up.
-6. Main loop last.
+1. Food/organisms after AZR-361/AZR-350/AZR-293 settle the biological model contract.
+2. Settlements after civilization progression tests and settlement model follow-up are in place.
+3. Main loop last, after the other runtime surfaces are stable.
 
 ## Standing Constraints
 

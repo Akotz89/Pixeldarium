@@ -123,6 +123,13 @@ PS.config.atmosphere = {
   outgassingRate: CONFIG.ATMOSPHERE_OUTGASSING_RATE
 };
 
+PS.config.spotlight = {
+  autoPan: CONFIG.SPOTLIGHT_AUTO_PAN !== false,
+  slowdownEnabled: CONFIG.SPOTLIGHT_SLOWDOWN_ENABLED !== false,
+  slowdownSpeed: CONFIG.SPOTLIGHT_SLOWDOWN_SPEED,
+  durationMs: CONFIG.SPOTLIGHT_DURATION_MS
+};
+
 PS.config.milestones = Array.isArray(CONFIG.MILESTONE_DEFINITIONS)
   ? CONFIG.MILESTONE_DEFINITIONS.map(function(milestone) {
     return Object.assign({}, milestone);
