@@ -316,6 +316,8 @@ function createWorldSaveData() {
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
     ecosystemHistory: (Array.isArray(world.ecosystemHistory) ? world.ecosystemHistory : []).map(copyEcosystemHistorySampleForSave),
     eventLog: (Array.isArray(world.eventLog) ? world.eventLog : []).map(copySimulationEventForSave),
+    timelineEvents: (Array.isArray(world.timelineEvents) ? world.timelineEvents : []).map(copySimulationEventForSave),
+    milestonesReached: copyLayerStateForSave(world.milestonesReached || {}),
     lineages: getLineagesForSave(),
     settlements: getSettlementsForSave(),
     settlementRoutes: getSettlementRoutesForSave(),

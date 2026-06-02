@@ -17,6 +17,7 @@ function clearWorld() {
   }
 
   world.tick = 0;
+  world.deepTimeYears = 0;
   world.era = "Organisms";
   world.organisms = [];
   world.organismBuckets = {};
@@ -74,6 +75,8 @@ function clearWorld() {
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
   world.eventLog = [];
+  world.timelineEvents = [];
+  world.milestonesReached = {};
   world.lineages = {};
   world.nextSettlementId = 1;
   world.settlements = [];

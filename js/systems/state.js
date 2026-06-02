@@ -114,6 +114,8 @@ const world = {
   lineageSummaryText: "LINEAGES: -",
   traitHistory: [],
   eventLog: [],
+  timelineEvents: [],
+  milestonesReached: {},
   nextLineageId: 1,
   lineages: {},
   nextSettlementId: 1,

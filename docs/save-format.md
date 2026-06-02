@@ -25,6 +25,7 @@
 | tick | int | Current simulation tick |
 | deepTimeYears | number | Semantic deep-time elapsed according to adaptive time scale |
 | timeScale | object | Current adaptive/manual time-scale state |
+| milestonesReached | object | Fired milestone map used to prevent duplicate milestone events |
 | speed | int | Sim speed multiplier (1-10) |
 | era | string | Current era name |
 | isExtinct | bool | Whether all organisms died |
@@ -129,6 +130,9 @@ tick, population, food, averageEnergy, foodPerOrganism, populationBalance, resou
 
 ### eventLog[]
 tick, type, label, detail
+
+### timelineEvents[]
+Durable milestone playback stream. Uses the event fields plus optional `details`, `deepTime`, `source`, `severity`, and `inspectTarget`.
 
 ## config{} (Embedded Snapshot)
 

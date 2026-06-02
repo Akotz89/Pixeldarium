@@ -123,6 +123,12 @@ PS.config.atmosphere = {
   outgassingRate: CONFIG.ATMOSPHERE_OUTGASSING_RATE
 };
 
+PS.config.milestones = Array.isArray(CONFIG.MILESTONE_DEFINITIONS)
+  ? CONFIG.MILESTONE_DEFINITIONS.map(function(milestone) {
+    return Object.assign({}, milestone);
+  })
+  : [];
+
 PS.config.persistence = {
   saveFormatVersion: CONFIG.SAVE_FORMAT_VERSION
 };

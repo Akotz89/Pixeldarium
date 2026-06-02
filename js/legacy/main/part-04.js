@@ -312,6 +312,9 @@ function updateWorld(dt) {
   profileStart = performance.now();
   if (shouldRefreshSummaries) {
     recordSimulationMilestones(milestoneSnapshot);
+    if (PS.events && typeof PS.events.detectMilestones === "function") {
+      PS.events.detectMilestones();
+    }
   }
 
   if (shouldRefreshSummaries && typeof recordTraitHistorySample === "function") {

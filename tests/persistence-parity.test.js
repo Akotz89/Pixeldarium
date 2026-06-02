@@ -229,6 +229,22 @@ const root = path.resolve(__dirname, "..");
         label: "Parity event",
         detail: "Persistence parity coverage"
       }];
+      world.timelineEvents = [{
+        tick: 4211,
+        type: "life.first",
+        label: "First life",
+        detail: "organisms 1",
+        details: { value: 1 },
+        deepTime: { years: 123456789 },
+        source: "milestone-detector",
+        severity: "major"
+      }];
+      world.milestonesReached = {
+        "life.first": {
+          tick: 4211,
+          value: 1
+        }
+      };
       world.geology = {
         ageTicks: 12,
         plates: [{ id: "plate-test", driftX: 1.25 }],
@@ -297,6 +313,8 @@ const root = path.resolve(__dirname, "..");
       },
       deepTimeYears: world.deepTimeYears,
       timeScale: PS.time && PS.time.timeScale ? Object.assign({}, PS.time.timeScale) : null,
+      timelineEvents: world.timelineEvents.slice(),
+      milestonesReached: Object.assign({}, world.milestonesReached),
       geology: Object.assign({}, world.geology),
       atmosphere: Object.assign({}, world.atmosphere)
     };
@@ -353,6 +371,9 @@ const root = path.resolve(__dirname, "..");
   assert.strictEqual(evidence.importedEvidence.geology.continentFormation, 0.18, "geology layer state should restore");
   assert.strictEqual(evidence.saveData.atmosphere.gases.o2, 0.2, "atmosphere gas state should serialize");
   assert.strictEqual(evidence.importedEvidence.atmosphere.temperatureC, 19.5, "atmosphere layer state should restore");
+  assert.strictEqual(evidence.saveData.timelineEvents.length, 1, "timeline events should serialize");
+  assert.strictEqual(evidence.importedEvidence.timelineEvents[0].details.value, 1, "timeline events should restore details");
+  assert.strictEqual(evidence.importedEvidence.milestonesReached["life.first"].value, 1, "milestone fired state should restore");
   assert.ok(Number.isFinite(evidence.saveData.colonyNetworkScore), "colony score should serialize");
   assert.ok(evidence.importedEvidence.progression.colonyNetworkScore > 0, "colony score should restore to an active progression state");
   [

@@ -154,6 +154,8 @@ function applyWorldSaveData(saveData) {
   world.traitHistory = restoreTraitHistory(saveData.traitHistory);
   world.ecosystemHistory = restoreEcosystemHistory(saveData.ecosystemHistory);
   world.eventLog = restoreSimulationEvents(saveData.eventLog);
+  world.timelineEvents = restoreSimulationEvents(saveData.timelineEvents, 0);
+  world.milestonesReached = saveData.milestonesReached ? JSON.parse(JSON.stringify(saveData.milestonesReached)) : {};
   world.ecosystemSummary = null;
 
   if (typeof refreshEcosystemSummary === "function") {

@@ -225,18 +225,26 @@ function restoreSimulationEvent(event) {
     tick: Math.max(0, Math.round(restoreNumber(event.tick, 0))),
     type: String(event.type || "sim"),
     label: String(event.label || "Event"),
-    detail: String(event.detail || "")
+    detail: String(event.detail || ""),
+    details: event.details || null,
+    deepTime: event.deepTime || null,
+    source: event.source || null,
+    severity: event.severity || null,
+    inspectTarget: event.inspectTarget || null
   };
 }
 
-function restoreSimulationEvents(eventLog) {
+function restoreSimulationEvents(eventLog, limit) {
   if (!Array.isArray(eventLog)) {
     return [];
   }
 
-  return eventLog
-    .slice(-CONFIG.EVENT_LOG_MAX_ENTRIES)
-    .map(restoreSimulationEvent);
+  var normalizedLimit = limit == null
+    ? CONFIG.EVENT_LOG_MAX_ENTRIES
+    : Math.max(0, Math.round(Number(limit) || 0));
+  var source = normalizedLimit > 0 ? eventLog.slice(-normalizedLimit) : eventLog.slice();
+
+  return source.map(restoreSimulationEvent);
 }
 
 function restoreEcosystemHistorySample(sample) {

@@ -93,7 +93,12 @@ function copySimulationEventForSave(event) {
     tick: Math.max(0, Math.round(Number(event.tick) || 0)),
     type: String(event.type || "sim"),
     label: String(event.label || "Event"),
-    detail: String(event.detail || "")
+    detail: String(event.detail || ""),
+    details: event.details || null,
+    deepTime: event.deepTime || null,
+    source: event.source || null,
+    severity: event.severity || null,
+    inspectTarget: event.inspectTarget || null
   };
 }
 
