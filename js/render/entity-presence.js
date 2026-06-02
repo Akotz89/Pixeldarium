@@ -126,6 +126,150 @@ PS.render.entities.drawRouteTrafficMarks = function () {
   }
 };
 
+PS.render.entities.getProtoSettlementFootprints = function () {
+  if (
+    Array.isArray(world.settlements) &&
+    world.settlements.length > 0
+  ) {
+    return [];
+  }
+
+  var summary = PS.sim &&
+    PS.sim.settlements &&
+    typeof PS.sim.settlements.earlyProgressionSummary === "function"
+    ? PS.sim.settlements.earlyProgressionSummary()
+    : null;
+  var topLineage = summary && summary.topLineage ? summary.topLineage : null;
+  var lineageId = topLineage ? Math.max(1, Math.round(Number(topLineage.id) || 1)) : 0;
+  var organisms = lineageId > 0 && PS.sim && PS.sim.organisms && typeof PS.sim.organisms.byLineage === "function"
+    ? PS.sim.organisms.byLineage(lineageId)
+    : [];
+  var activeCount = Math.max(0, Number(summary && summary.topActive) || organisms.length);
+  var targetCount = Math.max(1, Number(summary && summary.populationTarget) || activeCount || 1);
+  var progress = clamp(activeCount / targetCount, 0, 1);
+  var footprints = [];
+
+  if ((!organisms || organisms.length < 2 || activeCount <= 0) && Array.isArray(world.organisms)) {
+    var activityCount = Math.min(4, world.organisms.length);
+
+    for (var activityIndex = 0; activityIndex < activityCount; activityIndex++) {
+      var organism = world.organisms[activityIndex];
+      var organismLineageId = Math.max(1, Math.round(Number(organism.lineageId) || activityIndex + 1));
+
+      footprints.push({
+        id: "lineage-forage:" + organismLineageId + ":" + activityIndex,
+        x: organism.x,
+        y: organism.y,
+        lineageId: organismLineageId,
+        progress: clamp(0.18 + (Number(summary && summary.activeLineages) || activityCount) / Math.max(8, targetCount) * 0.18, 0.18, 0.42),
+        activeCount: 1
+      });
+    }
+
+    return footprints;
+  }
+
+  var centerX = 0;
+  var centerY = 0;
+
+  for (var i = 0; i < organisms.length; i++) {
+    centerX += Number(organisms[i].x) || 0;
+    centerY += Number(organisms[i].y) || 0;
+  }
+
+  centerX /= organisms.length;
+  centerY /= organisms.length;
+
+  var anchor = {
+    id: "proto-settlement:" + lineageId,
+    x: centerX,
+    y: centerY,
+    lineageId: lineageId,
+    progress: progress,
+    activeCount: activeCount
+  };
+
+  footprints.push(anchor);
+
+  if (progress > 0.55 && organisms.length >= 5) {
+    footprints.push({
+      id: "proto-forage-ring:" + lineageId,
+      x: clamp(centerX + (PS.render.entities.getPresenceHash(anchor, 7) - 0.5) * 7, 0, WORLD_WIDTH - 1),
+      y: clamp(centerY + (PS.render.entities.getPresenceHash(anchor, 11) - 0.5) * 5, 0, WORLD_HEIGHT - 1),
+      lineageId: lineageId,
+      progress: progress * 0.72,
+      activeCount: activeCount
+    });
+  }
+
+  return footprints;
+};
+
+PS.render.entities.drawProtoSettlementFootprint = function (footprint) {
+  var point = PS.render.entities.getRenderPosition(footprint, 1);
+
+  if (!PS.render.entities.isPresencePointVisible(point, 120)) {
+    return;
+  }
+
+  var progress = clamp(Number(footprint.progress) || 0, 0, 1);
+  var color = PS.render.entities.getLineageColorById(footprint.lineageId);
+  var size = Math.max(18, (24 + progress * 30) * (point.scale || 1));
+  var cellSize = Math.max(4, Math.round(size * 0.16));
+
+  ctx.save();
+  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(color, 0.32 + progress * 0.34);
+  ctx.lineWidth = Math.max(1, Math.round(size * 0.05));
+  ctx.setLineDash([Math.max(2, cellSize * 2), Math.max(2, cellSize)]);
+  ctx.strokeRect(
+    Math.round(point.x - size / 2),
+    Math.round(point.y - size / 2),
+    Math.round(size),
+    Math.round(size)
+  );
+  ctx.setLineDash([]);
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#d9b85f", 0.54 + progress * 0.28);
+  ctx.fillRect(
+    Math.round(point.x - cellSize * 1.5),
+    Math.round(point.y - cellSize * 1.5),
+    cellSize * 3,
+    cellSize * 3
+  );
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#70f0d0", 0.34 + progress * 0.24);
+  ctx.fillRect(
+    Math.round(point.x + cellSize * 1.5),
+    Math.round(point.y - cellSize * 2.5),
+    Math.max(2, Math.round(cellSize * 1.25)),
+    Math.max(2, Math.round(cellSize * 1.25))
+  );
+
+  for (var i = 0; i < 9; i++) {
+    var sample = PS.render.entities.getPresenceDensitySample(footprint, "settlement", i);
+    var x = point.x + sample.offsetX * (point.scale || 1);
+    var y = point.y + sample.offsetY * (point.scale || 1);
+
+    ctx.fillStyle = i % 3 === 0
+      ? PS.render.entities.getRgbaFromHex("#d9b85f", 0.32 + progress * 0.28)
+      : PS.render.entities.getRgbaFromHex(color, 0.24 + progress * 0.24);
+    ctx.fillRect(
+      Math.round(x - cellSize / 2),
+      Math.round(y - cellSize / 2),
+      cellSize,
+      Math.max(1, Math.round(cellSize * (i % 2 === 0 ? 1.5 : 1)))
+    );
+  }
+
+  ctx.restore();
+};
+
+PS.render.entities.drawProtoSettlementFootprints = function () {
+  var footprints = PS.render.entities.getProtoSettlementFootprints();
+
+  for (var i = 0; i < footprints.length; i++) {
+    PS.render.entities.drawProtoSettlementFootprint(footprints[i]);
+  }
+};
+
 PS.render.entities.drawLocalPresenceField = function () {
   if (!PS.render.entities.shouldDrawLocalPresenceField()) {
     return;
@@ -154,5 +298,6 @@ PS.render.entities.drawLocalPresenceField = function () {
     PS.render.entities.drawEntityPresenceCluster(settlement, "settlement", settlementColor, 7);
   }
 
+  PS.render.entities.drawProtoSettlementFootprints();
   PS.render.entities.drawRouteTrafficMarks();
 };

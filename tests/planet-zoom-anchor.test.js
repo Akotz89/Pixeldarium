@@ -360,12 +360,59 @@ assert.strictEqual(PS.render.pipeline.getZoomBand(5), "continent", "zoom manifes
 assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest should expose local band");
 assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
 assert.strictEqual(typeof PS.render.entities.drawLocalPresenceField, "function", "local presence field should be exposed for dense simulation-map readability");
+assert.strictEqual(typeof PS.render.entities.getProtoSettlementFootprints, "function", "presence field should expose pre-settlement activity footprints");
 assert.strictEqual(PS.render.entities.getPresenceZoomAmount(0), 0, "presence density should stay hidden at orbit zoom");
 assert.ok(PS.render.entities.getPresenceZoomAmount(finalGroundZoomIndex) > 0.9, "presence density should ramp up at ground zoom");
 var resourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
 var repeatedResourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
 assert.deepStrictEqual(repeatedResourcePresenceSample, resourcePresenceSample, "presence density samples should be deterministic for stable screenshots");
 assert.ok(resourcePresenceSample.size >= 1, "presence density samples should reserve visible pixel marks");
+world.settlements = [];
+world.lineages = { "4": { id: 4, activeCount: 6, peakPopulation: 8, isExtinct: false } };
+world.organisms = [
+  { id: "o1", x: 20, y: 20, lineageId: 4 },
+  { id: "o2", x: 22, y: 21, lineageId: 4 },
+  { id: "o3", x: 24, y: 19, lineageId: 4 },
+  { id: "o4", x: 26, y: 23, lineageId: 4 },
+  { id: "o5", x: 28, y: 20, lineageId: 4 },
+  { id: "o6", x: 30, y: 22, lineageId: 4 }
+];
+PS.sim = {
+  settlements: {
+    earlyProgressionSummary: function() {
+      return {
+        topLineage: { id: 4 },
+        topActive: 6,
+        populationTarget: 8
+      };
+    }
+  },
+  organisms: {
+    byLineage: function(lineageId) {
+      return world.organisms.filter(function(organism) {
+        return organism.lineageId === lineageId;
+      });
+    }
+  }
+};
+var protoFootprints = PS.render.entities.getProtoSettlementFootprints();
+assert.ok(protoFootprints.length >= 1, "pre-settlement lineage clusters should produce visual activity footprints");
+assert.strictEqual(protoFootprints[0].lineageId, 4, "proto-settlement footprint should identify the leading lineage");
+world.organisms = [{ id: "solo", x: 9, y: 11, lineageId: 8 }];
+PS.sim.settlements.earlyProgressionSummary = function() {
+  return {
+    topLineage: { id: 8 },
+    topActive: 1,
+    activeLineages: 1,
+    populationTarget: 10
+  };
+};
+var forageFootprints = PS.render.entities.getProtoSettlementFootprints();
+assert.ok(forageFootprints.length >= 1, "early diversifying organisms should produce truthful forage footprints before settlement clusters");
+assert.strictEqual(forageFootprints[0].lineageId, 8, "forage footprint should preserve organism lineage identity");
+world.organisms = [];
+world.lineages = {};
+PS.sim = null;
 assert.strictEqual(organismSprite.family, "entities", "organism sprite should use entity asset family");
 assert.strictEqual(foodSprite.family, "resources", "food sprite should use resource asset family");
 assert.strictEqual(settlementSprite.family, "settlement", "settlement sprite should use settlement asset family");
