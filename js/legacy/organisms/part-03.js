@@ -185,6 +185,8 @@ function updatePooledOrganismsForTick(organismsAtStartOfTick) {
   var arrays = PS.pools.organism.arrays;
   var travelKmPerTick = getOrganismTravelKmPerTick();
   var applyEnergyCostThisTick = world.tick % 3 === 0;
+  var foragingInterval = Math.max(1, Math.round(Number(CONFIG.ORGANISM_FORAGING_INTERVAL) || 1));
+  var foodPositions = world.foodPositions || {};
 
   for (var i = 0; i < organismsAtStartOfTick; i++) {
     var organism = world.organisms[i];
@@ -219,7 +221,8 @@ function updatePooledOrganismsForTick(organismsAtStartOfTick) {
         CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST;
     }
 
-    var nearestFood = findNearestFoodInBuckets(x, y, arrays.vision[pooledIndex]);
+    var shouldForageOrganism = (world.tick + pooledIndex) % foragingInterval === 0;
+    var nearestFood = shouldForageOrganism ? findNearestFoodInBuckets(x, y, arrays.vision[pooledIndex]) : null;
 
     if (nearestFood) {
       arrays.directionX[pooledIndex] = getDirectionXToTile(x, nearestFood.x);
@@ -246,7 +249,9 @@ function updatePooledOrganismsForTick(organismsAtStartOfTick) {
 
     arrays.travelKm[pooledIndex] = travelKm;
 
-    if (removeFoodAtPosition(x, y)) {
+    var foodKey = x + ":" + y;
+
+    if (foodPositions[foodKey] && removeFoodAtPosition(x, y)) {
       energy += CONFIG.FOOD_ENERGY_VALUE;
 
       if (typeof recordFoodConsumed === "function") {
@@ -287,6 +292,10 @@ function moveOrganismByTravelBudget(organism) {
 }
 
 function removeDeadOrganisms() {
+  if (PS.pools && PS.pools.organism && removeDeadPooledOrganisms()) {
+    return;
+  }
+
   var writeIndex = 0;
   var removedCount = 0;
 
@@ -309,6 +318,37 @@ function removeDeadOrganisms() {
   if (typeof recordOrganismDeath === "function") {
     recordOrganismDeath(removedCount);
   }
+}
+
+function removeDeadPooledOrganisms() {
+  var arrays = PS.pools.organism.arrays;
+  var writeIndex = 0;
+  var removedCount = 0;
+
+  for (var readIndex = 0; readIndex < world.organisms.length; readIndex++) {
+    var organism = world.organisms[readIndex];
+    var poolIndex = organism && Number.isFinite(Number(organism.poolIndex)) ? Math.round(organism.poolIndex) : -1;
+
+    if (poolIndex < 0 || !arrays.active[poolIndex]) {
+      return false;
+    }
+
+    if (arrays.energy[poolIndex] > 0 && arrays.age[poolIndex] < CONFIG.ORGANISM_MAX_AGE) {
+      world.organisms[writeIndex] = organism;
+      writeIndex++;
+    } else {
+      PS.pools.organism.release(organism);
+      removedCount++;
+    }
+  }
+
+  world.organisms.length = writeIndex;
+
+  if (typeof recordOrganismDeath === "function") {
+    recordOrganismDeath(removedCount);
+  }
+
+  return true;
 }
 
 function trimOrganismPopulation() {

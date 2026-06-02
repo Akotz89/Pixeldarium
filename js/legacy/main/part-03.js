@@ -114,15 +114,21 @@ function refreshEcosystemSummary() {
   var totalEnergy = 0;
   var totalAge = 0;
   var matureOrganisms = 0;
+  var pooledArrays = PS.pools && PS.pools.organism ? PS.pools.organism.arrays : null;
 
   for (var i = 0; i < world.organisms.length; i++) {
     var organism = world.organisms[i];
-    var traits = ensureOrganismTraits(organism);
+    var poolIndex = pooledArrays && Number.isFinite(Number(organism.poolIndex)) ? Math.round(organism.poolIndex) : -1;
+    var energy = poolIndex >= 0 ? pooledArrays.energy[poolIndex] : Math.max(0, Number(organism.energy) || 0);
+    var age = poolIndex >= 0 ? pooledArrays.age[poolIndex] : Math.max(0, Number(organism.age) || 0);
+    var reproductionEnergy = poolIndex >= 0
+      ? pooledArrays.reproductionEnergy[poolIndex]
+      : ensureOrganismTraits(organism).reproductionEnergy;
 
-    totalEnergy += Math.max(0, Number(organism.energy) || 0);
-    totalAge += Math.max(0, Number(organism.age) || 0);
+    totalEnergy += Math.max(0, energy);
+    totalAge += Math.max(0, age);
 
-    if (organism.energy >= traits.reproductionEnergy) {
+    if (energy >= reproductionEnergy) {
       matureOrganisms++;
     }
   }
@@ -131,7 +137,9 @@ function refreshEcosystemSummary() {
   var averageAge = population > 0 ? totalAge / population : 0;
   var foodPerOrganism = population > 0 ? world.food.length / population : world.food.length;
   var fertilePercent = (world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100;
-  var activeLineages = getActiveLineageCount();
+  var activeLineages = world.lineageSummary && Number.isFinite(Number(world.lineageSummary.activeCount))
+    ? Math.max(0, Math.round(Number(world.lineageSummary.activeCount) || 0))
+    : getActiveLineageCount();
   var matureRatio = population > 0 ? matureOrganisms / population : 0;
   var foodNetThisTick = Math.max(0, Math.round(Number(world.foodSpawnedThisTick) || 0)) -
     Math.max(0, Math.round(Number(world.foodConsumedThisTick) || 0));

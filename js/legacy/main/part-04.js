@@ -263,6 +263,7 @@ function updateWorld() {
   var profileStart = performance.now();
 
   world.tick++;
+  var shouldRefreshSummaries = world.tick % CONFIG.SIM_SUMMARY_UPDATE_INTERVAL === 0;
   world.needsRender = true;
   resetPopulationFlowCounters();
   resetFoodFlowCounters();
@@ -283,32 +284,39 @@ function updateWorld() {
   trimOrganismPopulation();
   world.populationDeltaThisTick = world.organisms.length - organismsAtStartOfTick;
 
-  if (typeof refreshLineageRegistry === "function") {
+  if (typeof refreshLineageRegistry === "function" && shouldRefreshSummaries) {
     refreshLineageRegistry();
   }
 
   tickProfile.organisms = performance.now() - profileStart;
   profileStart = performance.now();
 
-  refreshEcosystemSummary();
+  if (shouldRefreshSummaries || !world.ecosystemSummary) {
+    refreshEcosystemSummary();
+  }
+
   syncLifecycleState();
   recordEcosystemHistorySample(!milestoneSnapshot.isExtinct && world.isExtinct);
   tickProfile.events += performance.now() - profileStart;
 
-  if (!world.isExtinct && typeof updateSettlements === "function") {
+  if (shouldRefreshSummaries && !world.isExtinct && typeof updateSettlements === "function") {
     profileStart = performance.now();
     updateSettlements();
     tickProfile.settlements = performance.now() - profileStart;
   }
 
   profileStart = performance.now();
-  recordSimulationMilestones(milestoneSnapshot);
+  if (shouldRefreshSummaries) {
+    recordSimulationMilestones(milestoneSnapshot);
+  }
 
-  if (typeof recordTraitHistorySample === "function") {
+  if (shouldRefreshSummaries && typeof recordTraitHistorySample === "function") {
     recordTraitHistorySample(false);
   }
 
-  refreshSimulationAlerts();
+  if (shouldRefreshSummaries || !world.simulationAlerts) {
+    refreshSimulationAlerts();
+  }
   tickProfile.events += performance.now() - profileStart;
   world.tickProfileMs = tickProfile;
 }
