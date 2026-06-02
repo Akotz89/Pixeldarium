@@ -322,6 +322,7 @@ assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlay, "function",
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlayAccent, "function", "local surface underlay should expose semantic feature accents");
 assert.strictEqual(typeof PS.render.raster.getLocalSurfaceMaterialMark, "function", "local underlay should expose material mark archetypes");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceMaterialMarks, "function", "local underlay should draw deterministic material marks");
+assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceReadabilityVeil, "function", "local surface compositor should soften chunk seams with semantic marks");
 assert.strictEqual(typeof PS.render.surfaceRender.work.drawChunkOverUnderlay, "function", "surface chunk compositor should blend progressive chunks into the underlay");
 assert.strictEqual(typeof PS.render.surfaceRender.work.getVisibleChunkReadiness, "function", "surface chunk compositor should measure current viewport readiness");
 assert.strictEqual(typeof PS.render.terrainCache.isCurrent, "function", "terrain cache should expose current-view validity checks");

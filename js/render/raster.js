@@ -240,6 +240,68 @@ PS.render.raster.drawLocalSurfaceUnderlayAccent = function (targetCtx, x, y, wid
   targetCtx.restore();
 };
 
+PS.render.raster.drawLocalSurfaceReadabilityVeil = function (targetCtx) {
+  if (!targetCtx || !isGlobeRenderMode() || !isPlanetLocalView()) {
+    return false;
+  }
+
+  var zoom = Number(getPlanetView().zoomLevel) || 0;
+  var amount = clamp((zoom - 1.5) / 5.5, 0, 1);
+  var pixelSize = Math.max(8, Math.round((Number(CONFIG.PLANET_LOCAL_UNDERLAY_PIXEL_SIZE) || 8) * 1.5));
+  var surfaceLod = getPlanetSurfaceLodZoomIndex(zoom);
+  var veilLod = Math.max(1, surfaceLod - 1);
+
+  if (amount <= 0.02) {
+    return false;
+  }
+
+  targetCtx.save();
+
+  for (var y = 0; y < canvas.height; y += pixelSize) {
+    var height = Math.min(pixelSize, canvas.height - y);
+
+    for (var x = 0; x < canvas.width; x += pixelSize) {
+      var width = Math.min(pixelSize, canvas.width - x);
+      var latLon = getPlanetLatLonFromCanvasPoint(x + width / 2, y + height / 2);
+      var sample = PS.render.surface.getChunkSample(latLon.latitude, latLon.longitude, null, veilLod);
+      var mark = PS.render.raster.getLocalSurfaceMaterialMark(sample, latLon);
+      var noise = getDeterministicUnitNoise(
+        Math.round(Number(sample && sample.surfaceSampleX) || x),
+        Math.round(Number(sample && sample.surfaceSampleY) || y),
+        getPlanetVisualSeedOffset() + 9361
+      );
+      var color = mark ? mark.color : PS.render.raster.getLocalSurfaceUnderlayColor(sample, latLon);
+      var alpha = mark
+        ? clamp(0.018 + amount * 0.042 + (Number(mark.density) || 0) * 0.026, 0.018, 0.088)
+        : clamp(0.010 + amount * 0.022, 0.010, 0.036);
+      var inset = Math.floor(noise * Math.min(3, Math.max(0, pixelSize - 2)));
+
+      targetCtx.globalAlpha = alpha;
+      targetCtx.fillStyle = color;
+      targetCtx.fillRect(
+        x + inset,
+        y + Math.max(0, 2 - inset),
+        Math.max(1, width - inset),
+        Math.max(1, height - Math.max(0, 2 - inset))
+      );
+
+      if (mark && noise > 0.58) {
+        targetCtx.globalAlpha = clamp(alpha * 1.55, 0.018, 0.12);
+        targetCtx.fillStyle = mark.accent;
+        targetCtx.fillRect(
+          x + Math.floor(width * 0.18),
+          y + Math.floor(height * 0.18),
+          Math.max(1, Math.round(width * 0.48)),
+          Math.max(1, Math.round(height * 0.18))
+        );
+      }
+    }
+  }
+
+  targetCtx.restore();
+  return true;
+};
+
 PS.render.raster.buildGlobeTileRgbCache = function () {
   var colors = [];
 

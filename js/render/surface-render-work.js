@@ -109,9 +109,11 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
 
   if (shouldCompositeChunks) {
     fineDraws.forEach(function (draw) {
-      PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.96);
+      PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.90);
     });
   }
+
+  PS.render.raster.drawLocalSurfaceReadabilityVeil(targetCtx);
 
   localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = generatedThisPass;
   localSurfaceRenderChunkCache.stats.lastPendingChunks = pendingChunks;
@@ -345,8 +347,10 @@ PS.render.surfaceRender.work.drawCompletedToTerrainCache = function (draws) {
   }
 
   draws.forEach(function (draw) {
-    PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.96);
+    PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.90);
   });
+
+  PS.render.raster.drawLocalSurfaceReadabilityVeil(targetCtx);
 
   return true;
 };
