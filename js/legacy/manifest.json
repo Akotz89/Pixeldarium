@@ -49,7 +49,6 @@
     "js/legacy/settlements/part-09.js"
   ],
   "ui.js": [
-    "js/legacy/ui/part-04.js",
     "js/legacy/ui/part-05.js",
     "js/legacy/ui/part-06.js"
   ],
