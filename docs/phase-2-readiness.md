@@ -17,12 +17,12 @@ Current repo state:
 - `js/sim/food.js`, `js/sim/organisms.js`, `js/sim/evolution.js`, `js/sim/settlements.js`, and `js/sim/civilizations.js` are public `PS.sim.*` facades over existing runtime functions.
 - `js/sim/food-runtime.js`, `js/sim/food-growth.js`, `js/sim/organisms-*`, `js/sim/settlements-*`, and `js/sim/civilizations-*` own food, representative organism, settlement, and civilization runtime. `js/main-*` modules own runtime reset, ecosystem summaries, simulation tick updates, and the frame loop. `index.html` no longer loads any `js/legacy/*` runtime shards.
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
-- `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
+- `js/epochs/registry.js` exists. `js/epochs/microbial.js` now registers the microbial epoch and implements a field/population hybrid for microbial density, chemical energy, oxygen production, stress, visible blooms, and notable microbial population records.
 - `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override.
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays. `js/render/observation-overlays.js` adds Phase 2 temperature, population density, resource, and atmospheric-composition observation overlays with blend metadata, panel toggles, keyboard cycling, and frame-time sampling.
 - `js/ui/spotlight.js` consumes watcher milestone events, shows an event spotlight panel, optionally slows time, and focuses the relevant tile or event location.
 - `js/core/events.js` includes milestone payload normalization, a configurable milestone registry, event categories, milestone detection, visible event-log writes, durable timeline-event writes, notification routing, and optional spotlight focus routing.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-297 event spotlight UI, AZR-362 watcher event contract, AZR-302 timeline viewer, AZR-299 observation overlays, the Phase 2 layer/epoch/event contract, AZR-290 geology, AZR-291 atmosphere chemistry, and AZR-350 representative organism lifecycle. They do not yet cover full food webs, microbial models, abiogenesis, or deep-time timeline UI.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-297 event spotlight UI, AZR-362 watcher event contract, AZR-302 timeline viewer, AZR-299 observation overlays, the Phase 2 layer/epoch/event contract, AZR-290 geology, AZR-291 atmosphere chemistry, AZR-293 microbial field/population modeling, and AZR-350 representative organism lifecycle. They do not yet cover full food webs, abiogenesis, or deep-time timeline UI.
 
 ## Linear Inventory
 
@@ -35,7 +35,7 @@ AZR-257 E3 Biological Simulation children:
 | AZR-286 E3-S3 Food web mechanics | Backlog | Missing | Food indexing and organism food seeking exist. Predator/prey, trophic levels, energy transfer, and food-web metrics are missing. |
 | AZR-287 E3-S4 Terrain-driven evolution | Backlog | Partial foundation, needs watcher criteria | Terrain affinity and terrain mismatch costs exist. Biome-specific trait pressure, geographic isolation, and event outputs are missing. |
 | AZR-288 E3-S5 Speciation events | Backlog | Partial foundation, needs split | Lineages and divergence scoring exist. `speciesId`, reproductive isolation, species events, and species-level UI are missing. |
-| AZR-350 E3-S5 Representative organisms | Backlog | Runtime foundation implemented | `docs/biological-model-decision.md` chooses aggregate populations as authoritative and representative organisms as watchable facades. `js/sim/representatives.js` now creates aggregate population summaries, representative records, inspection/pin/bookmark support, pressure context, and bounded history. Covered by `tests/representatives.test.js`. |
+| AZR-350 E3-S5 Representative organisms | Done | Runtime foundation implemented | `docs/biological-model-decision.md` chooses aggregate populations as authoritative and representative organisms as watchable facades. `js/sim/representatives.js` now creates aggregate population summaries, representative records, inspection/pin/bookmark support, pressure context, and bounded history. Covered by `tests/representatives.test.js`. |
 | AZR-289 E3-S6 Mass extinction modeling | Backlog | Missing | Current extinction only handles all-organisms-dead state. Catastrophe event types, survival checks, adaptive radiation, and overlay/timeline output are missing. |
 
 AZR-258 E4 Primordial + Microbial children:
@@ -45,7 +45,7 @@ AZR-258 E4 Primordial + Microbial children:
 | AZR-290 E4-S1 Geological simulation | Done | Implemented foundation | `PS.layers.geology` now defines deterministic tectonic plates, drift, collision/subduction boundaries, hotspots, volcanism, erosion/sediment, continental formation, and tile annotations. Covered by `tests/geology-layer.test.js`. |
 | AZR-291 E4-S2 Atmospheric chemistry | Done | Implemented foundation | `PS.layers.atmosphere` now tracks gas composition, volcanic outgassing, photosynthetic oxygen, greenhouse temperature, ozone formation, oxygen stress, and persistence-safe state. Covered by `tests/atmosphere-layer.test.js` and persistence parity assertions. |
 | AZR-292 E4-S3 Abiogenesis mechanics | Backlog | Missing | No chemical complexity state, abiogenesis threshold, epoch transition, or first-life event contract exists. |
-| AZR-293 E4-S4 Microbial simulation | Backlog | Model direction recorded, experiments pending | `docs/biological-model-decision.md` recommends a field/population hybrid for microbial life; AZR-293 still needs prototype/evaluation evidence before implementation. |
+| AZR-293 E4-S4 Microbial simulation | Done | Runtime foundation implemented | `docs/microbial-model-evaluation.md` records agent/field/population prototype evaluation and selects a field/population hybrid. `js/epochs/microbial.js` implements microbial fields, notable population records, oxygen output, visible blooms, and `observation.microbial`. Covered by `tests/microbial-epoch.test.js`, `tests/observation-overlays.test.js`, and persistence parity. |
 | AZR-294 E4-S5 Deep time visualization | Backlog | Missing | No geological-era timeline or click-to-era navigation exists. Should depend on time/event contracts. |
 
 AZR-259 E9 Observation Tools children:
@@ -106,8 +106,8 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 
 ## Recommended Implementation Order
 
-1. AZR-293 validation: convert the recorded microbial model direction into prototype evidence.
-2. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
+1. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
+2. AZR-292/AZR-294: abiogenesis transition and deep-time visualization once microbial state has a stronger entry point.
 3. Continue with Phase 2 implementation issues after AZR-352 legacy runtime retirement closes.
 
 ## Verification Expectations

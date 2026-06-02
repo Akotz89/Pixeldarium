@@ -163,6 +163,8 @@ AZR-293 should select a field/population hybrid for microbial life:
 - Individual microbe agents are not the default model because they are too small and numerous for watcher-scale simulation.
 - Representatives may appear later as macro-visible colonies, mats, stromatolite patches, or sampled microbial population records, not individual microbes.
 
+AZR-293 now records the prototype comparison in `docs/microbial-model-evaluation.md` and implements the selected hybrid in `js/epochs/microbial.js`.
+
 ## AZR-357 Migration Approach
 
 AZR-357 should migrate food/organism runtime in this order:

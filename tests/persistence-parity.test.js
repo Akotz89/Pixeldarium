@@ -321,6 +321,47 @@ const root = path.resolve(__dirname, "..");
         temperatureC: 19.5,
         oxygenStress: 0
       };
+      world.microbialReady = true;
+      world.microbial = {
+        model: "field-population-hybrid",
+        ageTicks: 8,
+        fieldWidth: 2,
+        fieldHeight: 2,
+        fields: {
+          density: [0.1, 0.2, 0.3, 0.4],
+          chemicalEnergy: [0.5, 0.6, 0.7, 0.8],
+          oxygenProduction: [0.01, 0.02, 0.03, 0.04],
+          stress: [0.1, 0.2, 0.3, 0.4],
+          bloomIntensity: [0.2, 0.4, 0.6, 0.8]
+        },
+        populations: [{
+          id: 5,
+          name: "Microbial mat 5",
+          lineageId: "microbial-5",
+          x: 44,
+          y: 22,
+          bloomIntensity: 0.8,
+          morphology: "mat",
+          isVisible: true
+        }],
+        populationById: {
+          "5": {
+            id: 5,
+            name: "Microbial mat 5"
+          }
+        },
+        nextPopulationId: 6,
+        visibleBlooms: [{
+          id: 5,
+          x: 44,
+          y: 22,
+          intensity: 0.8,
+          morphology: "mat"
+        }],
+        selectedPrototype: "field-population-hybrid",
+        totalDensity: 1,
+        totalOxygenProduction: 0.1
+      };
       if (PS.time) {
         PS.time.setManualTimeScale(2);
       }
@@ -373,6 +414,12 @@ const root = path.resolve(__dirname, "..");
       biologyPopulationByIdKeys: Object.keys(world.biologyPopulationById),
       biologyRepresentatives: world.biologyRepresentatives.slice(),
       biologyRepresentativeByIdKeys: Object.keys(world.biologyRepresentativeById),
+      microbial: Object.assign({}, world.microbial, {
+        fields: Object.assign({}, world.microbial && world.microbial.fields),
+        populations: world.microbial && world.microbial.populations ? world.microbial.populations.slice() : [],
+        visibleBlooms: world.microbial && world.microbial.visibleBlooms ? world.microbial.visibleBlooms.slice() : []
+      }),
+      microbialReady: world.microbialReady,
       nextBiologyPopulationId: world.nextBiologyPopulationId,
       nextBiologyRepresentativeId: world.nextBiologyRepresentativeId,
       nextSpeciesId: world.nextSpeciesId,
@@ -440,6 +487,10 @@ const root = path.resolve(__dirname, "..");
   assert.strictEqual(evidence.importedEvidence.geology.continentFormation, 0.18, "geology layer state should restore");
   assert.strictEqual(evidence.saveData.atmosphere.gases.o2, 0.2, "atmosphere gas state should serialize");
   assert.strictEqual(evidence.importedEvidence.atmosphere.temperatureC, 19.5, "atmosphere layer state should restore");
+  assert.strictEqual(evidence.saveData.microbial.model, "field-population-hybrid", "microbial model should serialize");
+  assert.strictEqual(evidence.importedEvidence.microbial.fields.bloomIntensity[3], 0.8, "microbial fields should restore");
+  assert.strictEqual(evidence.importedEvidence.microbial.populations[0].morphology, "mat", "microbial populations should restore");
+  assert.strictEqual(evidence.importedEvidence.microbialReady, true, "microbial readiness should restore");
   assert.strictEqual(evidence.saveData.timelineEvents.length, 1, "timeline events should serialize");
   assert.strictEqual(evidence.importedEvidence.timelineEvents[0].details.value, 1, "timeline events should restore details");
   assert.strictEqual(evidence.importedEvidence.milestonesReached["life.first"].value, 1, "milestone fired state should restore");

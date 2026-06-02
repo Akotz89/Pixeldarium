@@ -155,6 +155,8 @@ const world = {
   biologyPopulationById: {},
   biologyRepresentatives: [],
   biologyRepresentativeById: {},
+  microbial: null,
+  microbialReady: false,
   nextSettlementId: 1,
   settlements: [],
   settlementsById: {},

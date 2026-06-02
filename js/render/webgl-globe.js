@@ -149,7 +149,8 @@ PS.render.webglGlobe.getObservationOverlaySignature = function () {
     world && world.tick ? world.tick : 0,
     world && world.organisms ? world.organisms.length : 0,
     world && world.food ? world.food.length : 0,
-    world && world.atmosphere ? JSON.stringify(world.atmosphere.gases || {}) : ""
+    world && world.atmosphere ? JSON.stringify(world.atmosphere.gases || {}) : "",
+    world && world.microbial ? String(world.microbial.ageTicks || 0) + ":" + String(world.microbial.totalDensity || 0) : ""
   ].join(":");
 };
 

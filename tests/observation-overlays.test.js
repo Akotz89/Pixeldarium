@@ -61,6 +61,15 @@ const context = {
         co2: 0.04
       },
       temperatureC: 21
+    },
+    microbial: {
+      ageTicks: 3,
+      fieldWidth: 2,
+      fieldHeight: 2,
+      fields: {
+        bloomIntensity: [0.7, 0.1, 0.4, 0.2],
+        stress: [0.1, 0.2, 0.3, 0.4]
+      }
     }
   },
   getPlanetTile(x, y) {
@@ -74,6 +83,20 @@ const context = {
     };
   },
   PS: {
+    epochs: {
+      microbial: {
+        getCellForTile(x, y) {
+          const cellX = x < 14 ? 0 : 1;
+          const cellY = y < 8 ? 0 : 1;
+          const index = cellY * 2 + cellX;
+
+          return {
+            bloomIntensity: context.world.microbial.fields.bloomIntensity[index],
+            stress: context.world.microbial.fields.stress[index]
+          };
+        }
+      }
+    },
     render: {
       entities: {
         getTileRenderPosition(x, y) {
@@ -94,7 +117,8 @@ const expectedIds = [
   "observation.temperature",
   "observation.population",
   "observation.resources",
-  "observation.atmosphere"
+  "observation.atmosphere",
+  "observation.microbial"
 ];
 const manifest = context.PS.render.overlays.getManifest();
 const webglShaderSource = read("js/render/webgl-globe-shaders.js");
@@ -131,6 +155,12 @@ fills.length = 0;
 context.PS.render.observationOverlays.setActive("observation.atmosphere");
 context.PS.render.overlays.drawRegistered();
 assert.ok(fills.length > 0, "atmosphere overlay should draw gas composition cells");
+
+fills.length = 0;
+context.PS.render.observationOverlays.setActive("observation.microbial");
+context.PS.render.overlays.drawRegistered();
+assert.ok(fills.length > 0, "microbial overlay should draw bloom cells");
+assert.strictEqual(fills[0].composite, "lighter", "microbial overlay should use additive blend metadata");
 
 context.PS.render.observationOverlays.setActive("unknown");
 assert.strictEqual(context.world.activeObservationOverlay, "none", "unknown overlay should normalize to none");

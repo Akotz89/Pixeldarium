@@ -19,6 +19,9 @@ function clearWorld() {
   world.tick = 0;
   world.deepTimeYears = 0;
   world.era = "Organisms";
+  if (PS.epochs) {
+    PS.epochs.activeId = world.era;
+  }
   world.organisms = [];
   world.organismBuckets = {};
   world.organismsByLineage = {};
@@ -81,6 +84,8 @@ function clearWorld() {
   world.biologyPopulationById = {};
   world.biologyRepresentatives = [];
   world.biologyRepresentativeById = {};
+  world.microbial = null;
+  world.microbialReady = false;
   world.eventLog = [];
   world.timelineEvents = [];
   world.milestonesReached = {};

@@ -5,7 +5,8 @@ PS.render.observationOverlays.ids = [
   "observation.temperature",
   "observation.population",
   "observation.resources",
-  "observation.atmosphere"
+  "observation.atmosphere",
+  "observation.microbial"
 ];
 
 PS.render.observationOverlays.getActiveId = function() {
@@ -132,6 +133,16 @@ PS.render.observationOverlays.getOverlaySample = function(id, x, y, tile) {
     return PS.render.observationOverlays.makeColor(255 * (1 - oxygen), 130 + oxygen * 100, 80 + oxygen * 175, 0.34);
   }
 
+  if (id === "observation.microbial") {
+    var microbialCell = PS.epochs && PS.epochs.microbial && typeof PS.epochs.microbial.getCellForTile === "function"
+      ? PS.epochs.microbial.getCellForTile(x, y)
+      : null;
+    var bloom = microbialCell ? Math.max(0, Math.min(1, Number(microbialCell.bloomIntensity) || 0)) : 0;
+    var stress = microbialCell ? Math.max(0, Math.min(1, Number(microbialCell.stress) || 0)) : 0;
+
+    return PS.render.observationOverlays.makeColor(90 + bloom * 70, 190 + bloom * 55, 135 - stress * 60, 0.08 + bloom * 0.64);
+  }
+
   return PS.render.observationOverlays.makeColor(0, 0, 0, 0);
 };
 
@@ -240,6 +251,22 @@ PS.render.overlays.register("observation.atmosphere", {
     PS.render.observationOverlays.drawTileSamples("observation.atmosphere", function(x, y) {
       return PS.render.observationOverlays.toRgba(
         PS.render.observationOverlays.getOverlaySample("observation.atmosphere", x, y, getPlanetTile(x, y))
+      );
+    });
+  }
+});
+
+PS.render.overlays.register("observation.microbial", {
+  order: 14,
+  family: "overlays",
+  semantic: "microbial blooms and stromatolite mats",
+  blendMode: "lighter",
+  alpha: 0.78,
+  shortcut: "O",
+  draw: function() {
+    PS.render.observationOverlays.drawTileSamples("observation.microbial", function(x, y) {
+      return PS.render.observationOverlays.toRgba(
+        PS.render.observationOverlays.getOverlaySample("observation.microbial", x, y, getPlanetTile(x, y))
       );
     });
   }

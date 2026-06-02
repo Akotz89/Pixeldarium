@@ -10,6 +10,9 @@ function applyWorldSaveData(saveData) {
   }
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
+  if (PS.epochs) {
+    PS.epochs.activeId = world.era;
+  }
   world.isExtinct = Boolean(saveData.isExtinct);
   world.extinctionTick = Math.max(0, Math.round(restoreNumber(saveData.extinctionTick, 0)));
   world.birthsThisTick = 0;
@@ -77,6 +80,8 @@ function applyWorldSaveData(saveData) {
   world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
   world.geology = saveData.geology ? JSON.parse(JSON.stringify(saveData.geology)) : null;
   world.atmosphere = saveData.atmosphere ? JSON.parse(JSON.stringify(saveData.atmosphere)) : null;
+  world.microbial = saveData.microbial ? JSON.parse(JSON.stringify(saveData.microbial)) : null;
+  world.microbialReady = Boolean(saveData.microbialReady || (world.microbial && world.microbial.totalDensity > 0.1));
   restoreBiologyAggregateState(saveData);
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);

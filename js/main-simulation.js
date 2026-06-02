@@ -271,6 +271,10 @@ function updateWorld(dt) {
     PS.layers.updateAll(dt);
   }
 
+  if (PS.epochs && typeof PS.epochs.updateCurrent === "function") {
+    PS.epochs.updateCurrent(dt);
+  }
+
   var shouldRefreshSummaries = world.tick % CONFIG.SIM_SUMMARY_UPDATE_INTERVAL === 0;
   world.needsRender = true;
   resetPopulationFlowCounters();

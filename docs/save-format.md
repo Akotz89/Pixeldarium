@@ -38,6 +38,7 @@
 | nextSpeciesId | int | Auto-increment counter for biology species IDs |
 | nextBiologyPopulationId | int | Auto-increment counter for aggregate biology population IDs |
 | nextBiologyRepresentativeId | int | Auto-increment counter for watchable representative organism IDs |
+| microbialReady | bool | Whether microbial field growth has crossed the readiness threshold |
 | nextSettlementId | int | Auto-increment counter |
 | nextSettlementRouteId | int | Auto-increment counter |
 | nextOrbitalAssetId | int | Auto-increment counter |
@@ -60,6 +61,41 @@ Always-on geology layer state, including deterministic tectonic plates, boundari
 ### atmosphere
 
 Always-on atmosphere layer state, including gas composition (`co2`, `o2`, `n2`, `ch4`, `h2o`, `o3`, `sulfur`), greenhouse forcing, temperature, volcanic outgassing, photosynthetic oxygen, and oxygen stress.
+
+### microbial
+
+Microbial epoch state, using the selected field/population hybrid.
+
+```json
+{
+  "model": "field-population-hybrid",
+  "ageTicks": 8,
+  "fieldWidth": 40,
+  "fieldHeight": 22,
+  "fields": {
+    "density": [0.1],
+    "chemicalEnergy": [0.5],
+    "oxygenProduction": [0.01],
+    "stress": [0.2],
+    "bloomIntensity": [0.4]
+  },
+  "populations": [
+    {
+      "id": 5,
+      "name": "Microbial mat 5",
+      "lineageId": "microbial-5",
+      "x": 44,
+      "y": 22,
+      "bloomIntensity": 0.8,
+      "morphology": "mat",
+      "isVisible": true
+    }
+  ],
+  "nextPopulationId": 6,
+  "visibleBlooms": [{ "id": 5, "x": 44, "y": 22, "intensity": 0.8, "morphology": "mat" }],
+  "selectedPrototype": "field-population-hybrid"
+}
+```
 
 ## Entity Arrays
 
