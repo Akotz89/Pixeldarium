@@ -10,7 +10,7 @@ const source = [
   "js/legacy/persistence/part-03.js",
   "js/legacy/persistence/part-05.js",
   "js/legacy/ui/part-05.js",
-  "js/legacy/ui/part-07.js"
+  "js/ui/touch.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 const context = {
@@ -41,6 +41,7 @@ const context = {
   },
   toggledPause: false,
   lastKeyboardPan: null,
+  lastScreenPan: null,
   lastZoomAnchor: null,
   canvas: {
     width: 160,
@@ -52,6 +53,7 @@ const context = {
     }
   },
   window: {
+    PS: {},
     setTimeout(callback) {
       return callback();
     },
@@ -115,6 +117,9 @@ const context = {
   },
   panPlanetViewBySamples(eastSamples, northSamples) {
     lastKeyboardPan = { eastSamples, northSamples };
+  },
+  panPlanetViewByScreenDelta(deltaX, deltaY) {
+    lastScreenPan = { deltaX, deltaY };
   }
 };
 
@@ -138,6 +143,9 @@ context.adjustPlanetZoomAtCanvasPoint = function (delta, canvasX, canvasY) {
 };
 context.panPlanetViewBySamples = function (eastSamples, northSamples) {
   context.lastKeyboardPan = { eastSamples, northSamples };
+};
+context.panPlanetViewByScreenDelta = function (deltaX, deltaY) {
+  context.lastScreenPan = { deltaX, deltaY };
 };
 
 vm.runInNewContext(`${source}
@@ -193,6 +201,16 @@ assert.ok(world.planetView.zoomLevel > pinchZoomBefore, "two-finger pinch-out sh
 assert.strictEqual(lastZoomAnchor.canvasX, 55, "pinch zoom should anchor at the touch midpoint X");
 assert.strictEqual(lastZoomAnchor.canvasY, 30, "pinch zoom should anchor at the touch midpoint Y");
 assert.strictEqual(planetDragState.skipNextClick, true, "pinch zoom should suppress the synthetic follow-up click");
+var lastRotatePanBefore = lastScreenPan;
+updatePlanetDrag({
+  pointerType: "touch",
+  pointerId: 2,
+  clientX: 550,
+  clientY: 450,
+  preventDefault: function() { this.prevented = true; }
+});
+assert.notStrictEqual(lastScreenPan, lastRotatePanBefore, "two-finger rotate should pan the globe camera");
+assert.ok(Math.abs(lastScreenPan.deltaX) > 0, "two-finger rotate should map angle changes to horizontal globe rotation");
 endPlanetDrag({ pointerType: "touch", pointerId: 1 });
 endPlanetDrag({ pointerType: "touch", pointerId: 2 });
 

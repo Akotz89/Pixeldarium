@@ -174,7 +174,7 @@ function beginPlanetDrag(event) {
     return;
   }
 
-  if (trackTouchPointer(event) && beginPlanetPinchIfReady()) {
+  if (PS.ui.touch.track(event) && PS.ui.touch.beginIfReady()) {
     if (typeof event.preventDefault === "function") {
       event.preventDefault();
     }
@@ -202,7 +202,7 @@ function beginPlanetDrag(event) {
 }
 
 function updatePlanetDrag(event) {
-  if (updatePlanetPinch(event)) {
+  if (PS.ui.touch.update(event)) {
     return;
   }
 
@@ -268,7 +268,7 @@ function continuePlanetDragInertia() {
 }
 
 function endPlanetDrag(event) {
-  if (endTouchPointer(event)) {
+  if (PS.ui.touch.end(event)) {
     if (!planetDragState.active) {
       return;
     }
@@ -307,9 +307,7 @@ function panPlanetViewFromKeyboard(eastSamples, northSamples) {
 }
 
 function prepareTouchInput() {
-  if (canvas && canvas.style) {
-    canvas.style.touchAction = "none";
-  }
+  PS.ui.touch.prepare();
 }
 
 function setPersistenceStatus(message, isError) {
