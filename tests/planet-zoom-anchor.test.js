@@ -480,6 +480,28 @@ PS.render.entities.drawSettlementFootprint({
 assert.ok(infrastructureDrawOps.fillRect >= builtFootprintSamples.length + 4, "built settlement silhouette should draw blocks, streets, parcels, and core");
 assert.ok(infrastructureDrawOps.strokeRect >= 1, "built settlement silhouette should draw an authored boundary");
 PS.render.entities.getSettlementRenderPosition = previousSettlementRenderPosition;
+var previousRegisteredSprite = PS.render.entities.drawRegisteredSprite;
+var settlementMapOps = { fillRect: 0, strokeRect: 0, stroke: 0, sprite: 0 };
+ctx.beginPath = function() {};
+ctx.moveTo = function() {};
+ctx.lineTo = function() {};
+ctx.stroke = function() { settlementMapOps.stroke++; };
+ctx.strokeRect = function() { settlementMapOps.strokeRect++; };
+ctx.fillRect = function() { settlementMapOps.fillRect++; };
+ctx.setLineDash = function() {};
+PS.render.entities.drawRegisteredSprite = function() { settlementMapOps.sprite++; };
+PS.render.entities.getSettlementRenderPosition = function(settlement) {
+  return settlement.id === 20 ? { x: 20, y: 20, scale: 1, visible: true } : { x: 72, y: 26, scale: 1, visible: true };
+};
+PS.render.entities.drawSettlements();
+assert.ok(settlementMapOps.fillRect >= 8, "settlement structures should draw multi-scale map badge blocks before sprite details");
+assert.ok(settlementMapOps.strokeRect >= 2, "settlement structures should draw authored map badge boundaries");
+assert.strictEqual(settlementMapOps.sprite, 2, "settlement structures should still draw registered settlement sprites");
+settlementMapOps.stroke = 0;
+PS.render.entities.drawSettlementRoutes();
+assert.ok(settlementMapOps.stroke >= 2, "settlement routes should draw dark underlay and semantic route stroke");
+PS.render.entities.drawRegisteredSprite = previousRegisteredSprite;
+PS.render.entities.getSettlementRenderPosition = previousSettlementRenderPosition;
 world.organisms = [];
 world.lineages = {};
 PS.sim = null;

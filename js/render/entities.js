@@ -291,6 +291,40 @@ PS.render.entities.getSettlementRenderPosition = function (settlement) {
   return PS.render.entities.getRenderPosition(settlement, 1);
 };
 
+PS.render.entities.drawSettlementMapBadge = function (settlement, point, size) {
+  var level = Math.max(1, Math.round(Number(settlement.level) || 1));
+  var scale = point.scale || 1;
+  var badgeSize = Math.max(8, size * (settlement.isColony ? 1.18 : 1.02));
+  var blockSize = Math.max(3, Math.round((3 + Math.min(level, 5)) * scale));
+  var lineageColor = settlement.isActive
+    ? PS.render.entities.getLineageColorById(settlement.lineageId)
+    : "#d9d2c0";
+
+  ctx.save();
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#02070c", settlement.isColony ? 0.72 : 0.56);
+  ctx.fillRect(
+    Math.round(point.x - badgeSize * 0.62),
+    Math.round(point.y - badgeSize * 0.52),
+    Math.round(badgeSize * 1.24),
+    Math.round(badgeSize * 1.04)
+  );
+  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(lineageColor, settlement.isColony ? 0.82 : 0.62);
+  ctx.lineWidth = Math.max(1, Math.round(1.5 * scale));
+  ctx.strokeRect(
+    Math.round(point.x - badgeSize * 0.66),
+    Math.round(point.y - badgeSize * 0.56),
+    Math.round(badgeSize * 1.32),
+    Math.round(badgeSize * 1.12)
+  );
+  ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
+  ctx.fillRect(Math.round(point.x - blockSize * 1.7), Math.round(point.y - blockSize * 0.4), blockSize, blockSize);
+  ctx.fillRect(Math.round(point.x - blockSize * 0.4), Math.round(point.y - blockSize * 1.3), blockSize, Math.round(blockSize * 1.5));
+  ctx.fillRect(Math.round(point.x + blockSize * 0.9), Math.round(point.y - blockSize * 0.1), blockSize, blockSize);
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#c8bea0", settlement.isColony ? 0.52 : 0.36);
+  ctx.fillRect(Math.round(point.x - badgeSize * 0.42), Math.round(point.y + blockSize * 0.85), Math.round(badgeSize * 0.84), Math.max(1, Math.round(scale)));
+  ctx.restore();
+};
+
 PS.render.entities.drawSettlements = function () {
   if (!Array.isArray(world.settlements)) {
     return;
@@ -307,6 +341,7 @@ PS.render.entities.drawSettlements = function () {
     var size = PS.render.entities.getSettlementDrawSize(settlement) * (point.scale || 1);
     var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1)) * (point.scale || 1);
 
+    PS.render.entities.drawSettlementMapBadge(settlement, point, size);
     PS.render.entities.drawRegisteredSprite(
       "settlement.core",
       settlement,
@@ -384,12 +419,20 @@ PS.render.entities.drawSettlementRoutes = function () {
 
     var lineageColor = PS.render.entities.getLineageColorById(route.lineageId || parentSettlement.lineageId);
     var isColonyRoute = parentSettlement.isColony || childSettlement.isColony;
+    var routeWidth = isColonyRoute ? 4 : (route.isActive ? 3 : 2);
 
     ctx.beginPath();
     ctx.moveTo(parentPoint.x, parentPoint.y);
     ctx.lineTo(childPoint.x, childPoint.y);
+    ctx.strokeStyle = "rgba(2, 7, 12, 0.62)";
+    ctx.lineWidth = routeWidth + 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(parentPoint.x, parentPoint.y);
+    ctx.lineTo(childPoint.x, childPoint.y);
     ctx.strokeStyle = isColonyRoute ? "rgba(112, 240, 208, 0.68)" : PS.render.entities.getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
-    ctx.lineWidth = isColonyRoute ? 3 : (route.isActive ? 2 : 1);
+    ctx.lineWidth = routeWidth;
     ctx.setLineDash(isColonyRoute ? [10, 3] : (route.isActive ? [6, 4] : [2, 5]));
     ctx.stroke();
     ctx.setLineDash([]);
