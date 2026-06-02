@@ -31,21 +31,53 @@ PS.render.raster.drawLocalSurfaceUnderlay = function (targetCtx) {
       var width = Math.min(pixelSize, canvas.width - x);
       var latLon = getPlanetLatLonFromCanvasPoint(x + width / 2, y + height / 2);
       var sample = PS.render.surface.getChunkSample(latLon.latitude, latLon.longitude, null, underlayLod);
-      var rgb = getRgbFromHex(getPlanetSurfaceColor(sample));
-      var shadeSeed = getPlanetMaterialPixelNoise(latLon.latitude, latLon.longitude, 120, 9109) - 0.5;
-      var shade = 1 + shadeSeed * 0.12;
-
-      targetCtx.fillStyle = getHexFromRgb(
-        clamp(rgb.red * shade, 0, 255),
-        clamp(rgb.green * shade, 0, 255),
-        clamp(rgb.blue * shade, 0, 255)
-      );
+      targetCtx.fillStyle = PS.render.raster.getLocalSurfaceUnderlayColor(sample, latLon);
       targetCtx.fillRect(x, y, width, height);
       PS.render.raster.drawLocalSurfaceUnderlayAccent(targetCtx, x, y, width, height, sample);
     }
   }
 
   return true;
+};
+
+PS.render.raster.getLocalSurfaceUnderlayColor = function (sample, latLon) {
+  var latitude = Number(latLon && latLon.latitude) || Number(sample && sample.latitude) || 0;
+  var longitude = Number(latLon && latLon.longitude) || Number(sample && sample.longitude) || 0;
+  var detail = sample && sample.detail ? sample.detail : {};
+  var signals = detail.materialSignals || {};
+  var color = getPlanetSurfaceColor(sample);
+  var targetRgb = sample && sample.tileBlend ? getPlanetSurfaceTileBlendRgb(sample.tileBlend) : null;
+  var transitionStrength = getPlanetSurfaceBiomeTransitionStrength(sample);
+  var transitionNoise = getPlanetMaterialPixelNoise(latitude, longitude, 420, 9167);
+  var shore = clamp(Math.max(Number(signals.shorelineStrength) || 0, Number(signals.coast) || 0), 0, 1);
+  var snow = clamp(Number(signals.snow) || 0, 0, 1);
+  var shadeSeed = getPlanetMaterialPixelNoise(latitude, longitude, 120, 9109) - 0.5;
+  var shade = 1 + shadeSeed * 0.12;
+  var rgb;
+
+  if (targetRgb && transitionStrength > 0.02) {
+    color = blendHexColorWithRgb(
+      color,
+      targetRgb,
+      clamp(transitionStrength * (0.18 + transitionNoise * 0.16), 0, 0.34)
+    );
+  }
+
+  if (shore > 0.08) {
+    color = blendHexColors(color, transitionNoise > 0.48 ? "#d7bd78" : "#7fb7a7", clamp(shore * 0.16, 0, 0.18));
+  }
+
+  if (snow > 0.18) {
+    color = blendHexColors(color, "#f1f6f4", clamp(snow * 0.10, 0, 0.14));
+  }
+
+  rgb = getRgbFromHex(color);
+
+  return getHexFromRgb(
+    clamp(rgb.red * shade, 0, 255),
+    clamp(rgb.green * shade, 0, 255),
+    clamp(rgb.blue * shade, 0, 255)
+  );
 };
 
 PS.render.raster.drawLocalSurfaceUnderlayAccent = function (targetCtx, x, y, width, height, sample) {

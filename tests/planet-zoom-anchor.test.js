@@ -1652,12 +1652,25 @@ var unblendedBoundarySample = {
 };
 var blendedBoundaryColor = getPlanetSurfaceColor(boundarySample);
 var unblendedBoundaryColor = getPlanetSurfaceColor(unblendedBoundarySample);
+var transitionUnderlayColor = PS.render.raster.getLocalSurfaceUnderlayColor(boundarySample, {
+  latitude: boundaryLatitude,
+  longitude: boundaryLongitude
+});
+var flatUnderlayColor = PS.render.raster.getLocalSurfaceUnderlayColor(unblendedBoundarySample, {
+  latitude: boundaryLatitude,
+  longitude: boundaryLongitude
+});
 var blendTargetRgb = getPlanetSurfaceTileBlendRgb(tileBlend);
 
 assert.ok(colorDistance(blendedBoundaryColor, unblendedBoundaryColor) > 2, "biome transition should alter local surface color");
 assert.ok(
   rgbDistance(getRgbFromHex(blendedBoundaryColor), blendTargetRgb) < rgbDistance(getRgbFromHex(unblendedBoundaryColor), blendTargetRgb),
   "biome transition should move local color toward neighboring tile blend"
+);
+assert.ok(colorDistance(transitionUnderlayColor, flatUnderlayColor) > 2, "local underlay transition should alter coarse surface color");
+assert.ok(
+  rgbDistance(getRgbFromHex(transitionUnderlayColor), blendTargetRgb) < rgbDistance(getRgbFromHex(flatUnderlayColor), blendTargetRgb),
+  "local underlay transition should move coarse color toward neighboring tile blend"
 );
 
 var whitecapBoundarySample = {
