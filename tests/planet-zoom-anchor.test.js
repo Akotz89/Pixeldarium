@@ -361,6 +361,7 @@ assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest s
 assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
 assert.strictEqual(typeof PS.render.entities.drawLocalPresenceField, "function", "local presence field should be exposed for dense simulation-map readability");
 assert.strictEqual(typeof PS.render.entities.getProtoSettlementFootprints, "function", "presence field should expose pre-settlement activity footprints");
+assert.strictEqual(typeof PS.render.entities.getSettlementFootprintSamples, "function", "presence field should expose built settlement footprint samples");
 assert.strictEqual(PS.render.entities.getPresenceZoomAmount(0), 0, "presence density should stay hidden at orbit zoom");
 assert.ok(PS.render.entities.getPresenceZoomAmount(finalGroundZoomIndex) > 0.9, "presence density should ramp up at ground zoom");
 var resourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
@@ -410,6 +411,30 @@ PS.sim.settlements.earlyProgressionSummary = function() {
 var forageFootprints = PS.render.entities.getProtoSettlementFootprints();
 assert.ok(forageFootprints.length >= 1, "early diversifying organisms should produce truthful forage footprints before settlement clusters");
 assert.strictEqual(forageFootprints[0].lineageId, 8, "forage footprint should preserve organism lineage identity");
+var builtFootprintSamples = PS.render.entities.getSettlementFootprintSamples({
+  id: 12,
+  x: 18,
+  y: 19,
+  lineageId: 2,
+  level: 3,
+  isColony: true,
+  isActive: true
+});
+assert.ok(builtFootprintSamples.length >= 10, "built settlements should expose dense parcel and street footprint samples");
+assert.ok(builtFootprintSamples.some(function(sample) {
+  return sample.role === "store";
+}), "built settlement footprints should include authored storehouse parcels");
+var previousSettlementRenderPosition = PS.render.entities.getSettlementRenderPosition;
+world.settlements = [
+  { id: 20, x: 1, y: 1, lineageId: 2, level: 2, isActive: true },
+  { id: 21, x: 2, y: 2, lineageId: 2, level: 2, isActive: true }
+];
+world.settlementRoutes = [{ id: 30, parentSettlementId: 20, childSettlementId: 21, lineageId: 2, isActive: true }];
+PS.render.entities.getSettlementRenderPosition = function(settlement) {
+  return settlement.id === 20 ? null : { x: 24, y: 24, scale: 1, visible: true };
+};
+PS.render.entities.drawRouteTrafficMarks();
+PS.render.entities.getSettlementRenderPosition = previousSettlementRenderPosition;
 world.organisms = [];
 world.lineages = {};
 PS.sim = null;

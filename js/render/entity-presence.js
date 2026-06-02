@@ -104,6 +104,10 @@ PS.render.entities.drawRouteTrafficMarks = function () {
     var parentPoint = PS.render.entities.getSettlementRenderPosition(parentSettlement);
     var childPoint = PS.render.entities.getSettlementRenderPosition(childSettlement);
 
+    if (!parentPoint || !childPoint) {
+      continue;
+    }
+
     if (
       !PS.render.entities.isPresencePointVisible(parentPoint, 120) &&
       !PS.render.entities.isPresencePointVisible(childPoint, 120)
@@ -123,6 +127,90 @@ PS.render.entities.drawRouteTrafficMarks = function () {
       ctx.fillStyle = PS.render.entities.getRgbaFromHex(lineageColor, route.isActive ? 0.46 : 0.22);
       ctx.fillRect(Math.round(x - size / 2), Math.round(y - size / 2), size, size);
     }
+  }
+};
+
+PS.render.entities.getSettlementFootprintSamples = function (settlement) {
+  var level = Math.max(1, Math.round(Number(settlement && settlement.level) || 1));
+  var count = Math.min(14, 5 + level * 2 + (settlement && settlement.isColony ? 3 : 0));
+  var samples = [];
+
+  for (var i = 0; i < count; i++) {
+    var spread = 9 + level * 3;
+    var angle = PS.render.entities.getPresenceHash(settlement, i + 41) * Math.PI * 2;
+    var distance = (0.20 + PS.render.entities.getPresenceHash(settlement, i + 67) * 0.80) * spread;
+    var width = 3 + Math.round(PS.render.entities.getPresenceHash(settlement, i + 83) * (2 + level));
+    var height = 3 + Math.round(PS.render.entities.getPresenceHash(settlement, i + 97) * (2 + level));
+
+    samples.push({
+      offsetX: Math.round(Math.cos(angle) * distance),
+      offsetY: Math.round(Math.sin(angle) * distance),
+      width: width,
+      height: height,
+      role: i % 5 === 0 ? "store" : (i % 3 === 0 ? "street" : "parcel")
+    });
+  }
+
+  return samples;
+};
+
+PS.render.entities.drawSettlementFootprint = function (settlement) {
+  var point = PS.render.entities.getSettlementRenderPosition(settlement);
+
+  if (!PS.render.entities.isPresencePointVisible(point, 140)) {
+    return;
+  }
+
+  var level = Math.max(1, Math.round(Number(settlement.level) || 1));
+  var color = settlement.isActive
+    ? PS.render.entities.getLineageColorById(settlement.lineageId)
+    : "#d9d2c0";
+  var samples = PS.render.entities.getSettlementFootprintSamples(settlement);
+  var scale = point.scale || 1;
+  var coreSize = Math.max(10, (12 + level * 4) * scale);
+
+  ctx.save();
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#171d1a", 0.28);
+  ctx.fillRect(
+    Math.round(point.x - coreSize * 0.62),
+    Math.round(point.y - coreSize * 0.62),
+    Math.round(coreSize * 1.24),
+    Math.round(coreSize * 1.24)
+  );
+  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(color, settlement.isColony ? 0.62 : 0.44);
+  ctx.lineWidth = Math.max(1, Math.round(scale));
+  ctx.strokeRect(
+    Math.round(point.x - coreSize * 0.68),
+    Math.round(point.y - coreSize * 0.68),
+    Math.round(coreSize * 1.36),
+    Math.round(coreSize * 1.36)
+  );
+
+  for (var i = 0; i < samples.length; i++) {
+    var sample = samples[i];
+    var sampleWidth = Math.max(2, Math.round(sample.width * scale));
+    var sampleHeight = Math.max(2, Math.round(sample.height * scale));
+    var x = Math.round(point.x + sample.offsetX * scale - sampleWidth / 2);
+    var y = Math.round(point.y + sample.offsetY * scale - sampleHeight / 2);
+
+    ctx.fillStyle = sample.role === "store"
+      ? PS.render.entities.getRgbaFromHex("#d9b85f", 0.48)
+      : (sample.role === "street"
+        ? PS.render.entities.getRgbaFromHex("#a9a18d", 0.42)
+        : PS.render.entities.getRgbaFromHex(color, 0.36));
+    ctx.fillRect(x, y, sampleWidth, sampleHeight);
+  }
+
+  ctx.restore();
+};
+
+PS.render.entities.drawSettlementFootprints = function () {
+  if (!Array.isArray(world.settlements)) {
+    return;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    PS.render.entities.drawSettlementFootprint(world.settlements[i]);
   }
 };
 
@@ -291,6 +379,8 @@ PS.render.entities.drawLocalPresenceField = function () {
       organismCount
     );
   }
+
+  PS.render.entities.drawSettlementFootprints();
 
   for (var settlementIndex = 0; Array.isArray(world.settlements) && settlementIndex < world.settlements.length; settlementIndex++) {
     var settlement = world.settlements[settlementIndex];
