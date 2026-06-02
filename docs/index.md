@@ -8,6 +8,8 @@
 | [AGENTS.md](../AGENTS.md) | `AGENTS.md` | Agent instructions with D1-D7 architecture decisions |
 | [Baseline](baseline.md) | `docs/baseline.md` | Pre-restructure codebase metrics (19,484 lines, 773 functions) |
 | [Save Format](save-format.md) | `docs/save-format.md` | Persistence schema version 1 |
+| [Legacy UI Assessment](legacy-ui-assessment.md) | `docs/legacy-ui-assessment.md` | Completed UI runtime shard retirement record |
+| [Legacy Runtime Assessment](legacy-runtime-assessment.md) | `docs/legacy-runtime-assessment.md` | AZR-352 non-UI legacy runtime inventory and migration decisions |
 
 ## Planning Artifacts
 
