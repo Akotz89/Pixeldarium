@@ -175,6 +175,7 @@ PS.render.surfaceDraw.drawMicrotexture = function (tctx, sample, baseColor, scre
     .concat(getPlanetSurfaceSilhouetteBreakupSwatches(sample, baseColor))
     .concat(getPlanetSurfaceStrataSwatches(sample, baseColor))
     .concat(getPlanetSurfacePatternSwatches(sample, baseColor))
+    .concat(getPlanetSurfaceLandmarkSwatches(sample, baseColor))
     .concat(getPlanetSurfaceNaturalElementSwatches(sample, baseColor))
     .concat(getPlanetSurfaceMicrotextureSwatches(sample, baseColor));
 

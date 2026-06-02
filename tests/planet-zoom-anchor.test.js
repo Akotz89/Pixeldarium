@@ -1983,6 +1983,12 @@ var coarseTexturedGrassSample = Object.assign({}, texturedGrassSample, {
     sampleMeters: 100
   })
 });
+var regionTexturedGrassSample = Object.assign({}, texturedGrassSample, {
+  surfaceSampleMeters: 25,
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    sampleMeters: 25
+  })
+});
 var featureTexturedGrassSample = Object.assign({}, texturedGrassSample, {
   detail: Object.assign({}, texturedGrassSample.detail, {
     groundFeature: {
@@ -2096,6 +2102,12 @@ var waterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texture
 var alternateOrientationWaterNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(alternateOrientationWaterSample, "#08365f");
 var rockNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(slopedRockSample, "#665226");
 var coarseNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(coarseTexturedGrassSample, "#2f6531");
+var grassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedGrassSample, "#2f6531");
+var repeatedGrassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedGrassSample, "#2f6531");
+var waterLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedWaterSample, "#08365f");
+var rockLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(slopedRockSample, "#665226");
+var regionGrassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(regionTexturedGrassSample, "#2f6531");
+var coarseGrassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(coarseTexturedGrassSample, "#2f6531");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
@@ -2109,6 +2121,7 @@ var alternateSeedPatternSwatches = getPlanetSurfacePatternSwatches(texturedGrass
 var alternateSeedStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedGrassSample, "#2f6531");
 var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
@@ -2263,6 +2276,26 @@ grassNaturalElementSwatches.concat(waterNaturalElementSwatches).concat(rockNatur
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "natural element height should stay in cell");
   assert.ok(swatch.rotationRadians >= 0 && swatch.rotationRadians < Math.PI, "natural element rotation should stay normalized");
   assert.ok(["structure", "road", "track", "street", "house", "yard"].indexOf(swatch.elementType) < 0, "natural element swatches should not imply built infrastructure");
+});
+assert.ok(grassLandmarkSwatches.length > 0, "local surface landmarks should add material-scale map symbols");
+assert.ok(grassLandmarkSwatches.length <= 3, "local surface landmark count should stay bounded");
+assert.deepStrictEqual(repeatedGrassLandmarkSwatches, grassLandmarkSwatches, "local surface landmarks should be deterministic");
+assert.notDeepStrictEqual(alternateSeedLandmarkSwatches, grassLandmarkSwatches, "local surface landmarks should vary by seed");
+assert.strictEqual(grassLandmarkSwatches[0].landmarkType, "grass-clump", "grass landmarks should use grass clumps");
+assert.strictEqual(waterLandmarkSwatches[0].landmarkType, "water-band", "water landmarks should use water bands");
+assert.strictEqual(rockLandmarkSwatches[0].landmarkType, "stone-ridge", "rock landmarks should use stone ridges");
+assert.ok(regionGrassLandmarkSwatches.length > 0, "region-scale samples should still render material landmarks");
+assert.deepStrictEqual(coarseGrassLandmarkSwatches, [], "broad samples should skip landmark swatches");
+assert.notStrictEqual(waterLandmarkSwatches[0].color, grassLandmarkSwatches[0].color, "landmark color should vary by material");
+grassLandmarkSwatches.concat(waterLandmarkSwatches).concat(rockLandmarkSwatches).concat(regionGrassLandmarkSwatches).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "surface landmark swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.48, "surface landmark alpha should stay bounded");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "surface landmark x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "surface landmark y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "surface landmark width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface landmark height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface landmark width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface landmark height should stay in cell");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
 assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");

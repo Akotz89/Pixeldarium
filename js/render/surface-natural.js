@@ -211,3 +211,126 @@ PS.render.surfaceNatural.getElementSwatches = function (sample, baseColor) {
 
   return swatches;
 };
+
+PS.render.surfaceNatural.getLandmarkType = function (sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var surface = detail.surface || "ground";
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var signals = detail.materialSignals || {};
+
+  if (surface === "open water" || surface === "deep water" || surface === "whitecap") {
+    return "water-band";
+  }
+
+  if (surface === "dense canopy" || surface === "woodland") {
+    return "canopy-crown";
+  }
+
+  if (surface === "rock" || surface === "stone" || surface === "ridge ice") {
+    return "stone-ridge";
+  }
+
+  if (surface === "sand" || surface === "dune" || biome === "desert") {
+    return "dune-line";
+  }
+
+  if (surface === "snow" || surface === "ice") {
+    return "ice-facet";
+  }
+
+  if (surface === "moss" || surface === "meadow" || Number(signals.wetness) > 0.58) {
+    return "wet-pocket";
+  }
+
+  return "grass-clump";
+};
+
+PS.render.surfaceNatural.getLandmarkColor = function (landmarkType, baseColor, noise) {
+  var amount = clamp(0.20 + (Number(noise) || 0) * 0.20, 0.20, 0.44);
+
+  if (landmarkType === "water-band") {
+    return blendHexColors(baseColor, "#9bd8e7", amount);
+  }
+
+  if (landmarkType === "canopy-crown") {
+    return blendHexColors(baseColor, "#1f6a38", amount);
+  }
+
+  if (landmarkType === "dune-line") {
+    return blendHexColors(baseColor, "#d9bd73", amount);
+  }
+
+  if (landmarkType === "stone-ridge") {
+    return blendHexColors(baseColor, "#bdb79e", amount);
+  }
+
+  if (landmarkType === "ice-facet") {
+    return blendHexColors(baseColor, "#f4fdff", amount);
+  }
+
+  if (landmarkType === "wet-pocket") {
+    return blendHexColors(baseColor, "#72b887", amount);
+  }
+
+  return blendHexColors(baseColor, "#92bd5d", amount);
+};
+
+PS.render.surfaceNatural.getLandmarkShape = function (landmarkType, noise) {
+  var normalizedNoise = clamp(Number(noise) || 0, 0, 1);
+  var maxSize = Math.max(1, CONFIG.TILE_SIZE - 1);
+  var wide = clamp(Math.round(CONFIG.TILE_SIZE * (0.42 + normalizedNoise * 0.22)), 1, maxSize);
+  var mid = clamp(Math.round(CONFIG.TILE_SIZE * (0.24 + normalizedNoise * 0.18)), 1, maxSize);
+
+  if (landmarkType === "water-band" || landmarkType === "dune-line") {
+    return { width: wide, height: 1 };
+  }
+
+  if (landmarkType === "stone-ridge" || landmarkType === "ice-facet") {
+    return normalizedNoise > 0.5 ? { width: wide, height: 1 } : { width: 1, height: wide };
+  }
+
+  return { width: mid, height: mid };
+};
+
+PS.render.surfaceNatural.getLandmarkSwatches = function (sample, baseColor) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var swatches = [];
+  var landmarkType = PS.render.surfaceNatural.getLandmarkType(sample);
+  var seedEast = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedNorth = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+  var strength = clamp(
+    0.22 +
+      getPlanetSurfaceBiomeTransitionStrength(sample) * 0.24 +
+      (Number(detail.roughness) || 0) * 0.12 +
+      (Number(detail.slope) || 0) * 0.10 +
+      (detail.groundFeature ? clamp(Number(detail.groundFeature.influence) || 0, 0, 1) * 0.14 : 0),
+    0,
+    0.74
+  );
+  var count = sampleMeters <= 5 ? 3 : (sampleMeters <= 25 ? 2 : 0);
+
+  if (count <= 0 || CONFIG.TILE_SIZE < 4) {
+    return swatches;
+  }
+
+  for (var i = 0; i < count; i++) {
+    var noise = getDeterministicUnitNoise(seedEast + i * 37, seedNorth - i * 41, getPlanetVisualSeedOffset() + 6101 + i * 23);
+    var shape = PS.render.surfaceNatural.getLandmarkShape(landmarkType, noise);
+    var maxX = Math.max(1, CONFIG.TILE_SIZE - shape.width + 1);
+    var maxY = Math.max(1, CONFIG.TILE_SIZE - shape.height + 1);
+
+    swatches.push({
+      x: Math.floor(getDeterministicUnitNoise(seedEast - i * 11, seedNorth + i * 13, getPlanetVisualSeedOffset() + 6203 + i) * maxX),
+      y: Math.floor(getDeterministicUnitNoise(seedEast + i * 17, seedNorth - i * 19, getPlanetVisualSeedOffset() + 6311 + i) * maxY),
+      width: shape.width,
+      height: shape.height,
+      size: Math.max(shape.width, shape.height),
+      color: PS.render.surfaceNatural.getLandmarkColor(landmarkType, baseColor, noise),
+      alpha: clamp(0.16 + strength * 0.24 + noise * 0.08, 0.16, 0.48),
+      landmarkType: landmarkType
+    });
+  }
+
+  return swatches;
+};
