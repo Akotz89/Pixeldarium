@@ -284,25 +284,31 @@ function makeOrganism(x, y, lineageId) {
   var tileX = getWrappedWorldX(x);
   var tileY = getClampedWorldY(y);
   var surfacePosition = getRandomLatLonInTile(tileX, tileY);
-  var organism = {
-    x: tileX,
-    y: tileY,
-    prevX: tileX,
-    prevY: tileY,
-    latitude: surfacePosition.latitude,
-    longitude: surfacePosition.longitude,
-    prevLatitude: surfacePosition.latitude,
-    prevLongitude: surfacePosition.longitude,
-    energy: CONFIG.STARTING_ORGANISM_ENERGY,
-    age: 0,
-    directionX: randomInt(3) - 1,
-    directionY: randomInt(3) - 1,
-    travelKm: 0,
-    traits: makeInitialOrganismTraits(),
-    lineageId: lineageId || allocateLineageId(),
-    lineageParentId: 0,
-    generation: 0
-  };
+  var organism = PS.pools && PS.pools.ensure().organism.acquire();
+
+  if (!organism) {
+    return null;
+  }
+
+  organism.x = tileX;
+  organism.y = tileY;
+  organism.prevX = tileX;
+  organism.prevY = tileY;
+  organism.latitude = surfacePosition.latitude;
+  organism.longitude = surfacePosition.longitude;
+  organism.prevLatitude = surfacePosition.latitude;
+  organism.prevLongitude = surfacePosition.longitude;
+  organism.energy = CONFIG.STARTING_ORGANISM_ENERGY;
+  organism.age = 0;
+  organism.directionX = randomInt(3) - 1;
+  organism.directionY = randomInt(3) - 1;
+  organism.velocityX = 0;
+  organism.velocityY = 0;
+  organism.travelKm = 0;
+  organism.traits = makeInitialOrganismTraits();
+  organism.lineageId = lineageId || allocateLineageId();
+  organism.lineageParentId = 0;
+  organism.generation = 0;
 
   registerLineage(organism.lineageId, 0, 0, organism.traits, world.tick);
   return organism;

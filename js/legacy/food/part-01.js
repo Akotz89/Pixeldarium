@@ -2,13 +2,32 @@ function makeFood(x, y) {
   var tileX = getWrappedWorldX(x);
   var tileY = getClampedWorldY(y);
   var surfacePosition = getRandomLatLonInTile(tileX, tileY);
+  var food = PS.pools && PS.pools.ensure().food.acquire();
 
-  return {
-    x: tileX,
-    y: tileY,
-    latitude: surfacePosition.latitude,
-    longitude: surfacePosition.longitude
-  };
+  if (!food) {
+    food = {
+      poolIndex: -1,
+      active: true,
+      x: 0,
+      y: 0,
+      latitude: 0,
+      longitude: 0
+    };
+  }
+
+  food.x = tileX;
+  food.y = tileY;
+  food.latitude = surfacePosition.latitude;
+  food.longitude = surfacePosition.longitude;
+  food.active = true;
+
+  return food;
+}
+
+function releaseFoodParticle(food) {
+  if (PS.pools && PS.pools.food) {
+    PS.pools.food.release(food);
+  }
 }
 
 function getFoodPositionKey(x, y) {
@@ -149,6 +168,7 @@ function removeFoodAtIndex(index) {
 
   world.food.pop();
   delete food.foodIndex;
+  releaseFoodParticle(food);
   return food;
 }
 

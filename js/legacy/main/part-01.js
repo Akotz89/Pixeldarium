@@ -12,6 +12,10 @@ function reportRuntimeError(error) {
 }
 
 function clearWorld() {
+  if (PS.pools && typeof PS.pools.reset === "function") {
+    PS.pools.reset();
+  }
+
   world.tick = 0;
   world.era = "Organisms";
   world.organisms = [];

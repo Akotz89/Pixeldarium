@@ -143,25 +143,29 @@ function restoreOrganism(organism) {
       ? normalizeLongitude(organism.prevLongitude)
       : surfacePosition.longitude
   };
-  var restoredOrganism = {
-    x: tileX,
-    y: tileY,
-    prevX: previousTileX,
-    prevY: previousTileY,
-    latitude: surfacePosition.latitude,
-    longitude: surfacePosition.longitude,
-    prevLatitude: previousSurfacePosition.latitude,
-    prevLongitude: previousSurfacePosition.longitude,
-    energy: Number(organism.energy),
-    age: Number(organism.age),
-    directionX: clamp(Math.round(Number(organism.directionX)), -1, 1),
-    directionY: clamp(Math.round(Number(organism.directionY)), -1, 1),
-    travelKm: Math.max(0, restoreNumber(organism.travelKm, 0)),
-    traits: restoreOrganismTraits(organism.traits),
-    lineageId: Math.round(restoreNumber(organism.lineageId, 0)),
-    lineageParentId: Math.max(0, Math.round(restoreNumber(organism.lineageParentId, 0))),
-    generation: Math.max(0, Math.round(restoreNumber(organism.generation, 0)))
-  };
+  var restoredOrganism = makeOrganism(tileX, tileY, Math.round(restoreNumber(organism.lineageId, 0)));
+
+  if (!restoredOrganism) {
+    return null;
+  }
+
+  restoredOrganism.prevX = previousTileX;
+  restoredOrganism.prevY = previousTileY;
+  restoredOrganism.latitude = surfacePosition.latitude;
+  restoredOrganism.longitude = surfacePosition.longitude;
+  restoredOrganism.prevLatitude = previousSurfacePosition.latitude;
+  restoredOrganism.prevLongitude = previousSurfacePosition.longitude;
+  restoredOrganism.energy = Number(organism.energy);
+  restoredOrganism.age = Number(organism.age);
+  restoredOrganism.directionX = clamp(Math.round(Number(organism.directionX)), -1, 1);
+  restoredOrganism.directionY = clamp(Math.round(Number(organism.directionY)), -1, 1);
+  restoredOrganism.velocityX = 0;
+  restoredOrganism.velocityY = 0;
+  restoredOrganism.travelKm = Math.max(0, restoreNumber(organism.travelKm, 0));
+  restoredOrganism.traits = restoreOrganismTraits(organism.traits);
+  restoredOrganism.lineageId = Math.round(restoreNumber(organism.lineageId, 0));
+  restoredOrganism.lineageParentId = Math.max(0, Math.round(restoreNumber(organism.lineageParentId, 0)));
+  restoredOrganism.generation = Math.max(0, Math.round(restoreNumber(organism.generation, 0)));
 
   ensureOrganismLineage(restoredOrganism);
   return restoredOrganism;

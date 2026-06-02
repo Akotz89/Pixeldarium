@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/social-preview.png" alt="Pixeldarium — Planet-Scale Pixel Simulation" width="800">
+  <img src="docs/screenshots/social-preview.png" alt="Pixeldarium — Planet-Scale Emergent Sandbox" width="800">
 </p>
 
 <h1 align="center">🌍 Pixeldarium</h1>

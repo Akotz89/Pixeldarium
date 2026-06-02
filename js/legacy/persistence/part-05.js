@@ -83,9 +83,14 @@ function applyWorldSaveData(saveData) {
   rebuildEmpireSectorIndexes();
   world.terrain = saveData.terrain.slice();
   world.fertileTiles = countFertileTiles();
+
+  if (PS.pools && typeof PS.pools.reset === "function") {
+    PS.pools.reset();
+  }
+
   world.food = saveData.food.map(restoreFood);
   rebuildFoodPositions();
-  world.organisms = saveData.organisms.map(restoreOrganism);
+  world.organisms = saveData.organisms.map(restoreOrganism).filter(Boolean);
   refreshLineageRegistry();
   world.isExtinct = world.organisms.length === 0;
 

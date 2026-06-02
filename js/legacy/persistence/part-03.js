@@ -40,10 +40,9 @@ function validateWorldSaveData(saveData) {
 }
 
 function restoreFood(food) {
-  var restoredFood = {
-    x: clamp(Math.round(restoreNumber(food.x, 0)), 0, WORLD_WIDTH - 1),
-    y: clamp(Math.round(restoreNumber(food.y, 0)), 0, WORLD_HEIGHT - 1)
-  };
+  var tileX = clamp(Math.round(restoreNumber(food.x, 0)), 0, WORLD_WIDTH - 1);
+  var tileY = clamp(Math.round(restoreNumber(food.y, 0)), 0, WORLD_HEIGHT - 1);
+  var restoredFood = makeFood(tileX, tileY);
   var surfacePosition = getRestoredSurfacePosition(food, restoredFood.x, restoredFood.y);
 
   restoredFood.latitude = surfacePosition.latitude;

@@ -122,6 +122,10 @@ function reproduceIfReady(organism) {
     organism.lineageId
   );
 
+  if (!child) {
+    return;
+  }
+
   child.energy = CONFIG.CHILD_ORGANISM_ENERGY;
   child.traits = inheritOrganismTraits(traits);
   assignChildLineage(child, organism, traits);
@@ -198,6 +202,9 @@ function removeDeadOrganisms() {
       world.organisms[writeIndex] = organism;
       writeIndex++;
     } else {
+      if (PS.pools && PS.pools.organism) {
+        PS.pools.organism.release(organism);
+      }
       removedCount++;
     }
   }
@@ -212,6 +219,13 @@ function removeDeadOrganisms() {
 function trimOrganismPopulation() {
   if (world.organisms.length > CONFIG.MAX_ORGANISMS) {
     var trimmedCount = world.organisms.length - CONFIG.MAX_ORGANISMS;
+
+    for (var i = CONFIG.MAX_ORGANISMS; i < world.organisms.length; i++) {
+      if (PS.pools && PS.pools.organism) {
+        PS.pools.organism.release(world.organisms[i]);
+      }
+    }
+
     world.organisms.length = CONFIG.MAX_ORGANISMS;
 
     if (typeof recordOrganismDeath === "function") {

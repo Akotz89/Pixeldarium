@@ -28,13 +28,34 @@ PS.debug.performance = {
       " | Update " + world.updateMs.toFixed(2) + "ms" +
       " | Draw " + world.drawMs.toFixed(2) + "ms" +
       " | Entities " + world.organisms.length + "/" + world.food.length +
-      " | Memory " + this.getMemoryLabel();
+      " | Memory " + this.getMemoryLabel() +
+      " | Pools " + this.getPoolLabel();
   },
   getMemoryLabel: function() {
-    if (!performance.memory) {
+    var budget = PS.config && PS.config.pools ? PS.config.pools.memoryBudgetMb : 0;
+
+    if (performance.memory) {
+      return Math.round(performance.memory.usedJSHeapSize / 1048576) + "/" + budget + " MB";
+    }
+
+    return this.getEstimatedMemoryMb() + "/" + budget + " MB est";
+  },
+  getEstimatedMemoryMb: function() {
+    var poolStats = PS.pools && typeof PS.pools.getStats === "function" ? PS.pools.getStats() : null;
+    var pooledBytes = poolStats ? (
+      poolStats.organismCapacity * poolStats.organismArrayCount * 4 +
+      poolStats.foodCapacity * 40
+    ) : 0;
+
+    return Math.max(1, Math.round(pooledBytes / 1048576));
+  },
+  getPoolLabel: function() {
+    if (!PS.pools || typeof PS.pools.getStats !== "function") {
       return "-";
     }
 
-    return Math.round(performance.memory.usedJSHeapSize / 1048576) + " MB";
+    var stats = PS.pools.getStats();
+    return "org " + stats.activeOrganisms + "/" + stats.organismCapacity +
+      " food " + stats.activeFood + "/" + stats.foodCapacity;
   }
 };

@@ -85,6 +85,12 @@ PS.config.spatial = {
   chunkSize: CONFIG.SPATIAL_CHUNK_SIZE || CONFIG.ORGANISM_SPATIAL_BUCKET_SIZE
 };
 
+PS.config.pools = {
+  maxOrganisms: CONFIG.POOL_MAX_ORGANISMS || 20000,
+  maxFoodParticles: CONFIG.POOL_MAX_FOOD_PARTICLES || CONFIG.MAX_FOOD,
+  memoryBudgetMb: CONFIG.MEMORY_BUDGET_MB || 96
+};
+
 PS.config.planet = {
   name: CONFIG.PLANET_NAME,
   radiusKm: CONFIG.PLANET_RADIUS_KM,
