@@ -10,6 +10,15 @@
 <body>
   <main id="game-wrap">
     <canvas id="game" width="1600" height="850"></canvas>
+    <button id="seed-copy-button" class="seed-copy-button" type="button">Seed</button>
+    <div id="notification-toast" class="notification-toast" role="status" aria-live="polite" hidden></div>
+    <div id="debug-performance" class="debug-overlay debug-performance" hidden></div>
+    <div id="debug-profiler" class="debug-overlay debug-profiler" hidden></div>
+    <div id="debug-overlays" class="debug-overlay debug-overlays" hidden></div>
+    <pre id="debug-inspector" class="debug-overlay debug-inspector" hidden></pre>
+    <section id="debug-console" class="debug-console" aria-label="Debug console" hidden>
+      <input id="debug-console-input" type="text" autocomplete="off" spellcheck="false" placeholder="set CONFIG_KEY value">
+    </section>
 
     <button id="menu-backdrop" class="menu-backdrop" type="button" tabindex="-1" aria-hidden="true" aria-label="Close simulation menu"></button>
 
@@ -174,18 +183,128 @@
     });
   </script>
 
+  <!-- Core -->
+  <script src="js/core/namespace.js"></script>
   <script src="config.js"></script>
-  <script src="state.js"></script>
-  <script src="utils.js"></script>
-  <script src="planet.js"></script>
-  <script src="terrain.js"></script>
-  <script src="food.js"></script>
-  <script src="organisms.js"></script>
-  <script src="settlements.js"></script>
-  <script src="render-terrain-cache.js"></script>
-  <script src="render.js"></script>
-  <script src="persistence.js"></script>
-  <script src="ui.js"></script>
-  <script src="main.js"></script>
+  <script src="js/core/config.js"></script>
+  <script src="js/core/events.js"></script>
+  <script src="js/core/math.js"></script>
+  <script src="js/core/assert.js"></script>
+  <script src="js/core/log.js"></script>
+  <script src="js/assets/registry.js"></script>
+
+  <!-- Systems -->
+  <script src="js/legacy/state/part-01.js"></script>
+  <script src="js/systems/world.js"></script>
+  <script src="js/legacy/utils/part-01.js"></script>
+  <script src="js/core/world-grid.js"></script>
+  <script src="js/core/planet-metrics.js"></script>
+  <script src="js/systems/spatial.js"></script>
+  <script src="js/legacy/persistence/part-01.js"></script>
+  <script src="js/legacy/persistence/part-02.js"></script>
+  <script src="js/legacy/persistence/part-03.js"></script>
+  <script src="js/legacy/persistence/part-04.js"></script>
+  <script src="js/legacy/persistence/part-05.js"></script>
+  <script src="js/systems/persistence.js"></script>
+  <script src="js/systems/time.js"></script>
+
+  <!-- Rendering -->
+  <script src="js/legacy/planet/part-01.js"></script>
+  <script src="js/legacy/planet/part-02.js"></script>
+  <script src="js/legacy/planet/part-03.js"></script>
+  <script src="js/legacy/terrain/part-01.js"></script>
+  <script src="js/legacy/terrain/part-02.js"></script>
+  <script src="js/legacy/render-terrain-cache/part-01.js"></script>
+  <script src="js/legacy/render/part-01.js"></script>
+  <script src="js/legacy/render/part-02.js"></script>
+  <script src="js/render/gl.js"></script>
+  <script src="js/render/webgl-globe-shaders.js"></script>
+  <script src="js/render/webgl-globe.js"></script>
+  <script src="js/render/camera.js"></script>
+  <script src="js/render/lod.js"></script>
+  <script src="js/render/globe.js"></script>
+  <script src="js/render/projection.js"></script>
+  <script src="js/render/surface-address.js"></script>
+  <script src="js/render/surface-cache.js"></script>
+  <script src="js/render/surface-features.js"></script>
+  <script src="js/render/surface-feature-query.js"></script>
+  <script src="js/render/surface-noise.js"></script>
+  <script src="js/render/surface-geometry.js"></script>
+  <script src="js/render/surface-render-cache.js"></script>
+  <script src="js/render/surface-render-chunks.js"></script>
+  <script src="js/render/surface-render-placeholders.js"></script>
+  <script src="js/render/surface-streaming.js"></script>
+  <script src="js/render/surface-render-work.js"></script>
+  <script src="js/render/raster.js"></script>
+  <script src="js/render/terrain.js"></script>
+  <script src="js/render/surface-landform.js"></script>
+  <script src="js/render/surface-imagery.js"></script>
+  <script src="js/render/surface-color.js"></script>
+  <script src="js/render/surface-texture.js"></script>
+  <script src="js/render/surface-patterns.js"></script>
+  <script src="js/render/surface-strata.js"></script>
+  <script src="js/render/surface-natural.js"></script>
+  <script src="js/render/surface-material.js"></script>
+  <script src="js/render/surface-relief.js"></script>
+  <script src="js/render/surface-draw.js"></script>
+  <script src="js/render/entity-sprites.js"></script>
+  <script src="js/render/entities.js"></script>
+  <script src="js/render/reference-grid.js"></script>
+  <script src="js/render/overlays.js"></script>
+  <script src="js/render/atmosphere.js"></script>
+  <script src="js/render/terrain-cache.js"></script>
+  <script src="js/render/pipeline.js"></script>
+
+  <!-- Simulation -->
+  <script src="js/legacy/food/part-01.js"></script>
+  <script src="js/legacy/food/part-02.js"></script>
+  <script src="js/sim/food.js"></script>
+  <script src="js/legacy/organisms/part-01.js"></script>
+  <script src="js/legacy/organisms/part-02.js"></script>
+  <script src="js/legacy/organisms/part-03.js"></script>
+  <script src="js/sim/evolution.js"></script>
+  <script src="js/sim/organisms.js"></script>
+  <script src="js/legacy/settlements/part-01.js"></script>
+  <script src="js/legacy/settlements/part-02.js"></script>
+  <script src="js/legacy/settlements/part-03.js"></script>
+  <script src="js/legacy/settlements/part-04.js"></script>
+  <script src="js/legacy/settlements/part-05.js"></script>
+  <script src="js/legacy/settlements/part-06.js"></script>
+  <script src="js/legacy/settlements/part-07.js"></script>
+  <script src="js/legacy/settlements/part-08.js"></script>
+  <script src="js/legacy/settlements/part-09.js"></script>
+  <script src="js/sim/settlements.js"></script>
+  <script src="js/sim/civilizations.js"></script>
+
+  <!-- Epochs and layers -->
+  <script src="js/epochs/registry.js"></script>
+  <script src="js/layers/registry.js"></script>
+
+  <!-- UI -->
+  <script src="js/legacy/ui/part-01.js"></script>
+  <script src="js/legacy/ui/part-02.js"></script>
+  <script src="js/legacy/ui/part-03.js"></script>
+  <script src="js/legacy/ui/part-04.js"></script>
+  <script src="js/legacy/ui/part-05.js"></script>
+  <script src="js/legacy/ui/part-06.js"></script>
+  <script src="js/ui/hud.js"></script>
+  <script src="js/ui/panels.js"></script>
+  <script src="js/ui/controls.js"></script>
+  <script src="js/ui/notifications.js"></script>
+
+  <!-- Debug -->
+  <script src="js/debug/performance.js"></script>
+  <script src="js/debug/console.js"></script>
+  <script src="js/debug/profiler.js"></script>
+  <script src="js/debug/overlays.js"></script>
+  <script src="js/debug/inspector.js"></script>
+
+  <!-- Entry point -->
+  <script src="js/legacy/main/part-01.js"></script>
+  <script src="js/legacy/main/part-02.js"></script>
+  <script src="js/legacy/main/part-03.js"></script>
+  <script src="js/legacy/main/part-04.js"></script>
+  <script src="js/legacy/main/part-05.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

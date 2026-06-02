@@ -1,0 +1,336 @@
+
+function getOrganismTravelKmPerTick() {
+  return Math.max(0, Number(CONFIG.ORGANISM_TRAVEL_KM_PER_DAY) || 0) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
+}
+
+function getOrganismBucketSize() {
+  return Math.max(1, Math.round(Number(CONFIG.ORGANISM_SPATIAL_BUCKET_SIZE) || 16));
+}
+
+function getOrganismBucketKey(x, y) {
+  var bucketSize = getOrganismBucketSize();
+  return Math.floor(getWrappedWorldX(x) / bucketSize) + ":" + Math.floor(getClampedWorldY(y) / bucketSize);
+}
+
+function ensureOrganismIndexState() {
+  if (!world.organismBuckets) {
+    world.organismBuckets = {};
+  }
+
+  if (!world.organismsByLineage) {
+    world.organismsByLineage = {};
+  }
+}
+
+function registerOrganismInIndexes(organism) {
+  ensureOrganismIndexState();
+
+  var lineageId = ensureOrganismLineage(organism);
+  var lineageKey = String(lineageId);
+  var bucketKey = getOrganismBucketKey(organism.x, organism.y);
+
+  if (!world.organismBuckets[bucketKey]) {
+    world.organismBuckets[bucketKey] = [];
+  }
+
+  if (!world.organismsByLineage[lineageKey]) {
+    world.organismsByLineage[lineageKey] = [];
+  }
+
+  world.organismBuckets[bucketKey].push(organism);
+  world.organismsByLineage[lineageKey].push(organism);
+}
+
+function rebuildOrganismIndexes() {
+  world.organismBuckets = {};
+  world.organismsByLineage = {};
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    registerOrganismInIndexes(world.organisms[i]);
+  }
+}
+
+function ensureOrganismIndexes() {
+  if (!world.organismBuckets || !world.organismsByLineage) {
+    rebuildOrganismIndexes();
+  }
+}
+
+function getIndexedOrganismsForLineage(lineageId) {
+  ensureOrganismIndexes();
+  return world.organismsByLineage[String(lineageId)] || [];
+}
+
+function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
+  var normalizedLimit = Number.isFinite(Number(limit)) ? Math.max(0, Math.round(Number(limit))) : Infinity;
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
+  var organisms = [];
+
+  if (normalizedLimit <= 0) {
+    return organisms;
+  }
+
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+
+        if (
+          (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
+          getTileManhattanDistance(x, y, organism.x, organism.y) <= normalizedRadius
+        ) {
+          organisms.push(organism);
+
+          if (organisms.length >= normalizedLimit) {
+            return organisms;
+          }
+        }
+      }
+    }
+  }
+
+  return organisms;
+}
+
+function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var normalizedLineageId = Math.max(0, Math.round(Number(lineageId) || 0));
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
+  var count = 0;
+
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+
+        if (
+          (normalizedLineageId <= 0 || ensureOrganismLineage(organism) === normalizedLineageId) &&
+          getTileManhattanDistance(x, y, organism.x, organism.y) <= normalizedRadius
+        ) {
+          count++;
+        }
+      }
+    }
+  }
+
+  return count;
+}
+
+function getNearestOrganismInRadius(x, y, radius) {
+  ensureOrganismIndexes();
+
+  var bucketSize = getOrganismBucketSize();
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var bucketXs = getWrappedBucketIndexes(x, normalizedRadius, bucketSize, WORLD_WIDTH);
+  var bucketYs = getClampedBucketIndexes(y, normalizedRadius, bucketSize, WORLD_HEIGHT);
+  var nearestOrganism = null;
+  var nearestDistance = Infinity;
+
+  for (var bucketYIndex = 0; bucketYIndex < bucketYs.length; bucketYIndex++) {
+    for (var bucketXIndex = 0; bucketXIndex < bucketXs.length; bucketXIndex++) {
+      var bucketY = bucketYs[bucketYIndex];
+      var bucketX = bucketXs[bucketXIndex];
+      var bucket = world.organismBuckets[bucketX + ":" + bucketY];
+
+      if (!bucket) {
+        continue;
+      }
+
+      for (var i = 0; i < bucket.length; i++) {
+        var organism = bucket[i];
+        var distance = getTileManhattanDistance(x, y, organism.x, organism.y);
+
+        if (distance < nearestDistance && distance <= normalizedRadius) {
+          nearestOrganism = organism;
+          nearestDistance = distance;
+        }
+      }
+    }
+  }
+
+  return nearestOrganism;
+}
+
+function updateLineageSummaryCache() {
+  var lineages = [];
+  var activeCount = 0;
+  var extinctCount = 0;
+  var newestLineage = null;
+  var topLineages = [];
+  var lineageRecords = world.lineages || {};
+
+  for (var lineageKey in lineageRecords) {
+    if (Object.prototype.hasOwnProperty.call(lineageRecords, lineageKey)) {
+      lineages.push(lineageRecords[lineageKey]);
+    }
+  }
+
+  if (lineages.length === 0) {
+    world.lineageSummary = null;
+    world.lineageSummaryText = "LINEAGES: -";
+    return world.lineageSummaryText;
+  }
+
+  for (var i = 0; i < lineages.length; i++) {
+    var lineage = lineages[i];
+
+    if (lineage.activeCount > 0) {
+      activeCount++;
+      topLineages.push(lineage);
+    } else {
+      extinctCount++;
+    }
+
+    if (
+      !newestLineage ||
+      lineage.createdTick > newestLineage.createdTick ||
+      (lineage.createdTick === newestLineage.createdTick && lineage.id > newestLineage.id)
+    ) {
+      newestLineage = lineage;
+    }
+  }
+
+  topLineages.sort(function(a, b) {
+    if (b.activeCount !== a.activeCount) {
+      return b.activeCount - a.activeCount;
+    }
+
+    return a.id - b.id;
+  });
+
+  var visibleLineages = [];
+  var visibleLineageSummaries = [];
+
+  for (var topIndex = 0; topIndex < Math.min(5, topLineages.length); topIndex++) {
+    visibleLineages.push(
+      "L" + topLineages[topIndex].id +
+      " " + topLineages[topIndex].activeCount +
+      " peak " + topLineages[topIndex].peakPopulation
+    );
+    visibleLineageSummaries.push({
+      id: topLineages[topIndex].id,
+      activeCount: topLineages[topIndex].activeCount,
+      peakPopulation: topLineages[topIndex].peakPopulation
+    });
+  }
+
+  var newestText = "newest L" + newestLineage.id + " founder";
+
+  if (newestLineage.parentId > 0) {
+    newestText = "newest L" + newestLineage.id + " parent L" + newestLineage.parentId;
+  }
+
+  world.lineageSummaryText =
+    "LINEAGES: " + activeCount +
+    " active / " + extinctCount + " extinct   " +
+    newestText +
+    "   top " + (visibleLineages.length > 0 ? visibleLineages.join(" | ") : "-");
+  world.lineageSummary = {
+    activeCount: activeCount,
+    extinctCount: extinctCount,
+    newestId: newestLineage.id,
+    newestParentId: newestLineage.parentId,
+    newestCreatedTick: newestLineage.createdTick,
+    topLineages: visibleLineageSummaries
+  };
+
+  return world.lineageSummaryText;
+}
+
+function refreshLineageRegistry() {
+  var lineages = ensureLineageRegistry();
+  var lineageKey;
+  var traitTotals = {
+    vision: 0,
+    metabolism: 0,
+    reproductionEnergy: 0,
+    movementTendency: 0,
+    terrainAffinity: 0
+  };
+
+  world.organismBuckets = {};
+  world.organismsByLineage = {};
+
+  for (lineageKey in lineages) {
+    if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
+      lineages[lineageKey].activeCount = 0;
+    }
+  }
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var traits = ensureOrganismTraits(organism);
+    var lineageId = ensureOrganismLineage(organism);
+    var record = registerLineage(
+      lineageId,
+      organism.lineageParentId,
+      organism.generation,
+      traits,
+      world.tick
+    );
+
+    traitTotals.vision += traits.vision;
+    traitTotals.metabolism += traits.metabolism;
+    traitTotals.reproductionEnergy += traits.reproductionEnergy;
+    traitTotals.movementTendency += traits.movementTendency;
+    traitTotals.terrainAffinity += traits.terrainAffinity;
+
+    record.activeCount++;
+    record.lastSeenTick = world.tick;
+
+    if (record.activeCount > record.peakPopulation) {
+      record.peakPopulation = record.activeCount;
+    }
+
+    registerOrganismInIndexes(organism);
+  }
+
+  for (lineageKey in lineages) {
+    if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
+      var lineage = lineages[lineageKey];
+      lineage.isExtinct = lineage.activeCount === 0;
+    }
+  }
+
+  if (world.organisms.length === 0) {
+    world.populationTraitSummary = null;
+  } else {
+    world.populationTraitSummary = {
+      population: world.organisms.length,
+      vision: traitTotals.vision / world.organisms.length,
+      metabolism: traitTotals.metabolism / world.organisms.length,
+      reproductionEnergy: traitTotals.reproductionEnergy / world.organisms.length,
+      movementTendency: traitTotals.movementTendency / world.organisms.length,
+      terrainAffinity: traitTotals.terrainAffinity / world.organisms.length
+    };
+  }
+
+  updateLineageSummaryCache();
+}

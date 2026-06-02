@@ -1,0 +1,66 @@
+{
+  "state.js": [
+    "js/legacy/state/part-01.js"
+  ],
+  "utils.js": [
+    "js/legacy/utils/part-01.js"
+  ],
+  "persistence.js": [
+    "js/legacy/persistence/part-01.js",
+    "js/legacy/persistence/part-02.js",
+    "js/legacy/persistence/part-03.js",
+    "js/legacy/persistence/part-04.js",
+    "js/legacy/persistence/part-05.js"
+  ],
+  "planet.js": [
+    "js/legacy/planet/part-01.js",
+    "js/legacy/planet/part-02.js",
+    "js/legacy/planet/part-03.js"
+  ],
+  "terrain.js": [
+    "js/legacy/terrain/part-01.js",
+    "js/legacy/terrain/part-02.js"
+  ],
+  "render-terrain-cache.js": [
+    "js/legacy/render-terrain-cache/part-01.js"
+  ],
+  "render.js": [
+    "js/legacy/render/part-01.js",
+    "js/legacy/render/part-02.js"
+  ],
+  "food.js": [
+    "js/legacy/food/part-01.js",
+    "js/legacy/food/part-02.js"
+  ],
+  "organisms.js": [
+    "js/legacy/organisms/part-01.js",
+    "js/legacy/organisms/part-02.js",
+    "js/legacy/organisms/part-03.js"
+  ],
+  "settlements.js": [
+    "js/legacy/settlements/part-01.js",
+    "js/legacy/settlements/part-02.js",
+    "js/legacy/settlements/part-03.js",
+    "js/legacy/settlements/part-04.js",
+    "js/legacy/settlements/part-05.js",
+    "js/legacy/settlements/part-06.js",
+    "js/legacy/settlements/part-07.js",
+    "js/legacy/settlements/part-08.js",
+    "js/legacy/settlements/part-09.js"
+  ],
+  "ui.js": [
+    "js/legacy/ui/part-01.js",
+    "js/legacy/ui/part-02.js",
+    "js/legacy/ui/part-03.js",
+    "js/legacy/ui/part-04.js",
+    "js/legacy/ui/part-05.js",
+    "js/legacy/ui/part-06.js"
+  ],
+  "main.js": [
+    "js/legacy/main/part-01.js",
+    "js/legacy/main/part-02.js",
+    "js/legacy/main/part-03.js",
+    "js/legacy/main/part-04.js",
+    "js/legacy/main/part-05.js"
+  ]
+}

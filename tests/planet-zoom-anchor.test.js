@@ -27,7 +27,9 @@ function makeElement() {
 const context = {
   assert,
   console,
-  window: {},
+  window: {
+    addEventListener() {}
+  },
   document: {
     getElementById() {
       return makeElement();
@@ -36,13 +38,56 @@ const context = {
 };
 
 const source = [
+  "js/core/namespace.js",
   "config.js",
-  "state.js",
-  "utils.js",
-  "planet.js",
-  "terrain.js",
-  "render-terrain-cache.js",
-  "render.js"
+  "js/legacy/state/part-01.js",
+  "js/legacy/utils/part-01.js",
+  "js/core/math.js",
+  "js/assets/registry.js",
+  "js/core/world-grid.js",
+  "js/core/planet-metrics.js",
+  "js/legacy/planet/part-01.js",
+  "js/legacy/planet/part-02.js",
+  "js/legacy/planet/part-03.js",
+  "js/legacy/terrain/part-01.js",
+  "js/legacy/terrain/part-02.js",
+  "js/legacy/render-terrain-cache/part-01.js",
+  "js/legacy/render/part-01.js",
+  "js/legacy/render/part-02.js",
+  "js/render/camera.js",
+  "js/render/lod.js",
+  "js/render/globe.js",
+  "js/render/projection.js",
+  "js/render/surface-address.js",
+  "js/render/surface-cache.js",
+  "js/render/surface-features.js",
+  "js/render/surface-feature-query.js",
+  "js/render/surface-noise.js",
+  "js/render/surface-geometry.js",
+  "js/render/surface-render-cache.js",
+  "js/render/surface-render-chunks.js",
+  "js/render/surface-render-placeholders.js",
+  "js/render/surface-streaming.js",
+  "js/render/surface-render-work.js",
+  "js/render/raster.js",
+  "js/render/terrain.js",
+  "js/render/surface-landform.js",
+  "js/render/surface-imagery.js",
+  "js/render/surface-color.js",
+  "js/render/surface-texture.js",
+  "js/render/surface-patterns.js",
+  "js/render/surface-strata.js",
+  "js/render/surface-natural.js",
+  "js/render/surface-material.js",
+  "js/render/surface-relief.js",
+  "js/render/surface-draw.js",
+  "js/render/entity-sprites.js",
+  "js/render/entities.js",
+  "js/render/reference-grid.js",
+  "js/render/overlays.js",
+  "js/render/atmosphere.js",
+  "js/render/terrain-cache.js",
+  "js/render/pipeline.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 vm.runInNewContext(`${source}
@@ -240,6 +285,63 @@ assert.strictEqual(CONFIG.PLANET_GLOBE_ENTITY_MARKERS, false, "globe-scale entit
 assert.strictEqual(CONFIG.SHOW_SCANLINES, false, "scanline overlay should be hidden by default");
 assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud overlay should be disabled while tuning surface readability");
 
+var assetManifest = PS.assets.getManifest();
+var renderLayerManifest = PS.render.pipeline.getLayerManifest();
+var renderLayerIds = renderLayerManifest.map(function(layer) {
+  return layer.id;
+});
+var organismSprite = PS.render.entities.getSprite("entity.organism");
+var foodSprite = PS.render.entities.getSprite("resource.food");
+var phaseEntity = { id: "organism:visual-language", x: 10, y: 12 };
+var firstMovePhase;
+var repeatedMovePhase;
+var crowdPhases = {};
+
+assert.ok(assetManifest.families.terrain, "asset manifest should include terrain family");
+assert.ok(assetManifest.families.world, "asset manifest should include world family");
+assert.ok(assetManifest.families.settlement, "asset manifest should include settlement family");
+assert.ok(assetManifest.families.entities, "asset manifest should include entities family");
+assert.ok(assetManifest.families.resources, "asset manifest should include resources family");
+assert.ok(assetManifest.families.icons, "asset manifest should include icons family");
+assert.ok(assetManifest.families.ui, "asset manifest should include UI family");
+assert.ok(assetManifest.families.overlays, "asset manifest should include overlays family");
+assert.ok(assetManifest.families.atmosphere, "asset manifest should include atmosphere family");
+assert.ok(PS.assets.getPalette("terrain").wetland, "terrain palette should expose wetland color");
+assert.ok(PS.assets.getAtlas("entities").procedural, "entity atlas should be registered as procedural runtime art");
+assert.ok(renderLayerIds.indexOf("terrain.base") < renderLayerIds.indexOf("resources.food"), "terrain layer should draw before resources");
+assert.ok(renderLayerIds.indexOf("settlement.routes") < renderLayerIds.indexOf("settlement.structures"), "routes should draw before settlement structures");
+assert.ok(renderLayerIds.indexOf("entities.organisms") < renderLayerIds.indexOf("status.selection"), "entities should draw before status/overlay layers");
+assert.strictEqual(PS.render.pipeline.getZoomBand(0.5), "orbit", "zoom manifest should expose orbit band");
+assert.strictEqual(PS.render.pipeline.getZoomBand(5), "continent", "zoom manifest should expose continent band");
+assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest should expose local band");
+assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
+assert.strictEqual(organismSprite.family, "entities", "organism sprite should use entity asset family");
+assert.strictEqual(foodSprite.family, "resources", "food sprite should use resource asset family");
+
+world.tick = 42;
+firstMovePhase = PS.render.entities.getAnimationPhase(phaseEntity, "move", 4);
+repeatedMovePhase = PS.render.entities.getAnimationPhase(phaseEntity, "move", 4);
+for (var phaseIndex = 0; phaseIndex < 12; phaseIndex++) {
+  crowdPhases[PS.render.entities.getAnimationPhase({ id: "organism:" + phaseIndex, x: phaseIndex, y: 12 }, "move", 4)] = true;
+}
+assert.strictEqual(repeatedMovePhase, firstMovePhase, "entity animation phase should be deterministic for the same entity and state");
+assert.ok(Object.keys(crowdPhases).length > 1, "entity animation phase should offset a crowd out of lockstep");
+world.tick = 0;
+
+PS.render.overlays.register("test.visual-language", {
+  order: 30,
+  family: "overlays",
+  semantic: "test overlay extension point",
+  draw: function() {}
+});
+assert.strictEqual(PS.render.overlays.get("test.visual-language").family, "overlays", "overlay registry should expose registered overlays");
+assert.ok(
+  PS.render.overlays.getManifest().some(function(overlay) {
+    return overlay.id === "test.visual-language";
+  }),
+  "overlay manifest should include registered overlays"
+);
+
 var generatedPlanet = summarizeGeneratedPlanet("PIXEL-2026");
 var repeatedGeneratedPlanet = summarizeGeneratedPlanet("PIXEL-2026");
 var alternateGeneratedPlanet = summarizeGeneratedPlanet("PIXEL-2027");
@@ -350,6 +452,24 @@ world.planetView = {
 assert.ok(adjustPlanetZoom(0.25), "center zoom should still work");
 assert.ok(!isPlanetLocalView(), "fractional globe zoom should remain globe-rendered below local threshold");
 
+var galaxyTier = getPlanetLodTier(0);
+var planetTier = getPlanetLodTier(1);
+var localTier = getPlanetLodTier(finalGroundZoomIndex);
+
+assert.strictEqual(galaxyTier.name, "galaxy", "minimum zoom should map to architecture galaxy tier");
+assert.strictEqual(planetTier.name, "planet", "early local zoom should map to architecture planet tier");
+assert.strictEqual(localTier.name, "local", "final zoom should map to architecture local tier");
+assert.ok(
+  getPlanetLodTier(0.7).transitionAlpha > 0,
+  "tier metadata should expose cross-fade alpha near tier boundaries"
+);
+
+setPlanetZoomLevel(2);
+setPlanetZoomLevel(3);
+assert.strictEqual(getPlanetView().zoomDirection, 1, "zooming in should record positive preload direction");
+setPlanetZoomLevel(2);
+assert.strictEqual(getPlanetView().zoomDirection, -1, "zooming out should record negative preload direction");
+
 world.planetView = {
   zoomLevel: 2,
   latitude: 34.2117,
@@ -453,12 +573,83 @@ var shallowCoastColor = getPlanetTileCompositedColor({
   elevation: -2,
   shallowWater: 1
 });
+var wetlandColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 12,
+  moisture: 1.7,
+  elevation: 0.1,
+  riverStrength: 0.8,
+  coastFactor: 0.5,
+  shallowWater: 0.4,
+  terrainHillshade: 0.55
+});
+var mountainColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 28,
+  moisture: 0.8,
+  elevation: 1.9,
+  ridgeStrength: 0.95,
+  roughness: 0.9,
+  terrainSlope: 0.8,
+  terrainHillshade: 0.65
+});
+var barrenColor = getPlanetTileCompositedColor({
+  biome: "grassland",
+  latitude: 18,
+  moisture: 0.05,
+  elevation: 0.0,
+  ridgeStrength: 0.1,
+  roughness: 0.65,
+  terrainHillshade: 0.55
+});
 
 assert.ok(colorLuminance(shallowOceanColor) > colorLuminance(deepOceanColor), "shallow ocean should be lighter than deep ocean");
 assert.ok(colorDistance(lushLandColor, dryLandColor) > 50, "lush and dry land colors should diverge");
 assert.ok(colorLuminance(highIceColor) > colorLuminance(lushLandColor), "ice/high latitude terrain should read brighter than forest");
 assert.ok(colorDistance(riverLandColor, plainLandColor) > 20, "river corridors should alter land color");
 assert.ok(colorDistance(ridgeLandColor, plainLandColor) > 25, "ridge signals should alter land color");
+assert.ok(colorDistance(wetlandColor, plainLandColor) > 18, "wetland visual palette should diverge from plain grassland");
+assert.ok(colorDistance(mountainColor, plainLandColor) > 24, "mountain visual palette should diverge from plain grassland");
+assert.ok(colorDistance(barrenColor, plainLandColor) > 18, "barren visual palette should diverge from plain grassland");
+assert.strictEqual(
+  PS.render.surfaceImagery.getVisualBiome("grassland", {
+    elevation: 0.1,
+    moisture: 1.7,
+    riverStrength: 0.8,
+    coastFactor: 0.5,
+    shallowWater: 0.4,
+    ridgeStrength: 0.1,
+    roughness: 0.2
+  }, 12),
+  "wetland",
+  "wet terrain signals should resolve to wetland visual biome"
+);
+assert.strictEqual(
+  PS.render.surfaceImagery.getVisualBiome("grassland", {
+    elevation: 1.9,
+    moisture: 0.8,
+    riverStrength: 0,
+    coastFactor: 0,
+    shallowWater: 0,
+    ridgeStrength: 0.95,
+    roughness: 0.9
+  }, 28),
+  "mountain",
+  "high ridge signals should resolve to mountain visual biome"
+);
+assert.strictEqual(
+  PS.render.surfaceImagery.getVisualBiome("grassland", {
+    elevation: 0,
+    moisture: 0.05,
+    riverStrength: 0,
+    coastFactor: 0,
+    shallowWater: 0,
+    ridgeStrength: 0.1,
+    roughness: 0.65
+  }, 18),
+  "barren",
+  "dry rough lowland signals should resolve to barren visual biome"
+);
 assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
 
@@ -651,10 +842,11 @@ assertRgbBounds(subTileA, "sub-tile imagery");
 assertRgbBounds(getPlanetImageryRgbAtLatLon(0, 0), "equator imagery");
 assert.ok(rgbDistance(subTileA, subTileB) > 1, "sub-tile imagery should vary within a coarse tile");
 
-["ocean", "forest", "desert", "tundra", "ice"].forEach(function(biome) {
+["ocean", "forest", "desert", "tundra", "ice", "wetland", "mountain", "barren"].forEach(function(biome) {
   fillPlanetTiles(biome);
   assertRgbBounds(getPlanetImageryRgbAtLatLon(20, 20), biome + " imagery");
 });
+fillPlanetTiles("grassland");
 
 var deepWaterSurfaceColor = getPlanetSurfaceColor({
   biome: "ocean",
@@ -1146,14 +1338,17 @@ assert.strictEqual(broadReliefAdjustment.heightDeltaMeters, 0, "feature relief s
 assert.ok(nearReliefAdjustment.heightDeltaMeters < 0, "feature relief should apply at meter scale");
 assert.ok(weakRidgeReliefDelta.heightDeltaMeters < ridgeReliefDelta.heightDeltaMeters, "feature relief should scale with influence");
 
+var grasslandDetailLatitude = 34.2015;
+var grasslandDetailLongitude = -77.7265;
+
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
-  latitude: 34.2117,
-  longitude: -77.7265
+  latitude: grasslandDetailLatitude,
+  longitude: grasslandDetailLongitude
 };
 var detailTile = {
   biome: "grassland",
-  latitude: 34.2117,
+  latitude: grasslandDetailLatitude,
   moisture: 1.6,
   elevation: 0.7,
   riverStrength: 0.2,
@@ -1168,11 +1363,14 @@ var detailTile = {
   highlandLift: 0.2
 };
 setWorldSeed("PIXEL-2026");
-var classifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
-var repeatedClassifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
+resetPlanetGroundFeatureBlockCache();
+var classifiedDetail = getPlanetSurfaceDetail(grasslandDetailLatitude, grasslandDetailLongitude, detailTile);
+var repeatedClassifiedDetail = getPlanetSurfaceDetail(grasslandDetailLatitude, grasslandDetailLongitude, detailTile);
 setWorldSeed("PIXEL-2027");
-var alternateClassifiedDetail = getPlanetSurfaceDetail(34.2117, -77.7265, detailTile);
+resetPlanetGroundFeatureBlockCache();
+var alternateClassifiedDetail = getPlanetSurfaceDetail(grasslandDetailLatitude, grasslandDetailLongitude, detailTile);
 setWorldSeed("PIXEL-2026");
+resetPlanetGroundFeatureBlockCache();
 
 assert.ok(classifiedDetail.materialSignals, "surface detail should expose material signals");
 assert.ok(classifiedDetail.regionalContext, "surface detail should expose regional context");
@@ -2322,6 +2520,20 @@ assert.strictEqual(limitedVisibleChunks.workingSetLimit, 4, "limited visible chu
 assert.ok(limitedVisibleChunks.totalCandidateChunks > limitedVisibleChunks.length, "limited visible chunks should retain total candidate count");
 assert.strictEqual(limitedVisibleChunks.culledChunks, limitedVisibleChunks.totalCandidateChunks - limitedVisibleChunks.length, "limited visible chunks should expose culled count");
 
+world.planetView.panEastMeters = 2000;
+world.planetView.panNorthMeters = 0;
+var streamingQueue = PS.render.surfaceStreaming.makeQueue(getPlanetSurfaceChunkSampleCount(), 6);
+var streamingPrefetchChunks = streamingQueue.filter(function(chunk) {
+  return chunk.queueType === "prefetch";
+});
+
+assert.strictEqual(streamingQueue.visibleCount, 6, "streaming queue should expose visible chunk count");
+assert.strictEqual(streamingQueue.prefetchCount, 2, "streaming queue should prefetch two chunks ahead by default");
+assert.strictEqual(streamingPrefetchChunks.length, 2, "streaming queue should append prefetch chunks");
+assert.ok(streamingQueue[0].queueType === "visible", "streaming queue should prioritize visible chunks first");
+assert.ok(streamingPrefetchChunks[0].address.chunkX > streamingQueue[0].address.chunkX, "pan-east prefetch should target chunks ahead");
+world.planetView.panEastMeters = 0;
+
 for (var chunkIndex = 1; chunkIndex < visibleChunks.length; chunkIndex++) {
   assert.ok(
     visibleChunks[chunkIndex - 1].priorityScore <= visibleChunks[chunkIndex].priorityScore,
@@ -2336,6 +2548,26 @@ assert.ok(Math.abs(centerX - canvas.width / 2) <= centerChunk.width, "first visi
 assert.ok(Math.abs(centerY - canvas.height / 2) <= centerChunk.height, "first visible chunk should be near viewport center");
 
 var limitedCenterChunk = limitedVisibleChunks[0];
+
+resetLocalSurfaceRenderChunkCache();
+var cacheTestAddress = limitedVisibleChunks[0].address;
+var secondCacheTestAddress = limitedVisibleChunks[1].address;
+localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(cacheTestAddress)] = { id: "first" };
+localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(secondCacheTestAddress)] = { id: "second" };
+localSurfaceRenderChunkCache.order = [
+  getLocalSurfaceRenderChunkKey(cacheTestAddress),
+  getLocalSurfaceRenderChunkKey(secondCacheTestAddress)
+];
+assert.strictEqual(getLocalSurfaceRenderChunk(cacheTestAddress, false).id, "first", "cached chunk should be returned");
+assert.strictEqual(
+  localSurfaceRenderChunkCache.order[localSurfaceRenderChunkCache.order.length - 1],
+  getLocalSurfaceRenderChunkKey(cacheTestAddress),
+  "cache hit should promote chunk for LRU eviction"
+);
+PS.render.surfaceRender.markDirty(cacheTestAddress);
+assert.strictEqual(getLocalSurfaceRenderCacheStats().dirtyChunks, 1, "dirty chunk should be tracked");
+assert.strictEqual(getLocalSurfaceRenderChunk(cacheTestAddress, false), null, "dirty cached chunk should be invalidated before reuse");
+assert.strictEqual(getLocalSurfaceRenderCacheStats().dirtyInvalidations, 1, "dirty invalidation should be counted");
 var limitedCenterX = limitedCenterChunk.screenX + limitedCenterChunk.width / 2;
 var limitedCenterY = limitedCenterChunk.screenY + limitedCenterChunk.height / 2;
 assert.ok(Math.abs(limitedCenterX - canvas.width / 2) <= limitedCenterChunk.width, "limited visible chunks should keep center priority");

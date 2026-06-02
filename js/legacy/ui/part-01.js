@@ -1,0 +1,311 @@
+function updateHud() {
+  var fertilePercent = world.planetSummary
+    ? Math.round(world.planetSummary.fertileLandPercent)
+    : Math.round((world.fertileTiles / (WORLD_WIDTH * WORLD_HEIGHT)) * 100);
+  var waterPercent = world.planetSummary
+    ? Math.round(world.planetSummary.waterPercent)
+    : 0;
+  var estimatedIndividuals = world.organisms.length * Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1));
+  var lifecycleState = world.isExtinct ? "extinct" : (world.isPaused ? "paused" : "running");
+  var planetScaleInfo = getPlanetCameraScaleInfo();
+  var planetCacheStats = getPlanetSurfaceCacheStats();
+  var renderCacheStats = getLocalSurfaceRenderCacheStats();
+  var centerPyramidLineage = getPlanetSurfaceChunkLineage(
+    getPlanetLocalSurfaceAddress(Math.floor(WORLD_WIDTH / 2), Math.floor(WORLD_HEIGHT / 2)).address
+  );
+
+  setElementClass(eraText, "hud-card hud-era");
+  setElementHtml(eraText, makeHudPrimary("Era", world.era, lifecycleState));
+  setElementClass(populationText, "hud-card hud-population");
+  setElementHtml(
+    populationText,
+    makeHudPrimary("Population Bands", world.organisms.length, "~" + estimatedIndividuals.toLocaleString() + " individuals")
+  );
+  setElementClass(foodText, "hud-metrics");
+  setElementHtml(foodText, [
+    makeHudMetric("Tick", world.tick),
+    makeHudMetric("Day", getSimulationDayLabel()),
+    makeHudMetric("Food", world.food.length),
+    makeHudMetric("Water", waterPercent + "%"),
+    makeHudMetric("Fertile Land", fertilePercent + "%"),
+    makeHudMetric("Zoom", getPlanetScaleLabel()),
+    makeHudMetric("Cache LOD", planetScaleInfo.anchorName + " " + planetScaleInfo.anchorLevel),
+    makeHudMetric("Ground Px", getPlanetDistanceLabel(planetScaleInfo.metersPerCanvasPixel) + "/px"),
+    makeHudMetric("Footprint", getPlanetDistanceLabel(planetScaleInfo.footprintWidthKm * 1000) + " x " + getPlanetDistanceLabel(planetScaleInfo.footprintHeightKm * 1000)),
+    makeHudMetric("Camera", "~" + getPlanetDistanceLabel(planetScaleInfo.approximateAltitudeKm * 1000)),
+    makeHudMetric("Surface Cache", planetCacheStats.chunks + "c/" + planetCacheStats.samples + "s"),
+    makeHudMetric("Render Chunks", renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.lastPendingChunks + "p/" + renderCacheStats.lastGeneratedThisPass + "g/" + renderCacheStats.lastFallbackChunks + "f"),
+    makeHudMetric("Pyramid", centerPyramidLineage.length + " parents"),
+    makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
+    makeHudMetric("FPS", world.fps.toFixed(1)),
+    makeHudMetric("TPS", world.tps.toFixed(1)),
+    makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
+    makeHudMetric("Draw", world.drawMs.toFixed(2) + "ms"),
+    makeHudMetric("Max", world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms")
+  ].join(""));
+
+  setElementText(speedLabel, "Speed: " + world.speed + "x");
+  syncTuningControls();
+  syncControlStates();
+  updateEcosystemSummary();
+  updateSimulationAlerts();
+  updateTraitSummary();
+  updateLineageSummary();
+  updateSettlementSummary();
+  updateEventLog();
+  updateInspectPanel();
+
+  if (window.PS && PS.ui && PS.ui.hud) {
+    PS.ui.hud.updateSeedDisplay();
+  }
+
+  if (window.PS && PS.debug) {
+    if (PS.debug.performance) {
+      PS.debug.performance.render();
+    }
+
+    if (PS.debug.profiler) {
+      PS.debug.profiler.render();
+    }
+
+    if (PS.debug.overlays) {
+      PS.debug.overlays.render();
+    }
+  }
+}
+
+function getSimulationDay() {
+  return Math.max(0, Math.round(Number(world.tick) || 0)) *
+    Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0);
+}
+
+function getSimulationDayLabel() {
+  var day = getSimulationDay();
+  var year = Math.floor(day / 365);
+  var dayOfYear = Math.floor(day % 365);
+
+  return "Y" + year + " D" + dayOfYear;
+}
+
+function setElementText(element, text) {
+  if (element.textContent !== text) {
+    element.textContent = text;
+  }
+}
+
+function setElementHtml(element, html) {
+  if (element.innerHTML !== html) {
+    element.innerHTML = html;
+  }
+}
+
+function setElementClass(element, className) {
+  if (element.className !== className) {
+    element.className = className;
+  }
+}
+
+function setInputValue(input, value) {
+  var stringValue = String(value);
+
+  if (input.value !== stringValue) {
+    input.value = stringValue;
+  }
+}
+
+function makeHudMetric(label, value) {
+  return (
+    "<span class=\"hud-metric\">" +
+    "<b>" + escapeSummaryText(label) + "</b>" +
+    "<span>" + escapeSummaryText(value) + "</span>" +
+    "</span>"
+  );
+}
+
+function makeHudPrimary(label, value, detail) {
+  return (
+    "<span class=\"hud-primary-label\">" + escapeSummaryText(label) + "</span>" +
+    "<strong>" + escapeSummaryText(value) + "</strong>" +
+    "<small>" + escapeSummaryText(detail || "") + "</small>"
+  );
+}
+
+function getTuningInputNumber(input, fallbackValue) {
+  if (!input) {
+    return fallbackValue;
+  }
+
+  var value = Number(input.value);
+  return Number.isFinite(value) ? value : fallbackValue;
+}
+
+function syncTuningControls() {
+  var growthPercent = Math.round(CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100);
+
+  setInputValue(speedSlider, world.speed);
+  setElementText(speedValue, world.speed + "x");
+  setInputValue(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE);
+  setElementText(organismSizeValue, CONFIG.ORGANISM_DRAW_SIZE + "px");
+  setInputValue(foodSizeSlider, CONFIG.FOOD_DRAW_SIZE);
+  setElementText(foodSizeValue, CONFIG.FOOD_DRAW_SIZE + "px");
+  setInputValue(startingFoodSlider, CONFIG.STARTING_FOOD);
+  setElementText(startingFoodValue, String(CONFIG.STARTING_FOOD));
+  setInputValue(foodGrowthSlider, growthPercent);
+  setElementText(foodGrowthValue, growthPercent + "%");
+  setInputValue(seedInput, world.seedText);
+}
+
+function setButtonPressed(button, isPressed) {
+  button.setAttribute("aria-pressed", isPressed ? "true" : "false");
+  button.classList.toggle("active", Boolean(isPressed));
+}
+
+function setButtonDisabled(button, isDisabled) {
+  button.disabled = Boolean(isDisabled);
+  button.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+}
+
+function syncControlStates() {
+  setElementClass(
+    controlsPanel,
+    "controls-state " + (world.isExtinct ? "controls-extinct" : (world.isPaused ? "controls-paused" : "controls-running"))
+  );
+  setElementText(pauseButton, world.isExtinct ? "Extinct" : (world.isPaused ? "Resume" : "Pause"));
+  setButtonPressed(pauseButton, world.isPaused);
+  pauseButton.classList.toggle("danger", Boolean(world.isExtinct));
+  setButtonDisabled(pauseButton, world.isExtinct);
+  setButtonDisabled(stepButton, world.isExtinct || !world.isPaused);
+  setButtonDisabled(speedDownButton, world.isExtinct || world.speed <= 1);
+  setButtonDisabled(speedUpButton, world.isExtinct || world.speed >= 10);
+  pauseButton.title = world.isExtinct ? "Run extinct. Restart to seed a new population." : "Pause or resume simulation (Space)";
+  stepButton.title = "Advance one tick while paused (N)";
+  speedDownButton.title = "Decrease simulation speed (-)";
+  speedUpButton.title = "Increase simulation speed (+)";
+  restartButton.title = "Restart with current tuning (R)";
+  pauseButton.setAttribute("aria-keyshortcuts", "Space");
+  stepButton.setAttribute("aria-keyshortcuts", "N");
+  speedDownButton.setAttribute("aria-keyshortcuts", "-");
+  speedUpButton.setAttribute("aria-keyshortcuts", "+");
+  restartButton.setAttribute("aria-keyshortcuts", "R");
+}
+
+function syncMenuState() {
+  setElementClass(gameWrap, world.isMenuOpen ? "menu-open" : "menu-closed");
+  menuToggleButton.setAttribute("aria-expanded", world.isMenuOpen ? "true" : "false");
+  uiMenu.setAttribute("aria-hidden", world.isMenuOpen ? "false" : "true");
+  menuBackdrop.setAttribute("aria-hidden", world.isMenuOpen ? "false" : "true");
+  menuBackdrop.tabIndex = world.isMenuOpen ? 0 : -1;
+
+  if (world.isMenuOpen) {
+    uiMenu.removeAttribute("inert");
+  } else {
+    uiMenu.setAttribute("inert", "");
+  }
+
+  setElementText(menuToggleText, world.isMenuOpen ? "Close" : "Menu");
+  menuToggleButton.setAttribute("aria-label", world.isMenuOpen ? "Close simulation menu" : "Open simulation menu");
+}
+
+function setMenuOpen(isOpen) {
+  var nextOpen = Boolean(isOpen);
+
+  if (world.isMenuOpen === nextOpen) {
+    return false;
+  }
+
+  world.isMenuOpen = nextOpen;
+  syncMenuState();
+  return true;
+}
+
+function toggleMenuOpen() {
+  return setMenuOpen(!world.isMenuOpen);
+}
+
+function syncMenuPage() {
+  var activePage = world.menuPage || "controls";
+  var pages = uiMenu.querySelectorAll("[data-menu-page]");
+  var tabs = menuTabs.querySelectorAll("[data-menu-target]");
+
+  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    pages[pageIndex].hidden = pages[pageIndex].getAttribute("data-menu-page") !== activePage;
+  }
+
+  for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+    var isActive = tabs[tabIndex].getAttribute("data-menu-target") === activePage;
+    tabs[tabIndex].classList.toggle("active", isActive);
+    tabs[tabIndex].setAttribute("aria-pressed", isActive ? "true" : "false");
+  }
+}
+
+function setMenuPage(pageName) {
+  var nextPage = String(pageName || "controls");
+
+  if (!/^(controls|status|ecosystem|log)$/.test(nextPage)) {
+    nextPage = "controls";
+  }
+
+  if (world.menuPage === nextPage) {
+    syncMenuPage();
+    return false;
+  }
+
+  world.menuPage = nextPage;
+  syncMenuPage();
+  return true;
+}
+
+function applyTuningFromControls(redraw) {
+  world.speed = clamp(Math.round(getTuningInputNumber(speedSlider, world.speed)), 1, 10);
+  CONFIG.ORGANISM_DRAW_SIZE = clamp(Math.round(getTuningInputNumber(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE)), 2, 14);
+  CONFIG.FOOD_DRAW_SIZE = clamp(Math.round(getTuningInputNumber(foodSizeSlider, CONFIG.FOOD_DRAW_SIZE)), 1, 8);
+  CONFIG.STARTING_FOOD = clamp(Math.round(getTuningInputNumber(startingFoodSlider, CONFIG.STARTING_FOOD)), 100, 1000);
+  CONFIG.MAX_FOOD = Math.max(CONFIG.MAX_FOOD, CONFIG.STARTING_FOOD);
+  CONFIG.FERTILE_FOOD_GROWTH_CHANCE = clamp(getTuningInputNumber(foodGrowthSlider, CONFIG.FERTILE_FOOD_GROWTH_CHANCE * 100) / 100, 0, 1);
+  world.seedText = normalizeSeedText(seedInput.value);
+
+  if (redraw) {
+    drawWorld();
+  }
+
+  updateHud();
+}
+
+function getNearestOrganismToTile(tileX, tileY) {
+  return getNearestOrganismInRadius(tileX, tileY, 1);
+}
+
+function getNearestSettlementToTile(tileX, tileY) {
+  return typeof getNearestInfluencingSettlement === "function"
+    ? getNearestInfluencingSettlement(tileX, tileY)
+    : null;
+}
+
+function getInspectContextRadius() {
+  return Math.max(4, Math.round(Number(CONFIG.SETTLEMENT_RADIUS) / 2 || 6));
+}
+
+function countFertileTilesInRadius(tileX, tileY, radius) {
+  var normalizedRadius = Math.max(0, Math.round(Number(radius) || 0));
+  var fertileTiles = 0;
+  var sampledTiles = 0;
+
+  for (var y = Math.max(0, tileY - normalizedRadius); y <= Math.min(WORLD_HEIGHT - 1, tileY + normalizedRadius); y++) {
+    var rowRadius = normalizedRadius - Math.abs(tileY - y);
+
+    for (var dx = -rowRadius; dx <= rowRadius; dx++) {
+      var x = getWrappedWorldX(tileX + dx);
+      sampledTiles++;
+
+      if (isFertile(x, y)) {
+        fertileTiles++;
+      }
+    }
+  }
+
+  return {
+    fertileTiles: fertileTiles,
+    sampledTiles: sampledTiles,
+    fertilePercent: sampledTiles > 0 ? (fertileTiles / sampledTiles) * 100 : 0
+  };
+}
