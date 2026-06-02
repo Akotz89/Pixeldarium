@@ -9,7 +9,7 @@ const source = [
   "js/legacy/persistence/part-02.js",
   "js/legacy/persistence/part-03.js",
   "js/legacy/persistence/part-05.js",
-  "js/legacy/ui/part-05.js",
+  "js/ui/interaction.js",
   "js/ui/touch.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
