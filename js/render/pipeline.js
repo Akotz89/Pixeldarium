@@ -154,6 +154,15 @@ PS.render.pipeline.registerLayer("resources.food", {
   draw: function () { PS.render.entities.drawFood(); }
 });
 
+PS.render.pipeline.registerLayer("entities.presence", {
+  order: 75,
+  family: "entities",
+  semantic: "local-scale resource clusters, organism traces, settlement parcels, and route traffic",
+  minBand: "region",
+  maxBand: "settlement",
+  draw: function () { PS.render.entities.drawLocalPresenceField(); }
+});
+
 PS.render.pipeline.registerLayer("settlement.structures", {
   order: 80,
   family: "settlement",

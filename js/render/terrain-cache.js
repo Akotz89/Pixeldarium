@@ -97,8 +97,20 @@ PS.render.terrainCache.build = function () {
   }
 };
 
-PS.render.terrainCache.draw = function () {
+PS.render.terrainCache.isCurrent = function () {
   if (!terrainCache) {
+    return false;
+  }
+
+  if (isGlobeRenderMode() && isPlanetLocalView()) {
+    return localTerrainCacheSignature === getLocalTerrainCacheSignature();
+  }
+
+  return !localTerrainCacheSignature;
+};
+
+PS.render.terrainCache.draw = function () {
+  if (!PS.render.terrainCache.isCurrent()) {
     PS.render.terrainCache.build();
   }
 

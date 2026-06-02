@@ -87,6 +87,7 @@ const source = [
   "js/render/surface-draw.js",
   "js/render/entity-sprites.js",
   "js/render/entities.js",
+  "js/render/entity-presence.js",
   "js/render/reference-grid.js",
   "js/render/overlays.js",
   "js/render/atmosphere.js",
@@ -323,6 +324,7 @@ assert.strictEqual(typeof PS.render.raster.getLocalSurfaceMaterialMark, "functio
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceMaterialMarks, "function", "local underlay should draw deterministic material marks");
 assert.strictEqual(typeof PS.render.surfaceRender.work.drawChunkOverUnderlay, "function", "surface chunk compositor should blend progressive chunks into the underlay");
 assert.strictEqual(typeof PS.render.surfaceRender.work.getVisibleChunkReadiness, "function", "surface chunk compositor should measure current viewport readiness");
+assert.strictEqual(typeof PS.render.terrainCache.isCurrent, "function", "terrain cache should expose current-view validity checks");
 assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(12, 100), false, "surface chunk compositor should defer sparse partial chunk coverage");
 assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(80, 100), false, "surface chunk compositor should defer visibly incomplete chunk islands");
 assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(96, 100), false, "surface chunk compositor should keep underlay fallback until coverage is complete");
@@ -330,6 +332,7 @@ assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(100
 world.planetView = { zoomLevel: finalGroundZoomIndex, latitude: 0, longitude: 0, panEastMeters: 0, panNorthMeters: 0 };
 world.isCameraInteracting = false;
 world.organisms = [];
+assert.strictEqual(PS.render.terrainCache.isCurrent(), false, "local terrain cache should rebuild when the camera enters a new local zoom signature");
 world.speed = 1;
 world.updateMs = 0;
 world.maxUpdateMs = 0;
@@ -348,11 +351,20 @@ assert.ok(
 );
 assert.ok(renderLayerIds.indexOf("terrain.base") < renderLayerIds.indexOf("resources.food"), "terrain layer should draw before resources");
 assert.ok(renderLayerIds.indexOf("settlement.routes") < renderLayerIds.indexOf("settlement.structures"), "routes should draw before settlement structures");
+assert.ok(renderLayerIds.indexOf("entities.presence") > renderLayerIds.indexOf("resources.food"), "presence marks should draw after base resource objects");
+assert.ok(renderLayerIds.indexOf("entities.presence") < renderLayerIds.indexOf("settlement.structures"), "presence marks should remain behind settlement structures");
 assert.ok(renderLayerIds.indexOf("entities.organisms") < renderLayerIds.indexOf("status.selection"), "entities should draw before status/overlay layers");
 assert.strictEqual(PS.render.pipeline.getZoomBand(0.5), "orbit", "zoom manifest should expose orbit band");
 assert.strictEqual(PS.render.pipeline.getZoomBand(5), "continent", "zoom manifest should expose continent band");
 assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest should expose local band");
 assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
+assert.strictEqual(typeof PS.render.entities.drawLocalPresenceField, "function", "local presence field should be exposed for dense simulation-map readability");
+assert.strictEqual(PS.render.entities.getPresenceZoomAmount(0), 0, "presence density should stay hidden at orbit zoom");
+assert.ok(PS.render.entities.getPresenceZoomAmount(finalGroundZoomIndex) > 0.9, "presence density should ramp up at ground zoom");
+var resourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
+var repeatedResourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
+assert.deepStrictEqual(repeatedResourcePresenceSample, resourcePresenceSample, "presence density samples should be deterministic for stable screenshots");
+assert.ok(resourcePresenceSample.size >= 1, "presence density samples should reserve visible pixel marks");
 assert.strictEqual(organismSprite.family, "entities", "organism sprite should use entity asset family");
 assert.strictEqual(foodSprite.family, "resources", "food sprite should use resource asset family");
 assert.strictEqual(settlementSprite.family, "settlement", "settlement sprite should use settlement asset family");
