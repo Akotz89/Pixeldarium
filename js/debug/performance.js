@@ -23,8 +23,8 @@ PS.debug.performance = {
 
     this.element.hidden = !this.visible;
     this.element.textContent =
-      "FPS " + world.fps.toFixed(1) +
-      " | TPS " + world.tps.toFixed(1) +
+      "Render FPS " + world.fps.toFixed(1) +
+      " | Sim TPS " + world.tps.toFixed(1) +
       " | Update " + world.updateMs.toFixed(2) + "ms" +
       " | Draw " + world.drawMs.toFixed(2) + "ms" +
       " | Entities " + world.organisms.length + "/" + world.food.length +

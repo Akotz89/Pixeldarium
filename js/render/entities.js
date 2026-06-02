@@ -30,23 +30,72 @@ PS.render.entities.drawTileEntity = function (tileX, tileY, size, color) {
   );
 };
 
+PS.render.entities.getInterpolationAmount = function (interpolation) {
+  var rawInterpolation = Number(interpolation);
+  return Number.isFinite(rawInterpolation) ? clamp(rawInterpolation, 0, 1) : 1;
+};
+
+PS.render.entities.getInterpolatedTileCoordinate = function (previous, current, amount, worldSize, shouldWrap) {
+  var from = Number(previous);
+  var to = Number(current);
+
+  if (!Number.isFinite(from) || !Number.isFinite(to) || amount >= 1) {
+    return to;
+  }
+
+  var delta = to - from;
+
+  if (shouldWrap && worldSize > 0 && Math.abs(delta) > worldSize / 2) {
+    delta += delta > 0 ? -worldSize : worldSize;
+  }
+
+  var value = from + delta * amount;
+
+  if (shouldWrap && worldSize > 0) {
+    while (value < 0) {
+      value += worldSize;
+    }
+
+    while (value >= worldSize) {
+      value -= worldSize;
+    }
+  }
+
+  return value;
+};
+
+PS.render.entities.getInterpolatedTileRenderPosition = function (entity, amount) {
+  if (!entity) {
+    return null;
+  }
+
+  return PS.render.entities.getTileRenderPosition(
+    PS.render.entities.getInterpolatedTileCoordinate(entity.prevX, entity.x, amount, WORLD_WIDTH, true),
+    PS.render.entities.getInterpolatedTileCoordinate(entity.prevY, entity.y, amount, WORLD_HEIGHT, false)
+  );
+};
+
 PS.render.entities.getRenderPosition = function (entity, interpolation) {
   if (!entity) {
     return null;
   }
 
+  var amount = PS.render.entities.getInterpolationAmount(interpolation);
+
+  if (!isGlobeRenderMode()) {
+    return PS.render.entities.getInterpolatedTileRenderPosition(entity, amount);
+  }
+
   var surfacePosition = getEntitySurfacePosition(entity);
 
   if (!surfacePosition) {
-    return PS.render.entities.getTileRenderPosition(entity.x, entity.y);
+    return PS.render.entities.getInterpolatedTileRenderPosition(entity, amount);
   }
 
   ensureEntitySurfacePosition(entity);
 
   var renderLatitude = surfacePosition.latitude;
   var renderLongitude = surfacePosition.longitude;
-  var rawInterpolation = Number(interpolation);
-  var amount = Number.isFinite(rawInterpolation) ? clamp(rawInterpolation, 0, 1) : 1;
 
   if (
     amount < 1 &&

@@ -25,6 +25,7 @@ PS.debug.profiler = {
     this.element.textContent =
       "Profiler | sim " + world.updateMs.toFixed(2) + "ms" +
       " | render " + world.drawMs.toFixed(2) + "ms" +
+      " | interp " + (Number(world.interpolation) || 0).toFixed(2) +
       " | max " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms" +
       " | " + this.getTickProfileLabel();
   },

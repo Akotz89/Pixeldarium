@@ -37,8 +37,8 @@ function updateHud() {
     makeHudMetric("Render Chunks", renderCacheStats.lastVisibleChunks + "v/" + renderCacheStats.chunks + "c/" + renderCacheStats.lastPendingChunks + "p/" + renderCacheStats.lastGeneratedThisPass + "g/" + renderCacheStats.lastFallbackChunks + "f"),
     makeHudMetric("Pyramid", centerPyramidLineage.length + " parents"),
     makeHudMetric("Travel", Math.round(getOrganismTravelKmPerTick()) + " km/tick"),
-    makeHudMetric("FPS", world.fps.toFixed(1)),
-    makeHudMetric("TPS", world.tps.toFixed(1)),
+    makeHudMetric("Render FPS", world.fps.toFixed(1)),
+    makeHudMetric("Sim TPS", world.tps.toFixed(1)),
     makeHudMetric("Update", world.updateMs.toFixed(2) + "ms"),
     makeHudMetric("Draw", world.drawMs.toFixed(2) + "ms"),
     makeHudMetric("Max", world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms")

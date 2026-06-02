@@ -32,6 +32,7 @@ function stepSimulationOnce() {
   var drawStart = performance.now();
   drawWorld();
   world.drawMs = performance.now() - drawStart;
+  PS.time.recordRenderFrame(world.drawMs);
   world.maxDrawMs = Math.max(world.maxDrawMs, world.drawMs);
 
   updateHud();
@@ -82,6 +83,7 @@ function gameLoop() {
       drawWorld();
       world.needsRender = false;
       var drawElapsed = performance.now() - drawStart;
+      PS.time.recordRenderFrame(drawElapsed);
       drawMsSinceStatsUpdate += drawElapsed;
       measuredDrawFrames++;
 

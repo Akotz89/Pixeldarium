@@ -54,6 +54,10 @@ PS.time.reset();
 var first = PS.time.runFrame(16, simulateTick);
 assert.strictEqual(first.ticks, 0, "sub-dt frame should not simulate");
 assert.ok(first.interpolation > 0 && first.interpolation < 1, "sub-dt frame should interpolate");
+assert.strictEqual(first.rendered, false, "runFrame should not imply a render frame");
+PS.time.recordRenderFrame(3.5);
+assert.strictEqual(PS.time.lastFrame.rendered, true, "render frame should be recorded separately from sim tick");
+assert.strictEqual(PS.time.lastFrame.drawMs, 3.5, "render frame should record draw duration");
 
 var second = PS.time.runFrame(20, simulateTick);
 assert.strictEqual(second.ticks, 1, "accumulated elapsed should simulate one fixed tick");

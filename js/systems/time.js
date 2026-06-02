@@ -10,7 +10,9 @@ PS.time = {
     ticks: 0,
     interpolation: 0,
     updateMs: 0,
-    droppedMs: 0
+    droppedMs: 0,
+    rendered: false,
+    drawMs: 0
   },
   get tick() {
     return world.tick;
@@ -48,7 +50,9 @@ PS.time = {
       ticks: 0,
       interpolation: 0,
       updateMs: 0,
-      droppedMs: 0
+      droppedMs: 0,
+      rendered: false,
+      drawMs: 0
     };
   },
   getSpeedScale: function() {
@@ -85,9 +89,18 @@ PS.time = {
       ticks: ticks,
       interpolation: interpolation,
       updateMs: updateMs,
-      droppedMs: droppedMs
+      droppedMs: droppedMs,
+      rendered: false,
+      drawMs: 0
     };
 
+    return this.lastFrame;
+  },
+  recordRenderFrame: function(drawMs) {
+    var elapsed = Math.max(0, Number(drawMs) || 0);
+
+    this.lastFrame.rendered = true;
+    this.lastFrame.drawMs = elapsed;
     return this.lastFrame;
   }
 };
