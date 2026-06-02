@@ -48,9 +48,7 @@
     "js/legacy/settlements/part-08.js",
     "js/legacy/settlements/part-09.js"
   ],
-  "ui.js": [
-    "js/legacy/ui/part-06.js"
-  ],
+  "ui.js": [],
   "main.js": [
     "js/legacy/main/part-01.js",
     "js/legacy/main/part-02.js",
