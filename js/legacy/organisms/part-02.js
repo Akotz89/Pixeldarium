@@ -204,6 +204,17 @@ function updateLineageSummaryCache() {
     if (lineage.activeCount > 0) {
       activeCount++;
       topLineages.push(lineage);
+      topLineages.sort(function(a, b) {
+        if (b.activeCount !== a.activeCount) {
+          return b.activeCount - a.activeCount;
+        }
+
+        return a.id - b.id;
+      });
+
+      if (topLineages.length > 5) {
+        topLineages.length = 5;
+      }
     } else {
       extinctCount++;
     }
@@ -216,14 +227,6 @@ function updateLineageSummaryCache() {
       newestLineage = lineage;
     }
   }
-
-  topLineages.sort(function(a, b) {
-    if (b.activeCount !== a.activeCount) {
-      return b.activeCount - a.activeCount;
-    }
-
-    return a.id - b.id;
-  });
 
   var visibleLineages = [];
   var visibleLineageSummaries = [];
@@ -277,6 +280,8 @@ function refreshLineageRegistry() {
 
   world.organismBuckets = {};
   world.organismsByLineage = {};
+  var pooledArrays = PS.pools && PS.pools.organism ? PS.pools.organism.arrays : null;
+  var bucketSize = getOrganismBucketSize();
 
   for (lineageKey in lineages) {
     if (Object.prototype.hasOwnProperty.call(lineages, lineageKey)) {
@@ -286,21 +291,33 @@ function refreshLineageRegistry() {
 
   for (var i = 0; i < world.organisms.length; i++) {
     var organism = world.organisms[i];
-    var traits = ensureOrganismTraits(organism);
-    var lineageId = ensureOrganismLineage(organism);
-    var record = registerLineage(
+    var poolIndex = pooledArrays && Number.isFinite(Number(organism.poolIndex)) ? Math.round(organism.poolIndex) : -1;
+    var traits = organism.traits || ensureOrganismTraits(organism);
+    var lineageId = poolIndex >= 0
+      ? Math.max(1, Math.round(Number(pooledArrays.lineageId[poolIndex]) || 1))
+      : Math.max(1, Math.round(Number(organism.lineageId) || 1));
+    var lineageKeyForOrganism = String(lineageId);
+    var record = lineages[lineageKeyForOrganism] || registerLineage(
       lineageId,
       organism.lineageParentId,
       organism.generation,
       traits,
       world.tick
     );
+    var tileX = poolIndex >= 0 ? getWrappedWorldX(pooledArrays.x[poolIndex]) : getWrappedWorldX(organism.x);
+    var tileY = poolIndex >= 0 ? getClampedWorldY(pooledArrays.y[poolIndex]) : getClampedWorldY(organism.y);
+    var bucketKey = Math.floor(tileX / bucketSize) + ":" + Math.floor(tileY / bucketSize);
+    var vision = poolIndex >= 0 ? pooledArrays.vision[poolIndex] : traits.vision;
+    var metabolism = poolIndex >= 0 ? pooledArrays.metabolism[poolIndex] : traits.metabolism;
+    var reproductionEnergy = poolIndex >= 0 ? pooledArrays.reproductionEnergy[poolIndex] : traits.reproductionEnergy;
+    var movementTendency = poolIndex >= 0 ? pooledArrays.movementTendency[poolIndex] : traits.movementTendency;
+    var terrainAffinity = poolIndex >= 0 ? pooledArrays.terrainAffinity[poolIndex] : traits.terrainAffinity;
 
-    traitTotals.vision += traits.vision;
-    traitTotals.metabolism += traits.metabolism;
-    traitTotals.reproductionEnergy += traits.reproductionEnergy;
-    traitTotals.movementTendency += traits.movementTendency;
-    traitTotals.terrainAffinity += traits.terrainAffinity;
+    traitTotals.vision += vision;
+    traitTotals.metabolism += metabolism;
+    traitTotals.reproductionEnergy += reproductionEnergy;
+    traitTotals.movementTendency += movementTendency;
+    traitTotals.terrainAffinity += terrainAffinity;
 
     record.activeCount++;
     record.lastSeenTick = world.tick;
@@ -309,7 +326,16 @@ function refreshLineageRegistry() {
       record.peakPopulation = record.activeCount;
     }
 
-    registerOrganismInIndexes(organism);
+    if (!world.organismBuckets[bucketKey]) {
+      world.organismBuckets[bucketKey] = [];
+    }
+
+    if (!world.organismsByLineage[lineageKeyForOrganism]) {
+      world.organismsByLineage[lineageKeyForOrganism] = [];
+    }
+
+    world.organismBuckets[bucketKey].push(organism);
+    world.organismsByLineage[lineageKeyForOrganism].push(organism);
   }
 
   for (lineageKey in lineages) {

@@ -25,6 +25,16 @@ PS.debug.profiler = {
     this.element.textContent =
       "Profiler | sim " + world.updateMs.toFixed(2) + "ms" +
       " | render " + world.drawMs.toFixed(2) + "ms" +
-      " | max " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms";
+      " | max " + world.maxUpdateMs.toFixed(2) + "/" + world.maxDrawMs.toFixed(2) + "ms" +
+      " | " + this.getTickProfileLabel();
+  },
+  getTickProfileLabel: function() {
+    var profile = world.tickProfileMs || {};
+
+    return "tick food " + (Number(profile.food) || 0).toFixed(2) + "ms" +
+      " org " + (Number(profile.organisms) || 0).toFixed(2) + "ms" +
+      " set " + (Number(profile.settlements) || 0).toFixed(2) + "ms" +
+      " terrain " + (Number(profile.terrain) || 0).toFixed(2) + "ms" +
+      " events " + (Number(profile.events) || 0).toFixed(2) + "ms";
   }
 };

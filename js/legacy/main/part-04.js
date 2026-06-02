@@ -253,17 +253,30 @@ function seedWorld() {
 }
 
 function updateWorld() {
+  var tickProfile = {
+    organisms: 0,
+    food: 0,
+    settlements: 0,
+    terrain: 0,
+    events: 0
+  };
+  var profileStart = performance.now();
+
   world.tick++;
   world.needsRender = true;
   resetPopulationFlowCounters();
   resetFoodFlowCounters();
   var milestoneSnapshot = getSimulationMilestoneSnapshot();
   growFood();
+  tickProfile.food = performance.now() - profileStart;
 
   var organismsAtStartOfTick = world.organisms.length;
+  profileStart = performance.now();
 
-  for (var i = 0; i < organismsAtStartOfTick; i++) {
-    updateOrganism(world.organisms[i]);
+  if (typeof updatePooledOrganismsForTick !== "function" || !updatePooledOrganismsForTick(organismsAtStartOfTick)) {
+    for (var i = 0; i < organismsAtStartOfTick; i++) {
+      updateOrganism(world.organisms[i]);
+    }
   }
 
   removeDeadOrganisms();
@@ -274,14 +287,21 @@ function updateWorld() {
     refreshLineageRegistry();
   }
 
+  tickProfile.organisms = performance.now() - profileStart;
+  profileStart = performance.now();
+
   refreshEcosystemSummary();
   syncLifecycleState();
   recordEcosystemHistorySample(!milestoneSnapshot.isExtinct && world.isExtinct);
+  tickProfile.events += performance.now() - profileStart;
 
   if (!world.isExtinct && typeof updateSettlements === "function") {
+    profileStart = performance.now();
     updateSettlements();
+    tickProfile.settlements = performance.now() - profileStart;
   }
 
+  profileStart = performance.now();
   recordSimulationMilestones(milestoneSnapshot);
 
   if (typeof recordTraitHistorySample === "function") {
@@ -289,6 +309,8 @@ function updateWorld() {
   }
 
   refreshSimulationAlerts();
+  tickProfile.events += performance.now() - profileStart;
+  world.tickProfileMs = tickProfile;
 }
 
 function setSimulationPaused(isPaused) {

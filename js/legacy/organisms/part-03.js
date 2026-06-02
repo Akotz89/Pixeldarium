@@ -102,6 +102,11 @@ function getResourceAdjustedReproductionEnergy(traits, scarcityPressure) {
 
 function reproduceIfReady(organism) {
   var traits = ensureOrganismTraits(organism);
+
+  if (organism.energy < traits.reproductionEnergy) {
+    return;
+  }
+
   var scarcityPressure = getReproductionScarcityPressure();
   var reproductionEnergy = getResourceAdjustedReproductionEnergy(traits, scarcityPressure);
 
@@ -141,12 +146,15 @@ function reproduceIfReady(organism) {
 
 function updateOrganism(organism) {
   var traits = ensureOrganismTraits(organism);
-  var surfacePosition = getEntitySurfacePosition(organism);
 
   organism.prevX = organism.x;
   organism.prevY = organism.y;
-  organism.prevLatitude = surfacePosition ? surfacePosition.latitude : getPlanetLatitudeForTile(organism.y);
-  organism.prevLongitude = surfacePosition ? surfacePosition.longitude : getPlanetLongitudeForTile(organism.x);
+  organism.prevLatitude = Number.isFinite(Number(organism.latitude))
+    ? organism.latitude
+    : getPlanetLatitudeForTile(organism.y);
+  organism.prevLongitude = Number.isFinite(Number(organism.longitude))
+    ? organism.longitude
+    : getPlanetLongitudeForTile(organism.x);
   organism.age++;
   organism.travelKm = Math.max(0, Number(organism.travelKm) || 0) + getOrganismTravelKmPerTick();
 
@@ -167,6 +175,93 @@ function updateOrganism(organism) {
 
   eatFoodOnCurrentTile(organism);
   reproduceIfReady(organism);
+}
+
+function updatePooledOrganismsForTick(organismsAtStartOfTick) {
+  if (!PS.pools || !PS.pools.organism) {
+    return false;
+  }
+
+  var arrays = PS.pools.organism.arrays;
+  var travelKmPerTick = getOrganismTravelKmPerTick();
+  var applyEnergyCostThisTick = world.tick % 3 === 0;
+
+  for (var i = 0; i < organismsAtStartOfTick; i++) {
+    var organism = world.organisms[i];
+    var poolIndex = organism && Number.isFinite(Number(organism.poolIndex)) ? Math.round(organism.poolIndex) : -1;
+
+    if (poolIndex < 0 || !arrays.active[poolIndex]) {
+      return false;
+    }
+  }
+
+  for (var index = 0; index < organismsAtStartOfTick; index++) {
+    var pooledOrganism = world.organisms[index];
+    var pooledIndex = pooledOrganism.poolIndex;
+    var x = getWrappedWorldX(arrays.x[pooledIndex]);
+    var y = getClampedWorldY(arrays.y[pooledIndex]);
+    var energy = arrays.energy[pooledIndex];
+    var travelKm = Math.max(0, Number(arrays.travelKm[pooledIndex]) || 0) + travelKmPerTick;
+
+    arrays.prevX[pooledIndex] = x;
+    arrays.prevY[pooledIndex] = y;
+    arrays.prevLatitude[pooledIndex] = Number.isFinite(Number(arrays.latitude[pooledIndex]))
+      ? arrays.latitude[pooledIndex]
+      : getPlanetLatitudeForTile(y);
+    arrays.prevLongitude[pooledIndex] = Number.isFinite(Number(arrays.longitude[pooledIndex]))
+      ? arrays.longitude[pooledIndex]
+      : getPlanetLongitudeForTile(x);
+    arrays.age[pooledIndex]++;
+
+    if (applyEnergyCostThisTick) {
+      energy -= arrays.metabolism[pooledIndex];
+      energy -= Math.abs(arrays.terrainAffinity[pooledIndex] - getTerrainAffinityTargetValue(x, y)) *
+        CONFIG.TERRAIN_MISMATCH_MAX_ENERGY_COST;
+    }
+
+    var nearestFood = findNearestFoodInBuckets(x, y, arrays.vision[pooledIndex]);
+
+    if (nearestFood) {
+      arrays.directionX[pooledIndex] = getDirectionXToTile(x, nearestFood.x);
+      arrays.directionY[pooledIndex] = getDirectionYToTile(y, nearestFood.y);
+    } else if (chance(arrays.movementTendency[pooledIndex])) {
+      chooseRoamingDirection(pooledOrganism, pooledOrganism.traits);
+    }
+
+    var nextX = getWrappedWorldX(x + arrays.directionX[pooledIndex]);
+    var nextY = getClampedWorldY(y + arrays.directionY[pooledIndex]);
+
+    if (nextX !== x || nextY !== y) {
+      var requiredTravelKm = getTileGreatCircleDistanceKm(x, y, nextX, nextY);
+
+      if (travelKm >= requiredTravelKm) {
+        travelKm -= requiredTravelKm;
+        arrays.x[pooledIndex] = nextX;
+        arrays.y[pooledIndex] = nextY;
+        assignRandomSurfacePositionInTile(pooledOrganism);
+        x = nextX;
+        y = nextY;
+      }
+    }
+
+    arrays.travelKm[pooledIndex] = travelKm;
+
+    if (removeFoodAtPosition(x, y)) {
+      energy += CONFIG.FOOD_ENERGY_VALUE;
+
+      if (typeof recordFoodConsumed === "function") {
+        recordFoodConsumed(1);
+      }
+    }
+
+    arrays.energy[pooledIndex] = energy;
+
+    if (energy >= arrays.reproductionEnergy[pooledIndex]) {
+      reproduceIfReady(pooledOrganism);
+    }
+  }
+
+  return true;
 }
 
 function moveOrganismByTravelBudget(organism) {

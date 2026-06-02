@@ -24,7 +24,7 @@ function stepSimulationOnce() {
   }
 
   var updateStart = performance.now();
-  updateWorld();
+  updateWorld(PS.time.dt);
   world.updateMs = performance.now() - updateStart;
   world.maxUpdateMs = Math.max(world.maxUpdateMs, world.updateMs);
   world.interpolation = 1;
@@ -39,7 +39,6 @@ function stepSimulationOnce() {
 }
 
 var lastFrameTime = performance.now();
-var simAccumulatorMs = 0;
 var statsTimer = performance.now();
 var hudTimer = performance.now();
 var framesSinceStatsUpdate = 0;
@@ -59,42 +58,22 @@ function gameLoop() {
     framesSinceStatsUpdate++;
 
     if (!world.isPaused) {
-      var updateInterval = Math.max(
-        1,
-        CONFIG.SIM_UPDATE_INTERVAL_MS / Math.max(1, world.speed * CONFIG.SIM_SPEED_MULTIPLIER)
-      );
-      var updatesThisFrame = 0;
-      var updateStart = performance.now();
-      simAccumulatorMs += frameElapsed;
+      var timeFrame = PS.time.runFrame(frameElapsed, updateWorld);
 
-      while (
-        simAccumulatorMs >= updateInterval &&
-        updatesThisFrame < CONFIG.MAX_SIM_UPDATES_PER_FRAME
-      ) {
-        updateWorld();
-        simAccumulatorMs -= updateInterval;
-        updatesThisFrame++;
-      }
-
-      if (updatesThisFrame >= CONFIG.MAX_SIM_UPDATES_PER_FRAME) {
-        simAccumulatorMs = Math.min(simAccumulatorMs, updateInterval);
-      }
-
-      if (updatesThisFrame > 0) {
-        var updateElapsed = performance.now() - updateStart;
-        updateMsSinceStatsUpdate += updateElapsed;
+      if (timeFrame.ticks > 0) {
+        updateMsSinceStatsUpdate += timeFrame.updateMs;
         measuredUpdateFrames++;
 
-        if (updateElapsed > maxUpdateMsSinceStatsUpdate) {
-          maxUpdateMsSinceStatsUpdate = updateElapsed;
+        if (timeFrame.updateMs > maxUpdateMsSinceStatsUpdate) {
+          maxUpdateMsSinceStatsUpdate = timeFrame.updateMs;
         }
 
-        simTicksSinceStatsUpdate += updatesThisFrame;
+        simTicksSinceStatsUpdate += timeFrame.ticks;
       }
 
-      world.interpolation = Math.min(simAccumulatorMs / updateInterval, 1);
+      world.interpolation = timeFrame.interpolation;
     } else {
-      simAccumulatorMs = 0;
+      PS.time.accumulator = 0;
       world.interpolation = 0;
     }
 
@@ -147,6 +126,7 @@ function startGame() {
   try {
     setupControls();
     seedWorld();
+    PS.time.reset();
     drawWorld();
     updateHud();
     syncControlStates();

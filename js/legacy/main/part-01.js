@@ -56,6 +56,13 @@ function clearWorld() {
   world.drawMs = 0;
   world.maxUpdateMs = 0;
   world.maxDrawMs = 0;
+  world.tickProfileMs = {
+    organisms: 0,
+    food: 0,
+    settlements: 0,
+    terrain: 0,
+    events: 0
+  };
   world.inspectedTile = null;
   world.inspectedSurface = null;
   world.inspectedEntity = null;
@@ -136,6 +143,10 @@ function clearWorld() {
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();
+  }
+
+  if (PS.time && typeof PS.time.reset === "function") {
+    PS.time.reset();
   }
 }
 

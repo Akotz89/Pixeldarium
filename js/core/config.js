@@ -12,6 +12,7 @@ PS.config.constants = Object.freeze(PS_CONFIG_CONSTANTS);
 
 PS.config.sim = {
   updateIntervalMs: CONFIG.SIM_UPDATE_INTERVAL_MS,
+  fixedDeltaMs: CONFIG.SIM_UPDATE_INTERVAL_MS,
   maxUpdatesPerFrame: CONFIG.MAX_SIM_UPDATES_PER_FRAME,
   hudUpdateIntervalMs: CONFIG.HUD_UPDATE_INTERVAL_MS,
   daysPerTick: CONFIG.SIM_DAYS_PER_TICK,
