@@ -10,11 +10,5 @@
   "organisms.js": [],
   "settlements.js": [],
   "ui.js": [],
-  "main.js": [
-    "js/legacy/main/part-01.js",
-    "js/legacy/main/part-02.js",
-    "js/legacy/main/part-03.js",
-    "js/legacy/main/part-04.js",
-    "js/legacy/main/part-05.js"
-  ]
+  "main.js": []
 }

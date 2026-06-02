@@ -41,7 +41,7 @@ Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinishe
 6. Split the migrated `js/ui/setup.js` bootstrap/event binding into focused setup modules where useful.
 7. Keep static-browser and `file://` compatibility, root JS limited to `config.js`, and each JS module under 500 lines.
 
-The loaded legacy runtime work that remains is no longer UI-specific. It is tracked in `docs/legacy-runtime-assessment.md` under food/organisms, settlements, and main loop migration.
+The loaded legacy runtime work that remained after UI retirement was tracked in `docs/legacy-runtime-assessment.md`. AZR-352 retired the non-UI runtime loader dependencies as follow-up work.
 
 ## Recent Correction
 

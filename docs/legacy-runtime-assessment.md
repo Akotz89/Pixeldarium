@@ -12,17 +12,17 @@ This document is the current domain inventory and migration decision log for non
 
 Phase 1 Foundation is not proof that every `js/legacy/*` runtime shard is gone. Linear defines Phase 1 as planet rendering, performance foundation, WebGL2 migration, decoupled sim loop, spatial indexing, and project restructure. The completed E0 issues established the target architecture, removed root compatibility files, and retired the legacy UI runtime loader.
 
-The remaining legacy runtime work is explicitly tracked by AZR-352 and its children:
+The legacy runtime retirement work was explicitly tracked by AZR-352 and its children:
 
 - AZR-357: migrate food and organism runtime shards after the Phase 2 biological model gate.
 - AZR-358: migrate settlement/civilization runtime shards after settlement model follow-up.
 - AZR-359: migrate main-loop shards last, after the other runtime surfaces are stable.
 
-Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. Food, organism, settlement, and civilization runtime has also moved under `js/sim/*`. The tracked runtime dependency is the 5 non-UI files listed below.
+Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. Food, organism, settlement, civilization, and main-loop runtime have also moved under modern `js/*` modules. `index.html` no longer loads any tracked `js/legacy/*` runtime files.
 
 ## Current Runtime Inventory
 
-`index.html` still loads 5 non-UI legacy scripts:
+`index.html` loads 0 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
@@ -31,7 +31,7 @@ Current audit result: `js/legacy/ui` may still exist as an empty local directory
 | Planet/terrain/render | 0 | Migrated in AZR-356 to ordered `js/render/*` modules with compatibility preserved. |
 | Food/organisms | 0 | Migrated in AZR-357 to focused `js/sim/food-*` and `js/sim/organisms-*` modules after aggregate/representative model coverage. |
 | Settlements | 0 | Migrated in AZR-358 to focused `js/sim/settlements-*` and `js/sim/civilizations-*` modules after progression coverage. |
-| Main loop | 5 | Migrate after core state/systems are moved, because bootstrap ordering depends on every preceding runtime surface. |
+| Main loop | 0 | Migrated in AZR-359 to focused `js/main-*` modules after all preceding runtime surfaces were stable. |
 
 ## State / Utils
 
@@ -129,20 +129,17 @@ Verification:
 
 ## Main Loop
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/main/part-01.js`
-- `js/legacy/main/part-02.js`
-- `js/legacy/main/part-03.js`
-- `js/legacy/main/part-04.js`
-- `js/legacy/main/part-05.js`
-
-Decision: migrate last. Main loop code depends on namespace setup, world seeding, UI setup, simulation tick, render pipeline, worker mode, and startup sequencing.
+Decision: migrated in AZR-359. Main loop code depended on namespace setup, world seeding, UI setup, simulation tick, render pipeline, worker mode, and startup sequencing, so it moved last after the other runtime surfaces were stable.
 
 Target shape:
 
 - `js/main.js` owns `PS.init()` and boot orchestration.
-- Supporting loop pieces move into `js/systems/time.js`, `js/systems/world.js`, and small startup modules.
+- `js/main-runtime.js` owns reset, event-log, and milestone helpers.
+- `js/main-ecosystem-stability.js` and `js/main-ecosystem-summary.js` own ecosystem summary, stability, history, counters, and alerts.
+- `js/main-simulation.js` owns world seeding, simulation tick updates, and pause state.
+- `js/main-loop.js` owns frame loop, speed controls, single-step, stats aggregation, and `startGame()`.
 
 Verification:
 
@@ -152,7 +149,7 @@ Verification:
 
 ## Next Implementation Order
 
-1. Main loop last, after the other runtime surfaces are stable.
+AZR-352 has no remaining loaded `js/legacy/*` runtime migration lane. Future implementation should move through Phase 2 feature issues rather than the legacy runtime inventory.
 
 ## Standing Constraints
 

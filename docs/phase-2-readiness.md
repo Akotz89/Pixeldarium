@@ -15,7 +15,7 @@ AZR-361 records the chosen aggregate-population plus representative-organism mod
 Current repo state:
 
 - `js/sim/food.js`, `js/sim/organisms.js`, `js/sim/evolution.js`, `js/sim/settlements.js`, and `js/sim/civilizations.js` are public `PS.sim.*` facades over existing runtime functions.
-- `js/sim/food-runtime.js`, `js/sim/food-growth.js`, `js/sim/organisms-*`, `js/sim/settlements-*`, and `js/sim/civilizations-*` own food, representative organism, settlement, and civilization runtime. `js/legacy/main/*` is still loaded by `index.html`.
+- `js/sim/food-runtime.js`, `js/sim/food-growth.js`, `js/sim/organisms-*`, `js/sim/settlements-*`, and `js/sim/civilizations-*` own food, representative organism, settlement, and civilization runtime. `js/main-*` modules own runtime reset, ecosystem summaries, simulation tick updates, and the frame loop. `index.html` no longer loads any `js/legacy/*` runtime shards.
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
 - `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override.
@@ -94,7 +94,7 @@ The Phase 2 backlog needs stronger visible outcomes before implementation starts
 4. Connect E10 and E9 before deep biology features:
    - event detection should feed timeline, spotlight, notifications, and observation panels.
    - biology/geology events should become watcher-visible outputs, not internal-only state.
-5. Keep AZR-359 main-loop migration last. Boot sequencing should move only after Phase 2 layer/epoch/sim surfaces have stable ownership.
+5. AZR-359 moved the main-loop runtime last after Phase 2 layer/epoch/sim surfaces had stable ownership.
 
 ## Linear Backlog Updates
 
@@ -108,7 +108,7 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 
 1. AZR-350 and AZR-293 validation: convert the recorded model direction into runtime acceptance criteria and microbial prototype evidence.
 2. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
-3. AZR-359: migrate main loop last.
+3. Continue with Phase 2 implementation issues after AZR-352 legacy runtime retirement closes.
 
 ## Verification Expectations
 

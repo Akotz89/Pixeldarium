@@ -92,7 +92,7 @@ assert.ok(world.planetTiles.some(function(tile) {
 console.log("geology layer checks passed");
 `, context);
 
-const mainLoopSource = read("js/legacy/main/part-04.js");
+const mainLoopSource = read("js/main-simulation.js");
 
 assert.ok(
   /function updateWorld\(dt\)/.test(mainLoopSource) &&
