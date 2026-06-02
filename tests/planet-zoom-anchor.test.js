@@ -303,6 +303,28 @@ var settlementSprite = PS.render.entities.getSprite("settlement.core");
 var organismIdentity = PS.render.entities.getSpriteVisualIdentity("entity.organism");
 var foodIdentity = PS.render.entities.getSpriteVisualIdentity("resource.food");
 var settlementIdentity = PS.render.entities.getSpriteVisualIdentity("settlement.core");
+var richFoodVariant = PS.render.entities.getSpriteVariant("resource.food", { id: "food:rich", amount: 360, x: 6, y: 8 }, "idle");
+var sparseFoodVariant = PS.render.entities.getSpriteVariant("resource.food", { id: "food:sparse", amount: 40, x: 6, y: 8 }, "idle");
+var broadOrganismVariant = PS.render.entities.getSpriteVariant("entity.organism", {
+  id: "organism:broad",
+  energy: 240,
+  traits: { bodySize: 1.9, limbCount: 6, camouflage: 0.62 }
+}, "move");
+var scoutOrganismVariant = PS.render.entities.getSpriteVariant("entity.organism", {
+  id: "organism:scout",
+  energy: 70,
+  traits: { bodySize: 0.8, limbCount: 4, camouflage: 0.12 }
+}, "idle");
+var colonyVariant = PS.render.entities.getSpriteVariant("settlement.core", {
+  id: "settlement:colony",
+  level: 4,
+  isColony: true
+}, "colony");
+var outpostVariant = PS.render.entities.getSpriteVariant("settlement.core", {
+  id: "settlement:outpost",
+  level: 1,
+  isOutpost: true
+}, "outpost");
 var phaseEntity = { id: "organism:visual-language", x: 10, y: 12 };
 var firstMovePhase;
 var repeatedMovePhase;
@@ -319,6 +341,18 @@ assert.ok(assetManifest.families.overlays, "asset manifest should include overla
 assert.ok(assetManifest.families.atmosphere, "asset manifest should include atmosphere family");
 assert.ok(PS.assets.getPalette("terrain").wetland, "terrain palette should expose wetland color");
 assert.ok(PS.assets.getAtlas("entities").procedural, "entity atlas should be registered as procedural runtime art");
+assert.strictEqual(foodIdentity.variantRole, "amount-cluster", "food sprite identity should expose amount-driven variants");
+assert.strictEqual(organismIdentity.variantRole, "trait-silhouette", "organism sprite identity should expose trait-driven variants");
+assert.strictEqual(settlementIdentity.variantRole, "settlement-growth", "settlement sprite identity should expose growth variants");
+assert.strictEqual(richFoodVariant.silhouette, "thicket", "rich food nodes should render as thickets instead of generic dots");
+assert.strictEqual(sparseFoodVariant.silhouette, "sprout", "sparse food nodes should render as sprout clusters");
+assert.ok(richFoodVariant.clusterCount > sparseFoodVariant.clusterCount, "richer food nodes should reserve more authored cluster cells");
+assert.strictEqual(broadOrganismVariant.silhouette, "broad-body", "large organisms should get a distinct broad-body silhouette");
+assert.strictEqual(scoutOrganismVariant.silhouette, "scout", "small low-limb organisms should get a scout silhouette");
+assert.ok(broadOrganismVariant.partCount > scoutOrganismVariant.partCount, "more complex organism traits should produce richer sprite part counts");
+assert.strictEqual(colonyVariant.silhouette, "colony-grid", "colonies should use a distinct settlement silhouette");
+assert.strictEqual(outpostVariant.silhouette, "outpost-post", "outposts should use a distinct settlement silhouette");
+assert.ok(colonyVariant.partCount > outpostVariant.partCount, "higher-level colonies should reserve more authored structure parts");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlay, "function", "local surface underlay should fill the zoomed viewport");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlayAccent, "function", "local surface underlay should expose semantic feature accents");
 assert.strictEqual(typeof PS.render.raster.getLocalSurfaceMaterialMark, "function", "local underlay should expose material mark archetypes");
