@@ -8,6 +8,18 @@ AZR-352 tracks the architecture follow-up after Phase 1: remove runtime dependen
 
 This document is the current domain inventory and migration decision log for non-UI legacy runtime files. UI runtime retirement is covered separately in `docs/legacy-ui-assessment.md` and is complete: `index.html` no longer loads any `js/legacy/ui/*` scripts.
 
+## Phase 1 Scope Reconciliation
+
+Phase 1 Foundation is not proof that every `js/legacy/*` runtime shard is gone. Linear defines Phase 1 as planet rendering, performance foundation, WebGL2 migration, decoupled sim loop, spatial indexing, and project restructure. The completed E0 issues established the target architecture, removed root compatibility files, and retired the legacy UI runtime loader.
+
+The remaining legacy runtime work is explicitly tracked by AZR-352 and its children:
+
+- AZR-357: migrate food and organism runtime shards after the Phase 2 biological model gate.
+- AZR-358: migrate settlement/civilization runtime shards after settlement model follow-up.
+- AZR-359: migrate main-loop shards last, after the other runtime surfaces are stable.
+
+Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. The tracked runtime dependency is the 19 non-UI files listed below.
+
 ## Current Runtime Inventory
 
 `index.html` still loads 19 non-UI legacy scripts:
