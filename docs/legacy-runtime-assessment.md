@@ -10,12 +10,12 @@ This document is the current domain inventory and migration decision log for non
 
 ## Current Runtime Inventory
 
-`index.html` still loads 24 non-UI legacy scripts:
+`index.html` still loads 19 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
 | State/utils | 0 | Migrated in AZR-354 to `js/systems/state.js` and `js/core/utils.js`. |
-| Persistence | 5 | Migrate behind `PS.systems.persistence` only after save/load/export/import parity tests cover camera, settlements, and long-term progression fields. |
+| Persistence | 0 | Migrated in AZR-355 to focused `js/systems/persistence-*` modules after browser parity coverage. |
 | Planet/terrain/render | 0 | Migrated in AZR-356 to ordered `js/render/*` modules with compatibility preserved. |
 | Food/organisms | 5 | Migrate after Phase 2 readiness clarifies typed-array and representative-organism direction. Retain temporarily if the biological model is about to change. |
 | Settlements | 9 | Migrate after simulation follow-up issues decide whether settlement/civilization progression remains current or is reshaped. Retain temporarily if deeper model changes are imminent. |
@@ -41,25 +41,20 @@ Verification:
 
 ## Persistence
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/persistence/part-01.js`
-- `js/legacy/persistence/part-02.js`
-- `js/legacy/persistence/part-03.js`
-- `js/legacy/persistence/part-04.js`
-- `js/legacy/persistence/part-05.js`
-
-Decision: migrate, but not as a blind path move. Persistence is user-visible and should move only with parity tests for IndexedDB save/load, JSON export/import, camera state, settlement/civilization state, and future-proof save metadata.
+Decision: migrated in AZR-355. `index.html` no longer loads `js/legacy/persistence/*`.
 
 Target shape:
 
 - Keep `js/systems/persistence.js` as the facade.
-- Split implementation into focused save-format, IndexedDB, JSON import/export, and migration helpers if needed.
+- Focused implementation modules live in `js/systems/persistence-db.js`, `js/systems/persistence-save-data.js`, `js/systems/persistence-restore-core.js`, `js/systems/persistence-restore-entities.js`, and `js/systems/persistence-io.js`.
 
 Verification:
 
-- Existing persistence-focused tests.
-- New save/export/import parity tests before removing each runtime shard.
+- `tests/persistence-parity.test.js`
+- `tests/globe-interaction.test.js`
+- `bash .codex/setup.sh`
 
 ## Planet / Terrain / Render
 

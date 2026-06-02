@@ -6,9 +6,9 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 
 const source = [
-  "js/legacy/persistence/part-02.js",
-  "js/legacy/persistence/part-03.js",
-  "js/legacy/persistence/part-05.js",
+  "js/systems/persistence-save-data.js",
+  "js/systems/persistence-restore-core.js",
+  "js/systems/persistence-io.js",
   "js/ui/interaction.js",
   "js/ui/touch.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");

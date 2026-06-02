@@ -1,6 +1,6 @@
 # Pixeldarium Save Format — Version 1
 
-**Current version**: `PIXELDARIUM_SAVE_VERSION = 1` (persistence.js line 5)  
+**Current version**: `PIXELDARIUM_SAVE_VERSION = 1` (`js/systems/persistence-db.js`)
 **Config reference**: `CONFIG.SAVE_FORMAT_VERSION = 1` (config.js)  
 **Storage**: IndexedDB database `pixeldarium`, object store `saves`, key `latest`  
 **Export**: JSON file download via Export JSON button
@@ -120,13 +120,13 @@ tick, type, label, detail
 
 ## config{} (Embedded Snapshot)
 
-Full config snapshot embedded in save data (lines 451-589 of persistence.js). Contains all simulation parameters at time of save. Used for reference only — not restored on load.
+Full config snapshot embedded in save data by `js/systems/persistence-save-data.js`. Contains all simulation parameters at time of save. Used for reference only — not restored on load.
 
 ## Migration Notes for E0 Restructure
 
 1. **Save version stays at 1** until entity storage changes (typed arrays)
 2. **Typed array migration** (D3) will require version bump to 2
-3. **PS.* namespace** (D4) won't change save format — only function access patterns
+3. **PS.* namespace** (D4) did not change save format — only function access patterns
 4. **Event bus** (D5) won't change save format
 5. **WebGL2** (D1) won't change save format — rendering only
 6. **Migration function** should be added to persistence.js: `migrateSaveData(data)`

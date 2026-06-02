@@ -1,13 +1,7 @@
 {
   "state.js": [],
   "utils.js": [],
-  "persistence.js": [
-    "js/legacy/persistence/part-01.js",
-    "js/legacy/persistence/part-02.js",
-    "js/legacy/persistence/part-03.js",
-    "js/legacy/persistence/part-04.js",
-    "js/legacy/persistence/part-05.js"
-  ],
+  "persistence.js": [],
   "planet.js": [],
   "terrain.js": [],
   "render-terrain-cache.js": [],
