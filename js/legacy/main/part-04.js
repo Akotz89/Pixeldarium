@@ -252,7 +252,7 @@ function seedWorld() {
   refreshSimulationAlerts();
 }
 
-function updateWorld() {
+function updateWorld(dt) {
   var tickProfile = {
     organisms: 0,
     food: 0,
@@ -263,6 +263,10 @@ function updateWorld() {
   var profileStart = performance.now();
 
   world.tick++;
+  if (PS.layers && typeof PS.layers.updateAll === "function") {
+    PS.layers.updateAll(dt);
+  }
+
   var shouldRefreshSummaries = world.tick % CONFIG.SIM_SUMMARY_UPDATE_INTERVAL === 0;
   world.needsRender = true;
   resetPopulationFlowCounters();

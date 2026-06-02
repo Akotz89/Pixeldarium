@@ -107,6 +107,14 @@ PS.config.planet = {
   surfaceChunkCacheLimit: CONFIG.PLANET_SURFACE_CHUNK_CACHE_LIMIT
 };
 
+PS.config.geology = {
+  plateMin: CONFIG.GEOLOGY_PLATE_MIN,
+  plateMax: CONFIG.GEOLOGY_PLATE_MAX,
+  driftRateTilesPerMy: CONFIG.GEOLOGY_DRIFT_RATE_TILES_PER_MY,
+  erosionRate: CONFIG.GEOLOGY_EROSION_RATE,
+  sedimentRate: CONFIG.GEOLOGY_SEDIMENT_RATE
+};
+
 PS.config.persistence = {
   saveFormatVersion: CONFIG.SAVE_FORMAT_VERSION
 };

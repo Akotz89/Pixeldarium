@@ -14,12 +14,12 @@ Current repo state:
 
 - `js/sim/food.js`, `js/sim/organisms.js`, `js/sim/evolution.js`, `js/sim/settlements.js`, and `js/sim/civilizations.js` are public `PS.sim.*` facades over existing runtime functions.
 - `js/legacy/food/*`, `js/legacy/organisms/*`, `js/legacy/settlements/*`, and `js/legacy/main/*` are still loaded by `index.html`.
-- `js/layers/registry.js` exists, but there are no `js/layers/geology.js`, `js/layers/atmosphere.js`, ocean, or biosphere layer implementations.
+- `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
-- `js/systems/time.js` implements fixed-step accumulator plumbing, but does not yet adapt time scale from epoch state or emit milestone spotlight events.
+- `js/systems/time.js` implements fixed-step accumulator plumbing, and the legacy main-loop tick now calls `PS.layers.updateAll(dt)`. Time still does not adapt scale from epoch state or emit milestone spotlight events.
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays, but no Phase 2 temperature, population density, resource, atmospheric-composition, timeline, or lineage-tree overlays.
 - `js/core/events.js` exists, but Phase 2 milestone/speciation/extinction event contracts are not wired through sim, time, and watcher UI.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, and accumulator behavior. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, geology, atmosphere, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, the Phase 2 layer/epoch/event contract, and the AZR-290 geology layer. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, atmosphere chemistry, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
 
 ## Linear Inventory
 
@@ -39,7 +39,7 @@ AZR-258 E4 Primordial + Microbial children:
 
 | Issue | Status | Readiness classification | Evidence / gap |
 | --- | --- | --- | --- |
-| AZR-290 E4-S1 Geological simulation | Backlog | Missing foundation | Layer registry exists. `PS.layers.geology` implementation is missing. |
+| AZR-290 E4-S1 Geological simulation | Done | Implemented foundation | `PS.layers.geology` now defines deterministic tectonic plates, drift, collision/subduction boundaries, hotspots, volcanism, erosion/sediment, continental formation, and tile annotations. Covered by `tests/geology-layer.test.js`. |
 | AZR-291 E4-S2 Atmospheric chemistry | Backlog | Missing foundation | Render atmosphere visuals exist. `PS.layers.atmosphere` chemistry state is missing. |
 | AZR-292 E4-S3 Abiogenesis mechanics | Backlog | Missing | No chemical complexity state, abiogenesis threshold, epoch transition, or first-life event contract exists. |
 | AZR-293 E4-S4 Microbial simulation | Backlog | Needs model decision | The issue is experimental. It should decide agent vs field vs population modeling before implementation issues depend on it. |
@@ -104,7 +104,7 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 ## Recommended Implementation Order
 
 1. AZR-360: define always-on `PS.layers.*`, epoch update lifecycle, and milestone event payloads.
-2. AZR-290 and AZR-291: geology and atmosphere as always-on layers with minimal visible overlays and persistence-safe state.
+2. AZR-291: atmosphere as an always-on layer with chemistry state, visible overlays, and persistence-safe state.
 3. AZR-295 and AZR-296: adaptive time baseline and milestone event detection connected to `PS.events`.
 4. AZR-362, AZR-299, and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
 5. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
