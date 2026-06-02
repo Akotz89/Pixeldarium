@@ -115,6 +115,14 @@ PS.config.geology = {
   sedimentRate: CONFIG.GEOLOGY_SEDIMENT_RATE
 };
 
+PS.config.atmosphere = {
+  ozoneO2Threshold: CONFIG.ATMOSPHERE_OZONE_O2_THRESHOLD,
+  organismO2Requirement: CONFIG.ATMOSPHERE_ORGANISM_O2_REQUIREMENT,
+  anoxiaEnergyCost: CONFIG.ATMOSPHERE_ANOXIA_ENERGY_COST,
+  photosynthesisO2Rate: CONFIG.ATMOSPHERE_PHOTOSYNTHESIS_O2_RATE,
+  outgassingRate: CONFIG.ATMOSPHERE_OUTGASSING_RATE
+};
+
 PS.config.persistence = {
   saveFormatVersion: CONFIG.SAVE_FORMAT_VERSION
 };

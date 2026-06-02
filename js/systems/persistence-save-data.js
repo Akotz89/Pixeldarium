@@ -65,6 +65,14 @@ function copyCameraForSave() {
   };
 }
 
+function copyLayerStateForSave(layerState) {
+  if (!layerState) {
+    return null;
+  }
+
+  return JSON.parse(JSON.stringify(layerState));
+}
+
 function createWorldSaveData() {
   var networkSummary = null;
 
@@ -157,6 +165,8 @@ function createWorldSaveData() {
     empireLegacyReady: Boolean(world.empireLegacyReady),
     empireLegacyComplete: Boolean(world.empireLegacyComplete),
     lastEmpireLegacyTick: Math.max(0, Math.round(Number(world.lastEmpireLegacyTick) || 0)),
+    geology: copyLayerStateForSave(world.geology),
+    atmosphere: copyLayerStateForSave(world.atmosphere),
     config: {
       startingOrganisms: CONFIG.STARTING_ORGANISMS,
       startingFood: CONFIG.STARTING_FOOD,

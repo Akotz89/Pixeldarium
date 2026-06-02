@@ -228,6 +228,28 @@ const root = path.resolve(__dirname, "..");
         label: "Parity event",
         detail: "Persistence parity coverage"
       }];
+      world.geology = {
+        ageTicks: 12,
+        plates: [{ id: "plate-test", driftX: 1.25 }],
+        volcanicActivity: 0.42,
+        erosionSediment: 3.5,
+        continentFormation: 0.18
+      };
+      world.atmosphere = {
+        ageTicks: 14,
+        gases: {
+          co2: 0.12,
+          o2: 0.2,
+          n2: 0.67,
+          ch4: 0.004,
+          h2o: 0.005,
+          o3: 0.001,
+          sulfur: 0
+        },
+        oxygen: 0.2,
+        temperatureC: 19.5,
+        oxygenStress: 0
+      };
     }
 
     await resetTestDatabase();
@@ -268,7 +290,9 @@ const root = path.resolve(__dirname, "..");
         interstellarFleetReady: world.interstellarFleetReady,
         empireSectorReady: world.empireSectorReady,
         empireLegacyReady: world.empireLegacyReady
-      }
+      },
+      geology: Object.assign({}, world.geology),
+      atmosphere: Object.assign({}, world.atmosphere)
     };
 
     world.tick = 2;
@@ -316,6 +340,10 @@ const root = path.resolve(__dirname, "..");
   assert.strictEqual(evidence.importedEvidence.starSystems, evidence.saveData.starSystems.length, "star systems should round-trip");
   assert.strictEqual(evidence.importedEvidence.interstellarFleets, evidence.saveData.interstellarFleets.length, "interstellar fleets should round-trip");
   assert.strictEqual(evidence.importedEvidence.empireSectors, evidence.saveData.empireSectors.length, "empire sectors should round-trip");
+  assert.strictEqual(evidence.saveData.geology.volcanicActivity, 0.42, "geology layer state should serialize");
+  assert.strictEqual(evidence.importedEvidence.geology.continentFormation, 0.18, "geology layer state should restore");
+  assert.strictEqual(evidence.saveData.atmosphere.gases.o2, 0.2, "atmosphere gas state should serialize");
+  assert.strictEqual(evidence.importedEvidence.atmosphere.temperatureC, 19.5, "atmosphere layer state should restore");
   assert.ok(Number.isFinite(evidence.saveData.colonyNetworkScore), "colony score should serialize");
   assert.ok(evidence.importedEvidence.progression.colonyNetworkScore > 0, "colony score should restore to an active progression state");
   [

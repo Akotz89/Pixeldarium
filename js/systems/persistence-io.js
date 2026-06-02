@@ -68,6 +68,8 @@ function applyWorldSaveData(saveData) {
   world.empireLegacyReady = Boolean(saveData.empireLegacyReady);
   world.empireLegacyComplete = Boolean(saveData.empireLegacyComplete);
   world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
+  world.geology = saveData.geology ? JSON.parse(JSON.stringify(saveData.geology)) : null;
+  world.atmosphere = saveData.atmosphere ? JSON.parse(JSON.stringify(saveData.atmosphere)) : null;
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);

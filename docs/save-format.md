@@ -45,6 +45,16 @@
 
 Colony network, space program, orbital, planetary, probe, star map, galactic influence, interstellar fleet, empire sector, and empire legacy — all stored as top-level numeric/boolean fields (progress, readiness, last tick, counts).
 
+## Phase 2 Layer State
+
+### geology
+
+Always-on geology layer state, including deterministic tectonic plates, boundaries, hotspots, geological age, tectonic/volcanic activity, erosion sediment, basin sediment, and continent formation.
+
+### atmosphere
+
+Always-on atmosphere layer state, including gas composition (`co2`, `o2`, `n2`, `ch4`, `h2o`, `o3`, `sulfur`), greenhouse forcing, temperature, volcanic outgassing, photosynthetic oxygen, and oxygen stress.
+
 ## Entity Arrays
 
 ### organisms[]

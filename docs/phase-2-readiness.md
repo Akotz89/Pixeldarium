@@ -19,7 +19,7 @@ Current repo state:
 - `js/systems/time.js` implements fixed-step accumulator plumbing, and the legacy main-loop tick now calls `PS.layers.updateAll(dt)`. Time still does not adapt scale from epoch state or emit milestone spotlight events.
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays, but no Phase 2 temperature, population density, resource, atmospheric-composition, timeline, or lineage-tree overlays.
 - `js/core/events.js` exists, but Phase 2 milestone/speciation/extinction event contracts are not wired through sim, time, and watcher UI.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, the Phase 2 layer/epoch/event contract, and the AZR-290 geology layer. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, atmosphere chemistry, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
 
 ## Linear Inventory
 
@@ -40,7 +40,7 @@ AZR-258 E4 Primordial + Microbial children:
 | Issue | Status | Readiness classification | Evidence / gap |
 | --- | --- | --- | --- |
 | AZR-290 E4-S1 Geological simulation | Done | Implemented foundation | `PS.layers.geology` now defines deterministic tectonic plates, drift, collision/subduction boundaries, hotspots, volcanism, erosion/sediment, continental formation, and tile annotations. Covered by `tests/geology-layer.test.js`. |
-| AZR-291 E4-S2 Atmospheric chemistry | Backlog | Missing foundation | Render atmosphere visuals exist. `PS.layers.atmosphere` chemistry state is missing. |
+| AZR-291 E4-S2 Atmospheric chemistry | Done | Implemented foundation | `PS.layers.atmosphere` now tracks gas composition, volcanic outgassing, photosynthetic oxygen, greenhouse temperature, ozone formation, oxygen stress, and persistence-safe state. Covered by `tests/atmosphere-layer.test.js` and persistence parity assertions. |
 | AZR-292 E4-S3 Abiogenesis mechanics | Backlog | Missing | No chemical complexity state, abiogenesis threshold, epoch transition, or first-life event contract exists. |
 | AZR-293 E4-S4 Microbial simulation | Backlog | Needs model decision | The issue is experimental. It should decide agent vs field vs population modeling before implementation issues depend on it. |
 | AZR-294 E4-S5 Deep time visualization | Backlog | Missing | No geological-era timeline or click-to-era navigation exists. Should depend on time/event contracts. |
@@ -104,14 +104,13 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 ## Recommended Implementation Order
 
 1. AZR-360: define always-on `PS.layers.*`, epoch update lifecycle, and milestone event payloads.
-2. AZR-291: atmosphere as an always-on layer with chemistry state, visible overlays, and persistence-safe state.
-3. AZR-295 and AZR-296: adaptive time baseline and milestone event detection connected to `PS.events`.
-4. AZR-362, AZR-299, and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
-5. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
-6. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
-7. AZR-357: migrate food/organism runtime shards after the biological model contract is stable and tests cover the selected model.
-8. AZR-358: migrate settlement/civilization runtime shards after civilization progression tests are in place.
-9. AZR-359: migrate main loop last.
+2. AZR-295 and AZR-296: adaptive time baseline and milestone event detection connected to `PS.events`.
+3. AZR-362, AZR-299, and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
+4. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
+5. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
+6. AZR-357: migrate food/organism runtime shards after the biological model contract is stable and tests cover the selected model.
+7. AZR-358: migrate settlement/civilization runtime shards after civilization progression tests are in place.
+8. AZR-359: migrate main loop last.
 
 ## Verification Expectations
 
