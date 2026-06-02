@@ -358,6 +358,9 @@ function handleSimulationShortcut(event) {
   } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "Backquote" || key === "`") && window.PS && PS.debug && PS.debug.console) {
     handled = true;
     PS.debug.console.toggle();
+  } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "KeyO" || key.toLowerCase() === "o") && window.PS && PS.ui && PS.ui.observationOverlays) {
+    handled = true;
+    PS.ui.observationOverlays.cycle();
   } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "KeyM" || key.toLowerCase() === "m")) {
     handled = true;
     toggleMenuOpen();

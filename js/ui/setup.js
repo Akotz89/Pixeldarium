@@ -189,6 +189,10 @@ window.setupControls = function() {
       PS.ui.notifications.setup();
     }
 
+    if (PS.ui.observationOverlays) {
+      PS.ui.observationOverlays.setup();
+    }
+
     if (PS.ui.timeline) {
       PS.ui.timeline.setup();
     }

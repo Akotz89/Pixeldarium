@@ -55,6 +55,10 @@ function updateHud() {
   updateSettlementSummary();
   updateEventLog();
 
+  if (window.PS && PS.ui && PS.ui.observationOverlays) {
+    PS.ui.observationOverlays.sync();
+  }
+
   if (window.PS && PS.ui && PS.ui.timeline) {
     PS.ui.timeline.sync();
   }

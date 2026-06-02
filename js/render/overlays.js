@@ -35,17 +35,47 @@ PS.render.overlays.getManifest = function () {
       id: id,
       family: overlay.family || "overlays",
       semantic: overlay.semantic || "overlay",
-      order: overlay.order || 0
+      order: overlay.order || 0,
+      blendMode: overlay.blendMode || "source-over",
+      shortcut: overlay.shortcut || ""
     };
   });
 };
 
 PS.render.overlays.drawRegistered = function () {
   for (var i = 0; i < PS.render.overlays.order.length; i++) {
+    var overlayId = PS.render.overlays.order[i];
     var overlay = PS.render.overlays.registry[PS.render.overlays.order[i]];
 
     if (overlay && overlay.enabled !== false && typeof overlay.draw === "function") {
+      var previousComposite = ctx.globalCompositeOperation;
+      var previousAlpha = ctx.globalAlpha;
+      var startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+      var stats = null;
+
+      ctx.globalCompositeOperation = overlay.blendMode || "source-over";
+      ctx.globalAlpha = Number.isFinite(Number(overlay.alpha)) ? Number(overlay.alpha) : 1;
       overlay.draw();
+      ctx.globalCompositeOperation = previousComposite;
+      ctx.globalAlpha = previousAlpha;
+
+      if (
+        world.activeObservationOverlay === overlayId &&
+        !(
+          PS.render.webglGlobe &&
+          PS.render.webglGlobe.state &&
+          PS.render.webglGlobe.state.lastUsedObservationOverlay === overlayId &&
+          PS.render.webglGlobe.state.lastUsedFallback === false
+        )
+      ) {
+        stats = world.overlayPerformance || {};
+        stats.active = overlayId;
+        stats.lastFrameMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+        stats.lastSampleCount = Number(overlay.lastSampleCount) || 0;
+        stats.blendMode = overlay.blendMode || "source-over";
+        stats.compositor = "canvas";
+        world.overlayPerformance = stats;
+      }
     }
   }
 };

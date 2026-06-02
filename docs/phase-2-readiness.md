@@ -17,9 +17,9 @@ Current repo state:
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
 - `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override.
-- `js/render/overlays.js` has a registry plus current civilization/orbital overlays, but no Phase 2 temperature, population density, resource, atmospheric-composition, timeline, or lineage-tree overlays.
+- `js/render/overlays.js` has a registry plus current civilization/orbital overlays. `js/render/observation-overlays.js` adds Phase 2 temperature, population density, resource, and atmospheric-composition observation overlays with blend metadata, panel toggles, keyboard cycling, and frame-time sampling.
 - `js/core/events.js` includes milestone payload normalization, a configurable milestone registry, event categories, milestone detection, visible event-log writes, durable timeline-event writes, notification routing, and optional spotlight focus routing.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-362 watcher event contract, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, observation overlays, or deep-time timeline UI.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-362 watcher event contract, AZR-302 timeline viewer, AZR-299 observation overlays, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, or deep-time timeline UI.
 
 ## Linear Inventory
 
@@ -49,10 +49,10 @@ AZR-259 E9 Observation Tools children:
 
 | Issue | Status | Readiness classification | Evidence / gap |
 | --- | --- | --- | --- |
-| AZR-299 E9-S1 Observation overlays | Backlog | Partial foundation, needs split | Overlay registry exists. Specific temperature, population density, resource, and atmosphere overlays are missing. |
+| AZR-299 E9-S1 Observation overlays | Done | Implemented foundation | `PS.render.observationOverlays` registers temperature, population density, resource, and atmosphere overlays. UI buttons and `O` keyboard cycling toggle overlays; frame-time sampling is recorded in `world.overlayPerformance`. Covered by `tests/observation-overlays.test.js`. |
 | AZR-300 E9-S2 Lineage tracking | Backlog | Partial foundation | Lineage state and inspect chips exist. Pinning, selected-lineage highlights, species trends, and parent/speciation history UI are missing. |
 | AZR-301 E9-S3 Statistics dashboard | Backlog | Partial foundation | HUD/ecosystem/trait history exist. Full dashboard, biodiversity index, histograms, and biome/species charts are missing. |
-| AZR-302 E9-S4 Timeline viewer | Backlog | Partial foundation | Event log exists. Chronological timeline, event filtering, camera jump, and event source contract are missing. |
+| AZR-302 E9-S4 Timeline viewer | Done | Implemented foundation | `PS.ui.timeline` reads `world.timelineEvents`, sorts chronologically, filters all/extinction/speciation/civilization, and focuses event locations or inspect targets. Covered by `tests/timeline-viewer.test.js`. |
 | AZR-303 E9-S5 Bookmarks/annotations | Backlog | Missing | No bookmark model, persistence fields, screenshot capture, or panel exists. |
 | AZR-304 E9-S6 History scrubbing | Backlog | Correctly deferred | Snapshot/checkpoint model is not ready and should remain deferred until core sim state stabilizes. |
 | AZR-305 E9-S7 Evolutionary tree visualization | Backlog | Missing | Lineage records exist, but no tree view, zoom/pan, node selection, or active/extinct graph exists. |
@@ -104,7 +104,7 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 ## Recommended Implementation Order
 
 1. AZR-360: define always-on `PS.layers.*`, epoch update lifecycle, and milestone event payloads.
-2. AZR-299 and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
+2. AZR-297: event spotlight UI consuming the watcher event contract, notifications, and spotlight focus.
 3. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
 4. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
 5. AZR-357: migrate food/organism runtime shards after the biological model contract is stable and tests cover the selected model.

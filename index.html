@@ -145,6 +145,17 @@
       <div id="event-log">EVENTS: Waiting for milestones</div>
     </section>
 
+    <section id="observation-overlay-panel" data-menu-page="log" aria-label="Observation overlays" hidden>
+      <div id="observation-overlay-controls" class="observation-overlay-controls" aria-label="Observation overlay controls">
+        <button type="button" data-observation-overlay="none" aria-pressed="true">None</button>
+        <button type="button" data-observation-overlay="observation.temperature" aria-pressed="false">Temp</button>
+        <button type="button" data-observation-overlay="observation.population" aria-pressed="false">Population</button>
+        <button type="button" data-observation-overlay="observation.resources" aria-pressed="false">Resources</button>
+        <button type="button" data-observation-overlay="observation.atmosphere" aria-pressed="false">Atmosphere</button>
+      </div>
+      <div id="observation-overlay-status" class="observation-overlay-status">OVERLAY: None</div>
+    </section>
+
     <section id="timeline-panel" data-menu-page="log" aria-label="Chronological timeline" hidden>
       <div id="timeline-filters" class="timeline-filters" aria-label="Timeline filters">
         <button type="button" data-timeline-filter="all" aria-pressed="true">All</button>
@@ -268,6 +279,7 @@
   <script src="js/render/entities.js"></script>
   <script src="js/render/reference-grid.js"></script>
   <script src="js/render/overlays.js"></script>
+  <script src="js/render/observation-overlays.js"></script>
   <script src="js/render/atmosphere.js"></script>
   <script src="js/render/terrain-cache.js"></script>
   <script src="js/render/pipeline.js"></script>
@@ -306,6 +318,7 @@
   <script src="js/ui/inspect-history.js"></script>
   <script src="js/ui/interaction.js"></script>
   <script src="js/ui/touch.js"></script>
+  <script src="js/ui/observation-overlays.js"></script>
   <script src="js/ui/timeline.js"></script>
   <script src="js/ui/setup.js"></script>
   <script src="js/ui/hud.js"></script>

@@ -18,7 +18,13 @@ const traitSummaryText = document.getElementById("trait-summary");
 const lineageSummaryText = document.getElementById("lineage-summary");
 const settlementSummaryText = document.getElementById("settlement-summary");
 const eventLogText = document.getElementById("event-log");
-const timelineFilterButtons = document.querySelectorAll("[data-timeline-filter]");
+const observationOverlayButtons = typeof document.querySelectorAll === "function"
+  ? document.querySelectorAll("[data-observation-overlay]")
+  : [];
+const observationOverlayStatus = document.getElementById("observation-overlay-status");
+const timelineFilterButtons = typeof document.querySelectorAll === "function"
+  ? document.querySelectorAll("[data-timeline-filter]")
+  : [];
 const timelineList = document.getElementById("timeline-list");
 const ecosystemHistoryCanvas = document.getElementById("ecosystem-history");
 const ecosystemHistoryCtx = ecosystemHistoryCanvas.getContext("2d", { willReadFrequently: true });
@@ -119,6 +125,12 @@ const world = {
   timelineEvents: [],
   timelineFilter: "all",
   selectedTimelineEvent: null,
+  activeObservationOverlay: "none",
+  overlayPerformance: {
+    active: "none",
+    lastFrameMs: 0,
+    lastSampleCount: 0
+  },
   milestonesReached: {},
   spotlightEvent: null,
   nextLineageId: 1,
