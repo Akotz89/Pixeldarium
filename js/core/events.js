@@ -63,3 +63,71 @@ PS.events.emit = function (name, payload) {
 PS.events.clearHistory = function () {
   PS.events.history.length = 0;
 };
+
+PS.events.normalizeMilestonePayload = function (payload) {
+  payload = payload || {};
+
+  var normalized = {
+    type: String(payload.type || "milestone"),
+    label: String(payload.label || "Milestone"),
+    detail: String(payload.detail || ""),
+    tick: Math.max(0, Math.round(Number(payload.tick != null ? payload.tick : (typeof world !== "undefined" ? world.tick : 0)) || 0)),
+    deepTime: payload.deepTime || null,
+    location: payload.location || null,
+    source: String(payload.source || "simulation"),
+    severity: String(payload.severity || "info"),
+    inspectTarget: payload.inspectTarget || null,
+    watcher: {
+      eventLog: payload.watcher && payload.watcher.eventLog === false ? false : true,
+      timeline: payload.watcher && payload.watcher.timeline === false ? false : true,
+      notification: Boolean(payload.watcher && payload.watcher.notification),
+      spotlight: Boolean(payload.watcher && payload.watcher.spotlight),
+      overlays: payload.watcher && payload.watcher.overlays ? payload.watcher.overlays.slice ? payload.watcher.overlays.slice() : payload.watcher.overlays : []
+    }
+  };
+
+  PS.assert(normalized.type.length > 0, "Milestone type is required");
+  PS.assert(normalized.label.length > 0, "Milestone label is required");
+
+  return normalized;
+};
+
+PS.events.appendMilestoneToWorldLog = function (payload) {
+  if (typeof world === "undefined" || !payload || !payload.watcher || payload.watcher.eventLog === false) {
+    return null;
+  }
+
+  if (!Array.isArray(world.eventLog)) {
+    world.eventLog = [];
+  }
+
+  var entry = {
+    tick: payload.tick,
+    type: payload.type,
+    label: payload.label,
+    detail: payload.detail,
+    source: payload.source,
+    severity: payload.severity,
+    inspectTarget: payload.inspectTarget
+  };
+
+  world.eventLog.push(entry);
+
+  if (typeof CONFIG !== "undefined" && world.eventLog.length > CONFIG.EVENT_LOG_MAX_ENTRIES) {
+    world.eventLog.splice(0, world.eventLog.length - CONFIG.EVENT_LOG_MAX_ENTRIES);
+  }
+
+  return entry;
+};
+
+PS.events.emitMilestone = function (payload) {
+  var normalized = PS.events.normalizeMilestonePayload(payload);
+  var logEntry = PS.events.appendMilestoneToWorldLog(normalized);
+  var eventEntry = PS.events.emit("milestone.reached", normalized);
+
+  return {
+    payload: normalized,
+    logEntry: logEntry,
+    eventEntry: eventEntry
+  };
+};
