@@ -236,11 +236,11 @@ const CONFIG = {
   ATMOSPHERE_PHOTOSYNTHESIS_O2_RATE: 0.00008,
   ATMOSPHERE_OUTGASSING_RATE: 0.0005,
   MILESTONE_DEFINITIONS: [
-    { type: "life.first", epoch: "primordial", label: "First life", condition: "organismsAtLeast", threshold: 1, detail: "organisms {value}" },
-    { type: "life.multicellular", epoch: "complex-life", label: "First multicellular life", condition: "populationAtLeast", threshold: 24, detail: "population bands {value}" },
-    { type: "intelligence.tool-use", epoch: "intelligence", label: "First tool use", condition: "settlementDevelopmentAtLeast", threshold: 10, detail: "development {value}" },
-    { type: "civilization.first-city", epoch: "civilization", label: "First city", condition: "settlementLevelAtLeast", threshold: 3, detail: "settlement level {value}" },
-    { type: "space.first-launch", epoch: "space", label: "First orbital launch", condition: "orbitalLaunchesAtLeast", threshold: 1, detail: "launches {value}" }
+    { type: "life.first", epoch: "primordial", category: "biology", label: "First life", condition: "organismsAtLeast", threshold: 1, detail: "organisms {value}" },
+    { type: "life.multicellular", epoch: "complex-life", category: "biology", label: "First multicellular life", condition: "populationAtLeast", threshold: 24, detail: "population bands {value}" },
+    { type: "intelligence.tool-use", epoch: "intelligence", category: "civilization", label: "First tool use", condition: "settlementDevelopmentAtLeast", threshold: 10, detail: "development {value}" },
+    { type: "civilization.first-city", epoch: "civilization", category: "civilization", label: "First city", condition: "settlementLevelAtLeast", threshold: 3, detail: "settlement level {value}" },
+    { type: "space.first-launch", epoch: "space", category: "civilization", label: "First orbital launch", condition: "orbitalLaunchesAtLeast", threshold: 1, detail: "launches {value}" }
   ],
 
   SIM_UPDATE_INTERVAL_MS: 1000 / 30,

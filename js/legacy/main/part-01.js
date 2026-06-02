@@ -77,6 +77,7 @@ function clearWorld() {
   world.eventLog = [];
   world.timelineEvents = [];
   world.milestonesReached = {};
+  world.spotlightEvent = null;
   world.lineages = {};
   world.nextSettlementId = 1;
   world.settlements = [];

@@ -16,10 +16,10 @@ Current repo state:
 - `js/legacy/food/*`, `js/legacy/organisms/*`, `js/legacy/settlements/*`, and `js/legacy/main/*` are still loaded by `index.html`.
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
-- `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override. Time still does not emit milestone spotlight events.
+- `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override.
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays, but no Phase 2 temperature, population density, resource, atmospheric-composition, timeline, or lineage-tree overlays.
-- `js/core/events.js` includes milestone payload normalization, a configurable milestone registry, milestone detection, visible event-log writes, and durable timeline-event writes. Event spotlight UI is not implemented yet.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
+- `js/core/events.js` includes milestone payload normalization, a configurable milestone registry, event categories, milestone detection, visible event-log writes, durable timeline-event writes, notification routing, and optional spotlight focus routing.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-362 watcher event contract, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, observation overlays, or deep-time timeline UI.
 
 ## Linear Inventory
 
@@ -99,12 +99,12 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 
 - AZR-360: Phase 2 foundation contract for always-on layers, epoch lifecycle, and milestone events.
 - AZR-361: Biological model gate for representative organisms and aggregate populations before AZR-357 moves food/organism runtime.
-- AZR-362: Watcher event contract connecting timeline, spotlight, overlays, and observation panels.
+- AZR-362: Watcher event contract connecting timeline, spotlight, overlays, and observation panels. Implemented in `PS.events` and covered by `tests/watcher-event-contract.test.js`.
 
 ## Recommended Implementation Order
 
 1. AZR-360: define always-on `PS.layers.*`, epoch update lifecycle, and milestone event payloads.
-2. AZR-362, AZR-299, and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
+2. AZR-299 and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
 3. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
 4. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
 5. AZR-357: migrate food/organism runtime shards after the biological model contract is stable and tests cover the selected model.

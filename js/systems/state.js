@@ -116,6 +116,7 @@ const world = {
   eventLog: [],
   timelineEvents: [],
   milestonesReached: {},
+  spotlightEvent: null,
   nextLineageId: 1,
   lineages: {},
   nextSettlementId: 1,

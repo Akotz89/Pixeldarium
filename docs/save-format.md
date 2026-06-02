@@ -129,7 +129,7 @@ tick, population, vision, metabolism, reproductionEnergy, movementTendency, terr
 tick, population, food, averageEnergy, foodPerOrganism, populationBalance, resourceBalance, foodNetThisTick, foodRunwayTicks, pressure, stabilityScore
 
 ### eventLog[]
-tick, type, label, detail
+Bounded visible event log. Event fields include tick, type, label, detail, optional details, deepTime, location, source, category, severity, and inspectTarget.
 
 ### timelineEvents[]
 Durable milestone playback stream. Uses the event fields plus optional `details`, `deepTime`, `source`, `severity`, and `inspectTarget`.

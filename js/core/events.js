@@ -3,6 +3,19 @@ PS.events = PS.events || {};
 PS.events.listeners = PS.events.listeners || {};
 PS.events.history = PS.events.history || [];
 PS.events.historyLimit = PS.events.historyLimit || 256;
+PS.events.categories = {
+  biology: { label: "Biology", sources: ["biology", "life", "organisms", "species"] },
+  geology: { label: "Geology", sources: ["geology", "tectonics"] },
+  atmosphere: { label: "Atmosphere", sources: ["atmosphere", "climate"] },
+  civilization: { label: "Civilization", sources: ["civilization", "settlement", "network", "space", "empire"] },
+  extinction: { label: "Extinction", sources: ["extinction", "lifecycle"] }
+};
+PS.events.contract = {
+  payloadFields: ["type", "label", "detail", "details", "tick", "deepTime", "location", "source", "category", "severity", "inspectTarget", "watcher"],
+  watcherRoutes: ["eventLog", "timeline", "notification", "spotlight", "overlays"],
+  timelineModel: "world.timelineEvents",
+  eventLogModel: "world.eventLog"
+};
 
 PS.events.on = function (name, handler) {
   PS.assert(typeof name === "string" && name.length > 0, "Event name is required");
@@ -64,6 +77,44 @@ PS.events.clearHistory = function () {
   PS.events.history.length = 0;
 };
 
+PS.events.getMilestoneContract = function() {
+  return {
+    payloadFields: this.contract.payloadFields.slice(),
+    watcherRoutes: this.contract.watcherRoutes.slice(),
+    timelineModel: this.contract.timelineModel,
+    eventLogModel: this.contract.eventLogModel,
+    categories: Object.assign({}, this.categories)
+  };
+};
+
+PS.events.getEventCategories = function() {
+  return Object.keys(this.categories);
+};
+
+PS.events.inferCategory = function(payload) {
+  var explicit = String(payload.category || "").trim();
+
+  if (explicit) {
+    return explicit;
+  }
+
+  var source = String(payload.source || payload.type || "").toLowerCase();
+
+  for (var category in this.categories) {
+    if (Object.prototype.hasOwnProperty.call(this.categories, category)) {
+      var sources = this.categories[category].sources || [];
+
+      for (var i = 0; i < sources.length; i++) {
+        if (source.indexOf(String(sources[i]).toLowerCase()) >= 0) {
+          return category;
+        }
+      }
+    }
+  }
+
+  return "biology";
+};
+
 PS.events.normalizeMilestonePayload = function (payload) {
   payload = payload || {};
 
@@ -76,6 +127,7 @@ PS.events.normalizeMilestonePayload = function (payload) {
     deepTime: payload.deepTime || null,
     location: payload.location || null,
     source: String(payload.source || "simulation"),
+    category: PS.events.inferCategory(payload),
     severity: String(payload.severity || "info"),
     inspectTarget: payload.inspectTarget || null,
     watcher: {
@@ -89,43 +141,90 @@ PS.events.normalizeMilestonePayload = function (payload) {
 
   PS.assert(normalized.type.length > 0, "Milestone type is required");
   PS.assert(normalized.label.length > 0, "Milestone label is required");
+  PS.assert(normalized.source.length > 0, "Milestone source is required");
+  PS.assert(normalized.category.length > 0, "Milestone category is required");
 
   return normalized;
 };
 
-PS.events.appendMilestoneToWorldLog = function (payload) {
-  if (typeof world === "undefined" || !payload || !payload.watcher || payload.watcher.eventLog === false) {
-    return null;
-  }
-
-  if (!Array.isArray(world.eventLog)) {
-    world.eventLog = [];
-  }
-
-  var entry = {
+PS.events.makeMilestoneLogEntry = function(payload) {
+  return {
     tick: payload.tick,
     type: payload.type,
     label: payload.label,
     detail: payload.detail,
     details: payload.details,
     deepTime: payload.deepTime,
+    location: payload.location,
     source: payload.source,
+    category: payload.category,
     severity: payload.severity,
     inspectTarget: payload.inspectTarget
   };
+};
 
-  world.eventLog.push(entry);
-
-  if (!Array.isArray(world.timelineEvents)) {
-    world.timelineEvents = [];
+PS.events.focusMilestoneSpotlight = function(payload, entry) {
+  if (typeof world === "undefined" || !payload || !payload.watcher || !payload.watcher.spotlight) {
+    return false;
   }
 
-  world.timelineEvents.push(Object.assign({}, entry));
+  world.spotlightEvent = Object.assign({}, entry);
 
-  if (typeof CONFIG !== "undefined" && world.eventLog.length > CONFIG.EVENT_LOG_MAX_ENTRIES) {
-    world.eventLog.splice(0, world.eventLog.length - CONFIG.EVENT_LOG_MAX_ENTRIES);
+  if (payload.location && Number.isFinite(Number(payload.location.latitude)) && Number.isFinite(Number(payload.location.longitude))) {
+    if (typeof focusPlanetViewOnLatLon === "function") {
+      focusPlanetViewOnLatLon(payload.location.latitude, payload.location.longitude);
+    }
+  } else if (payload.inspectTarget && Number.isFinite(Number(payload.inspectTarget.x)) && Number.isFinite(Number(payload.inspectTarget.y))) {
+    if (typeof focusPlanetViewOnTile === "function") {
+      focusPlanetViewOnTile(payload.inspectTarget.x, payload.inspectTarget.y);
+    }
   }
 
+  world.needsRender = true;
+  return true;
+};
+
+PS.events.notifyMilestone = function(payload) {
+  if (!payload || !payload.watcher || !payload.watcher.notification) {
+    return null;
+  }
+
+  if (PS.ui && PS.ui.notifications && typeof PS.ui.notifications.show === "function") {
+    return PS.ui.notifications.show(payload.label, payload.detail, payload.severity);
+  }
+
+  return null;
+};
+
+PS.events.appendMilestoneToWorldLog = function (payload) {
+  if (typeof world === "undefined" || !payload || !payload.watcher) {
+    return null;
+  }
+
+  var entry = this.makeMilestoneLogEntry(payload);
+
+  if (payload.watcher.eventLog !== false) {
+    if (!Array.isArray(world.eventLog)) {
+      world.eventLog = [];
+    }
+
+    world.eventLog.push(entry);
+
+    if (typeof CONFIG !== "undefined" && world.eventLog.length > CONFIG.EVENT_LOG_MAX_ENTRIES) {
+      world.eventLog.splice(0, world.eventLog.length - CONFIG.EVENT_LOG_MAX_ENTRIES);
+    }
+  }
+
+  if (payload.watcher.timeline !== false) {
+    if (!Array.isArray(world.timelineEvents)) {
+      world.timelineEvents = [];
+    }
+
+    world.timelineEvents.push(Object.assign({}, entry));
+  }
+
+  this.notifyMilestone(payload);
+  this.focusMilestoneSpotlight(payload, entry);
   return entry;
 };
 
@@ -267,6 +366,7 @@ PS.events.detectMilestones = function() {
         years: Math.max(0, Number(world.deepTimeYears) || 0)
       },
       source: "milestone-detector",
+      category: definition.category,
       severity: definition.severity || "major",
       watcher: {
         eventLog: true,

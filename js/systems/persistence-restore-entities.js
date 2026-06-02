@@ -228,7 +228,9 @@ function restoreSimulationEvent(event) {
     detail: String(event.detail || ""),
     details: event.details || null,
     deepTime: event.deepTime || null,
+    location: event.location || null,
     source: event.source || null,
+    category: event.category || null,
     severity: event.severity || null,
     inspectTarget: event.inspectTarget || null
   };
