@@ -33,6 +33,9 @@ const context = {
   document: {
     getElementById() {
       return makeElement();
+    },
+    createElement() {
+      return makeElement();
     }
   }
 };
@@ -65,6 +68,7 @@ const source = [
   "js/render/surface-noise.js",
   "js/render/surface-geometry.js",
   "js/render/surface-render-cache.js",
+  "js/render/surface-render-canvases.js",
   "js/render/surface-render-chunks.js",
   "js/render/surface-render-placeholders.js",
   "js/render/surface-streaming.js",
@@ -2552,8 +2556,22 @@ var limitedCenterChunk = limitedVisibleChunks[0];
 resetLocalSurfaceRenderChunkCache();
 var cacheTestAddress = limitedVisibleChunks[0].address;
 var secondCacheTestAddress = limitedVisibleChunks[1].address;
-localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(cacheTestAddress)] = { id: "first" };
-localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(secondCacheTestAddress)] = { id: "second" };
+var canvasStatsBeforePool = getLocalSurfaceRenderCacheStats().canvases;
+var pooledCanvas = PS.render.surfaceRender.chunks.makeCanvas(8, 8);
+PS.render.surfaceRender.releaseRenderCanvas(pooledCanvas);
+var reusedCanvas = PS.render.surfaceRender.chunks.makeCanvas(8, 8);
+var canvasStatsAfterReuse = getLocalSurfaceRenderCacheStats().canvases;
+assert.strictEqual(reusedCanvas, pooledCanvas, "surface render canvas pool should reuse released canvases");
+assert.strictEqual(canvasStatsAfterReuse.reused, canvasStatsBeforePool.reused + 1, "canvas reuse should be counted");
+
+localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(cacheTestAddress)] = {
+  id: "first",
+  canvas: reusedCanvas
+};
+localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(secondCacheTestAddress)] = {
+  id: "second",
+  canvas: PS.render.surfaceRender.chunks.makeCanvas(8, 8)
+};
 localSurfaceRenderChunkCache.order = [
   getLocalSurfaceRenderChunkKey(cacheTestAddress),
   getLocalSurfaceRenderChunkKey(secondCacheTestAddress)
@@ -2568,6 +2586,7 @@ PS.render.surfaceRender.markDirty(cacheTestAddress);
 assert.strictEqual(getLocalSurfaceRenderCacheStats().dirtyChunks, 1, "dirty chunk should be tracked");
 assert.strictEqual(getLocalSurfaceRenderChunk(cacheTestAddress, false), null, "dirty cached chunk should be invalidated before reuse");
 assert.strictEqual(getLocalSurfaceRenderCacheStats().dirtyInvalidations, 1, "dirty invalidation should be counted");
+assert.ok(getLocalSurfaceRenderCacheStats().canvases.released > canvasStatsAfterReuse.released, "dirty invalidation should release cached chunk canvases");
 var limitedCenterX = limitedCenterChunk.screenX + limitedCenterChunk.width / 2;
 var limitedCenterY = limitedCenterChunk.screenY + limitedCenterChunk.height / 2;
 assert.ok(Math.abs(limitedCenterX - canvas.width / 2) <= limitedCenterChunk.width, "limited visible chunks should keep center priority");

@@ -7,12 +7,8 @@ PS.render.surfaceRender.chunks.getKey = function (address) {
 };
 
 PS.render.surfaceRender.chunks.makeCanvas = function (width, height) {
-  if (typeof document !== "undefined" && document.createElement) {
-    return document.createElement("canvas");
-  }
-
-  if (typeof OffscreenCanvas !== "undefined") {
-    return new OffscreenCanvas(width, height);
+  if (PS.render.surfaceRender.canvases && typeof PS.render.surfaceRender.canvases.make === "function") {
+    return PS.render.surfaceRender.canvases.make(width, height);
   }
 
   return null;

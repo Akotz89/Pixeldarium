@@ -103,7 +103,10 @@ PS.render.surfaceRender.placeholders.hasPreview = function (address) {
 };
 
 PS.render.surfaceRender.placeholders.getPreview = function (address) {
-  if (typeof document === "undefined" || typeof document.createElement !== "function") {
+  if (
+    !PS.render.surfaceRender.canvases ||
+    typeof PS.render.surfaceRender.canvases.make !== "function"
+  ) {
     return null;
   }
 
@@ -120,9 +123,11 @@ PS.render.surfaceRender.placeholders.getPreview = function (address) {
     return cachedPreview;
   }
 
-  var previewCanvas = document.createElement("canvas");
-  previewCanvas.width = previewSamples;
-  previewCanvas.height = previewSamples;
+  var previewCanvas = PS.render.surfaceRender.canvases.make(previewSamples, previewSamples);
+
+  if (!previewCanvas || typeof previewCanvas.getContext !== "function") {
+    return null;
+  }
 
   var previewCtx = previewCanvas.getContext("2d");
 
@@ -151,6 +156,7 @@ PS.render.surfaceRender.placeholders.getPreview = function (address) {
     getLocalSurfacePlaceholderColorCacheLimit()
   ) {
     var evictedKey = localSurfaceRenderChunkCache.placeholderPreviewOrder.shift();
+    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.placeholderPreviews[evictedKey]);
     delete localSurfaceRenderChunkCache.placeholderPreviews[evictedKey];
   }
 

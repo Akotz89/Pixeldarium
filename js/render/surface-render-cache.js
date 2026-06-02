@@ -127,6 +127,24 @@ PS.render.surfaceRender.getFallbackChunksPerPass = function () {
 };
 
 PS.render.surfaceRender.resetChunkCache = function () {
+  for (var chunkKey in localSurfaceRenderChunkCache.chunks) {
+    if (Object.prototype.hasOwnProperty.call(localSurfaceRenderChunkCache.chunks, chunkKey)) {
+      PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[chunkKey]);
+    }
+  }
+
+  for (var pendingKey in localSurfaceRenderChunkCache.pendingChunks) {
+    if (Object.prototype.hasOwnProperty.call(localSurfaceRenderChunkCache.pendingChunks, pendingKey)) {
+      PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.pendingChunks[pendingKey]);
+    }
+  }
+
+  for (var previewKey in localSurfaceRenderChunkCache.placeholderPreviews) {
+    if (Object.prototype.hasOwnProperty.call(localSurfaceRenderChunkCache.placeholderPreviews, previewKey)) {
+      PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.placeholderPreviews[previewKey]);
+    }
+  }
+
   localSurfaceRenderChunkCache = PS.render.surfaceRender.createCacheState();
 };
 
@@ -155,6 +173,9 @@ PS.render.surfaceRender.getCacheStats = function () {
     lastPreloadZoomLevel: localSurfaceRenderChunkCache.stats.lastPreloadZoomLevel,
     dirtyChunks: localSurfaceRenderChunkCache.stats.dirtyChunks,
     dirtyInvalidations: localSurfaceRenderChunkCache.stats.dirtyInvalidations,
+    canvases: PS.render.surfaceRender.canvases && typeof PS.render.surfaceRender.canvases.getStats === "function"
+      ? PS.render.surfaceRender.canvases.getStats()
+      : null,
     lastChunkKey: localSurfaceRenderChunkCache.stats.lastChunkKey
   };
 };
@@ -168,6 +189,19 @@ PS.render.surfaceRender.promoteChunkKey = function (renderKey) {
   }
 
   order.push(renderKey);
+};
+
+PS.render.surfaceRender.releaseRenderCanvas = function (renderItem) {
+  var canvas = renderItem && renderItem.canvas ? renderItem.canvas : renderItem;
+
+  if (
+    PS.render.surfaceRender.canvases &&
+    typeof PS.render.surfaceRender.canvases.release === "function"
+  ) {
+    return PS.render.surfaceRender.canvases.release(canvas);
+  }
+
+  return false;
 };
 
 PS.render.surfaceRender.markDirty = function (address) {
@@ -197,6 +231,8 @@ PS.render.surfaceRender.getChunk = function (address, allowGenerate) {
   localSurfaceRenderChunkCache.stats.lastChunkKey = renderKey;
 
   if (PS.render.surfaceRender.clearDirty(renderKey)) {
+    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[renderKey]);
+    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.pendingChunks[renderKey]);
     delete localSurfaceRenderChunkCache.chunks[renderKey];
     delete localSurfaceRenderChunkCache.pendingChunks[renderKey];
     cachedChunk = null;
@@ -242,6 +278,7 @@ PS.render.surfaceRender.getChunk = function (address, allowGenerate) {
 
   while (localSurfaceRenderChunkCache.order.length > PS.render.surfaceRender.getChunkCacheLimit()) {
     var evictedKey = localSurfaceRenderChunkCache.order.shift();
+    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[evictedKey]);
     delete localSurfaceRenderChunkCache.chunks[evictedKey];
     localSurfaceRenderChunkCache.stats.evictions++;
   }

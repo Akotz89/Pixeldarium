@@ -71,12 +71,15 @@ PS.render.terrainCache.build = function () {
     terrainCacheCanvas.width !== canvas.width ||
     terrainCacheCanvas.height !== canvas.height
   ) {
-    terrainCacheCanvas = document.createElement("canvas");
-    terrainCacheCanvas.width = canvas.width;
-    terrainCacheCanvas.height = canvas.height;
+    PS.render.surfaceRender.releaseRenderCanvas(terrainCacheCanvas);
+    terrainCacheCanvas = PS.render.surfaceRender.canvases.make(canvas.width, canvas.height);
   }
 
   terrainCache = terrainCacheCanvas;
+
+  if (!terrainCache || typeof terrainCache.getContext !== "function") {
+    return;
+  }
 
   var targetCtx = terrainCache.getContext("2d");
 
