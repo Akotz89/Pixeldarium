@@ -18,11 +18,11 @@ The remaining legacy runtime work is explicitly tracked by AZR-352 and its child
 - AZR-358: migrate settlement/civilization runtime shards after settlement model follow-up.
 - AZR-359: migrate main-loop shards last, after the other runtime surfaces are stable.
 
-Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. Food and organism runtime has also moved under `js/sim/*`. The tracked runtime dependency is the 14 non-UI files listed below.
+Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. Food, organism, settlement, and civilization runtime has also moved under `js/sim/*`. The tracked runtime dependency is the 5 non-UI files listed below.
 
 ## Current Runtime Inventory
 
-`index.html` still loads 14 non-UI legacy scripts:
+`index.html` still loads 5 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
@@ -30,7 +30,7 @@ Current audit result: `js/legacy/ui` may still exist as an empty local directory
 | Persistence | 0 | Migrated in AZR-355 to focused `js/systems/persistence-*` modules after browser parity coverage. |
 | Planet/terrain/render | 0 | Migrated in AZR-356 to ordered `js/render/*` modules with compatibility preserved. |
 | Food/organisms | 0 | Migrated in AZR-357 to focused `js/sim/food-*` and `js/sim/organisms-*` modules after aggregate/representative model coverage. |
-| Settlements | 9 | Migrate after simulation follow-up issues decide whether settlement/civilization progression remains current or is reshaped. Retain temporarily if deeper model changes are imminent. |
+| Settlements | 0 | Migrated in AZR-358 to focused `js/sim/settlements-*` and `js/sim/civilizations-*` modules after progression coverage. |
 | Main loop | 5 | Migrate after core state/systems are moved, because bootstrap ordering depends on every preceding runtime surface. |
 
 ## State / Utils
@@ -112,28 +112,19 @@ Verification:
 
 ## Settlements
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/settlements/part-01.js`
-- `js/legacy/settlements/part-02.js`
-- `js/legacy/settlements/part-03.js`
-- `js/legacy/settlements/part-04.js`
-- `js/legacy/settlements/part-05.js`
-- `js/legacy/settlements/part-06.js`
-- `js/legacy/settlements/part-07.js`
-- `js/legacy/settlements/part-08.js`
-- `js/legacy/settlements/part-09.js`
-
-Decision: retain temporarily pending civilization and settlement model follow-up. The current settlement runtime is broad, stateful, and likely to change with Phase 3 planning.
+Decision: migrated in AZR-358. `index.html` no longer loads `js/legacy/settlements/*`. The current settlement/civilization model was preserved and moved under focused simulation modules so Phase 3 work can iterate on explicit `PS.sim.*` facades instead of legacy shard paths.
 
 Target shape:
 
 - `js/sim/settlements.js` and `js/sim/civilizations.js` own the public surface.
-- Split progression systems only when tests cover route, colony, space, probe, star, fleet, sector, and legacy progression.
+- `js/sim/settlements-state.js`, `js/sim/settlements-growth.js`, `js/sim/settlements-founding.js`, `js/sim/settlements-routes.js`, and `js/sim/settlements-runtime.js` own settlement implementation.
+- `js/sim/civilizations-orbital.js`, `js/sim/civilizations-probes.js`, `js/sim/civilizations-stars.js`, and `js/sim/civilizations-empire.js` own civilization progression implementation.
 
 Verification:
 
-- New settlement progression tests before removing shards.
+- `tests/settlement-progression.test.js`
 - Persistence tests covering all settlement/civilization fields.
 
 ## Main Loop
@@ -161,8 +152,7 @@ Verification:
 
 ## Next Implementation Order
 
-1. Settlements after civilization progression tests and settlement model follow-up are in place.
-2. Main loop last, after the other runtime surfaces are stable.
+1. Main loop last, after the other runtime surfaces are stable.
 
 ## Standing Constraints
 

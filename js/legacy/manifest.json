@@ -8,17 +8,7 @@
   "render.js": [],
   "food.js": [],
   "organisms.js": [],
-  "settlements.js": [
-    "js/legacy/settlements/part-01.js",
-    "js/legacy/settlements/part-02.js",
-    "js/legacy/settlements/part-03.js",
-    "js/legacy/settlements/part-04.js",
-    "js/legacy/settlements/part-05.js",
-    "js/legacy/settlements/part-06.js",
-    "js/legacy/settlements/part-07.js",
-    "js/legacy/settlements/part-08.js",
-    "js/legacy/settlements/part-09.js"
-  ],
+  "settlements.js": [],
   "ui.js": [],
   "main.js": [
     "js/legacy/main/part-01.js",

@@ -1,0 +1,181 @@
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const root = path.resolve(__dirname, "..");
+
+function read(file) {
+  return fs.readFileSync(path.join(root, file), "utf8");
+}
+
+const context = {
+  assert,
+  console,
+  window: {
+    addEventListener() {}
+  },
+  document: {
+    getElementById() {
+      return {
+        getContext() {
+          return {};
+        },
+        querySelector() {
+          return {};
+        }
+      };
+    },
+    querySelectorAll() {
+      return [];
+    }
+  }
+};
+
+const source = [
+  "js/core/namespace.js",
+  "config.js",
+  "js/systems/state.js",
+  "js/core/utils.js",
+  "js/core/config.js",
+  "js/core/world-grid.js",
+  "js/sim/settlements-state.js",
+  "js/sim/settlements-growth.js",
+  "js/sim/civilizations-orbital.js",
+  "js/sim/civilizations-probes.js",
+  "js/sim/civilizations-stars.js",
+  "js/sim/civilizations-empire.js",
+  "js/sim/settlements-founding.js",
+  "js/sim/settlements-routes.js",
+  "js/sim/settlements-runtime.js",
+  "js/sim/settlements.js",
+  "js/sim/civilizations.js"
+].map(read).join("\n");
+
+vm.runInNewContext(`${source}
+
+function countFoodInRadius() {
+  return 0;
+}
+
+function removeFoodInRadius() {
+  return 0;
+}
+
+function countOrganismsInRadiusForLineage() {
+  return 12;
+}
+
+function isFertile() {
+  return true;
+}
+
+world.tick = 10000;
+world.settlements = [];
+world.settlementRoutes = [];
+PS.sim.settlements.ensureState();
+
+var capital = PS.sim.settlements.makeAt(1, 20, 20, { isColony: true });
+capital.storedFood = 500;
+capital.development = 600;
+capital.claimedTiles = 80;
+capital.isActive = true;
+PS.sim.settlements.updateMetrics(capital);
+
+var outpost = PS.sim.settlements.makeAt(1, 45, 20, {
+  parentSettlementId: capital.id,
+  isOutpost: true,
+  isColony: true
+});
+outpost.storedFood = 180;
+outpost.development = 260;
+outpost.claimedTiles = 40;
+outpost.isActive = true;
+PS.sim.settlements.updateMetrics(outpost);
+
+world.settlements.push(capital, outpost);
+PS.sim.settlements.rebuildIndexes();
+
+var route = ensureSettlementRoute(capital, outpost);
+route.isActive = true;
+route.foodTransferred = 24;
+rebuildSettlementRouteStats();
+
+var routeStats = getSettlementRouteStats(capital.id);
+assert.strictEqual(routeStats.routeCount, 1, "route stats should index settlement routes");
+assert.strictEqual(routeStats.activeRoutes, 1, "route stats should count active routes");
+
+var colonySummary = PS.sim.civilizations.updateColonyNetwork();
+assert.ok(colonySummary.score >= CONFIG.SPACE_PROGRAM_MIN_NETWORK_SCORE, "colony network should reach space readiness score");
+assert.strictEqual(world.colonyNetworkActiveRoutes, 1, "colony network should record active routes");
+
+world.spaceProgramProgress = CONFIG.SPACE_PROGRAM_LAUNCH_THRESHOLD - 1;
+PS.sim.civilizations.updateSpaceProgram(colonySummary);
+assert.ok(world.orbitalLaunches > 0, "space progression should create orbital launches");
+
+world.orbitalLaunches = Math.max(world.orbitalLaunches, 4);
+PS.sim.civilizations.updateSpaceProgram(colonySummary);
+PS.sim.civilizations.updatePlanetarySurvey();
+assert.strictEqual(world.orbitalPlatformReady, true, "orbital infrastructure should unlock platform readiness");
+
+world.planetarySurveyProgress = CONFIG.PLANETARY_DISCOVERY_THRESHOLD - 1;
+world.lastPlanetarySurveyTick = 0;
+PS.sim.civilizations.updatePlanetarySurvey();
+assert.ok(world.planetaryBodies.length > 0, "planetary survey should discover bodies");
+
+while (world.planetaryBodies.length < CONFIG.PROBE_MISSION_MIN_BODIES) {
+  world.planetaryBodies.push(makePlanetaryBody());
+}
+world.probeMissionProgress = CONFIG.PROBE_MISSION_THRESHOLD - 1;
+world.lastProbeMissionTick = 0;
+PS.sim.civilizations.updateProbeMissions();
+assert.ok(world.probeMissions.length > 0, "probe progression should launch missions");
+
+while (world.probeMissions.length < CONFIG.STAR_MAP_MIN_COMPLETED_PROBES) {
+  world.probeMissions.push(makeProbeMission());
+}
+for (var probeIndex = 0; probeIndex < world.probeMissions.length; probeIndex++) {
+  world.probeMissions[probeIndex].isComplete = true;
+}
+world.starMapProgress = CONFIG.STAR_SYSTEM_DISCOVERY_THRESHOLD - 1;
+world.lastStarMapTick = 0;
+PS.sim.civilizations.updateStarMap();
+assert.ok(world.starSystems.length > 0, "star map progression should discover systems");
+
+while (world.starSystems.length < CONFIG.GALACTIC_INFLUENCE_MIN_SYSTEMS) {
+  world.starSystems.push(makeStarSystem());
+}
+world.galacticInfluenceProgress = CONFIG.GALACTIC_SYSTEM_CLAIM_THRESHOLD - 1;
+world.lastGalacticInfluenceTick = 0;
+PS.sim.civilizations.updateGalacticInfluence();
+assert.ok(getClaimedStarSystemCount() > 0, "galactic influence should claim star systems");
+
+for (var systemIndex = 0; systemIndex < world.starSystems.length; systemIndex++) {
+  world.starSystems[systemIndex].isClaimed = true;
+}
+world.interstellarFleetProgress = CONFIG.INTERSTELLAR_FLEET_BUILD_THRESHOLD - 1;
+world.lastInterstellarFleetTick = 0;
+PS.sim.civilizations.updateInterstellarFleets();
+assert.ok(world.interstellarFleets.length > 0, "fleet progression should launch interstellar fleets");
+
+while (world.interstellarFleets.length < CONFIG.EMPIRE_SECTOR_MIN_COMPLETED_FLEETS) {
+  world.interstellarFleets.push(makeInterstellarFleet());
+}
+for (var fleetIndex = 0; fleetIndex < world.interstellarFleets.length; fleetIndex++) {
+  world.interstellarFleets[fleetIndex].isComplete = true;
+}
+world.empireSectorProgress = CONFIG.EMPIRE_SECTOR_BUILD_THRESHOLD - 1;
+world.lastEmpireSectorTick = 0;
+PS.sim.civilizations.updateEmpireSectors();
+assert.ok(world.empireSectors.length > 0, "sector progression should found empire sectors");
+
+while (world.empireSectors.length < CONFIG.EMPIRE_LEGACY_MIN_SECTORS) {
+  world.empireSectors.push(makeEmpireSector(world.starSystems[world.empireSectors.length]));
+}
+world.empireLegacyProgress = CONFIG.EMPIRE_LEGACY_THRESHOLD - 1;
+world.lastEmpireLegacyTick = 0;
+PS.sim.civilizations.updateEmpireLegacy();
+assert.ok(world.empireLegacyLevel > 0, "legacy progression should advance empire legacy level");
+
+console.log("settlement progression checks passed");
+`, context);
