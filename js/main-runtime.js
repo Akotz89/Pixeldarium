@@ -84,6 +84,7 @@ function clearWorld() {
   world.biologyPopulationById = {};
   world.biologyRepresentatives = [];
   world.biologyRepresentativeById = {};
+  world.abiogenesis = null;
   world.microbial = null;
   world.microbialReady = false;
   world.eventLog = [];

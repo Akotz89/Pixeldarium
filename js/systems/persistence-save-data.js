@@ -172,6 +172,7 @@ function createWorldSaveData() {
     lastEmpireLegacyTick: Math.max(0, Math.round(Number(world.lastEmpireLegacyTick) || 0)),
     geology: copyLayerStateForSave(world.geology),
     atmosphere: copyLayerStateForSave(world.atmosphere),
+    abiogenesis: copyLayerStateForSave(world.abiogenesis),
     microbial: copyLayerStateForSave(world.microbial),
     microbialReady: Boolean(world.microbialReady),
     config: {

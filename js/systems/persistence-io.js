@@ -80,6 +80,7 @@ function applyWorldSaveData(saveData) {
   world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
   world.geology = saveData.geology ? JSON.parse(JSON.stringify(saveData.geology)) : null;
   world.atmosphere = saveData.atmosphere ? JSON.parse(JSON.stringify(saveData.atmosphere)) : null;
+  world.abiogenesis = saveData.abiogenesis ? JSON.parse(JSON.stringify(saveData.abiogenesis)) : null;
   world.microbial = saveData.microbial ? JSON.parse(JSON.stringify(saveData.microbial)) : null;
   world.microbialReady = Boolean(saveData.microbialReady || (world.microbial && world.microbial.totalDensity > 0.1));
   restoreBiologyAggregateState(saveData);

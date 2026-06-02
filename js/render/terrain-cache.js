@@ -14,7 +14,8 @@ PS.render.terrainCache.getLocalSignature = function () {
     Number(scale.metersPerSample).toFixed(4),
     getPlanetSurfaceChunkSampleCount(),
     Math.floor((Number(world.deepTimeYears) || 0) / 10000000),
-    world.era || ""
+    world.era || "",
+    world.abiogenesis ? Math.round(Number(world.abiogenesis.lastUpdatedTick) || 0) : 0
   ].join(":");
 };
 

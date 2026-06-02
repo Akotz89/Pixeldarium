@@ -296,6 +296,11 @@ PS.render.surfaceImagery.getTileCompositedColor = function (tile) {
 
   color = blendHexColors(color, "#224f63", river * 0.45);
   color = blendHexColors(color, "#b6b06a", coast * 0.18);
+  if (PS.epochs && PS.epochs.primordial && typeof PS.epochs.primordial.getSoupIntensityForTile === "function") {
+    var soupIntensity = PS.epochs.primordial.getSoupIntensityForTile(tile);
+    color = blendHexColors(color, "#7fbf82", soupIntensity * 0.38);
+    color = blendHexColors(color, "#d9b85f", soupIntensity * shallowWater * 0.20);
+  }
   color = blendHexColors(color, "#6d6a60", clamp(terrainSlope * 0.22 + roughness * 0.08, 0, 0.30));
   color = blendHexColors(color, "#6f6a5c", clamp(highland * 0.20 + ridge * 0.18, 0, 0.32));
   color = blendHexColors(
