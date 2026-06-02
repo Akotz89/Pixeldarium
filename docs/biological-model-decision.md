@@ -12,10 +12,11 @@ This preserves the watcher fantasy of following individual life without making t
 
 ## Current Code Baseline
 
-Current biology runtime is still split between modern facades and legacy implementation shards:
+Current biology runtime is now owned by modern simulation modules:
 
 - `js/sim/food.js`, `js/sim/organisms.js`, and `js/sim/evolution.js` expose `PS.sim.*` facades.
-- `js/sim/food-runtime.js` and `js/sim/food-growth.js` own loaded food implementation. `js/legacy/organisms/*` still owns loaded organism implementation.
+- `js/sim/food-runtime.js` and `js/sim/food-growth.js` own loaded food implementation.
+- `js/sim/organisms-traits.js`, `js/sim/organisms-indexes.js`, and `js/sim/organisms-behavior.js` own loaded representative organism implementation.
 - `js/systems/pools.js` already stores current organism facades over typed arrays for position, energy, movement, lineage, generation, and five traits.
 - `world.lineages`, `world.organismsByLineage`, `world.organismBuckets`, `world.foodBuckets`, and `world.foodPositions` are the current aggregate/index surfaces.
 - Current tests cover typed-array pool backing, food indexing, spatial indexing, and persistence parity. They do not yet cover species IDs, aggregate population records, representative selection, or representative persistence.
@@ -156,14 +157,15 @@ AZR-357 should migrate food/organism runtime in this order:
 1. Add aggregate biology state containers and ID counters in `js/systems/state.js`.
 2. Add typed-array fields for `speciesId`, `populationId`, `representativeId`, and required AZR-284 traits in `js/systems/pools.js`.
 3. Move legacy food implementation into focused `js/sim/food-*` modules while preserving `PS.sim.food`. Done in `js/sim/food-runtime.js` and `js/sim/food-growth.js`.
-4. Move representative organism implementation into focused `js/sim/organisms-*` modules while preserving current behavior.
+4. Move representative organism implementation into focused `js/sim/organisms-*` modules while preserving current behavior. Done in `js/sim/organisms-traits.js`, `js/sim/organisms-indexes.js`, and `js/sim/organisms-behavior.js`.
 5. Add aggregate population helpers before changing biology behavior.
-6. Remove `js/legacy/organisms/*` script tags only after tests prove parity.
+6. Remove `js/legacy/organisms/*` script tags only after tests prove parity. Done after `tests/organism-runtime.test.js`.
 
 Verification expectations for AZR-357:
 
 - `node tests/pools.test.js`
 - `node tests/food-index.test.js`
+- `node tests/organism-runtime.test.js`
 - `node tests/spatial-index.test.js`
 - `node tests/persistence-parity.test.js`
 - New tests for representative IDs, species IDs, population IDs, and aggregate population persistence.
@@ -175,5 +177,5 @@ Verification expectations for AZR-357:
 
 - Do not simulate every organism at representative detail.
 - Do not make microbial life individual-agent-first.
-- Do not migrate legacy food/organism files before the aggregate/representative ownership boundary is reflected in tests.
+- Do not change food/organism behavior before the aggregate/representative ownership boundary is reflected in tests.
 - Do not replace existing food/organism behavior during the migration unless a Linear issue explicitly changes that behavior.

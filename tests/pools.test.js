@@ -50,8 +50,8 @@ const source = [
   "js/core/world-grid.js",
   "js/systems/pools.js",
   "js/sim/food-runtime.js",
-  "js/legacy/organisms/part-01.js",
-  "js/legacy/organisms/part-03.js",
+  "js/sim/organisms-traits.js",
+  "js/sim/organisms-behavior.js",
   "js/debug/performance.js"
 ].map((file) => file.endsWith(".js") ? read(file) : file).join("\n");
 
@@ -166,7 +166,7 @@ console.log("pool checks passed");
 `, context);
 
 const hotLoopFiles = [
-  "js/legacy/organisms/part-03.js",
+  "js/sim/organisms-behavior.js",
   "js/sim/food-runtime.js",
   "js/sim/organisms.js",
   "js/sim/food.js"

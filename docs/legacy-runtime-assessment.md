@@ -18,18 +18,18 @@ The remaining legacy runtime work is explicitly tracked by AZR-352 and its child
 - AZR-358: migrate settlement/civilization runtime shards after settlement model follow-up.
 - AZR-359: migrate main-loop shards last, after the other runtime surfaces are stable.
 
-Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. The tracked runtime dependency is the 17 non-UI files listed below.
+Current audit result: `js/legacy/ui` may still exist as an empty local directory, but Git tracks no `js/legacy/ui/*` files and `index.html` loads no legacy UI scripts. Food and organism runtime has also moved under `js/sim/*`. The tracked runtime dependency is the 14 non-UI files listed below.
 
 ## Current Runtime Inventory
 
-`index.html` still loads 17 non-UI legacy scripts:
+`index.html` still loads 14 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
 | State/utils | 0 | Migrated in AZR-354 to `js/systems/state.js` and `js/core/utils.js`. |
 | Persistence | 0 | Migrated in AZR-355 to focused `js/systems/persistence-*` modules after browser parity coverage. |
 | Planet/terrain/render | 0 | Migrated in AZR-356 to ordered `js/render/*` modules with compatibility preserved. |
-| Food/organisms | 3 | Food runtime migrated to `js/sim/food-runtime.js` and `js/sim/food-growth.js`; organism runtime remains in legacy shards until representative behavior migration. |
+| Food/organisms | 0 | Migrated in AZR-357 to focused `js/sim/food-*` and `js/sim/organisms-*` modules after aggregate/representative model coverage. |
 | Settlements | 9 | Migrate after simulation follow-up issues decide whether settlement/civilization progression remains current or is reshaped. Retain temporarily if deeper model changes are imminent. |
 | Main loop | 5 | Migrate after core state/systems are moved, because bootstrap ordering depends on every preceding runtime surface. |
 
@@ -89,18 +89,15 @@ Verification:
 
 ## Food / Organisms
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/organisms/part-01.js`
-- `js/legacy/organisms/part-02.js`
-- `js/legacy/organisms/part-03.js`
-
-Decision: food runtime has moved out of `js/legacy/*`. Retain organism shards temporarily until AZR-357 can implement the representative-organism behavior migration from the AZR-361 model decision. `docs/biological-model-decision.md` chooses aggregate population records as authoritative and representative organisms as detailed watcher-facing facades.
+Decision: migrated in AZR-357. `index.html` no longer loads `js/legacy/food/*` or `js/legacy/organisms/*`. `docs/biological-model-decision.md` chooses aggregate population records as authoritative and representative organisms as detailed watcher-facing facades, so the migration kept behavior stable while moving implementation under `js/sim/*`.
 
 Target shape:
 
 - `js/sim/food-runtime.js`, `js/sim/food-growth.js`, and `js/sim/food.js` own food behavior.
-- `js/sim/organisms.js` and `js/sim/evolution.js` own public organism/evolution facades while organism implementation migration continues.
+- `js/sim/organisms-traits.js`, `js/sim/organisms-indexes.js`, and `js/sim/organisms-behavior.js` own representative organism implementation.
+- `js/sim/organisms.js` and `js/sim/evolution.js` own public organism/evolution facades.
 - Aggregate biology records own population/species scale.
 - Representative organism facades own inspectable local behavior.
 - Typed-array fields include stable species, population, and representative IDs before migration is marked complete.
@@ -108,6 +105,7 @@ Target shape:
 Verification:
 
 - `tests/food-index.test.js`
+- `tests/organism-runtime.test.js`
 - `tests/spatial-index.test.js`
 - Future E3/E4 trait/food-web tests.
 - New aggregate population and representative organism persistence tests.
@@ -163,9 +161,8 @@ Verification:
 
 ## Next Implementation Order
 
-1. Food/organisms after AZR-357 has tests for the AZR-361 aggregate/representative model contract.
-2. Settlements after civilization progression tests and settlement model follow-up are in place.
-3. Main loop last, after the other runtime surfaces are stable.
+1. Settlements after civilization progression tests and settlement model follow-up are in place.
+2. Main loop last, after the other runtime surfaces are stable.
 
 ## Standing Constraints
 

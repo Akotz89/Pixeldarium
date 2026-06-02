@@ -38,7 +38,7 @@ const source = [
   "js/core/utils.js",
   "js/core/world-grid.js",
   "js/systems/pools.js",
-  "js/legacy/organisms/part-01.js"
+  "js/sim/organisms-traits.js"
 ].map(read).join("\n");
 
 vm.runInNewContext(`${source}

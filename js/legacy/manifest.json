@@ -7,11 +7,7 @@
   "render-terrain-cache.js": [],
   "render.js": [],
   "food.js": [],
-  "organisms.js": [
-    "js/legacy/organisms/part-01.js",
-    "js/legacy/organisms/part-02.js",
-    "js/legacy/organisms/part-03.js"
-  ],
+  "organisms.js": [],
   "settlements.js": [
     "js/legacy/settlements/part-01.js",
     "js/legacy/settlements/part-02.js",
