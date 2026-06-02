@@ -16,6 +16,7 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
   var fallbackDraws = [];
   var placeholderDraws = [];
   var fineDraws = [];
+  var shouldCompositeChunks = false;
 
   if (!drawLocalSurfaceUnderlay(targetCtx)) {
     targetCtx.fillStyle = "#01030a";
@@ -100,25 +101,16 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
     }
   });
 
-  placeholderDraws.forEach(function (draw) {
-    if (draw.canvas) {
-      targetCtx.save();
-      targetCtx.imageSmoothingEnabled = false;
-      targetCtx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
-      targetCtx.restore();
-    } else {
-      targetCtx.fillStyle = draw.color;
-      targetCtx.fillRect(draw.x, draw.y, draw.width, draw.height);
-    }
-  });
+  shouldCompositeChunks = PS.render.surfaceRender.work.shouldCompositeVisibleChunks(
+    fineDraws.length,
+    fineDraws.length + pendingChunks
+  );
 
-  fallbackDraws.forEach(function (draw) {
-    targetCtx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
-  });
-
-  fineDraws.forEach(function (draw) {
-    targetCtx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
-  });
+  if (shouldCompositeChunks) {
+    fineDraws.forEach(function (draw) {
+      PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.96);
+    });
+  }
 
   localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = generatedThisPass;
   localSurfaceRenderChunkCache.stats.lastPendingChunks = pendingChunks;
@@ -194,6 +186,45 @@ PS.render.surfaceRender.work.preloadZoomDirection = function (maxChunks) {
   localSurfaceRenderChunkCache.stats.lastPreloadedChunks = generated;
   localSurfaceRenderChunkCache.stats.lastPreloadZoomLevel = targetZoom;
   return generated;
+};
+
+PS.render.surfaceRender.work.getChunkCompositeReadiness = function (readyChunks, totalChunks) {
+  var total = Math.max(0, Math.round(Number(totalChunks) || 0));
+
+  if (total <= 0) {
+    return 1;
+  }
+
+  return clamp((Number(readyChunks) || 0) / total, 0, 1);
+};
+
+PS.render.surfaceRender.work.shouldCompositeVisibleChunks = function (readyChunks, totalChunks) {
+  return PS.render.surfaceRender.work.getChunkCompositeReadiness(readyChunks, totalChunks) >= 0.72;
+};
+
+PS.render.surfaceRender.work.drawChunkOverUnderlay = function (targetCtx, draw, alpha) {
+  if (!targetCtx || !draw || !draw.canvas) {
+    return false;
+  }
+
+  var sourceWidth = Math.max(1, Number(draw.canvas.width) || 1);
+  var sourceHeight = Math.max(1, Number(draw.canvas.height) || 1);
+
+  targetCtx.save();
+  targetCtx.globalAlpha = clamp(Number(alpha) || 1, 0, 1);
+  targetCtx.drawImage(
+    draw.canvas,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+    Number(draw.x) || 0,
+    Number(draw.y) || 0,
+    Math.max(1, Number(draw.width) || sourceWidth),
+    Math.max(1, Number(draw.height) || sourceHeight)
+  );
+  targetCtx.restore();
+  return true;
 };
 
 PS.render.surfaceRender.work.advance = function (maxChunksOverride) {
@@ -283,8 +314,15 @@ PS.render.surfaceRender.work.drawCompletedToTerrainCache = function (draws) {
     return false;
   }
 
+  if (!PS.render.surfaceRender.work.shouldCompositeVisibleChunks(
+    localSurfaceRenderChunkCache.order.length,
+    localSurfaceRenderChunkCache.stats.lastVisibleChunks
+  )) {
+    return true;
+  }
+
   draws.forEach(function (draw) {
-    targetCtx.drawImage(draw.canvas, draw.x, draw.y, draw.width, draw.height);
+    PS.render.surfaceRender.work.drawChunkOverUnderlay(targetCtx, draw, 0.96);
   });
 
   return true;

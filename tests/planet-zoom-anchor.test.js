@@ -315,6 +315,11 @@ assert.ok(PS.assets.getPalette("terrain").wetland, "terrain palette should expos
 assert.ok(PS.assets.getAtlas("entities").procedural, "entity atlas should be registered as procedural runtime art");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlay, "function", "local surface underlay should fill the zoomed viewport");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlayAccent, "function", "local surface underlay should expose semantic feature accents");
+assert.strictEqual(typeof PS.render.raster.getLocalSurfaceMaterialMark, "function", "local underlay should expose material mark archetypes");
+assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceMaterialMarks, "function", "local underlay should draw deterministic material marks");
+assert.strictEqual(typeof PS.render.surfaceRender.work.drawChunkOverUnderlay, "function", "surface chunk compositor should blend progressive chunks into the underlay");
+assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(12, 100), false, "surface chunk compositor should defer sparse partial chunk coverage");
+assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(80, 100), true, "surface chunk compositor should allow high-coverage chunk composition");
 assert.ok(renderLayerIds.indexOf("terrain.base") < renderLayerIds.indexOf("resources.food"), "terrain layer should draw before resources");
 assert.ok(renderLayerIds.indexOf("settlement.routes") < renderLayerIds.indexOf("settlement.structures"), "routes should draw before settlement structures");
 assert.ok(renderLayerIds.indexOf("entities.organisms") < renderLayerIds.indexOf("status.selection"), "entities should draw before status/overlay layers");
@@ -324,6 +329,26 @@ assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest s
 assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
 assert.strictEqual(organismSprite.family, "entities", "organism sprite should use entity asset family");
 assert.strictEqual(foodSprite.family, "resources", "food sprite should use resource asset family");
+assert.strictEqual(PS.render.raster.getLocalSurfaceMaterialMark({
+  biome: "forest",
+  tile: { fertilityScore: 0.74, prebioticSoup: 0 },
+  detail: { materialSignals: { canopyDensity: 0.82, wetness: 0.42, snow: 0 } }
+}).kind, "canopy", "forest samples should use canopy material marks");
+assert.strictEqual(PS.render.raster.getLocalSurfaceMaterialMark({
+  biome: "grassland",
+  tile: { moisture: 1.7, prebioticSoup: 0 },
+  detail: { materialSignals: { wetness: 0.88, river: 0.12, snow: 0 } }
+}).kind, "wetland", "wet samples should use wetland material marks");
+assert.strictEqual(PS.render.raster.getLocalSurfaceMaterialMark({
+  biome: "mountain",
+  tile: { ridgeStrength: 0.72, roughness: 0.64, prebioticSoup: 0 },
+  detail: { materialSignals: { ridge: 0.72, surfaceRoughness: 0.64, snow: 0 } }
+}).kind, "ridge", "mountain samples should use ridge material marks");
+assert.strictEqual(PS.render.raster.getLocalSurfaceMaterialMark({
+  biome: "grassland",
+  tile: { coastFactor: 0.78, prebioticSoup: 0 },
+  detail: { materialSignals: { coast: 0.78, snow: 0 } }
+}).kind, "shore", "coastal samples should use shore material marks");
 
 world.tick = 42;
 firstMovePhase = PS.render.entities.getAnimationPhase(phaseEntity, "move", 4);

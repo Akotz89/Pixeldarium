@@ -34,6 +34,7 @@ PS.render.raster.drawLocalSurfaceUnderlay = function (targetCtx) {
       targetCtx.fillStyle = PS.render.raster.getLocalSurfaceUnderlayColor(sample, latLon);
       targetCtx.fillRect(x, y, width, height);
       PS.render.raster.drawLocalSurfaceUnderlayAccent(targetCtx, x, y, width, height, sample);
+      PS.render.raster.drawLocalSurfaceMaterialMarks(targetCtx, x, y, width, height, sample, latLon);
     }
   }
 
@@ -78,6 +79,112 @@ PS.render.raster.getLocalSurfaceUnderlayColor = function (sample, latLon) {
     clamp(rgb.green * shade, 0, 255),
     clamp(rgb.blue * shade, 0, 255)
   );
+};
+
+PS.render.raster.getLocalSurfaceMaterialMark = function (sample, latLon) {
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var tile = sample && sample.tile ? sample.tile : {};
+  var detail = sample && sample.detail ? sample.detail : {};
+  var signals = detail.materialSignals || {};
+  var latitude = Number(latLon && latLon.latitude) || Number(sample && sample.latitude) || Number(tile.latitude) || 0;
+  var river = clamp(Number(signals.river) || Number(tile.riverStrength) || 0, 0, 1);
+  var wetness = clamp(Number(signals.wetness) || Number(tile.moisture) / 1.8 || 0, 0, 1);
+  var ridge = clamp(Number(signals.ridge) || Number(tile.ridgeStrength) || 0, 0, 1);
+  var roughness = clamp(Number(signals.surfaceRoughness) || Number(tile.roughness) || 0, 0, 1);
+  var coast = clamp(Math.max(Number(signals.coast) || 0, Number(signals.shorelineStrength) || 0, Number(tile.coastFactor) || 0), 0, 1);
+  var snow = clamp(Number(signals.snow) || getPlanetSurfaceSnowSignal(tile, latitude), 0, 1);
+  var canopy = clamp(Number(signals.canopyDensity) || 0, 0, 1);
+  var fertility = clamp(Number(tile.fertilityScore) || 0, 0, 1);
+  var microbial = 0;
+
+  if (PS.epochs && PS.epochs.primordial && typeof PS.epochs.primordial.getSoupIntensityForTile === "function") {
+    microbial = clamp(PS.epochs.primordial.getSoupIntensityForTile(tile), 0, 1);
+  }
+
+  if (microbial > 0.42) {
+    return { kind: "microbial", color: "#92e68d", accent: "#d9b85f", density: microbial, direction: "speckle" };
+  }
+
+  if (river > 0.36 || (wetness > 0.72 && biome !== "ocean")) {
+    return { kind: river > 0.36 ? "river" : "wetland", color: "#76cde2", accent: "#4f9f72", density: Math.max(river, wetness), direction: "horizontal" };
+  }
+
+  if (coast > 0.46 && biome !== "ice") {
+    return { kind: "shore", color: "#d7bd78", accent: "#8ccfc2", density: coast, direction: "broken-edge" };
+  }
+
+  if (snow > 0.56 || biome === "ice") {
+    return { kind: "snow", color: "#e8fbff", accent: "#9bcfe0", density: Math.max(snow, biome === "ice" ? 0.7 : 0), direction: "diagonal" };
+  }
+
+  if (ridge > 0.50 || roughness > 0.76 || biome === "mountain") {
+    return { kind: "ridge", color: "#c1b89f", accent: "#6d6a60", density: Math.max(ridge, roughness), direction: "diagonal" };
+  }
+
+  if (biome === "forest" || canopy > 0.58) {
+    return { kind: "canopy", color: "#4f8f45", accent: "#16341e", density: Math.max(canopy, fertility, 0.5), direction: "speckle" };
+  }
+
+  if (biome === "grassland" || fertility > 0.62) {
+    return { kind: "grass", color: "#9fdd5b", accent: "#6f8a3f", density: Math.max(fertility, wetness, 0.45), direction: "vertical" };
+  }
+
+  if (biome === "desert") {
+    return { kind: "dune", color: "#c8a85b", accent: "#7e6734", density: 0.58, direction: "horizontal" };
+  }
+
+  if (biome === "barren" || roughness > 0.52) {
+    return { kind: "scrub", color: "#746a4e", accent: "#383529", density: Math.max(roughness, 0.45), direction: "speckle" };
+  }
+
+  return null;
+};
+
+PS.render.raster.drawLocalSurfaceMaterialMarks = function (targetCtx, x, y, width, height, sample, latLon) {
+  var zoom = Number(getPlanetView().zoomLevel) || 0;
+  var closeDetail = clamp((zoom - 2.75) / 4.25, 0, 1);
+  var mark = PS.render.raster.getLocalSurfaceMaterialMark(sample, latLon);
+  var seedX = Math.round(Number(sample && sample.surfaceSampleX) || x);
+  var seedY = Math.round(Number(sample && sample.surfaceSampleY) || y);
+  var density;
+  var count;
+
+  if (!mark || closeDetail <= 0.02 || width < 2 || height < 2) {
+    return;
+  }
+
+  density = clamp(Number(mark.density) || 0, 0, 1);
+  count = Math.max(1, Math.round(1 + closeDetail * 2 + density * 2));
+  targetCtx.save();
+  targetCtx.globalAlpha = clamp(0.10 + density * 0.14 + closeDetail * 0.08, 0.10, 0.34);
+
+  for (var i = 0; i < count; i++) {
+    var noiseA = getDeterministicUnitNoise(seedX + i * 19, seedY - i * 29, getPlanetVisualSeedOffset() + 9233);
+    var noiseB = getDeterministicUnitNoise(seedX - i * 31, seedY + i * 17, getPlanetVisualSeedOffset() + 9277);
+    var px = x + Math.floor(noiseA * Math.max(1, width - 1));
+    var py = y + Math.floor(noiseB * Math.max(1, height - 1));
+    var markWidth = Math.max(1, Math.round(width * (mark.direction === "horizontal" ? 0.48 : 0.18)));
+    var markHeight = Math.max(1, Math.round(height * (mark.direction === "vertical" ? 0.48 : 0.18)));
+
+    if (mark.direction === "diagonal") {
+      markWidth = Math.max(1, Math.round(width * 0.34));
+      markHeight = Math.max(1, Math.round(height * 0.22));
+      px = clamp(px - Math.floor(markWidth / 2), x, x + width - markWidth);
+      py = clamp(py - Math.floor(markHeight / 2), y, y + height - markHeight);
+    } else if (mark.direction === "broken-edge") {
+      markWidth = Math.max(1, Math.round(width * (0.34 + noiseB * 0.36)));
+      markHeight = Math.max(1, Math.round(height * 0.22));
+      px = clamp(px - Math.floor(markWidth / 2), x, x + width - markWidth);
+    } else if (mark.direction === "speckle") {
+      markWidth = Math.max(1, Math.round(width * 0.18));
+      markHeight = Math.max(1, Math.round(height * 0.18));
+    }
+
+    targetCtx.fillStyle = i % 2 === 0 ? mark.color : mark.accent;
+    targetCtx.fillRect(px, py, markWidth, markHeight);
+  }
+
+  targetCtx.restore();
 };
 
 PS.render.raster.drawLocalSurfaceUnderlayAccent = function (targetCtx, x, y, width, height, sample) {
