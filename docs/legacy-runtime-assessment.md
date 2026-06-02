@@ -10,13 +10,13 @@ This document is the current domain inventory and migration decision log for non
 
 ## Current Runtime Inventory
 
-`index.html` still loads 32 non-UI legacy scripts:
+`index.html` still loads 24 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
 | State/utils | 0 | Migrated in AZR-354 to `js/systems/state.js` and `js/core/utils.js`. |
 | Persistence | 5 | Migrate behind `PS.systems.persistence` only after save/load/export/import parity tests cover camera, settlements, and long-term progression fields. |
-| Planet/terrain/render | 8 | Migrate in small render-contract slices because camera, globe projection, terrain, and render cache order are tightly coupled. |
+| Planet/terrain/render | 0 | Migrated in AZR-356 to ordered `js/render/*` modules with compatibility preserved. |
 | Food/organisms | 5 | Migrate after Phase 2 readiness clarifies typed-array and representative-organism direction. Retain temporarily if the biological model is about to change. |
 | Settlements | 9 | Migrate after simulation follow-up issues decide whether settlement/civilization progression remains current or is reshaped. Retain temporarily if deeper model changes are imminent. |
 | Main loop | 5 | Migrate after core state/systems are moved, because bootstrap ordering depends on every preceding runtime surface. |
@@ -63,24 +63,16 @@ Verification:
 
 ## Planet / Terrain / Render
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/planet/part-01.js`
-- `js/legacy/planet/part-02.js`
-- `js/legacy/planet/part-03.js`
-- `js/legacy/terrain/part-01.js`
-- `js/legacy/terrain/part-02.js`
-- `js/legacy/render-terrain-cache/part-01.js`
-- `js/legacy/render/part-01.js`
-- `js/legacy/render/part-02.js`
-
-Decision: migrate in render-contract slices. This domain touches camera behavior, projection math, surface addressing, terrain cache invalidation, and draw pipeline ordering.
+Decision: migrated in AZR-356. `index.html` no longer loads `js/legacy/planet/*`, `js/legacy/terrain/*`, `js/legacy/render-terrain-cache/*`, or `js/legacy/render/*`.
 
 Target shape:
 
 - Existing `js/render/*` modules own rendering behavior.
+- Ordered compatibility surfaces live in `js/render/planet-view.js`, `js/render/planet-surface.js`, `js/render/planet-grid.js`, `js/render/terrain-hydrology.js`, `js/render/terrain-seeding.js`, `js/render/terrain-cache-runtime.js`, `js/render/terrain-render-compat.js`, and `js/render/pipeline-compat.js`.
 - `js/core/planet-metrics.js` and `js/core/world-grid.js` continue to own shared calculations.
-- Legacy wrappers should disappear only after render and zoom-anchor tests cover the moved API.
+- Compatibility wrappers should disappear only after render and zoom-anchor tests cover direct `PS.render.*` API use.
 
 Verification:
 

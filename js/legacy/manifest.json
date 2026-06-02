@@ -8,22 +8,10 @@
     "js/legacy/persistence/part-04.js",
     "js/legacy/persistence/part-05.js"
   ],
-  "planet.js": [
-    "js/legacy/planet/part-01.js",
-    "js/legacy/planet/part-02.js",
-    "js/legacy/planet/part-03.js"
-  ],
-  "terrain.js": [
-    "js/legacy/terrain/part-01.js",
-    "js/legacy/terrain/part-02.js"
-  ],
-  "render-terrain-cache.js": [
-    "js/legacy/render-terrain-cache/part-01.js"
-  ],
-  "render.js": [
-    "js/legacy/render/part-01.js",
-    "js/legacy/render/part-02.js"
-  ],
+  "planet.js": [],
+  "terrain.js": [],
+  "render-terrain-cache.js": [],
+  "render.js": [],
   "food.js": [
     "js/legacy/food/part-01.js",
     "js/legacy/food/part-02.js"
