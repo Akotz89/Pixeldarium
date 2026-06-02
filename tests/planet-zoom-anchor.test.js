@@ -288,6 +288,7 @@ assert.strictEqual(CONFIG.PLANET_REFERENCE_GRID, false, "planet reference grid s
 assert.strictEqual(CONFIG.PLANET_GLOBE_ENTITY_MARKERS, false, "globe-scale entity markers should be hidden by default");
 assert.strictEqual(CONFIG.SHOW_SCANLINES, false, "scanline overlay should be hidden by default");
 assert.strictEqual(CONFIG.PLANET_CLOUD_ALPHA, 0, "cloud overlay should be disabled while tuning surface readability");
+assert.ok(CONFIG.PLANET_LOCAL_UNDERLAY_PIXEL_SIZE > 0, "local underlay should define a bounded pixel sample size");
 
 var assetManifest = PS.assets.getManifest();
 var renderLayerManifest = PS.render.pipeline.getLayerManifest();
@@ -312,6 +313,8 @@ assert.ok(assetManifest.families.overlays, "asset manifest should include overla
 assert.ok(assetManifest.families.atmosphere, "asset manifest should include atmosphere family");
 assert.ok(PS.assets.getPalette("terrain").wetland, "terrain palette should expose wetland color");
 assert.ok(PS.assets.getAtlas("entities").procedural, "entity atlas should be registered as procedural runtime art");
+assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlay, "function", "local surface underlay should fill the zoomed viewport");
+assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlayAccent, "function", "local surface underlay should expose semantic feature accents");
 assert.ok(renderLayerIds.indexOf("terrain.base") < renderLayerIds.indexOf("resources.food"), "terrain layer should draw before resources");
 assert.ok(renderLayerIds.indexOf("settlement.routes") < renderLayerIds.indexOf("settlement.structures"), "routes should draw before settlement structures");
 assert.ok(renderLayerIds.indexOf("entities.organisms") < renderLayerIds.indexOf("status.selection"), "entities should draw before status/overlay layers");

@@ -41,10 +41,64 @@ PS.render.raster.drawLocalSurfaceUnderlay = function (targetCtx) {
         clamp(rgb.blue * shade, 0, 255)
       );
       targetCtx.fillRect(x, y, width, height);
+      PS.render.raster.drawLocalSurfaceUnderlayAccent(targetCtx, x, y, width, height, sample);
     }
   }
 
   return true;
+};
+
+PS.render.raster.drawLocalSurfaceUnderlayAccent = function (targetCtx, x, y, width, height, sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var signals = detail.materialSignals || {};
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var zoom = Number(getPlanetView().zoomLevel) || 0;
+  var seedX = Math.round(Number(sample && sample.surfaceSampleX) || 0);
+  var seedY = Math.round(Number(sample && sample.surfaceSampleY) || 0);
+  var noise = getDeterministicUnitNoise(seedX, seedY, getPlanetVisualSeedOffset() + 9119);
+  var secondaryNoise = getDeterministicUnitNoise(seedX - 17, seedY + 23, getPlanetVisualSeedOffset() + 9151);
+  var river = clamp(Number(signals.river) || 0, 0, 1);
+  var wetness = clamp(Number(signals.wetness) || 0, 0, 1);
+  var ridge = clamp(Number(signals.ridge) || 0, 0, 1);
+  var roughness = clamp(Number(signals.surfaceRoughness) || 0, 0, 1);
+  var coast = clamp(Number(signals.coast) || 0, 0, 1);
+  var snow = clamp(Number(signals.snow) || 0, 0, 1);
+  var canopy = clamp(Number(signals.canopyDensity) || 0, 0, 1);
+  var fertility = clamp(Number(sample && sample.tile && sample.tile.fertilityScore) || 0, 0, 1);
+  var closeDetail = clamp((zoom - 3.5) / 3, 0, 1);
+  var drawWidth = Math.max(1, Math.round(width * (0.35 + secondaryNoise * 0.50)));
+  var drawHeight = Math.max(1, Math.round(height * (0.28 + noise * 0.38)));
+  var drawX = x + Math.floor((width - drawWidth) * secondaryNoise);
+  var drawY = y + Math.floor((height - drawHeight) * noise);
+  var accent = null;
+  var alpha = 0;
+
+  if ((river > 0.42 || wetness > 0.76) && biome !== "ocean" && noise > 0.38 - closeDetail * 0.14) {
+    accent = river > 0.38 ? "#7ec8ff" : "#5da879";
+    alpha = clamp(0.12 + Math.max(river, wetness) * (0.16 + closeDetail * 0.08), 0.12, 0.36);
+    drawHeight = Math.max(1, Math.round(height * 0.28));
+  } else if ((ridge > 0.55 || roughness > 0.78) && noise > 0.55 - closeDetail * 0.12) {
+    accent = ridge > 0.48 ? "#c1b89f" : "#a99d8a";
+    alpha = clamp(0.10 + Math.max(ridge, roughness) * (0.12 + closeDetail * 0.06), 0.10, 0.28);
+  } else if (closeDetail > 0.15 && (fertility > 0.62 || canopy > 0.68) && biome !== "ocean" && noise > 0.70 - closeDetail * 0.12) {
+    accent = canopy > 0.58 ? "#4f8f45" : "#9fdd5b";
+    alpha = clamp(0.10 + Math.max(fertility, canopy) * 0.14, 0.10, 0.26);
+    drawWidth = Math.max(1, Math.round(width * 0.34));
+    drawHeight = Math.max(1, Math.round(height * 0.34));
+  } else if ((coast > 0.58 || snow > 0.68) && noise > 0.62 - closeDetail * 0.10) {
+    accent = snow > 0.58 ? "#e8fbff" : "#d7bd78";
+    alpha = clamp(0.10 + Math.max(coast, snow) * 0.14, 0.10, 0.26);
+  }
+
+  if (!accent || alpha <= 0) {
+    return;
+  }
+
+  targetCtx.save();
+  targetCtx.globalAlpha = alpha;
+  targetCtx.fillStyle = accent;
+  targetCtx.fillRect(drawX, drawY, drawWidth, drawHeight);
+  targetCtx.restore();
 };
 
 PS.render.raster.buildGlobeTileRgbCache = function () {
