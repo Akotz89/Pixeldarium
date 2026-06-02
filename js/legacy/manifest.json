@@ -1,10 +1,6 @@
 {
-  "state.js": [
-    "js/legacy/state/part-01.js"
-  ],
-  "utils.js": [
-    "js/legacy/utils/part-01.js"
-  ],
+  "state.js": [],
+  "utils.js": [],
   "persistence.js": [
     "js/legacy/persistence/part-01.js",
     "js/legacy/persistence/part-02.js",

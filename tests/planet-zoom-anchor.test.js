@@ -43,8 +43,8 @@ const context = {
 const source = [
   "js/core/namespace.js",
   "config.js",
-  "js/legacy/state/part-01.js",
-  "js/legacy/utils/part-01.js",
+  "js/systems/state.js",
+  "js/core/utils.js",
   "js/core/math.js",
   "js/assets/registry.js",
   "js/core/world-grid.js",

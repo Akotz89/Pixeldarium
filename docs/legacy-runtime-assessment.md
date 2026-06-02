@@ -10,11 +10,11 @@ This document is the current domain inventory and migration decision log for non
 
 ## Current Runtime Inventory
 
-`index.html` still loads 34 non-UI legacy scripts:
+`index.html` still loads 32 non-UI legacy scripts:
 
 | Domain | Runtime scripts | Decision |
 | --- | ---: | --- |
-| State/utils | 2 | Migrate next as low-risk `js/core` / `js/systems` support modules. |
+| State/utils | 0 | Migrated in AZR-354 to `js/systems/state.js` and `js/core/utils.js`. |
 | Persistence | 5 | Migrate behind `PS.systems.persistence` only after save/load/export/import parity tests cover camera, settlements, and long-term progression fields. |
 | Planet/terrain/render | 8 | Migrate in small render-contract slices because camera, globe projection, terrain, and render cache order are tightly coupled. |
 | Food/organisms | 5 | Migrate after Phase 2 readiness clarifies typed-array and representative-organism direction. Retain temporarily if the biological model is about to change. |
@@ -23,17 +23,14 @@ This document is the current domain inventory and migration decision log for non
 
 ## State / Utils
 
-Runtime scripts:
+Runtime scripts: none.
 
-- `js/legacy/state/part-01.js`
-- `js/legacy/utils/part-01.js`
-
-Decision: migrate. These are small bootstrap/helper shards and are good candidates for early AZR-352 implementation slices.
+Decision: migrated in AZR-354. `index.html` no longer loads `js/legacy/state/*` or `js/legacy/utils/*`.
 
 Target shape:
 
-- `js/systems/state.js` or focused `js/core/dom-state.js` for DOM/world initialization surfaces.
-- `js/core/utils.js` or narrower helpers for generic utility functions.
+- `js/systems/state.js` owns DOM/world initialization surfaces.
+- `js/core/utils.js` owns seed, RNG, tile index, clamp, and world-position compatibility helpers.
 
 Verification:
 
