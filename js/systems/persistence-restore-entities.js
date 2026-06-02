@@ -129,6 +129,41 @@ function restoreEmpireSectors(sectors) {
   return sectors.map(restoreEmpireSector);
 }
 
+function restoreBiologyAggregateState(saveData) {
+  world.biologyPopulations = Array.isArray(saveData.biologyPopulations)
+    ? JSON.parse(JSON.stringify(saveData.biologyPopulations))
+    : [];
+  world.biologyRepresentatives = Array.isArray(saveData.biologyRepresentatives)
+    ? JSON.parse(JSON.stringify(saveData.biologyRepresentatives))
+    : [];
+  world.biologyPopulationById = {};
+  world.biologyRepresentativeById = {};
+
+  for (var populationIndex = 0; populationIndex < world.biologyPopulations.length; populationIndex++) {
+    var population = world.biologyPopulations[populationIndex] || {};
+    var populationId = Math.max(1, Math.round(restoreNumber(population.id, populationIndex + 1)));
+    population.id = populationId;
+    population.speciesId = Math.max(1, Math.round(restoreNumber(population.speciesId, populationId)));
+    population.lineageId = Math.max(1, Math.round(restoreNumber(population.lineageId, population.speciesId)));
+    world.biologyPopulationById[String(populationId)] = population;
+    world.nextBiologyPopulationId = Math.max(world.nextBiologyPopulationId, populationId + 1);
+    world.nextSpeciesId = Math.max(world.nextSpeciesId, population.speciesId + 1);
+  }
+
+  for (var representativeIndex = 0; representativeIndex < world.biologyRepresentatives.length; representativeIndex++) {
+    var representative = world.biologyRepresentatives[representativeIndex] || {};
+    var representativeId = Math.max(1, Math.round(restoreNumber(representative.id, representativeIndex + 1)));
+    representative.id = representativeId;
+    representative.populationId = Math.max(1, Math.round(restoreNumber(representative.populationId, 1)));
+    representative.speciesId = Math.max(1, Math.round(restoreNumber(representative.speciesId, representative.populationId)));
+    representative.lineageId = Math.max(1, Math.round(restoreNumber(representative.lineageId, representative.speciesId)));
+    world.biologyRepresentativeById[String(representativeId)] = representative;
+    world.nextBiologyRepresentativeId = Math.max(world.nextBiologyRepresentativeId, representativeId + 1);
+    world.nextBiologyPopulationId = Math.max(world.nextBiologyPopulationId, representative.populationId + 1);
+    world.nextSpeciesId = Math.max(world.nextSpeciesId, representative.speciesId + 1);
+  }
+}
+
 function restoreOrganism(organism) {
   var tileX = clamp(Math.round(restoreNumber(organism.x, 0)), 0, WORLD_WIDTH - 1);
   var tileY = clamp(Math.round(restoreNumber(organism.y, 0)), 0, WORLD_HEIGHT - 1);
@@ -166,6 +201,12 @@ function restoreOrganism(organism) {
   restoredOrganism.lineageId = Math.round(restoreNumber(organism.lineageId, 0));
   restoredOrganism.lineageParentId = Math.max(0, Math.round(restoreNumber(organism.lineageParentId, 0)));
   restoredOrganism.generation = Math.max(0, Math.round(restoreNumber(organism.generation, 0)));
+  restoredOrganism.speciesId = Math.max(1, Math.round(restoreNumber(organism.speciesId, restoredOrganism.lineageId || 1)));
+  restoredOrganism.populationId = Math.max(1, Math.round(restoreNumber(organism.populationId, restoredOrganism.lineageId || 1)));
+  restoredOrganism.representativeId = Math.max(
+    1,
+    Math.round(restoreNumber(organism.representativeId, restoredOrganism.representativeId || 1))
+  );
 
   ensureOrganismLineage(restoredOrganism);
   return restoredOrganism;

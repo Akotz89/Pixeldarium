@@ -48,6 +48,9 @@ const root = path.resolve(__dirname, "..");
         panNorthMeters: -155
       };
       world.nextLineageId = 12;
+      world.nextSpeciesId = 18;
+      world.nextBiologyPopulationId = 19;
+      world.nextBiologyRepresentativeId = 20;
       world.nextSettlementId = 22;
       world.nextSettlementRouteId = 32;
       world.nextOrbitalAssetId = 42;
@@ -111,6 +114,57 @@ const root = path.resolve(__dirname, "..");
           isExtinct: false
         }
       };
+      world.biologyPopulations = [{
+        id: 17,
+        speciesId: 13,
+        lineageId: 7,
+        parentPopulationId: 0,
+        count: 44,
+        biomass: 120,
+        energyReserve: 88,
+        territoryCells: [{ x: 12, y: 9, density: 0.8 }],
+        traitMean: { vision: 22, bodySize: 1.4 },
+        traitVariance: { vision: 2, bodySize: 0.1 },
+        pressure: { food: 0.3, terrain: 0.2 },
+        representativeIds: [19],
+        createdTick: 250,
+        lastUpdatedTick: 4240
+      }];
+      world.biologyPopulationById = { "17": world.biologyPopulations[0] };
+      world.biologyRepresentatives = [{
+        id: 19,
+        populationId: 17,
+        speciesId: 13,
+        lineageId: 7,
+        x: 12,
+        y: 9,
+        latitude: 21.2,
+        longitude: -73.4,
+        energy: 150,
+        age: 12,
+        behavior: "forage",
+        target: { type: "food", x: 13, y: 9 },
+        traits: { vision: 22, bodySize: 1.4 },
+        history: [{ tick: 4238, label: "sampled" }],
+        pinned: true,
+        createdTick: 4200,
+        lastSeenTick: 4240
+      }];
+      world.biologyRepresentativeById = { "19": world.biologyRepresentatives[0] };
+      if (!Array.isArray(world.organisms) || world.organisms.length === 0) {
+        const seededOrganism = makeOrganism(12, 9, 7);
+        if (seededOrganism) {
+          world.organisms = [seededOrganism];
+        }
+      }
+      if (world.organisms[0]) {
+        world.organisms[0].speciesId = 13;
+        world.organisms[0].populationId = 17;
+        world.organisms[0].representativeId = 19;
+        world.organisms[0].traits.bodySize = 1.5;
+        world.organisms[0].traits.limbCount = 6;
+        world.organisms[0].traits.camouflage = 0.75;
+      }
       world.settlements = [{
         id: 21,
         lineageId: 7,
@@ -315,6 +369,21 @@ const root = path.resolve(__dirname, "..");
       timeScale: PS.time && PS.time.timeScale ? Object.assign({}, PS.time.timeScale) : null,
       timelineEvents: world.timelineEvents.slice(),
       milestonesReached: Object.assign({}, world.milestonesReached),
+      biologyPopulations: world.biologyPopulations.slice(),
+      biologyPopulationByIdKeys: Object.keys(world.biologyPopulationById),
+      biologyRepresentatives: world.biologyRepresentatives.slice(),
+      biologyRepresentativeByIdKeys: Object.keys(world.biologyRepresentativeById),
+      nextBiologyPopulationId: world.nextBiologyPopulationId,
+      nextBiologyRepresentativeId: world.nextBiologyRepresentativeId,
+      nextSpeciesId: world.nextSpeciesId,
+      organismIdentity: world.organisms[0] ? {
+        speciesId: world.organisms[0].speciesId,
+        populationId: world.organisms[0].populationId,
+        representativeId: world.organisms[0].representativeId,
+        bodySize: world.organisms[0].traits.bodySize,
+        limbCount: world.organisms[0].traits.limbCount,
+        camouflage: world.organisms[0].traits.camouflage
+      } : null,
       geology: Object.assign({}, world.geology),
       atmosphere: Object.assign({}, world.atmosphere)
     };
@@ -374,6 +443,27 @@ const root = path.resolve(__dirname, "..");
   assert.strictEqual(evidence.saveData.timelineEvents.length, 1, "timeline events should serialize");
   assert.strictEqual(evidence.importedEvidence.timelineEvents[0].details.value, 1, "timeline events should restore details");
   assert.strictEqual(evidence.importedEvidence.milestonesReached["life.first"].value, 1, "milestone fired state should restore");
+  assert.strictEqual(evidence.saveData.nextSpeciesId, 18, "species counter should serialize");
+  assert.strictEqual(evidence.saveData.nextBiologyPopulationId, 19, "biology population counter should serialize");
+  assert.strictEqual(evidence.saveData.nextBiologyRepresentativeId, 20, "biology representative counter should serialize");
+  assert.ok(evidence.importedEvidence.nextSpeciesId >= 18, "species counter should advance past restored records");
+  assert.ok(evidence.importedEvidence.nextBiologyPopulationId >= 19, "population counter should advance past restored records");
+  assert.ok(evidence.importedEvidence.nextBiologyRepresentativeId >= 20, "representative counter should advance past restored records");
+  assert.strictEqual(evidence.saveData.biologyPopulations[0].id, 17, "biology populations should serialize");
+  assert.strictEqual(evidence.importedEvidence.biologyPopulations[0].traitMean.bodySize, 1.4, "biology populations should restore trait means");
+  assert.deepStrictEqual(evidence.importedEvidence.biologyPopulationByIdKeys, ["17"], "biology population index should rebuild");
+  assert.strictEqual(evidence.saveData.biologyRepresentatives[0].id, 19, "biology representatives should serialize");
+  assert.strictEqual(evidence.importedEvidence.biologyRepresentatives[0].target.type, "food", "biology representatives should restore target data");
+  assert.deepStrictEqual(evidence.importedEvidence.biologyRepresentativeByIdKeys, ["19"], "biology representative index should rebuild");
+  assert.strictEqual(evidence.saveData.organisms[0].speciesId, 13, "organism species id should serialize");
+  assert.strictEqual(evidence.saveData.organisms[0].populationId, 17, "organism population id should serialize");
+  assert.strictEqual(evidence.saveData.organisms[0].representativeId, 19, "organism representative id should serialize");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.speciesId, 13, "organism species id should restore");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.populationId, 17, "organism population id should restore");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.representativeId, 19, "organism representative id should restore");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.bodySize, 1.5, "organism body size should restore");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.limbCount, 6, "organism limb count should restore");
+  assert.strictEqual(evidence.importedEvidence.organismIdentity.camouflage, 0.75, "organism camouflage should restore");
   assert.ok(Number.isFinite(evidence.saveData.colonyNetworkScore), "colony score should serialize");
   assert.ok(evidence.importedEvidence.progression.colonyNetworkScore > 0, "colony score should restore to an active progression state");
   [

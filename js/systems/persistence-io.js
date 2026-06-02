@@ -27,6 +27,9 @@ function applyWorldSaveData(saveData) {
   world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
   restoreCameraState(saveData.camera);
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
+  world.nextSpeciesId = Math.max(1, Math.round(restoreNumber(saveData.nextSpeciesId, 1)));
+  world.nextBiologyPopulationId = Math.max(1, Math.round(restoreNumber(saveData.nextBiologyPopulationId, 1)));
+  world.nextBiologyRepresentativeId = Math.max(1, Math.round(restoreNumber(saveData.nextBiologyRepresentativeId, 1)));
   world.nextSettlementId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementId, 1)));
   world.nextSettlementRouteId = Math.max(1, Math.round(restoreNumber(saveData.nextSettlementRouteId, 1)));
   world.nextOrbitalAssetId = Math.max(1, Math.round(restoreNumber(saveData.nextOrbitalAssetId, 1)));
@@ -74,6 +77,7 @@ function applyWorldSaveData(saveData) {
   world.lastEmpireLegacyTick = Math.max(0, Math.round(restoreNumber(saveData.lastEmpireLegacyTick, 0)));
   world.geology = saveData.geology ? JSON.parse(JSON.stringify(saveData.geology)) : null;
   world.atmosphere = saveData.atmosphere ? JSON.parse(JSON.stringify(saveData.atmosphere)) : null;
+  restoreBiologyAggregateState(saveData);
   world.lineages = restoreLineages(saveData.lineages);
   world.settlements = restoreSettlements(saveData.settlements);
   world.settlementRoutes = restoreSettlementRoutes(saveData.settlementRoutes);

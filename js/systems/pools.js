@@ -49,9 +49,19 @@ function makeOrganismArrays(capacity) {
     reproductionEnergy: new Float32Array(capacity),
     movementTendency: new Float32Array(capacity),
     terrainAffinity: new Float32Array(capacity),
-    lineageId: new Float32Array(capacity),
-    lineageParentId: new Float32Array(capacity),
-    generation: new Float32Array(capacity)
+    bodySize: new Float32Array(capacity),
+    limbCount: new Uint8Array(capacity),
+    bodyShape: new Uint8Array(capacity),
+    appendageType: new Uint8Array(capacity),
+    camouflage: new Float32Array(capacity),
+    thermalTolerance: new Float32Array(capacity),
+    waterDependency: new Float32Array(capacity),
+    lineageId: new Uint32Array(capacity),
+    lineageParentId: new Uint32Array(capacity),
+    generation: new Uint32Array(capacity),
+    speciesId: new Uint32Array(capacity),
+    populationId: new Uint32Array(capacity),
+    representativeId: new Uint32Array(capacity)
   };
 }
 
@@ -64,9 +74,12 @@ function createOrganismFacade(index, arrays) {
   var fields = [
     "x", "y", "prevX", "prevY", "latitude", "longitude", "prevLatitude", "prevLongitude",
     "energy", "age", "directionX", "directionY", "velocityX", "velocityY", "travelKm",
-    "lineageId", "lineageParentId", "generation"
+    "lineageId", "lineageParentId", "generation", "speciesId", "populationId", "representativeId"
   ];
-  var traitFields = ["vision", "metabolism", "reproductionEnergy", "movementTendency", "terrainAffinity"];
+  var traitFields = [
+    "vision", "metabolism", "reproductionEnergy", "movementTendency", "terrainAffinity",
+    "bodySize", "limbCount", "bodyShape", "appendageType", "camouflage", "thermalTolerance", "waterDependency"
+  ];
 
   for (var fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
     definePooledNumber(organism, fields[fieldIndex], arrays, fields[fieldIndex], index);

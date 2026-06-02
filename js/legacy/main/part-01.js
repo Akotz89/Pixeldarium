@@ -74,6 +74,13 @@ function clearWorld() {
   world.lineageSummary = null;
   world.lineageSummaryText = "LINEAGES: -";
   world.nextLineageId = 1;
+  world.nextSpeciesId = 1;
+  world.nextBiologyPopulationId = 1;
+  world.nextBiologyRepresentativeId = 1;
+  world.biologyPopulations = [];
+  world.biologyPopulationById = {};
+  world.biologyRepresentatives = [];
+  world.biologyRepresentativeById = {};
   world.eventLog = [];
   world.timelineEvents = [];
   world.milestonesReached = {};

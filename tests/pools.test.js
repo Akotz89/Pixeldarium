@@ -118,15 +118,25 @@ PS.pools.reset();
 assert.strictEqual(PS.pools.organism.capacity, 4, "organism capacity should be configurable");
 assert.strictEqual(PS.pools.food.capacity, 3, "food capacity should be configurable");
 assert.ok(PS.pools.organism.arrays.x instanceof Float32Array, "organism x should be typed-array backed");
-assert.strictEqual(Object.keys(PS.pools.organism.arrays).length, 24, "organism pool should expose 20+ typed arrays");
+assert.strictEqual(Object.keys(PS.pools.organism.arrays).length, 34, "organism pool should expose biology identity and trait arrays");
 
 var organism = makeOrganism(5, 6);
 assert.strictEqual(PS.pools.getStats().activeOrganisms, 1, "makeOrganism should acquire from pool");
 assert.strictEqual(organism.x, 5, "pooled organism should expose x");
 organism.energy = 42;
 organism.traits.vision = 27;
+organism.speciesId = 3;
+organism.populationId = 5;
+organism.representativeId = 7;
+organism.traits.bodySize = 1.5;
+organism.traits.limbCount = 6;
 assert.strictEqual(PS.pools.organism.arrays.energy[organism.poolIndex], 42, "organism energy should write through to typed array");
 assert.strictEqual(PS.pools.organism.arrays.vision[organism.poolIndex], 27, "trait writes should update typed array");
+assert.strictEqual(PS.pools.organism.arrays.speciesId[organism.poolIndex], 3, "species id should write through to typed array");
+assert.strictEqual(PS.pools.organism.arrays.populationId[organism.poolIndex], 5, "population id should write through to typed array");
+assert.strictEqual(PS.pools.organism.arrays.representativeId[organism.poolIndex], 7, "representative id should write through to typed array");
+assert.strictEqual(PS.pools.organism.arrays.bodySize[organism.poolIndex], 1.5, "body size should write through to typed array");
+assert.strictEqual(PS.pools.organism.arrays.limbCount[organism.poolIndex], 6, "limb count should write through to typed array");
 
 organism.energy = 0;
 world.organisms = [organism];

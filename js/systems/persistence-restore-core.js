@@ -106,6 +106,45 @@ function restoreOrganismTraits(traits) {
       CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MAX
+    ),
+    bodySize: restoreClampedNumber(
+      traits.bodySize,
+      CONFIG.TRAIT_BODY_SIZE_DEFAULT,
+      CONFIG.TRAIT_BODY_SIZE_MIN,
+      CONFIG.TRAIT_BODY_SIZE_MAX
+    ),
+    limbCount: clamp(
+      Math.round(restoreNumber(traits.limbCount, CONFIG.TRAIT_LIMB_COUNT_DEFAULT)),
+      CONFIG.TRAIT_LIMB_COUNT_MIN,
+      CONFIG.TRAIT_LIMB_COUNT_MAX
+    ),
+    bodyShape: clamp(
+      Math.round(restoreNumber(traits.bodyShape, CONFIG.TRAIT_BODY_SHAPE_DEFAULT)),
+      CONFIG.TRAIT_BODY_SHAPE_MIN,
+      CONFIG.TRAIT_BODY_SHAPE_MAX
+    ),
+    appendageType: clamp(
+      Math.round(restoreNumber(traits.appendageType, CONFIG.TRAIT_APPENDAGE_TYPE_DEFAULT)),
+      CONFIG.TRAIT_APPENDAGE_TYPE_MIN,
+      CONFIG.TRAIT_APPENDAGE_TYPE_MAX
+    ),
+    camouflage: restoreClampedNumber(
+      traits.camouflage,
+      CONFIG.TRAIT_CAMOUFLAGE_DEFAULT,
+      CONFIG.TRAIT_CAMOUFLAGE_MIN,
+      CONFIG.TRAIT_CAMOUFLAGE_MAX
+    ),
+    thermalTolerance: restoreClampedNumber(
+      traits.thermalTolerance,
+      CONFIG.TRAIT_THERMAL_TOLERANCE_DEFAULT,
+      CONFIG.TRAIT_THERMAL_TOLERANCE_MIN,
+      CONFIG.TRAIT_THERMAL_TOLERANCE_MAX
+    ),
+    waterDependency: restoreClampedNumber(
+      traits.waterDependency,
+      CONFIG.TRAIT_WATER_DEPENDENCY_DEFAULT,
+      CONFIG.TRAIT_WATER_DEPENDENCY_MIN,
+      CONFIG.TRAIT_WATER_DEPENDENCY_MAX
     )
   };
 }

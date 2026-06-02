@@ -35,6 +35,9 @@
 | seedText | string | World seed string |
 | rngState | uint32 | Current xorshift32 RNG state |
 | nextLineageId | int | Auto-increment counter |
+| nextSpeciesId | int | Auto-increment counter for biology species IDs |
+| nextBiologyPopulationId | int | Auto-increment counter for aggregate biology population IDs |
+| nextBiologyRepresentativeId | int | Auto-increment counter for watchable representative organism IDs |
 | nextSettlementId | int | Auto-increment counter |
 | nextSettlementRouteId | int | Auto-increment counter |
 | nextOrbitalAssetId | int | Auto-increment counter |
@@ -70,14 +73,75 @@ Always-on atmosphere layer state, including gas composition (`co2`, `o2`, `n2`, 
   "energy": 180, "age": 0,
   "directionX": 0, "directionY": 0,
   "travelKm": 0.0,
-  "traits": { "vision": 20, "metabolism": 1, "reproductionEnergy": 260, "movementTendency": 0.06, "terrainAffinity": 0.5 },
-  "lineageId": 1, "lineageParentId": 0, "generation": 0
+  "traits": {
+    "vision": 20,
+    "metabolism": 1,
+    "reproductionEnergy": 260,
+    "movementTendency": 0.06,
+    "terrainAffinity": 0.5,
+    "bodySize": 1,
+    "limbCount": 4,
+    "bodyShape": 0,
+    "appendageType": 0,
+    "camouflage": 0.25,
+    "thermalTolerance": 0.5,
+    "waterDependency": 0.5
+  },
+  "lineageId": 1, "lineageParentId": 0, "generation": 0,
+  "speciesId": 1, "populationId": 1, "representativeId": 1
 }
 ```
 
 ### food[]
 ```json
 { "x": 0, "y": 0, "latitude": 0.0, "longitude": 0.0 }
+```
+
+### biologyPopulations[]
+Aggregate population records for planet-scale biology. These are authoritative for population/species state.
+
+```json
+{
+  "id": 1,
+  "speciesId": 1,
+  "lineageId": 1,
+  "parentPopulationId": 0,
+  "count": 100,
+  "biomass": 220,
+  "energyReserve": 80,
+  "territoryCells": [{ "x": 12, "y": 9, "density": 0.8 }],
+  "traitMean": { "vision": 22, "bodySize": 1.2 },
+  "traitVariance": { "vision": 2, "bodySize": 0.1 },
+  "pressure": { "food": 0.3, "terrain": 0.2 },
+  "representativeIds": [1],
+  "createdTick": 0,
+  "lastUpdatedTick": 0
+}
+```
+
+### biologyRepresentatives[]
+Persisted watcher-facing representative organisms. Unpinned representatives may be regenerated and do not all need to persist.
+
+```json
+{
+  "id": 1,
+  "populationId": 1,
+  "speciesId": 1,
+  "lineageId": 1,
+  "x": 12,
+  "y": 9,
+  "latitude": 21.2,
+  "longitude": -73.4,
+  "energy": 150,
+  "age": 12,
+  "behavior": "forage",
+  "target": { "type": "food", "x": 13, "y": 9 },
+  "traits": { "vision": 22, "bodySize": 1.2 },
+  "history": [{ "tick": 100, "label": "sampled" }],
+  "pinned": true,
+  "createdTick": 0,
+  "lastSeenTick": 0
+}
 ```
 
 ### terrain[]

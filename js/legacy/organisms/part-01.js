@@ -43,7 +43,14 @@ function makeInitialOrganismTraits() {
       CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MAX,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP
-    )
+    ),
+    bodySize: CONFIG.TRAIT_BODY_SIZE_DEFAULT,
+    limbCount: CONFIG.TRAIT_LIMB_COUNT_DEFAULT,
+    bodyShape: CONFIG.TRAIT_BODY_SHAPE_DEFAULT,
+    appendageType: CONFIG.TRAIT_APPENDAGE_TYPE_DEFAULT,
+    camouflage: CONFIG.TRAIT_CAMOUFLAGE_DEFAULT,
+    thermalTolerance: CONFIG.TRAIT_THERMAL_TOLERANCE_DEFAULT,
+    waterDependency: CONFIG.TRAIT_WATER_DEPENDENCY_DEFAULT
   };
 }
 
@@ -80,7 +87,14 @@ function inheritOrganismTraits(parentTraits) {
       CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MAX,
       CONFIG.TRAIT_TERRAIN_AFFINITY_MUTATION_STEP
-    )
+    ),
+    bodySize: parentTraits.bodySize,
+    limbCount: parentTraits.limbCount,
+    bodyShape: parentTraits.bodyShape,
+    appendageType: parentTraits.appendageType,
+    camouflage: parentTraits.camouflage,
+    thermalTolerance: parentTraits.thermalTolerance,
+    waterDependency: parentTraits.waterDependency
   };
 }
 
@@ -92,7 +106,14 @@ function copyTraitsForLineage(traits) {
     metabolism: traits.metabolism,
     reproductionEnergy: traits.reproductionEnergy,
     movementTendency: traits.movementTendency,
-    terrainAffinity: traits.terrainAffinity
+    terrainAffinity: traits.terrainAffinity,
+    bodySize: traits.bodySize,
+    limbCount: traits.limbCount,
+    bodyShape: traits.bodyShape,
+    appendageType: traits.appendageType,
+    camouflage: traits.camouflage,
+    thermalTolerance: traits.thermalTolerance,
+    waterDependency: traits.waterDependency
   };
 }
 
@@ -100,6 +121,24 @@ function allocateLineageId() {
   var lineageId = world.nextLineageId;
   world.nextLineageId++;
   return lineageId;
+}
+
+function allocateSpeciesId() {
+  var speciesId = Math.max(1, Math.round(Number(world.nextSpeciesId) || 1));
+  world.nextSpeciesId = speciesId + 1;
+  return speciesId;
+}
+
+function allocateBiologyPopulationId() {
+  var populationId = Math.max(1, Math.round(Number(world.nextBiologyPopulationId) || 1));
+  world.nextBiologyPopulationId = populationId + 1;
+  return populationId;
+}
+
+function allocateBiologyRepresentativeId() {
+  var representativeId = Math.max(1, Math.round(Number(world.nextBiologyRepresentativeId) || 1));
+  world.nextBiologyRepresentativeId = representativeId + 1;
+  return representativeId;
 }
 
 function ensureLineageRegistry() {
@@ -183,8 +222,32 @@ function ensureOrganismLineage(organism) {
     organism.generation = 0;
   }
 
+  if (typeof organism.speciesId !== "number" || organism.speciesId < 1) {
+    organism.speciesId = organism.lineageId;
+  }
+
+  if (typeof organism.populationId !== "number" || organism.populationId < 1) {
+    organism.populationId = organism.lineageId;
+  }
+
+  if (typeof organism.representativeId !== "number" || organism.representativeId < 1) {
+    organism.representativeId = allocateBiologyRepresentativeId();
+  }
+
   if (organism.lineageId >= world.nextLineageId) {
     world.nextLineageId = organism.lineageId + 1;
+  }
+
+  if (organism.speciesId >= world.nextSpeciesId) {
+    world.nextSpeciesId = organism.speciesId + 1;
+  }
+
+  if (organism.populationId >= world.nextBiologyPopulationId) {
+    world.nextBiologyPopulationId = organism.populationId + 1;
+  }
+
+  if (organism.representativeId >= world.nextBiologyRepresentativeId) {
+    world.nextBiologyRepresentativeId = organism.representativeId + 1;
   }
 
   registerLineage(
@@ -259,6 +322,34 @@ function normalizeOrganismTraits(traits) {
     traits.terrainAffinity = CONFIG.TRAIT_TERRAIN_AFFINITY_DEFAULT;
   }
 
+  if (typeof traits.bodySize !== "number") {
+    traits.bodySize = CONFIG.TRAIT_BODY_SIZE_DEFAULT;
+  }
+
+  if (typeof traits.limbCount !== "number") {
+    traits.limbCount = CONFIG.TRAIT_LIMB_COUNT_DEFAULT;
+  }
+
+  if (typeof traits.bodyShape !== "number") {
+    traits.bodyShape = CONFIG.TRAIT_BODY_SHAPE_DEFAULT;
+  }
+
+  if (typeof traits.appendageType !== "number") {
+    traits.appendageType = CONFIG.TRAIT_APPENDAGE_TYPE_DEFAULT;
+  }
+
+  if (typeof traits.camouflage !== "number") {
+    traits.camouflage = CONFIG.TRAIT_CAMOUFLAGE_DEFAULT;
+  }
+
+  if (typeof traits.thermalTolerance !== "number") {
+    traits.thermalTolerance = CONFIG.TRAIT_THERMAL_TOLERANCE_DEFAULT;
+  }
+
+  if (typeof traits.waterDependency !== "number") {
+    traits.waterDependency = CONFIG.TRAIT_WATER_DEPENDENCY_DEFAULT;
+  }
+
   traits.vision = clamp(traits.vision, CONFIG.TRAIT_VISION_MIN, CONFIG.TRAIT_VISION_MAX);
   traits.metabolism = clamp(traits.metabolism, CONFIG.TRAIT_METABOLISM_MIN, CONFIG.TRAIT_METABOLISM_MAX);
   traits.reproductionEnergy = clamp(
@@ -276,6 +367,17 @@ function normalizeOrganismTraits(traits) {
     CONFIG.TRAIT_TERRAIN_AFFINITY_MIN,
     CONFIG.TRAIT_TERRAIN_AFFINITY_MAX
   );
+  traits.bodySize = clamp(traits.bodySize, CONFIG.TRAIT_BODY_SIZE_MIN, CONFIG.TRAIT_BODY_SIZE_MAX);
+  traits.limbCount = clamp(Math.round(traits.limbCount), CONFIG.TRAIT_LIMB_COUNT_MIN, CONFIG.TRAIT_LIMB_COUNT_MAX);
+  traits.bodyShape = clamp(Math.round(traits.bodyShape), CONFIG.TRAIT_BODY_SHAPE_MIN, CONFIG.TRAIT_BODY_SHAPE_MAX);
+  traits.appendageType = clamp(Math.round(traits.appendageType), CONFIG.TRAIT_APPENDAGE_TYPE_MIN, CONFIG.TRAIT_APPENDAGE_TYPE_MAX);
+  traits.camouflage = clamp(traits.camouflage, CONFIG.TRAIT_CAMOUFLAGE_MIN, CONFIG.TRAIT_CAMOUFLAGE_MAX);
+  traits.thermalTolerance = clamp(
+    traits.thermalTolerance,
+    CONFIG.TRAIT_THERMAL_TOLERANCE_MIN,
+    CONFIG.TRAIT_THERMAL_TOLERANCE_MAX
+  );
+  traits.waterDependency = clamp(traits.waterDependency, CONFIG.TRAIT_WATER_DEPENDENCY_MIN, CONFIG.TRAIT_WATER_DEPENDENCY_MAX);
 
   return traits;
 }
@@ -309,6 +411,9 @@ function makeOrganism(x, y, lineageId) {
   organism.lineageId = lineageId || allocateLineageId();
   organism.lineageParentId = 0;
   organism.generation = 0;
+  organism.speciesId = organism.lineageId;
+  organism.populationId = organism.lineageId;
+  organism.representativeId = allocateBiologyRepresentativeId();
 
   registerLineage(organism.lineageId, 0, 0, organism.traits, world.tick);
   return organism;

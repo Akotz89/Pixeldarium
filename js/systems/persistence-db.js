@@ -39,7 +39,14 @@ function copyOrganismTraitsForSave(traits) {
     metabolism: traits.metabolism,
     reproductionEnergy: traits.reproductionEnergy,
     movementTendency: traits.movementTendency,
-    terrainAffinity: traits.terrainAffinity
+    terrainAffinity: traits.terrainAffinity,
+    bodySize: traits.bodySize,
+    limbCount: traits.limbCount,
+    bodyShape: traits.bodyShape,
+    appendageType: traits.appendageType,
+    camouflage: traits.camouflage,
+    thermalTolerance: traits.thermalTolerance,
+    waterDependency: traits.waterDependency
   };
 }
 
@@ -63,7 +70,10 @@ function copyOrganismForSave(organism) {
     traits: copyOrganismTraitsForSave(traits),
     lineageId: ensureOrganismLineage(organism),
     lineageParentId: organism.lineageParentId,
-    generation: organism.generation
+    generation: organism.generation,
+    speciesId: Math.max(1, Math.round(Number(organism.speciesId) || organism.lineageId || 1)),
+    populationId: Math.max(1, Math.round(Number(organism.populationId) || organism.lineageId || 1)),
+    representativeId: Math.max(1, Math.round(Number(organism.representativeId) || 1))
   };
 }
 

@@ -122,6 +122,9 @@ function createWorldSaveData() {
     seedText: normalizeSeedText(world.seedText),
     rngState: Math.max(1, Math.round(Number(world.rngState) || 1)) >>> 0,
     nextLineageId: world.nextLineageId,
+    nextSpeciesId: Math.max(1, Math.round(Number(world.nextSpeciesId) || 1)),
+    nextBiologyPopulationId: Math.max(1, Math.round(Number(world.nextBiologyPopulationId) || 1)),
+    nextBiologyRepresentativeId: Math.max(1, Math.round(Number(world.nextBiologyRepresentativeId) || 1)),
     nextSettlementId: world.nextSettlementId,
     nextSettlementRouteId: world.nextSettlementRouteId,
     nextOrbitalAssetId: Math.max(1, Math.round(Number(world.nextOrbitalAssetId) || 1)),
@@ -311,6 +314,10 @@ function createWorldSaveData() {
     },
     terrain: world.terrain.slice(),
     food: world.food.map(copyFoodForSave),
+    biologyPopulations: copyLayerStateForSave(Array.isArray(world.biologyPopulations) ? world.biologyPopulations : []),
+    biologyRepresentatives: copyLayerStateForSave(
+      Array.isArray(world.biologyRepresentatives) ? world.biologyRepresentatives : []
+    ),
     camera: copyCameraForSave(),
     organisms: world.organisms.map(copyOrganismForSave),
     traitHistory: world.traitHistory.map(copyTraitHistorySampleForSave),
