@@ -6,7 +6,7 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
   var visibleChunks = PS.render.surfaceStreaming.makeQueue(getPlanetSurfaceChunkSampleCount());
   var generatedThisPass = 0;
   var pendingChunks = 0;
-  var chunksPerPass = 0;
+  var chunksPerPass = getLocalSurfaceRenderChunksPerPass();
   var fallbackChunks = 0;
   var fallbackGeneratedThisPass = 0;
   var fallbackPendingChunks = 0;
@@ -17,8 +17,10 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
   var placeholderDraws = [];
   var fineDraws = [];
 
-  targetCtx.fillStyle = "#01030a";
-  targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!drawLocalSurfaceUnderlay(targetCtx)) {
+    targetCtx.fillStyle = "#01030a";
+    targetCtx.fillRect(0, 0, canvas.width, canvas.height);
+  }
   localSurfaceRenderChunkCache.stats.lastVisibleChunks = Number(visibleChunks.visibleCount) || visibleChunks.length;
   localSurfaceRenderChunkCache.stats.lastVisibleQueueChunks = Number(visibleChunks.visibleCount) || visibleChunks.length;
   localSurfaceRenderChunkCache.stats.lastPrefetchQueueChunks = Number(visibleChunks.prefetchCount) || 0;

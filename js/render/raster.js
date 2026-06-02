@@ -15,6 +15,38 @@ PS.render.raster.buildFlatTerrainCache = function (targetCtx) {
   }
 };
 
+PS.render.raster.drawLocalSurfaceUnderlay = function (targetCtx) {
+  if (!targetCtx || typeof getPlanetLatLonFromCanvasPoint !== "function") {
+    return false;
+  }
+
+  var pixelSize = Math.max(2, Math.round(Number(CONFIG.PLANET_LOCAL_UNDERLAY_PIXEL_SIZE) || 8));
+  var surfaceLod = getPlanetSurfaceLodZoomIndex(getPlanetView().zoomLevel);
+  var underlayLod = Math.max(1, surfaceLod - 1);
+
+  for (var y = 0; y < canvas.height; y += pixelSize) {
+    var height = Math.min(pixelSize, canvas.height - y);
+
+    for (var x = 0; x < canvas.width; x += pixelSize) {
+      var width = Math.min(pixelSize, canvas.width - x);
+      var latLon = getPlanetLatLonFromCanvasPoint(x + width / 2, y + height / 2);
+      var sample = PS.render.surface.getChunkSample(latLon.latitude, latLon.longitude, null, underlayLod);
+      var rgb = getRgbFromHex(getPlanetSurfaceColor(sample));
+      var shadeSeed = getPlanetMaterialPixelNoise(latLon.latitude, latLon.longitude, 120, 9109) - 0.5;
+      var shade = 1 + shadeSeed * 0.12;
+
+      targetCtx.fillStyle = getHexFromRgb(
+        clamp(rgb.red * shade, 0, 255),
+        clamp(rgb.green * shade, 0, 255),
+        clamp(rgb.blue * shade, 0, 255)
+      );
+      targetCtx.fillRect(x, y, width, height);
+    }
+  }
+
+  return true;
+};
+
 PS.render.raster.buildGlobeTileRgbCache = function () {
   var colors = [];
 

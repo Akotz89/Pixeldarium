@@ -175,6 +175,10 @@ function buildGlobeTerrainCache(tctx) {
   return PS.render.terrainCache.buildGlobe(tctx);
 }
 
+function drawLocalSurfaceUnderlay(tctx) {
+  return PS.render.raster.drawLocalSurfaceUnderlay(tctx);
+}
+
 function buildLocalTerrainCache(tctx) {
   return PS.render.surfaceRender.work.buildLocalTerrainCache(tctx);
 }

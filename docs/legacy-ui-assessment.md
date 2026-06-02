@@ -33,6 +33,8 @@ Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinishe
 
 ## Remaining UI Lane Work
 
+Linear issue AZR-366 tracks this as follow-up cleanup: the runtime migration is complete, but several modern UI modules still reflect the old multipart migration slices rather than final Pixeldarium UI ownership boundaries.
+
 1. Split the migrated `js/ui/foundation.js` functions into focused HUD, controls, panels, and inspect modules.
 2. Split the migrated `js/ui/summary.js` helpers into focused summary, ecosystem, lineage, and inspect modules where useful.
 3. Split the migrated `js/ui/history-summary.js` helpers into focused event, ecosystem-history, and settlement-summary modules where useful.

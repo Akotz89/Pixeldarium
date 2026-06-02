@@ -83,12 +83,24 @@ PS.render.entities.drawRegisteredSprite = function (spriteId, entity, point, siz
     ctx.fillRect(-drawSize * 0.50, -drawSize * 0.10 + phase % 2, drawSize, Math.max(1, drawSize * 0.22));
   } else if (sprite.shape === "settlement") {
     ctx.fillStyle = sprite.shadow || "rgba(5, 6, 10, 0.72)";
-    ctx.fillRect(-drawSize / 2, -drawSize / 2, drawSize, drawSize);
+    ctx.fillRect(-drawSize * 0.58, -drawSize * 0.42, drawSize * 1.16, drawSize * 0.84);
     ctx.strokeStyle = tint;
     ctx.lineWidth = Math.max(1, Math.min(3, drawSize * 0.18));
-    ctx.strokeRect(-drawSize / 2, -drawSize / 2, drawSize, drawSize);
+    ctx.strokeRect(-drawSize * 0.58, -drawSize * 0.42, drawSize * 1.16, drawSize * 0.84);
     ctx.fillStyle = sprite.accent || "#f2b85b";
-    ctx.fillRect(-drawSize * 0.18, -drawSize * 0.18, drawSize * 0.36, drawSize * 0.36);
+    ctx.fillRect(-drawSize * 0.42, -drawSize * 0.18, drawSize * 0.26, drawSize * 0.34);
+    ctx.fillRect(-drawSize * 0.08, -drawSize * 0.28, drawSize * 0.22, drawSize * 0.44);
+    ctx.fillRect(drawSize * 0.22, -drawSize * 0.10, drawSize * 0.26, drawSize * 0.32);
+  } else if (sprite.shape === "creature") {
+    var bob = phase % 2;
+    ctx.fillStyle = sprite.shadow || "rgba(4, 6, 8, 0.45)";
+    ctx.fillRect(-drawSize * 0.42, drawSize * 0.34, drawSize * 0.84, Math.max(1, drawSize * 0.18));
+    ctx.fillStyle = tint;
+    ctx.fillRect(-drawSize * 0.34, -drawSize * 0.22 + bob, drawSize * 0.68, drawSize * 0.46);
+    ctx.fillRect(-drawSize * 0.18, -drawSize * 0.44 + bob, drawSize * 0.36, drawSize * 0.24);
+    ctx.fillStyle = sprite.accent || "#ffffff";
+    ctx.fillRect(-drawSize * 0.44, -drawSize * 0.04 + bob, drawSize * 0.18, drawSize * 0.18);
+    ctx.fillRect(drawSize * 0.26, -drawSize * 0.04 + bob, drawSize * 0.18, drawSize * 0.18);
   } else {
     var bob = phase % 2;
     ctx.fillRect(-drawSize * 0.34, -drawSize * 0.42 + bob, drawSize * 0.68, drawSize * 0.84);
