@@ -37,6 +37,8 @@ const speedLabel = document.getElementById("speed-label");
 const persistenceStatus = document.getElementById("persistence-status");
 const speedSlider = document.getElementById("speed-slider");
 const speedValue = document.getElementById("speed-value");
+const timeScaleSlider = document.getElementById("time-scale-slider");
+const timeScaleValue = document.getElementById("time-scale-value");
 const organismSizeSlider = document.getElementById("organism-size-slider");
 const organismSizeValue = document.getElementById("organism-size-value");
 const foodSizeSlider = document.getElementById("food-size-slider");
@@ -91,6 +93,7 @@ const world = {
   extinctionTick: 0,
   needsRender: true,
   speed: 1,
+  deepTimeYears: 0,
   seedText: CONFIG.DEFAULT_SEED,
   rngState: 1,
   interpolation: 0,

@@ -23,6 +23,8 @@
 | Field | Type | Description |
 |-------|------|-------------|
 | tick | int | Current simulation tick |
+| deepTimeYears | number | Semantic deep-time elapsed according to adaptive time scale |
+| timeScale | object | Current adaptive/manual time-scale state |
 | speed | int | Sim speed multiplier (1-10) |
 | era | string | Current era name |
 | isExtinct | bool | Whether all organisms died |

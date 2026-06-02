@@ -23,6 +23,8 @@ const context = {
   },
   world: {
     tick: 0,
+    era: "Organisms",
+    deepTimeYears: 0,
     speed: 1,
     isPaused: false
   }
@@ -32,6 +34,7 @@ const source = [
   "js/core/namespace.js",
   "config.js",
   "js/core/config.js",
+  "js/epochs/registry.js",
   "js/systems/time.js"
 ].map(read).join("\n");
 
@@ -39,6 +42,14 @@ vm.runInNewContext(`${source}
 
 assert.strictEqual(PS.time.dt, 1000 / 30, "fixed timestep should default to 1000/30ms");
 assert.strictEqual(PS.time.maxTicksPerFrame, 4, "max ticks per frame should default to 4");
+assert.strictEqual(PS.time.timeScales.length, 7, "adaptive time table should cover all AZR-295 epochs");
+assert.strictEqual(PS.time.timeScales[0].yearsPerTick, 10000000, "cosmological scale should be 10M years per tick");
+assert.strictEqual(PS.time.timeScales[1].yearsPerTick, 100000, "primordial scale should be 100K years per tick");
+assert.strictEqual(PS.time.timeScales[2].yearsPerTick, 10000, "microbial scale should be 10K years per tick");
+assert.strictEqual(PS.time.timeScales[3].yearsPerTick, 1000, "complex life scale should be 1K years per tick");
+assert.strictEqual(PS.time.timeScales[4].yearsPerTick, 100, "intelligence scale should be 100 years per tick");
+assert.strictEqual(PS.time.timeScales[5].yearsPerTick, 1, "civilization scale should be 1 year per tick");
+assert.strictEqual(PS.time.timeScales[6].yearsPerTick, 1 / 12, "space scale should be 1 month per tick");
 
 var ticks = 0;
 var receivedDt = [];
@@ -82,6 +93,35 @@ PS.time.reset();
 var configured = PS.time.runFrame(100, simulateTick);
 assert.strictEqual(PS.time.dt, 25, "dt should be configurable through PS.config.sim");
 assert.strictEqual(configured.ticks, 2, "configured max ticks should be honored");
+
+var currentCalls = 0;
+PS.epochs.current = function() {
+  currentCalls++;
+  return world.era;
+};
+
+PS.time.clearManualTimeScale();
+world.era = "Primordial";
+PS.time.timeScale.currentYearsPerTick = 1000;
+var primordialScale = PS.time.updateAdaptiveTimeScale(false);
+assert.ok(currentCalls > 0, "PS.time should read PS.epochs.current to detect epoch");
+assert.strictEqual(primordialScale.targetYearsPerTick, 100000, "primordial epoch should target 100K years per tick");
+assert.ok(
+  primordialScale.currentYearsPerTick > 1000 && primordialScale.currentYearsPerTick < 100000,
+  "epoch changes should transition smoothly instead of snapping"
+);
+
+PS.time.setManualTimeScale(6);
+world.era = "Cosmological";
+var manualScale = PS.time.updateAdaptiveTimeScale(false);
+assert.strictEqual(manualScale.manualOverride, true, "manual time scale slider should set override state");
+assert.strictEqual(manualScale.targetYearsPerTick, 1 / 12, "manual override should keep selected scale despite epoch");
+assert.ok(PS.time.getTimeScaleLabel().indexOf("manual") >= 0, "manual override should be visible in label");
+
+world.deepTimeYears = 0;
+PS.time.reset();
+PS.time.runFrame(100, simulateTick);
+assert.ok(world.deepTimeYears > 0, "sim ticks should advance deep-time units");
 
 console.log("time accumulator checks passed");
 `, context);

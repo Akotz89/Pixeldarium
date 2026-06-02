@@ -4,6 +4,10 @@ function applyWorldSaveData(saveData) {
   applySaveConfig(saveData.config);
 
   world.tick = Number(saveData.tick);
+  world.deepTimeYears = Math.max(0, restoreNumber(saveData.deepTimeYears, 0));
+  if (PS.time && saveData.timeScale) {
+    PS.time.timeScale = JSON.parse(JSON.stringify(saveData.timeScale));
+  }
   world.speed = clamp(Math.round(Number(saveData.speed)), 1, 10);
   world.era = String(saveData.era || "Organisms");
   world.isExtinct = Boolean(saveData.isExtinct);

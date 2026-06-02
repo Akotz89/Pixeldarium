@@ -108,6 +108,8 @@ function createWorldSaveData() {
     worldHeight: WORLD_HEIGHT,
     tileSize: CONFIG.TILE_SIZE,
     tick: world.tick,
+    deepTimeYears: Math.max(0, Number(world.deepTimeYears) || 0),
+    timeScale: PS.time && PS.time.timeScale ? copyLayerStateForSave(PS.time.timeScale) : null,
     speed: world.speed,
     era: world.era,
     isExtinct: Boolean(world.isExtinct),

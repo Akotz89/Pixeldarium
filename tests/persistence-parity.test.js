@@ -35,6 +35,7 @@ const root = path.resolve(__dirname, "..");
     function installRepresentativeWorldState() {
       world.isPaused = true;
       world.tick = 4242;
+      world.deepTimeYears = 123456789;
       world.speed = 4;
       world.era = "Empire";
       world.seedText = "AZR-355-PARITY";
@@ -250,6 +251,9 @@ const root = path.resolve(__dirname, "..");
         temperatureC: 19.5,
         oxygenStress: 0
       };
+      if (PS.time) {
+        PS.time.setManualTimeScale(2);
+      }
     }
 
     await resetTestDatabase();
@@ -291,6 +295,8 @@ const root = path.resolve(__dirname, "..");
         empireSectorReady: world.empireSectorReady,
         empireLegacyReady: world.empireLegacyReady
       },
+      deepTimeYears: world.deepTimeYears,
+      timeScale: PS.time && PS.time.timeScale ? Object.assign({}, PS.time.timeScale) : null,
       geology: Object.assign({}, world.geology),
       atmosphere: Object.assign({}, world.atmosphere)
     };
@@ -324,6 +330,9 @@ const root = path.resolve(__dirname, "..");
   assert.strictEqual(evidence.exportData.tick, evidence.saveData.tick, "export should return the same save tick");
   assert.strictEqual(evidence.importedData.tick, evidence.saveData.tick, "JSON import should resolve imported save data");
   assert.strictEqual(evidence.importedEvidence.tick, 4242, "JSON import should restore tick");
+  assert.strictEqual(evidence.saveData.deepTimeYears, 123456789, "deep time should serialize");
+  assert.strictEqual(evidence.importedEvidence.deepTimeYears, 123456789, "deep time should restore");
+  assert.strictEqual(evidence.importedEvidence.timeScale.targetYearsPerTick, 10000, "manual time scale should restore");
   assert.strictEqual(evidence.importedEvidence.camera.zoomLevel, 3.5, "camera zoom should round-trip");
   assert.strictEqual(evidence.importedEvidence.camera.latitude, 21.25, "camera latitude should round-trip");
   assert.strictEqual(evidence.importedEvidence.camera.longitude, -73.5, "camera longitude should round-trip");

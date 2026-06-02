@@ -26,6 +26,7 @@ function updateHud() {
     makeHudMetric("Tick", world.tick),
     makeHudMetric("Day", getSimulationDayLabel()),
     makeHudMetric("Food", world.food.length),
+    makeHudMetric("Time Scale", PS.time ? PS.time.getTimeScaleLabel() : "-"),
     makeHudMetric("Water", waterPercent + "%"),
     makeHudMetric("Fertile Land", fertilePercent + "%"),
     makeHudMetric("Zoom", getPlanetScaleLabel()),
@@ -144,6 +145,10 @@ function syncTuningControls() {
 
   setInputValue(speedSlider, world.speed);
   setElementText(speedValue, world.speed + "x");
+  if (PS.time) {
+    setInputValue(timeScaleSlider, PS.time.timeScale.targetIndex);
+    setElementText(timeScaleValue, PS.time.getTimeScaleLabel());
+  }
   setInputValue(organismSizeSlider, CONFIG.ORGANISM_DRAW_SIZE);
   setElementText(organismSizeValue, CONFIG.ORGANISM_DRAW_SIZE + "px");
   setInputValue(foodSizeSlider, CONFIG.FOOD_DRAW_SIZE);
@@ -181,6 +186,7 @@ function syncControlStates() {
   stepButton.title = "Advance one tick while paused (N)";
   speedDownButton.title = "Decrease simulation speed (-)";
   speedUpButton.title = "Increase simulation speed (+)";
+  timeScaleSlider.title = "Manual time scale override";
   restartButton.title = "Restart with current tuning (R)";
   pauseButton.setAttribute("aria-keyshortcuts", "Space");
   stepButton.setAttribute("aria-keyshortcuts", "N");

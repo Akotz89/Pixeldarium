@@ -73,6 +73,14 @@ window.setupControls = function() {
     applyTuningFromControls(false);
   });
 
+  timeScaleSlider.addEventListener("input", function() {
+    if (PS.time && typeof PS.time.setManualTimeScale === "function") {
+      PS.time.setManualTimeScale(timeScaleSlider.value);
+    }
+
+    updateHud();
+  });
+
   organismSizeSlider.addEventListener("input", function() {
     applyTuningFromControls(true);
   });

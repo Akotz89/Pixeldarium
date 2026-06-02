@@ -16,10 +16,10 @@ Current repo state:
 - `js/legacy/food/*`, `js/legacy/organisms/*`, `js/legacy/settlements/*`, and `js/legacy/main/*` are still loaded by `index.html`.
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
-- `js/systems/time.js` implements fixed-step accumulator plumbing, and the legacy main-loop tick now calls `PS.layers.updateAll(dt)`. Time still does not adapt scale from epoch state or emit milestone spotlight events.
+- `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override. Time still does not emit milestone spotlight events.
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays, but no Phase 2 temperature, population density, resource, atmospheric-composition, timeline, or lineage-tree overlays.
 - `js/core/events.js` exists, but Phase 2 milestone/speciation/extinction event contracts are not wired through sim, time, and watcher UI.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, event spotlight, observation overlays, or deep-time timeline behavior.
 
 ## Linear Inventory
 
@@ -62,7 +62,7 @@ AZR-260 E10 Time Scale System children:
 
 | Issue | Status | Readiness classification | Evidence / gap |
 | --- | --- | --- | --- |
-| AZR-295 E10-S1 Adaptive time baseline | Backlog | Partial foundation | Fixed-step accumulator exists. Epoch-derived time scale, smooth transitions, and deep-time units are missing. |
+| AZR-295 E10-S1 Adaptive time baseline | Done | Implemented foundation | `PS.time` reads `PS.epochs.current`, maps epochs to the required time-scale table, transitions smoothly, advances `world.deepTimeYears`, and exposes a manual time-scale slider. Covered by `tests/time-accumulator.test.js`. |
 | AZR-296 E10-S2 Event detection system | Backlog | Partial foundation | Event bus and event log exist. Milestone registry, detection rules, and timeline payload schema are missing. |
 | AZR-297 E10-S3 Event spotlight UI | Backlog | Missing | Notifications exist, but no slowdown/autopan/investigate spotlight controller exists. |
 | AZR-298 E10-S4 Time compression UI | Backlog | Partial foundation | Speed controls exist. Deep-time scale labels and adaptive unit display are missing. |
@@ -104,7 +104,7 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 ## Recommended Implementation Order
 
 1. AZR-360: define always-on `PS.layers.*`, epoch update lifecycle, and milestone event payloads.
-2. AZR-295 and AZR-296: adaptive time baseline and milestone event detection connected to `PS.events`.
+2. AZR-296: milestone event detection connected to `PS.events`.
 3. AZR-362, AZR-299, and AZR-302: observation overlays and timeline viewer consuming geology/atmosphere/biology/time events.
 4. AZR-361, AZR-350, and AZR-293 decisions: representative organisms, aggregate populations, and microbial model.
 5. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
