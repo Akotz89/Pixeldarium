@@ -208,8 +208,21 @@ function updateInspectPanel() {
     var parentText = lineageRecord && lineageRecord.parentId > 0 ? " parent L" + lineageRecord.parentId : " founder";
     var traits = ensureOrganismTraits(organism);
     var organismSurfacePosition = getEntitySurfacePosition(organism);
+    var representativeContext = PS.sim.representatives && PS.sim.representatives.inspect
+      ? PS.sim.representatives.inspect(organism)
+      : null;
+    var representativeRecord = representativeContext ? representativeContext.representative : null;
+    var populationRecord = representativeContext ? representativeContext.population : null;
+    var pressure = populationRecord && populationRecord.pressure ? populationRecord.pressure : null;
 
     detailChips.push(makeInspectChip("Organism", "L" + ensureOrganismLineage(organism) + parentText));
+    detailChips.push(makeInspectChip("Rep ID", representativeRecord ? "R" + representativeRecord.id : "-"));
+    detailChips.push(makeInspectChip("Population", populationRecord ? "P" + populationRecord.id + " count " + populationRecord.count : "-"));
+    detailChips.push(makeInspectChip("Species", organism.speciesId ? "S" + organism.speciesId : "-"));
+    detailChips.push(makeInspectChip("Rep State", representativeRecord ? representativeRecord.behavior : "-"));
+    detailChips.push(makeInspectChip("Rep Pin", representativeRecord && representativeRecord.pinned ? "pinned" : "open"));
+    detailChips.push(makeInspectChip("Bookmark", representativeRecord ? representativeRecord.bookmarkScore.toFixed(2) : "0.00"));
+    detailChips.push(makeInspectChip("Agg Pressure", pressure ? "food " + pressure.food + " scarcity " + pressure.scarcity.toFixed(2) + " terrain " + pressure.terrain.toFixed(2) : "-"));
     detailChips.push(makeInspectChip("Org Unit", "~" + Math.max(1, Math.round(Number(CONFIG.ORGANISM_POPULATION_UNIT) || 1)).toLocaleString()));
     detailChips.push(makeInspectChip("Org Energy", organism.energy));
     detailChips.push(makeInspectChip("Org Age", Math.round(organism.age * Math.max(0, Number(CONFIG.SIM_DAYS_PER_TICK) || 0)).toLocaleString() + " days"));

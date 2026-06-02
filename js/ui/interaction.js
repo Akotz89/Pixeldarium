@@ -113,9 +113,18 @@ function getInspectableEntityFromTile(tileX, tileY) {
   }
 
   if (organism && Math.abs(organism.x - tileX) + Math.abs(organism.y - tileY) <= 1) {
+    var representative = PS.sim.representatives && PS.sim.representatives.syncOrganism
+      ? PS.sim.representatives.syncOrganism(organism, { selected: true })
+      : null;
+
     return {
       type: "organism",
       lineageId: ensureOrganismLineage(organism),
+      speciesId: organism.speciesId,
+      populationId: organism.populationId,
+      representativeId: organism.representativeId,
+      pinned: representative ? representative.pinned : false,
+      bookmarkScore: representative ? representative.bookmarkScore : 0,
       generation: organism.generation,
       energy: organism.energy,
       x: organism.x,
@@ -141,6 +150,15 @@ function inspectTile(tileX, tileY, shouldFocus, surfacePosition, inspectedEntity
   };
   world.inspectedSurface = surfacePosition || null;
   world.inspectedEntity = inspectedEntity || getInspectableEntityFromTile(world.inspectedTile.x, world.inspectedTile.y);
+
+  if (
+    world.inspectedEntity &&
+    world.inspectedEntity.representativeId &&
+    PS.sim.representatives &&
+    PS.sim.representatives.select
+  ) {
+    PS.sim.representatives.select(world.inspectedEntity.representativeId);
+  }
 
   if (shouldFocus !== false && !isPlanetLocalView()) {
     focusPlanetViewOnTile(world.inspectedTile.x, world.inspectedTile.y);

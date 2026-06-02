@@ -197,6 +197,39 @@ PS.render.entities.getOrganismColor = function (organism) {
   return PS.render.entities.getLineageColor(organism);
 };
 
+PS.render.entities.drawRepresentativeMarker = function (organism, interpolation) {
+  if (!PS.sim || !PS.sim.representatives || !PS.sim.representatives.getRepresentative) {
+    return;
+  }
+
+  var representative = PS.sim.representatives.getRepresentative(organism.representativeId);
+
+  if (!representative || (!representative.selected && !representative.pinned && representative.bookmarkScore <= 0)) {
+    return;
+  }
+
+  var point = PS.render.entities.getRenderPosition(organism, interpolation);
+
+  if (!point) {
+    return;
+  }
+
+  var size = Math.max(4, CONFIG.ORGANISM_DRAW_SIZE * (point.scale || 1) * 2.2);
+  ctx.save();
+  ctx.strokeStyle = representative.pinned ? "#fff26b" : "#72d7ff";
+  ctx.lineWidth = Math.max(1, size * 0.18);
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (representative.bookmarkScore > 0) {
+    ctx.fillStyle = PS.render.entities.getRgbaFromHex("#fff26b", clamp(representative.bookmarkScore, 0.2, 0.75));
+    ctx.fillRect(point.x - size * 0.18, point.y - size * 1.45, size * 0.36, size * 0.70);
+  }
+
+  ctx.restore();
+};
+
 PS.render.entities.drawOrganisms = function () {
   if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;
@@ -222,6 +255,7 @@ PS.render.entities.drawOrganisms = function () {
       "entity.organism",
       PS.render.entities.getOrganismSpriteState(organism)
     );
+    PS.render.entities.drawRepresentativeMarker(organism, interpolation);
   }
 };
 

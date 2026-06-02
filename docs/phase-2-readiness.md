@@ -22,7 +22,7 @@ Current repo state:
 - `js/render/overlays.js` has a registry plus current civilization/orbital overlays. `js/render/observation-overlays.js` adds Phase 2 temperature, population density, resource, and atmospheric-composition observation overlays with blend metadata, panel toggles, keyboard cycling, and frame-time sampling.
 - `js/ui/spotlight.js` consumes watcher milestone events, shows an event spotlight panel, optionally slows time, and focuses the relevant tile or event location.
 - `js/core/events.js` includes milestone payload normalization, a configurable milestone registry, event categories, milestone detection, visible event-log writes, durable timeline-event writes, notification routing, and optional spotlight focus routing.
-- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-297 event spotlight UI, AZR-362 watcher event contract, AZR-302 timeline viewer, AZR-299 observation overlays, the Phase 2 layer/epoch/event contract, AZR-290 geology, and AZR-291 atmosphere chemistry. They do not yet cover Phase 2 body-plan traits, food webs, species IDs, microbial models, abiogenesis, or deep-time timeline UI.
+- Tests currently cover pools, food indexing, spatial indexing, persistence parity, render/zoom, mobile layout, worker spike, accumulator behavior, AZR-295 adaptive time, AZR-296 milestone detection, AZR-297 event spotlight UI, AZR-362 watcher event contract, AZR-302 timeline viewer, AZR-299 observation overlays, the Phase 2 layer/epoch/event contract, AZR-290 geology, AZR-291 atmosphere chemistry, and AZR-350 representative organism lifecycle. They do not yet cover full food webs, microbial models, abiogenesis, or deep-time timeline UI.
 
 ## Linear Inventory
 
@@ -35,7 +35,7 @@ AZR-257 E3 Biological Simulation children:
 | AZR-286 E3-S3 Food web mechanics | Backlog | Missing | Food indexing and organism food seeking exist. Predator/prey, trophic levels, energy transfer, and food-web metrics are missing. |
 | AZR-287 E3-S4 Terrain-driven evolution | Backlog | Partial foundation, needs watcher criteria | Terrain affinity and terrain mismatch costs exist. Biome-specific trait pressure, geographic isolation, and event outputs are missing. |
 | AZR-288 E3-S5 Speciation events | Backlog | Partial foundation, needs split | Lineages and divergence scoring exist. `speciesId`, reproductive isolation, species events, and species-level UI are missing. |
-| AZR-350 E3-S5 Representative organisms | Backlog | Decision recorded, implementation pending | `docs/biological-model-decision.md` chooses aggregate populations as authoritative and representative organisms as watchable facades. Runtime implementation is still pending. |
+| AZR-350 E3-S5 Representative organisms | Backlog | Runtime foundation implemented | `docs/biological-model-decision.md` chooses aggregate populations as authoritative and representative organisms as watchable facades. `js/sim/representatives.js` now creates aggregate population summaries, representative records, inspection/pin/bookmark support, pressure context, and bounded history. Covered by `tests/representatives.test.js`. |
 | AZR-289 E3-S6 Mass extinction modeling | Backlog | Missing | Current extinction only handles all-organisms-dead state. Catastrophe event types, survival checks, adaptive radiation, and overlay/timeline output are missing. |
 
 AZR-258 E4 Primordial + Microbial children:
@@ -106,7 +106,7 @@ AZR-353 created three bridge issues to prevent Phase 2 stories from diverging:
 
 ## Recommended Implementation Order
 
-1. AZR-350 and AZR-293 validation: convert the recorded model direction into runtime acceptance criteria and microbial prototype evidence.
+1. AZR-293 validation: convert the recorded microbial model direction into prototype evidence.
 2. AZR-284/AZR-288/AZR-286/AZR-287: expanded traits, species, food web, terrain-driven evolution.
 3. Continue with Phase 2 implementation issues after AZR-352 legacy runtime retirement closes.
 

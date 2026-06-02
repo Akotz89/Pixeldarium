@@ -17,9 +17,10 @@ Current biology runtime is now owned by modern simulation modules:
 - `js/sim/food.js`, `js/sim/organisms.js`, and `js/sim/evolution.js` expose `PS.sim.*` facades.
 - `js/sim/food-runtime.js` and `js/sim/food-growth.js` own loaded food implementation.
 - `js/sim/organisms-traits.js`, `js/sim/organisms-indexes.js`, and `js/sim/organisms-behavior.js` own loaded representative organism implementation.
+- `js/sim/representatives.js` owns the aggregate-population and watcher-facing representative lifecycle foundation: population summaries, representative records, selection, pinning, bookmarks, pressure context, and bounded inspection history.
 - `js/systems/pools.js` already stores current organism facades over typed arrays for position, energy, movement, lineage, generation, and five traits.
 - `world.lineages`, `world.organismsByLineage`, `world.organismBuckets`, `world.foodBuckets`, and `world.foodPositions` are the current aggregate/index surfaces.
-- Current tests cover typed-array pool backing, food indexing, spatial indexing, and persistence parity. They do not yet cover species IDs, aggregate population records, representative selection, or representative persistence.
+- Current tests cover typed-array pool backing, food indexing, spatial indexing, persistence parity, species/population/representative IDs, aggregate population records, representative selection, pinning/bookmarks, and representative lifecycle history.
 
 ## State Ownership
 
@@ -44,6 +45,18 @@ Representative organisms are detailed watcher-facing facades:
 - Optional bookmark/interest score.
 
 Representative behavior may sample aggregate pressure and may write bounded observations back to aggregate state, but it must not singlehandedly determine the whole population. Aggregate population math remains authoritative for counts, species survival, and planet-scale evolution.
+
+## Runtime Support
+
+`PS.sim.representatives` now exposes the first implementation slice for AZR-350:
+
+- `refresh()` rebuilds aggregate population summaries from the active representative facades in `world.organisms`.
+- `syncOrganism(organism)` creates or updates a watcher-facing representative record and links it back to species, population, lineage, position, behavior, target, traits, and history.
+- `inspect()`, `select()`, `pin()`, and `bookmark()` support player-facing inspection and bookmark state.
+- Population records summarize count, biomass, energy reserve, territory cells, trait mean/variance, pressure, representative IDs, and activity state.
+- Representative records retire to `isActive: false` when their active facade leaves the runtime, while pinned or selected state remains available for persistence.
+
+The current implementation still treats `world.organisms` as the active high-detail facade list. Aggregate records now make that ownership explicit so future Phase 2 stories can move counts, survival, and planet-scale evolution toward aggregate math without requiring high-detail brains for every individual.
 
 ## Lifecycle
 

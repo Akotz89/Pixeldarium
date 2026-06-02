@@ -112,10 +112,11 @@ Aggregate population records for planet-scale biology. These are authoritative f
   "territoryCells": [{ "x": 12, "y": 9, "density": 0.8 }],
   "traitMean": { "vision": 22, "bodySize": 1.2 },
   "traitVariance": { "vision": 2, "bodySize": 0.1 },
-  "pressure": { "food": 0.3, "terrain": 0.2 },
+  "pressure": { "food": 1, "scarcity": 0.5, "terrain": 0.2, "energyReserve": 110 },
   "representativeIds": [1],
   "createdTick": 0,
-  "lastUpdatedTick": 0
+  "lastUpdatedTick": 0,
+  "isActive": true
 }
 ```
 
@@ -139,8 +140,12 @@ Persisted watcher-facing representative organisms. Unpinned representatives may 
   "traits": { "vision": 22, "bodySize": 1.2 },
   "history": [{ "tick": 100, "label": "sampled" }],
   "pinned": true,
+  "selected": true,
+  "bookmarkScore": 0.8,
+  "isActive": true,
   "createdTick": 0,
-  "lastSeenTick": 0
+  "lastSeenTick": 0,
+  "lastSelectedTick": 100
 }
 ```
 

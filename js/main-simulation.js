@@ -240,6 +240,10 @@ function seedWorld() {
     addFoodAt(position.x, position.y);
   }
 
+  if (PS.sim.representatives && typeof PS.sim.representatives.refresh === "function") {
+    PS.sim.representatives.refresh();
+  }
+
   refreshEcosystemSummary();
   syncLifecycleState();
   recordEcosystemHistorySample(true);
@@ -290,6 +294,10 @@ function updateWorld(dt) {
 
   if (typeof refreshLineageRegistry === "function" && shouldRefreshSummaries) {
     refreshLineageRegistry();
+  }
+
+  if (PS.sim.representatives && typeof PS.sim.representatives.refresh === "function" && shouldRefreshSummaries) {
+    PS.sim.representatives.refresh();
   }
 
   tickProfile.organisms = performance.now() - profileStart;
