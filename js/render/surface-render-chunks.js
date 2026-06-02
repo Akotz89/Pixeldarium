@@ -139,7 +139,67 @@ PS.render.surfaceRender.chunks.getPointForMeters = function (address, eastMeters
   };
 };
 
-PS.render.surfaceRender.chunks.drawGroundFeatureLine = function (targetCtx, address, feature) {
+PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle = function (feature, address) {
+  var type = feature && feature.type ? feature.type : "feature";
+  var sampleMeters = Math.max(0.25, Number(address && address.sampleMeters) || 1);
+  var closeAmount = clamp((25 - sampleMeters) / 24, 0, 1);
+  var baseAlpha = clamp(Number(feature && feature.alpha) || 0.18, 0.10, 0.72);
+  var widthPixels = clamp((Number(feature && feature.widthMeters) || 1) / sampleMeters * CONFIG.TILE_SIZE, 1, 12);
+  var style = {
+    strokeColor: feature && feature.color ? feature.color : "#d9e7ff",
+    fillColor: feature && feature.color ? feature.color : "#d9e7ff",
+    haloColor: "rgba(4, 9, 14, 0.86)",
+    tickColor: "rgba(226, 238, 226, 0.42)",
+    alpha: clamp(baseAlpha + closeAmount * 0.22, 0.18, 0.74),
+    haloAlpha: clamp(0.16 + closeAmount * 0.18, 0.12, 0.42),
+    outlineAlpha: clamp(0.18 + closeAmount * 0.16, 0.12, 0.38),
+    lineWidth: widthPixels,
+    haloWidth: clamp(widthPixels + 2 + closeAmount * 2, 2, 16),
+    tickSpacingMeters: 12,
+    tickLengthPixels: clamp(1 + closeAmount * 3, 1, 5)
+  };
+
+  if (type === "stream") {
+    style.strokeColor = "#8fdcff";
+    style.haloColor = "rgba(0, 17, 34, 0.92)";
+    style.tickColor = "rgba(213, 250, 255, 0.62)";
+    style.alpha = clamp(baseAlpha + 0.26 + closeAmount * 0.18, 0.34, 0.82);
+    style.lineWidth = clamp(widthPixels + 1, 2, 12);
+    style.tickSpacingMeters = 10;
+  } else if (type === "ridge") {
+    style.strokeColor = "#c8bc86";
+    style.haloColor = "rgba(17, 15, 10, 0.80)";
+    style.tickColor = "rgba(238, 226, 182, 0.48)";
+    style.alpha = clamp(baseAlpha + 0.20 + closeAmount * 0.16, 0.32, 0.76);
+    style.lineWidth = clamp(widthPixels + 1, 2, 11);
+    style.tickSpacingMeters = 14;
+  } else if (type === "swale") {
+    style.strokeColor = "#79b77b";
+    style.haloColor = "rgba(7, 24, 14, 0.74)";
+    style.tickColor = "rgba(169, 223, 154, 0.40)";
+    style.alpha = clamp(baseAlpha + 0.16 + closeAmount * 0.12, 0.28, 0.68);
+  } else if (type === "reef" || type === "shoal") {
+    style.strokeColor = type === "reef" ? "#8ed7c9" : "#b1e4d4";
+    style.haloColor = "rgba(0, 26, 36, 0.70)";
+    style.tickColor = "rgba(225, 255, 242, 0.42)";
+    style.alpha = clamp(baseAlpha + 0.18 + closeAmount * 0.14, 0.28, 0.70);
+  } else if (type === "rockfield") {
+    style.strokeColor = "#c7bda9";
+    style.fillColor = "#a99d8a";
+    style.haloColor = "rgba(20, 18, 14, 0.72)";
+    style.tickColor = "rgba(236, 224, 198, 0.42)";
+    style.alpha = clamp(baseAlpha + 0.14 + closeAmount * 0.12, 0.26, 0.66);
+  } else if (type === "wetland" || type === "meadow" || type === "clearing") {
+    style.strokeColor = type === "wetland" ? "#70bc89" : "#a0d77a";
+    style.fillColor = type === "wetland" ? "#5da879" : "#8fcf71";
+    style.haloColor = "rgba(5, 24, 15, 0.68)";
+    style.alpha = clamp(baseAlpha + 0.12 + closeAmount * 0.10, 0.24, 0.62);
+  }
+
+  return style;
+};
+
+PS.render.surfaceRender.chunks.getGroundFeatureLinePoints = function (address, feature) {
   var start = PS.render.surfaceRender.chunks.getPointForMeters(address, feature.east1, feature.north1);
   var end = PS.render.surfaceRender.chunks.getPointForMeters(address, feature.east2, feature.north2);
   var dx = end.x - start.x;
@@ -148,27 +208,93 @@ PS.render.surfaceRender.chunks.drawGroundFeatureLine = function (targetCtx, addr
   var normalX = -dy / lengthPixels;
   var normalY = dx / lengthPixels;
   var bends = Array.isArray(feature.bends) ? feature.bends : [];
-
-  targetCtx.save();
-  targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
-  targetCtx.strokeStyle = feature.color || "#d9e7ff";
-  targetCtx.lineWidth = clamp((Number(feature.widthMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE, 1, 9);
-  targetCtx.lineCap = "round";
-  targetCtx.lineJoin = "round";
-  targetCtx.beginPath();
-  targetCtx.moveTo(start.x, start.y);
+  var points = [start];
 
   for (var i = 0; i < bends.length; i++) {
     var bend = bends[i];
     var t = clamp(Number(bend.t) || 0, 0, 1);
     var offsetPixels = (Number(bend.offsetMeters) || 0) / Math.max(0.1, address.sampleMeters) * CONFIG.TILE_SIZE;
 
-    targetCtx.lineTo(start.x + dx * t + normalX * offsetPixels, start.y + dy * t + normalY * offsetPixels);
+    points.push({
+      x: start.x + dx * t + normalX * offsetPixels,
+      y: start.y + dy * t + normalY * offsetPixels
+    });
   }
 
-  targetCtx.lineTo(end.x, end.y);
+  points.push(end);
+  return points;
+};
+
+PS.render.surfaceRender.chunks.strokeGroundFeaturePath = function (targetCtx, points) {
+  targetCtx.beginPath();
+  targetCtx.moveTo(points[0].x, points[0].y);
+
+  for (var i = 1; i < points.length; i++) {
+    targetCtx.lineTo(points[i].x, points[i].y);
+  }
+
   targetCtx.stroke();
+};
+
+PS.render.surfaceRender.chunks.drawGroundFeatureLineTicks = function (targetCtx, address, feature, points, style) {
+  if (address.sampleMeters > 8 || !points || points.length < 2) {
+    return;
+  }
+
+  var spacing = Math.max(6, Number(style.tickSpacingMeters) || 12) / address.sampleMeters * CONFIG.TILE_SIZE;
+  var tickLength = Math.max(1, Number(style.tickLengthPixels) || 1);
+  var seed = Math.round(Number(feature.blockEast) || 0) * 31 + Math.round(Number(feature.blockNorth) || 0) * 17;
+  var drawn = 0;
+
+  targetCtx.save();
+  targetCtx.globalAlpha = clamp((Number(style.alpha) || 0.3) * 0.72, 0.16, 0.62);
+  targetCtx.strokeStyle = style.tickColor;
+  targetCtx.lineWidth = 1;
+
+  for (var i = 1; i < points.length; i++) {
+    var previous = points[i - 1];
+    var current = points[i];
+    var dx = current.x - previous.x;
+    var dy = current.y - previous.y;
+    var segmentLength = Math.sqrt(dx * dx + dy * dy) || 1;
+    var normalX = -dy / segmentLength;
+    var normalY = dx / segmentLength;
+
+    for (var distance = spacing * 0.5; distance < segmentLength; distance += spacing) {
+      var t = distance / segmentLength;
+      var noise = getDeterministicUnitNoise(seed + drawn * 7, i * 19, 9029);
+      var side = noise > 0.5 ? 1 : -1;
+      var x = previous.x + dx * t;
+      var y = previous.y + dy * t;
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(x, y);
+      targetCtx.lineTo(x + normalX * tickLength * side, y + normalY * tickLength * side);
+      targetCtx.stroke();
+      drawn++;
+    }
+  }
+
   targetCtx.restore();
+};
+
+PS.render.surfaceRender.chunks.drawGroundFeatureLine = function (targetCtx, address, feature) {
+  var style = PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle(feature, address);
+  var points = PS.render.surfaceRender.chunks.getGroundFeatureLinePoints(address, feature);
+
+  targetCtx.save();
+  targetCtx.lineCap = "round";
+  targetCtx.lineJoin = "round";
+  targetCtx.globalAlpha = style.haloAlpha;
+  targetCtx.strokeStyle = style.haloColor;
+  targetCtx.lineWidth = style.haloWidth;
+  PS.render.surfaceRender.chunks.strokeGroundFeaturePath(targetCtx, points);
+  targetCtx.globalAlpha = style.alpha;
+  targetCtx.strokeStyle = style.strokeColor;
+  targetCtx.lineWidth = style.lineWidth;
+  PS.render.surfaceRender.chunks.strokeGroundFeaturePath(targetCtx, points);
+  targetCtx.restore();
+  PS.render.surfaceRender.chunks.drawGroundFeatureLineTicks(targetCtx, address, feature, points, style);
 };
 
 PS.render.surfaceRender.chunks.drawGroundFeatureRect = function (targetCtx, address, feature) {
@@ -176,12 +302,13 @@ PS.render.surfaceRender.chunks.drawGroundFeatureRect = function (targetCtx, addr
   var width = Math.max(1, (Number(feature.widthMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
   var height = Math.max(1, (Number(feature.heightMeters) || 1) / address.sampleMeters * CONFIG.TILE_SIZE);
   var patchPoints = Array.isArray(feature.patchPoints) ? feature.patchPoints : [];
+  var style = PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle(feature, address);
 
   targetCtx.save();
   targetCtx.translate(center.x, center.y);
   targetCtx.rotate(Number(feature.rotation) || 0);
-  targetCtx.globalAlpha = clamp(Number(feature.alpha) || 0.18, 0, 0.72);
-  targetCtx.fillStyle = feature.color || "#d9e7ff";
+  targetCtx.globalAlpha = style.alpha;
+  targetCtx.fillStyle = style.fillColor;
 
   if (patchPoints.length >= 3) {
     targetCtx.beginPath();
@@ -204,15 +331,31 @@ PS.render.surfaceRender.chunks.drawGroundFeatureRect = function (targetCtx, addr
     targetCtx.fillRect(-width / 2, -height / 2, width, height);
   }
 
-  if (feature.type === "rockfield") {
-    targetCtx.globalAlpha = clamp((Number(feature.alpha) || 0.18) + 0.04, 0, 0.44);
-    targetCtx.strokeStyle = "rgba(230, 218, 188, 0.26)";
+  if (feature.type === "rockfield" || feature.type === "wetland" || feature.type === "meadow" || feature.type === "clearing") {
+    targetCtx.globalAlpha = style.outlineAlpha;
+    targetCtx.strokeStyle = style.tickColor;
     targetCtx.lineWidth = 1;
 
     if (patchPoints.length >= 3) {
       targetCtx.stroke();
     } else {
       targetCtx.strokeRect(-width / 2, -height / 2, width, height);
+    }
+  }
+
+  if (feature.type === "rockfield" && address.sampleMeters <= 8) {
+    targetCtx.globalAlpha = clamp(style.alpha * 0.78, 0.16, 0.52);
+    targetCtx.fillStyle = style.tickColor;
+
+    for (var i = 0; i < 8; i++) {
+      var noiseX = getDeterministicUnitNoise(feature.blockEast + i * 11, feature.blockNorth - i * 13, 8053);
+      var noiseY = getDeterministicUnitNoise(feature.blockEast - i * 17, feature.blockNorth + i * 19, 8069);
+      targetCtx.fillRect(
+        -width / 2 + noiseX * width,
+        -height / 2 + noiseY * height,
+        1,
+        1
+      );
     }
   }
 

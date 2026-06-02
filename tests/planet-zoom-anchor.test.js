@@ -2543,6 +2543,31 @@ assert.ok(Math.abs(lineFeatureHeight - lineBaseHeight) > 0.1, "feature relief sh
 assertNear(lineFeatureRelief.heightMeters, lineFeatureHeight, 1e-9, "surface relief center height should use feature-aware height");
 assert.ok(Number.isFinite(lineFeatureRelief.hillshade), "feature-aware relief should keep hillshade finite");
 
+var streamDrawStyle = PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle({
+  type: "stream",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#7ec8ff"
+}, { sampleMeters: 1 });
+var ridgeDrawStyle = PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle({
+  type: "ridge",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#b9b081"
+}, { sampleMeters: 1 });
+var distantStreamDrawStyle = PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle({
+  type: "stream",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#7ec8ff"
+}, { sampleMeters: 25 });
+
+assert.ok(streamDrawStyle.alpha > distantStreamDrawStyle.alpha, "local feature draw style should strengthen ground features at close zoom");
+assert.ok(streamDrawStyle.haloAlpha > 0, "stream draw style should include a readable dark halo");
+assert.ok(streamDrawStyle.lineWidth >= 2, "stream draw style should keep water channels more than one pixel wide locally");
+assert.notStrictEqual(streamDrawStyle.strokeColor, ridgeDrawStyle.strokeColor, "feature draw style should preserve authored type identity");
+assert.ok(ridgeDrawStyle.tickSpacingMeters > 0, "ridge draw style should expose tick spacing for local pixel accents");
+
 var rectFeature = groundFeatures.filter(function(feature) { return feature.shape === "rect"; })[0];
 var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);
 var nearestRectFeature = getNearestPlanetGroundFeature(rectCenter.latitude, rectCenter.longitude, 16);
