@@ -9,7 +9,8 @@ const source = [
   "js/legacy/persistence/part-02.js",
   "js/legacy/persistence/part-03.js",
   "js/legacy/persistence/part-05.js",
-  "js/legacy/ui/part-05.js"
+  "js/legacy/ui/part-05.js",
+  "js/legacy/ui/part-07.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 const context = {
@@ -40,7 +41,10 @@ const context = {
   },
   toggledPause: false,
   lastKeyboardPan: null,
+  lastZoomAnchor: null,
   canvas: {
+    width: 160,
+    height: 85,
     style: {},
     classList: { add() {}, remove() {} },
     getBoundingClientRect() {
@@ -104,6 +108,11 @@ const context = {
     world.planetView.zoomLevel += delta;
     return true;
   },
+  adjustPlanetZoomAtCanvasPoint(delta, canvasX, canvasY) {
+    world.planetView.zoomLevel += delta;
+    lastZoomAnchor = { canvasX, canvasY };
+    return true;
+  },
   panPlanetViewBySamples(eastSamples, northSamples) {
     lastKeyboardPan = { eastSamples, northSamples };
   }
@@ -120,6 +129,11 @@ context.toggleSimulationPaused = function () {
 };
 context.adjustPlanetZoom = function (delta) {
   context.world.planetView.zoomLevel += delta;
+  return true;
+};
+context.adjustPlanetZoomAtCanvasPoint = function (delta, canvasX, canvasY) {
+  context.world.planetView.zoomLevel += delta;
+  context.lastZoomAnchor = { canvasX, canvasY };
   return true;
 };
 context.panPlanetViewBySamples = function (eastSamples, northSamples) {
@@ -152,6 +166,35 @@ handleSimulationShortcut({
   preventDefault: function() { this.prevented = true; }
 });
 assert.ok(world.planetView.zoomLevel > zoomBefore, "plus shortcut should zoom the camera");
+
+var pinchZoomBefore = world.planetView.zoomLevel;
+beginPlanetDrag({
+  pointerType: "touch",
+  pointerId: 1,
+  clientX: 400,
+  clientY: 300,
+  preventDefault: function() {}
+});
+beginPlanetDrag({
+  pointerType: "touch",
+  pointerId: 2,
+  clientX: 600,
+  clientY: 300,
+  preventDefault: function() { this.prevented = true; }
+});
+updatePlanetDrag({
+  pointerType: "touch",
+  pointerId: 2,
+  clientX: 700,
+  clientY: 300,
+  preventDefault: function() { this.prevented = true; }
+});
+assert.ok(world.planetView.zoomLevel > pinchZoomBefore, "two-finger pinch-out should zoom the camera");
+assert.strictEqual(lastZoomAnchor.canvasX, 55, "pinch zoom should anchor at the touch midpoint X");
+assert.strictEqual(lastZoomAnchor.canvasY, 30, "pinch zoom should anchor at the touch midpoint Y");
+assert.strictEqual(planetDragState.skipNextClick, true, "pinch zoom should suppress the synthetic follow-up click");
+endPlanetDrag({ pointerType: "touch", pointerId: 1 });
+endPlanetDrag({ pointerType: "touch", pointerId: 2 });
 
 handleSimulationShortcut({
   key: "ArrowRight",

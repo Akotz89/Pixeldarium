@@ -61,11 +61,15 @@ function markCameraInteracting() {
 }
 
 function getCanvasPointFromEvent(event) {
+  return getCanvasPointFromClient(event.clientX, event.clientY);
+}
+
+function getCanvasPointFromClient(clientX, clientY) {
   var rect = canvas.getBoundingClientRect();
 
   return {
-    canvasX: (event.clientX - rect.left) * (canvas.width / rect.width),
-    canvasY: (event.clientY - rect.top) * (canvas.height / rect.height)
+    canvasX: (Number(clientX) - rect.left) * (canvas.width / rect.width),
+    canvasY: (Number(clientY) - rect.top) * (canvas.height / rect.height)
   };
 }
 
@@ -170,6 +174,14 @@ function beginPlanetDrag(event) {
     return;
   }
 
+  if (trackTouchPointer(event) && beginPlanetPinchIfReady()) {
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    return;
+  }
+
   planetDragState.active = true;
   planetDragState.moved = false;
   planetDragState.lastClientX = Number(event.clientX) || 0;
@@ -190,6 +202,10 @@ function beginPlanetDrag(event) {
 }
 
 function updatePlanetDrag(event) {
+  if (updatePlanetPinch(event)) {
+    return;
+  }
+
   if (!planetDragState.active) {
     return;
   }
@@ -252,6 +268,12 @@ function continuePlanetDragInertia() {
 }
 
 function endPlanetDrag(event) {
+  if (endTouchPointer(event)) {
+    if (!planetDragState.active) {
+      return;
+    }
+  }
+
   if (!planetDragState.active) {
     return;
   }
