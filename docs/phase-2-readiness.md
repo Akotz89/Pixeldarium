@@ -15,7 +15,7 @@ AZR-361 records the chosen aggregate-population plus representative-organism mod
 Current repo state:
 
 - `js/sim/food.js`, `js/sim/organisms.js`, `js/sim/evolution.js`, `js/sim/settlements.js`, and `js/sim/civilizations.js` are public `PS.sim.*` facades over existing runtime functions.
-- `js/legacy/food/*`, `js/legacy/organisms/*`, `js/legacy/settlements/*`, and `js/legacy/main/*` are still loaded by `index.html`.
+- `js/sim/food-runtime.js` and `js/sim/food-growth.js` own food runtime. `js/legacy/organisms/*`, `js/legacy/settlements/*`, and `js/legacy/main/*` are still loaded by `index.html`.
 - `js/layers/registry.js` exists. `js/layers/geology.js` and `js/layers/atmosphere.js` are registered as always-on layers; ocean and biosphere layers are not implemented yet.
 - `js/epochs/registry.js` exists, but no epoch modules register primordial, microbial, biological, observer, or deep-time behavior.
 - `js/systems/time.js` implements fixed-step accumulator plumbing, epoch-derived adaptive time scale, smooth time-scale transitions, deep-time units, and manual time-scale override.

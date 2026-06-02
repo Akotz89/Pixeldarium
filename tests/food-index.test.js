@@ -54,8 +54,8 @@ const source = [
   "js/render/surface-cache.js",
   "js/render/terrain-hydrology.js",
   "js/render/terrain-seeding.js",
-  "js/legacy/food/part-01.js",
-  "js/legacy/food/part-02.js"
+  "js/sim/food-runtime.js",
+  "js/sim/food-growth.js"
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 vm.runInNewContext(`${source}

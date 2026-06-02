@@ -15,7 +15,7 @@ This preserves the watcher fantasy of following individual life without making t
 Current biology runtime is still split between modern facades and legacy implementation shards:
 
 - `js/sim/food.js`, `js/sim/organisms.js`, and `js/sim/evolution.js` expose `PS.sim.*` facades.
-- `js/legacy/food/*` and `js/legacy/organisms/*` still own the loaded implementation.
+- `js/sim/food-runtime.js` and `js/sim/food-growth.js` own loaded food implementation. `js/legacy/organisms/*` still owns loaded organism implementation.
 - `js/systems/pools.js` already stores current organism facades over typed arrays for position, energy, movement, lineage, generation, and five traits.
 - `world.lineages`, `world.organismsByLineage`, `world.organismBuckets`, `world.foodBuckets`, and `world.foodPositions` are the current aggregate/index surfaces.
 - Current tests cover typed-array pool backing, food indexing, spatial indexing, and persistence parity. They do not yet cover species IDs, aggregate population records, representative selection, or representative persistence.
@@ -155,10 +155,10 @@ AZR-357 should migrate food/organism runtime in this order:
 
 1. Add aggregate biology state containers and ID counters in `js/systems/state.js`.
 2. Add typed-array fields for `speciesId`, `populationId`, `representativeId`, and required AZR-284 traits in `js/systems/pools.js`.
-3. Move legacy food implementation into focused `js/sim/food-*` modules while preserving `PS.sim.food`.
+3. Move legacy food implementation into focused `js/sim/food-*` modules while preserving `PS.sim.food`. Done in `js/sim/food-runtime.js` and `js/sim/food-growth.js`.
 4. Move representative organism implementation into focused `js/sim/organisms-*` modules while preserving current behavior.
 5. Add aggregate population helpers before changing biology behavior.
-6. Remove `js/legacy/food/*` and `js/legacy/organisms/*` script tags only after tests prove parity.
+6. Remove `js/legacy/organisms/*` script tags only after tests prove parity.
 
 Verification expectations for AZR-357:
 

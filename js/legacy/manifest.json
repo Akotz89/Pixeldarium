@@ -6,10 +6,7 @@
   "terrain.js": [],
   "render-terrain-cache.js": [],
   "render.js": [],
-  "food.js": [
-    "js/legacy/food/part-01.js",
-    "js/legacy/food/part-02.js"
-  ],
+  "food.js": [],
   "organisms.js": [
     "js/legacy/organisms/part-01.js",
     "js/legacy/organisms/part-02.js",

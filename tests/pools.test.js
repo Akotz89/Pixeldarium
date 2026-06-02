@@ -49,7 +49,7 @@ const source = [
   "js/core/config.js",
   "js/core/world-grid.js",
   "js/systems/pools.js",
-  "js/legacy/food/part-01.js",
+  "js/sim/food-runtime.js",
   "js/legacy/organisms/part-01.js",
   "js/legacy/organisms/part-03.js",
   "js/debug/performance.js"
@@ -167,7 +167,7 @@ console.log("pool checks passed");
 
 const hotLoopFiles = [
   "js/legacy/organisms/part-03.js",
-  "js/legacy/food/part-01.js",
+  "js/sim/food-runtime.js",
   "js/sim/organisms.js",
   "js/sim/food.js"
 ];
