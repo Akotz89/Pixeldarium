@@ -6,7 +6,6 @@ Date: 2026-06-02
 
 `index.html` still loads these legacy UI runtime files:
 
-- `js/legacy/ui/part-02.js`
 - `js/legacy/ui/part-03.js`
 - `js/legacy/ui/part-04.js`
 - `js/legacy/ui/part-05.js`
@@ -20,6 +19,7 @@ The modern UI modules currently loaded are:
 - `js/ui/notifications.js`
 - `js/ui/touch.js`
 - `js/ui/foundation.js`
+- `js/ui/summary.js`
 
 ## Phase 1 Scope Reconciliation
 
@@ -32,7 +32,7 @@ Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinishe
 ## Remaining UI Lane Work
 
 1. Split the migrated `js/ui/foundation.js` functions into focused HUD, controls, panels, and inspect modules.
-2. Move remaining HUD/status rendering implementation out of `js/legacy/ui/part-02.js` into `js/ui/hud.js` or focused supporting modules.
+2. Split the migrated `js/ui/summary.js` helpers into focused summary, ecosystem, lineage, and inspect modules where useful.
 3. Move menu pages, panel synchronization, and panel display logic out of `js/legacy/ui/part-03.js` and `part-04.js` into `js/ui/panels.js`.
 4. Move inspect/camera/keyboard/control handling out of `js/legacy/ui/part-05.js` into focused `js/ui` modules.
 5. Move event binding/bootstrap from `js/legacy/ui/part-06.js` into modern UI setup modules.
@@ -44,3 +44,5 @@ Therefore, Phase 1 can have met AZR-271 as written while still leaving unfinishe
 Commit `e940d85` moved touch gesture ownership out of `js/legacy/ui/part-07.js` into `js/ui/touch.js`, removed the legacy touch shard, and added mobile layout regression coverage. That was the first cleanup step in this lane, not the end of the UI migration.
 
 Commit `4f10575` documented this assessment. The next implementation slice moved `js/legacy/ui/part-01.js` to `js/ui/foundation.js` so the runtime no longer loads that legacy shard.
+
+The following implementation slice moved `js/legacy/ui/part-02.js` to `js/ui/summary.js`, reducing the loaded legacy UI shard count to four.
