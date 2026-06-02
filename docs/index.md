@@ -10,6 +10,7 @@
 | [Save Format](save-format.md) | `docs/save-format.md` | Persistence schema version 1 |
 | [Legacy UI Assessment](legacy-ui-assessment.md) | `docs/legacy-ui-assessment.md` | Completed UI runtime shard retirement record |
 | [Legacy Runtime Assessment](legacy-runtime-assessment.md) | `docs/legacy-runtime-assessment.md` | AZR-352 non-UI legacy runtime inventory and migration decisions |
+| [Phase 2 Readiness](phase-2-readiness.md) | `docs/phase-2-readiness.md` | AZR-353 reconciliation of GDD, Linear Phase 2 stories, and current repo evidence |
 
 ## Planning Artifacts
 
