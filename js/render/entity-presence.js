@@ -419,10 +419,12 @@ PS.render.entities.drawLocalPresenceField = function () {
   var organismCount = 2 + Math.round(zoomAmount * 2);
 
   for (var foodIndex = 0; Array.isArray(world.food) && foodIndex < world.food.length; foodIndex++) {
+    PS.render.entities.drawResourcePresencePatch(world.food[foodIndex]);
     PS.render.entities.drawEntityPresenceCluster(world.food[foodIndex], "resource", "#58f06c", resourceCount);
   }
 
   for (var organismIndex = 0; Array.isArray(world.organisms) && organismIndex < world.organisms.length; organismIndex++) {
+    PS.render.entities.drawOrganismActivityTrail(world.organisms[organismIndex]);
     PS.render.entities.drawEntityPresenceCluster(
       world.organisms[organismIndex],
       "organism",

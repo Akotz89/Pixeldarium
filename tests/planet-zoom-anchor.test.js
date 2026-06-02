@@ -87,6 +87,7 @@ const source = [
   "js/render/surface-draw.js",
   "js/render/entity-sprites.js",
   "js/render/entities.js",
+  "js/render/entity-ecology-presence.js",
   "js/render/entity-presence.js",
   "js/render/reference-grid.js",
   "js/render/overlays.js",
@@ -362,12 +363,28 @@ assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manif
 assert.strictEqual(typeof PS.render.entities.drawLocalPresenceField, "function", "local presence field should be exposed for dense simulation-map readability");
 assert.strictEqual(typeof PS.render.entities.getProtoSettlementFootprints, "function", "presence field should expose pre-settlement activity footprints");
 assert.strictEqual(typeof PS.render.entities.getSettlementFootprintSamples, "function", "presence field should expose built settlement footprint samples");
+assert.strictEqual(typeof PS.render.entities.drawResourcePresencePatch, "function", "presence field should expose authored resource patches");
+assert.strictEqual(typeof PS.render.entities.drawOrganismActivityTrail, "function", "presence field should expose organism activity trails");
 assert.strictEqual(PS.render.entities.getPresenceZoomAmount(0), 0, "presence density should stay hidden at orbit zoom");
 assert.ok(PS.render.entities.getPresenceZoomAmount(finalGroundZoomIndex) > 0.9, "presence density should ramp up at ground zoom");
 var resourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
 var repeatedResourcePresenceSample = PS.render.entities.getPresenceDensitySample({ id: "food:a", x: 12, y: 18 }, "resource", 2);
 assert.deepStrictEqual(repeatedResourcePresenceSample, resourcePresenceSample, "presence density samples should be deterministic for stable screenshots");
 assert.ok(resourcePresenceSample.size >= 1, "presence density samples should reserve visible pixel marks");
+var ecologyDrawOps = { fillRect: 0 };
+var previousRenderPosition = PS.render.entities.getRenderPosition;
+ctx.save = function() {};
+ctx.restore = function() {};
+ctx.fillRect = function() { ecologyDrawOps.fillRect++; };
+PS.render.entities.getRenderPosition = function() {
+  return { x: 50, y: 50, scale: 1, visible: true };
+};
+PS.render.entities.drawResourcePresencePatch({ id: "food:a", x: 12, y: 18, amount: 260 });
+assert.ok(ecologyDrawOps.fillRect >= 11, "resource patches should draw a bed plus multiple authored resource cells");
+ecologyDrawOps.fillRect = 0;
+PS.render.entities.drawOrganismActivityTrail({ id: "org:a", x: 12, y: 18, lineageId: 2, energy: 45 });
+assert.ok(ecologyDrawOps.fillRect >= 6, "organism activity trails should draw hungry trail marks plus body signal");
+PS.render.entities.getRenderPosition = previousRenderPosition;
 world.settlements = [];
 world.lineages = { "4": { id: 4, activeCount: 6, peakPopulation: 8, isExtinct: false } };
 world.organisms = [
