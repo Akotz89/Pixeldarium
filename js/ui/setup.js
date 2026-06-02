@@ -188,6 +188,10 @@ window.setupControls = function() {
     if (PS.ui.notifications) {
       PS.ui.notifications.setup();
     }
+
+    if (PS.ui.timeline) {
+      PS.ui.timeline.setup();
+    }
   }
 
   if (window.PS && PS.debug) {

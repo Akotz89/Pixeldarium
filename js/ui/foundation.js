@@ -54,6 +54,11 @@ function updateHud() {
   updateLineageSummary();
   updateSettlementSummary();
   updateEventLog();
+
+  if (window.PS && PS.ui && PS.ui.timeline) {
+    PS.ui.timeline.sync();
+  }
+
   updateInspectPanel();
 
   if (window.PS && PS.ui && PS.ui.hud) {

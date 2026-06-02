@@ -18,6 +18,8 @@ const traitSummaryText = document.getElementById("trait-summary");
 const lineageSummaryText = document.getElementById("lineage-summary");
 const settlementSummaryText = document.getElementById("settlement-summary");
 const eventLogText = document.getElementById("event-log");
+const timelineFilterButtons = document.querySelectorAll("[data-timeline-filter]");
+const timelineList = document.getElementById("timeline-list");
 const ecosystemHistoryCanvas = document.getElementById("ecosystem-history");
 const ecosystemHistoryCtx = ecosystemHistoryCanvas.getContext("2d", { willReadFrequently: true });
 const traitHistoryCanvas = document.getElementById("trait-history");
@@ -115,6 +117,8 @@ const world = {
   traitHistory: [],
   eventLog: [],
   timelineEvents: [],
+  timelineFilter: "all",
+  selectedTimelineEvent: null,
   milestonesReached: {},
   spotlightEvent: null,
   nextLineageId: 1,

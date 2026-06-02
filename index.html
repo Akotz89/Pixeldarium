@@ -145,6 +145,16 @@
       <div id="event-log">EVENTS: Waiting for milestones</div>
     </section>
 
+    <section id="timeline-panel" data-menu-page="log" aria-label="Chronological timeline" hidden>
+      <div id="timeline-filters" class="timeline-filters" aria-label="Timeline filters">
+        <button type="button" data-timeline-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-timeline-filter="extinction" aria-pressed="false">Extinction</button>
+        <button type="button" data-timeline-filter="speciation" aria-pressed="false">Speciation</button>
+        <button type="button" data-timeline-filter="civilization" aria-pressed="false">Civilization</button>
+      </div>
+      <div id="timeline-list" class="timeline-list">TIMELINE: Waiting for events</div>
+    </section>
+
     <section id="persistence-status" data-menu-page="controls" aria-label="Save status">SAVE: Ready</section>
 
       <p class="help" data-menu-page="log" hidden>
@@ -296,6 +306,7 @@
   <script src="js/ui/inspect-history.js"></script>
   <script src="js/ui/interaction.js"></script>
   <script src="js/ui/touch.js"></script>
+  <script src="js/ui/timeline.js"></script>
   <script src="js/ui/setup.js"></script>
   <script src="js/ui/hud.js"></script>
   <script src="js/ui/panels.js"></script>
