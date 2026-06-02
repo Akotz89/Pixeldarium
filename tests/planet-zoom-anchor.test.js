@@ -297,6 +297,10 @@ var renderLayerIds = renderLayerManifest.map(function(layer) {
 });
 var organismSprite = PS.render.entities.getSprite("entity.organism");
 var foodSprite = PS.render.entities.getSprite("resource.food");
+var settlementSprite = PS.render.entities.getSprite("settlement.core");
+var organismIdentity = PS.render.entities.getSpriteVisualIdentity("entity.organism");
+var foodIdentity = PS.render.entities.getSpriteVisualIdentity("resource.food");
+var settlementIdentity = PS.render.entities.getSpriteVisualIdentity("settlement.core");
 var phaseEntity = { id: "organism:visual-language", x: 10, y: 12 };
 var firstMovePhase;
 var repeatedMovePhase;
@@ -351,6 +355,16 @@ assert.strictEqual(PS.render.pipeline.getZoomBand(12), "local", "zoom manifest s
 assert.strictEqual(PS.render.pipeline.getZoomBand(14), "settlement", "zoom manifest should expose settlement band");
 assert.strictEqual(organismSprite.family, "entities", "organism sprite should use entity asset family");
 assert.strictEqual(foodSprite.family, "resources", "food sprite should use resource asset family");
+assert.strictEqual(settlementSprite.family, "settlement", "settlement sprite should use settlement asset family");
+assert.strictEqual(organismIdentity.pixelRole, "mobile-agent", "organism sprite should expose an authored visual role");
+assert.strictEqual(foodIdentity.pixelRole, "resource-node", "food sprite should expose an authored visual role");
+assert.strictEqual(settlementIdentity.pixelRole, "built-cluster", "settlement sprite should expose an authored visual role");
+assert.ok(organismIdentity.partCount >= 6, "organism sprite should be a multi-part silhouette");
+assert.ok(foodIdentity.partCount >= 5, "food sprite should be a multi-part resource cluster");
+assert.ok(settlementIdentity.partCount >= 7, "settlement sprite should be a multi-part built cluster");
+assert.ok(/entities\\//.test(organismIdentity.atlasCell), "organism identity should reserve an entity atlas cell");
+assert.ok(/resources\\//.test(foodIdentity.atlasCell), "food identity should reserve a resource atlas cell");
+assert.ok(/settlement\\//.test(settlementIdentity.atlasCell), "settlement identity should reserve a settlement atlas cell");
 assert.strictEqual(PS.render.raster.getLocalSurfaceMaterialMark({
   biome: "forest",
   tile: { fertilityScore: 0.74, prebioticSoup: 0 },

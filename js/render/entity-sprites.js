@@ -34,6 +34,22 @@ PS.render.entities.getAnimationPhase = function (entity, state, frameCount) {
   return (Math.floor((Number(world && world.tick) || 0) / 18) + seed) % frames;
 };
 
+PS.render.entities.getSpriteVisualIdentity = function (spriteId) {
+  var sprite = PS.render.entities.getSprite(spriteId);
+
+  if (!sprite) {
+    return null;
+  }
+
+  return {
+    family: sprite.family || "entities",
+    shape: sprite.shape || "block",
+    partCount: Math.max(1, Math.round(Number(sprite.partCount) || 1)),
+    pixelRole: sprite.pixelRole || "marker",
+    atlasCell: sprite.atlasCell || null
+  };
+};
+
 PS.render.entities.getOrganismSpriteState = function (organism) {
   if (!organism) {
     return "idle";
@@ -48,6 +64,59 @@ PS.render.entities.getOrganismSpriteState = function (organism) {
   }
 
   return "idle";
+};
+
+PS.render.entities.drawResourceClusterSprite = function (sprite, drawSize, phase, tint) {
+  var sway = phase % 2;
+
+  ctx.fillStyle = sprite.shadow || "rgba(4, 8, 6, 0.42)";
+  ctx.fillRect(-drawSize * 0.52, drawSize * 0.28, drawSize * 1.04, Math.max(1, drawSize * 0.20));
+  ctx.fillStyle = sprite.stem || "#2b7a42";
+  ctx.fillRect(-drawSize * 0.08, -drawSize * 0.42, drawSize * 0.16, drawSize * 0.78);
+  ctx.fillStyle = tint;
+  ctx.fillRect(-drawSize * 0.42, -drawSize * 0.20 + sway, drawSize * 0.32, drawSize * 0.28);
+  ctx.fillRect(drawSize * 0.10, -drawSize * 0.32 - sway, drawSize * 0.36, drawSize * 0.30);
+  ctx.fillStyle = sprite.accent || "#d8ffd0";
+  ctx.fillRect(-drawSize * 0.18, -drawSize * 0.62, drawSize * 0.24, drawSize * 0.22);
+  ctx.fillRect(drawSize * 0.20, -drawSize * 0.04, drawSize * 0.20, drawSize * 0.20);
+};
+
+PS.render.entities.drawCreatureSprite = function (sprite, drawSize, phase, tint, state) {
+  var bob = phase % 2;
+  var isHungry = state === "hungry";
+
+  ctx.fillStyle = sprite.shadow || "rgba(4, 6, 8, 0.45)";
+  ctx.fillRect(-drawSize * 0.48, drawSize * 0.34, drawSize * 0.96, Math.max(1, drawSize * 0.18));
+  ctx.fillStyle = tint;
+  ctx.fillRect(-drawSize * 0.38, -drawSize * 0.18 + bob, drawSize * 0.76, drawSize * 0.42);
+  ctx.fillRect(-drawSize * 0.16, -drawSize * 0.46 + bob, drawSize * 0.38, drawSize * 0.26);
+  ctx.fillStyle = sprite.leg || "#2f321f";
+  ctx.fillRect(-drawSize * 0.42, drawSize * 0.16 + bob, drawSize * 0.16, drawSize * 0.22);
+  ctx.fillRect(drawSize * 0.26, drawSize * 0.16 + bob, drawSize * 0.16, drawSize * 0.22);
+  ctx.fillStyle = isHungry ? "#ff9c69" : (sprite.accent || "#ffffff");
+  ctx.fillRect(-drawSize * 0.46, -drawSize * 0.02 + bob, drawSize * 0.16, drawSize * 0.16);
+  ctx.fillRect(drawSize * 0.30, -drawSize * 0.02 + bob, drawSize * 0.16, drawSize * 0.16);
+  ctx.fillStyle = sprite.eye || "#041018";
+  ctx.fillRect(drawSize * 0.08, -drawSize * 0.36 + bob, Math.max(1, drawSize * 0.10), Math.max(1, drawSize * 0.10));
+};
+
+PS.render.entities.drawSettlementSprite = function (sprite, drawSize, tint, state) {
+  var isColony = state === "colony";
+  var isOutpost = state === "outpost";
+
+  ctx.fillStyle = sprite.shadow || "rgba(5, 6, 10, 0.72)";
+  ctx.fillRect(-drawSize * 0.64, -drawSize * 0.48, drawSize * 1.28, drawSize * 0.96);
+  ctx.strokeStyle = tint;
+  ctx.lineWidth = Math.max(1, Math.min(3, drawSize * 0.16));
+  ctx.strokeRect(-drawSize * 0.64, -drawSize * 0.48, drawSize * 1.28, drawSize * 0.96);
+  ctx.fillStyle = isColony ? "#70f0d0" : (isOutpost ? "#fff26b" : (sprite.accent || "#f2b85b"));
+  ctx.fillRect(-drawSize * 0.46, -drawSize * 0.18, drawSize * 0.24, drawSize * 0.34);
+  ctx.fillRect(-drawSize * 0.08, -drawSize * 0.34, drawSize * 0.24, drawSize * 0.50);
+  ctx.fillRect(drawSize * 0.24, -drawSize * 0.08, drawSize * 0.28, drawSize * 0.30);
+  ctx.fillStyle = sprite.roof || "#382719";
+  ctx.fillRect(-drawSize * 0.50, -drawSize * 0.28, drawSize * 0.36, drawSize * 0.10);
+  ctx.fillRect(-drawSize * 0.12, -drawSize * 0.42, drawSize * 0.34, drawSize * 0.10);
+  ctx.fillRect(drawSize * 0.20, -drawSize * 0.18, drawSize * 0.36, drawSize * 0.10);
 };
 
 PS.render.entities.drawRegisteredSprite = function (spriteId, entity, point, size, color, state) {
@@ -77,30 +146,12 @@ PS.render.entities.drawRegisteredSprite = function (spriteId, entity, point, siz
     ctx.lineTo(-drawSize / 2, 0);
     ctx.closePath();
     ctx.fill();
-  } else if (sprite.shape === "sprout") {
-    ctx.fillRect(-drawSize * 0.25, -drawSize * 0.35, drawSize * 0.50, drawSize * 0.70);
-    ctx.fillStyle = sprite.accent || "#d8ffd0";
-    ctx.fillRect(-drawSize * 0.50, -drawSize * 0.10 + phase % 2, drawSize, Math.max(1, drawSize * 0.22));
+  } else if (sprite.shape === "resource-cluster") {
+    PS.render.entities.drawResourceClusterSprite(sprite, drawSize, phase, tint);
   } else if (sprite.shape === "settlement") {
-    ctx.fillStyle = sprite.shadow || "rgba(5, 6, 10, 0.72)";
-    ctx.fillRect(-drawSize * 0.58, -drawSize * 0.42, drawSize * 1.16, drawSize * 0.84);
-    ctx.strokeStyle = tint;
-    ctx.lineWidth = Math.max(1, Math.min(3, drawSize * 0.18));
-    ctx.strokeRect(-drawSize * 0.58, -drawSize * 0.42, drawSize * 1.16, drawSize * 0.84);
-    ctx.fillStyle = sprite.accent || "#f2b85b";
-    ctx.fillRect(-drawSize * 0.42, -drawSize * 0.18, drawSize * 0.26, drawSize * 0.34);
-    ctx.fillRect(-drawSize * 0.08, -drawSize * 0.28, drawSize * 0.22, drawSize * 0.44);
-    ctx.fillRect(drawSize * 0.22, -drawSize * 0.10, drawSize * 0.26, drawSize * 0.32);
+    PS.render.entities.drawSettlementSprite(sprite, drawSize, tint, state);
   } else if (sprite.shape === "creature") {
-    var bob = phase % 2;
-    ctx.fillStyle = sprite.shadow || "rgba(4, 6, 8, 0.45)";
-    ctx.fillRect(-drawSize * 0.42, drawSize * 0.34, drawSize * 0.84, Math.max(1, drawSize * 0.18));
-    ctx.fillStyle = tint;
-    ctx.fillRect(-drawSize * 0.34, -drawSize * 0.22 + bob, drawSize * 0.68, drawSize * 0.46);
-    ctx.fillRect(-drawSize * 0.18, -drawSize * 0.44 + bob, drawSize * 0.36, drawSize * 0.24);
-    ctx.fillStyle = sprite.accent || "#ffffff";
-    ctx.fillRect(-drawSize * 0.44, -drawSize * 0.04 + bob, drawSize * 0.18, drawSize * 0.18);
-    ctx.fillRect(drawSize * 0.26, -drawSize * 0.04 + bob, drawSize * 0.18, drawSize * 0.18);
+    PS.render.entities.drawCreatureSprite(sprite, drawSize, phase, tint, state);
   } else {
     var bob = phase % 2;
     ctx.fillRect(-drawSize * 0.34, -drawSize * 0.42 + bob, drawSize * 0.68, drawSize * 0.84);
@@ -113,10 +164,14 @@ PS.render.entities.drawRegisteredSprite = function (spriteId, entity, point, siz
 
 PS.render.entities.registerSprite("resource.food", {
   family: "resources",
-  shape: "sprout",
+  shape: "resource-cluster",
   frames: 2,
   color: "#58f06c",
-  accent: "#c8ffd0"
+  accent: "#c8ffd0",
+  stem: "#2f8a4a",
+  partCount: 7,
+  pixelRole: "resource-node",
+  atlasCell: "resources/food-cluster-01"
 });
 
 PS.render.entities.registerSprite("entity.organism", {
@@ -124,7 +179,12 @@ PS.render.entities.registerSprite("entity.organism", {
   shape: "creature",
   frames: 4,
   color: "#fff26b",
-  accent: "#ffffff"
+  accent: "#ffffff",
+  leg: "#514e25",
+  eye: "#061018",
+  partCount: 8,
+  pixelRole: "mobile-agent",
+  atlasCell: "entities/organism-creature-01"
 });
 
 PS.render.entities.registerSprite("settlement.core", {
@@ -132,5 +192,9 @@ PS.render.entities.registerSprite("settlement.core", {
   shape: "settlement",
   frames: 2,
   color: "#f2b85b",
-  accent: "#fff26b"
+  accent: "#fff26b",
+  roof: "#46321f",
+  partCount: 9,
+  pixelRole: "built-cluster",
+  atlasCell: "settlement/core-cluster-01"
 });
