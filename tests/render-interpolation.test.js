@@ -26,7 +26,18 @@ const context = {
   isGlobeRenderMode() {
     return false;
   },
-  getEntitySurfacePosition() {
+  getEntitySurfacePosition(entity) {
+    if (
+      entity &&
+      Number.isFinite(Number(entity.latitude)) &&
+      Number.isFinite(Number(entity.longitude))
+    ) {
+      return {
+        latitude: Number(entity.latitude),
+        longitude: Number(entity.longitude)
+      };
+    }
+
     return null;
   },
   ensureEntitySurfacePosition(entity) {
@@ -35,8 +46,12 @@ const context = {
   isPlanetLocalView() {
     return false;
   },
-  projectPlanetLocalPoint() {
-    return null;
+  projectPlanetLocalPoint(longitude, latitude) {
+    return {
+      x: 100 + longitude,
+      y: 200 - latitude,
+      scale: 1.4
+    };
   },
   projectPlanetPoint() {
     return null;
@@ -78,6 +93,25 @@ var current = PS.render.entities.getRenderPosition({
 
 assert.strictEqual(current.x, 75, "full interpolation should render current X");
 assert.strictEqual(current.y, 35, "full interpolation should render current Y");
+
+isGlobeRenderMode = function() {
+  return true;
+};
+isPlanetLocalView = function() {
+  return true;
+};
+
+var settlementPoint = PS.render.entities.getSettlementRenderPosition({
+  id: 12,
+  x: 7,
+  y: 3,
+  latitude: 11,
+  longitude: -41
+});
+
+assert.strictEqual(settlementPoint.x, 59, "local settlement render X should use surface longitude projection");
+assert.strictEqual(settlementPoint.y, 189, "local settlement render Y should use surface latitude projection");
+assert.strictEqual(settlementPoint.scale, 1.4, "local settlement render should preserve projected scale");
 
 console.log("render interpolation checks passed");
 `, context);

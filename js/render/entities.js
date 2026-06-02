@@ -283,6 +283,14 @@ PS.render.entities.getSettlementById = function (settlementId) {
   return null;
 };
 
+PS.render.entities.getSettlementRenderPosition = function (settlement) {
+  if (!settlement) {
+    return null;
+  }
+
+  return PS.render.entities.getRenderPosition(settlement, 1);
+};
+
 PS.render.entities.drawSettlements = function () {
   if (!Array.isArray(world.settlements)) {
     return;
@@ -290,7 +298,7 @@ PS.render.entities.drawSettlements = function () {
 
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
-    var point = PS.render.entities.getTileRenderPosition(settlement.x, settlement.y);
+    var point = PS.render.entities.getSettlementRenderPosition(settlement);
 
     if (!point) {
       continue;
@@ -330,7 +338,7 @@ PS.render.entities.drawSettlementInfluence = function () {
   for (var i = 0; i < world.settlements.length; i++) {
     var settlement = world.settlements[i];
     var radius = Math.max(1, Math.round(Number(settlement.influenceRadius) || CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS));
-    var point = PS.render.entities.getTileRenderPosition(settlement.x, settlement.y);
+    var point = PS.render.entities.getSettlementRenderPosition(settlement);
 
     if (!point) {
       continue;
@@ -367,8 +375,8 @@ PS.render.entities.drawSettlementRoutes = function () {
       continue;
     }
 
-    var parentPoint = PS.render.entities.getTileRenderPosition(parentSettlement.x, parentSettlement.y);
-    var childPoint = PS.render.entities.getTileRenderPosition(childSettlement.x, childSettlement.y);
+    var parentPoint = PS.render.entities.getSettlementRenderPosition(parentSettlement);
+    var childPoint = PS.render.entities.getSettlementRenderPosition(childSettlement);
 
     if (!parentPoint || !childPoint) {
       continue;
