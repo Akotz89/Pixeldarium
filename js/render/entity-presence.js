@@ -116,17 +116,38 @@ PS.render.entities.drawRouteTrafficMarks = function () {
     }
 
     var lineageColor = PS.render.entities.getLineageColorById(route.lineageId || parentSettlement.lineageId);
-    var tickCount = route.isActive ? 5 : 3;
+    var scale = Math.max(parentPoint.scale || 1, childPoint.scale || 1, 1);
+    var tickCount = route.isActive ? 7 : 4;
+    var trafficAlpha = route.isActive ? 0.54 : 0.24;
+    var corridorWidth = Math.max(3, Math.round((route.isActive ? 4 : 3) * scale));
+
+    ctx.save();
+    ctx.lineCap = "square";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = PS.render.entities.getRgbaFromHex("#050b10", route.isActive ? 0.64 : 0.40);
+    ctx.lineWidth = corridorWidth + 3;
+    ctx.beginPath();
+    ctx.moveTo(parentPoint.x, parentPoint.y);
+    ctx.lineTo(childPoint.x, childPoint.y);
+    ctx.stroke();
+    ctx.strokeStyle = PS.render.entities.getRgbaFromHex(lineageColor, route.isActive ? 0.42 : 0.22);
+    ctx.lineWidth = corridorWidth;
+    ctx.beginPath();
+    ctx.moveTo(parentPoint.x, parentPoint.y);
+    ctx.lineTo(childPoint.x, childPoint.y);
+    ctx.stroke();
 
     for (var tick = 1; tick <= tickCount; tick++) {
       var amount = tick / (tickCount + 1);
       var x = parentPoint.x + (childPoint.x - parentPoint.x) * amount;
       var y = parentPoint.y + (childPoint.y - parentPoint.y) * amount;
-      var size = route.isActive ? 3 : 2;
+      var size = Math.max(2, Math.round((route.isActive ? 4 : 2) * scale));
 
-      ctx.fillStyle = PS.render.entities.getRgbaFromHex(lineageColor, route.isActive ? 0.46 : 0.22);
+      ctx.fillStyle = PS.render.entities.getRgbaFromHex(tick % 2 === 0 ? "#d9b85f" : lineageColor, trafficAlpha);
       ctx.fillRect(Math.round(x - size / 2), Math.round(y - size / 2), size, size);
     }
+
+    ctx.restore();
   }
 };
 
@@ -168,22 +189,44 @@ PS.render.entities.drawSettlementFootprint = function (settlement) {
   var samples = PS.render.entities.getSettlementFootprintSamples(settlement);
   var scale = point.scale || 1;
   var coreSize = Math.max(10, (12 + level * 4) * scale);
+  var blockSize = Math.max(16, coreSize * (settlement.isColony ? 1.72 : 1.46));
+  var streetWidth = Math.max(2, Math.round(2 * scale));
 
   ctx.save();
-  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#171d1a", 0.28);
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#050b10", 0.44);
+  ctx.fillRect(
+    Math.round(point.x - blockSize * 0.56),
+    Math.round(point.y - blockSize * 0.56),
+    Math.round(blockSize * 1.12),
+    Math.round(blockSize * 1.12)
+  );
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#1b211d", 0.48);
   ctx.fillRect(
     Math.round(point.x - coreSize * 0.62),
     Math.round(point.y - coreSize * 0.62),
     Math.round(coreSize * 1.24),
     Math.round(coreSize * 1.24)
   );
-  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(color, settlement.isColony ? 0.62 : 0.44);
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#b4ad98", settlement.isColony ? 0.34 : 0.24);
+  ctx.fillRect(
+    Math.round(point.x - blockSize * 0.48),
+    Math.round(point.y - streetWidth / 2),
+    Math.round(blockSize * 0.96),
+    streetWidth
+  );
+  ctx.fillRect(
+    Math.round(point.x - streetWidth / 2),
+    Math.round(point.y - blockSize * 0.48),
+    streetWidth,
+    Math.round(blockSize * 0.96)
+  );
+  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(color, settlement.isColony ? 0.74 : 0.54);
   ctx.lineWidth = Math.max(1, Math.round(scale));
   ctx.strokeRect(
-    Math.round(point.x - coreSize * 0.68),
-    Math.round(point.y - coreSize * 0.68),
-    Math.round(coreSize * 1.36),
-    Math.round(coreSize * 1.36)
+    Math.round(point.x - blockSize * 0.58),
+    Math.round(point.y - blockSize * 0.58),
+    Math.round(blockSize * 1.16),
+    Math.round(blockSize * 1.16)
   );
 
   for (var i = 0; i < samples.length; i++) {
@@ -194,12 +237,20 @@ PS.render.entities.drawSettlementFootprint = function (settlement) {
     var y = Math.round(point.y + sample.offsetY * scale - sampleHeight / 2);
 
     ctx.fillStyle = sample.role === "store"
-      ? PS.render.entities.getRgbaFromHex("#d9b85f", 0.48)
+      ? PS.render.entities.getRgbaFromHex("#d9b85f", 0.62)
       : (sample.role === "street"
-        ? PS.render.entities.getRgbaFromHex("#a9a18d", 0.42)
-        : PS.render.entities.getRgbaFromHex(color, 0.36));
+        ? PS.render.entities.getRgbaFromHex("#c8bea0", 0.52)
+        : PS.render.entities.getRgbaFromHex(color, 0.48));
     ctx.fillRect(x, y, sampleWidth, sampleHeight);
   }
+
+  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#70f0d0", settlement.isColony ? 0.84 : 0.62);
+  ctx.fillRect(
+    Math.round(point.x - Math.max(2, scale * 2)),
+    Math.round(point.y - Math.max(2, scale * 2)),
+    Math.max(3, Math.round(scale * 4)),
+    Math.max(3, Math.round(scale * 4))
+  );
 
   ctx.restore();
 };

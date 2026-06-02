@@ -434,6 +434,34 @@ PS.render.entities.getSettlementRenderPosition = function(settlement) {
   return settlement.id === 20 ? null : { x: 24, y: 24, scale: 1, visible: true };
 };
 PS.render.entities.drawRouteTrafficMarks();
+var infrastructureDrawOps = { fillRect: 0, stroke: 0, strokeRect: 0 };
+ctx.save = function() {};
+ctx.restore = function() {};
+ctx.beginPath = function() {};
+ctx.moveTo = function() {};
+ctx.lineTo = function() {};
+ctx.stroke = function() { infrastructureDrawOps.stroke++; };
+ctx.fillRect = function() { infrastructureDrawOps.fillRect++; };
+ctx.strokeRect = function() { infrastructureDrawOps.strokeRect++; };
+PS.render.entities.getSettlementRenderPosition = function(settlement) {
+  return settlement.id === 20 ? { x: 20, y: 20, scale: 1, visible: true } : { x: 72, y: 26, scale: 1, visible: true };
+};
+PS.render.entities.drawRouteTrafficMarks();
+assert.ok(infrastructureDrawOps.stroke >= 2, "active routes should draw a readable corridor halo and body");
+assert.ok(infrastructureDrawOps.fillRect >= 7, "active routes should draw multiple traffic ticks");
+infrastructureDrawOps.fillRect = 0;
+infrastructureDrawOps.strokeRect = 0;
+PS.render.entities.drawSettlementFootprint({
+  id: 22,
+  x: 3,
+  y: 3,
+  lineageId: 2,
+  level: 4,
+  isColony: true,
+  isActive: true
+});
+assert.ok(infrastructureDrawOps.fillRect >= builtFootprintSamples.length + 4, "built settlement silhouette should draw blocks, streets, parcels, and core");
+assert.ok(infrastructureDrawOps.strokeRect >= 1, "built settlement silhouette should draw an authored boundary");
 PS.render.entities.getSettlementRenderPosition = previousSettlementRenderPosition;
 world.organisms = [];
 world.lineages = {};
