@@ -17,8 +17,9 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
   var placeholderDraws = [];
   var fineDraws = [];
   var shouldCompositeChunks = false;
+  var underlayDrawn = drawLocalSurfaceUnderlay(targetCtx);
 
-  if (!drawLocalSurfaceUnderlay(targetCtx)) {
+  if (!underlayDrawn) {
     targetCtx.fillStyle = "#01030a";
     targetCtx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -63,12 +64,12 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
       }
 
       pendingChunks++;
-      var fallback = fallbackChunksPerPass > 0
-        ? getLocalSurfaceFallbackRenderChunk(
+      var fallback = underlayDrawn || fallbackChunksPerPass <= 0
+        ? null
+        : getLocalSurfaceFallbackRenderChunk(
           visibleChunk.address,
           fallbackGeneratedThisPass < fallbackChunksPerPass
-        )
-        : null;
+        );
 
       if (fallback) {
         var fallbackRect = getPlanetSurfaceChunkScreenRect(fallback.address);
@@ -86,9 +87,9 @@ PS.render.surfaceRender.work.buildLocalTerrainCache = function (targetCtx) {
         }
       } else {
         fallbackPendingChunks++;
-        var hasPreview = hasLocalSurfacePlaceholderPreview(visibleChunk.address);
-        var allowPreview = hasPreview || placeholderPreviewsThisPass < placeholderPreviewsPerPass;
-        var placeholder = getLocalSurfacePlaceholderDraw(visibleChunk.address, allowPreview);
+        var hasPreview = !underlayDrawn && hasLocalSurfacePlaceholderPreview(visibleChunk.address);
+        var allowPreview = !underlayDrawn && (hasPreview || placeholderPreviewsThisPass < placeholderPreviewsPerPass);
+        var placeholder = underlayDrawn ? null : getLocalSurfacePlaceholderDraw(visibleChunk.address, allowPreview);
 
         if (placeholder) {
           if (placeholder.canvas && !hasPreview) {
@@ -199,7 +200,30 @@ PS.render.surfaceRender.work.getChunkCompositeReadiness = function (readyChunks,
 };
 
 PS.render.surfaceRender.work.shouldCompositeVisibleChunks = function (readyChunks, totalChunks) {
-  return PS.render.surfaceRender.work.getChunkCompositeReadiness(readyChunks, totalChunks) >= 0.72;
+  return PS.render.surfaceRender.work.getChunkCompositeReadiness(readyChunks, totalChunks) >= 1;
+};
+
+PS.render.surfaceRender.work.getVisibleChunkReadiness = function () {
+  var visibleChunks = PS.render.surfaceStreaming.makeQueue(getPlanetSurfaceChunkSampleCount());
+  var readyChunks = 0;
+  var totalChunks = 0;
+
+  visibleChunks.forEach(function (visibleChunk) {
+    if (visibleChunk.queueType === "prefetch") {
+      return;
+    }
+
+    totalChunks++;
+
+    if (localSurfaceRenderChunkCache.chunks[getLocalSurfaceRenderChunkKey(visibleChunk.address)]) {
+      readyChunks++;
+    }
+  });
+
+  return {
+    readyChunks: readyChunks,
+    totalChunks: totalChunks
+  };
 };
 
 PS.render.surfaceRender.work.drawChunkOverUnderlay = function (targetCtx, draw, alpha) {
@@ -314,10 +338,9 @@ PS.render.surfaceRender.work.drawCompletedToTerrainCache = function (draws) {
     return false;
   }
 
-  if (!PS.render.surfaceRender.work.shouldCompositeVisibleChunks(
-    localSurfaceRenderChunkCache.order.length,
-    localSurfaceRenderChunkCache.stats.lastVisibleChunks
-  )) {
+  var readiness = PS.render.surfaceRender.work.getVisibleChunkReadiness();
+
+  if (!PS.render.surfaceRender.work.shouldCompositeVisibleChunks(readiness.readyChunks, readiness.totalChunks)) {
     return true;
   }
 
@@ -364,17 +387,36 @@ PS.render.surfaceRender.work.runIdle = function (deadline) {
   );
   var hasPendingChunks = localSurfaceRenderChunkCache.stats.lastPendingChunks > 0;
   var completedChunks = 0;
+  var idleChunksPerPass = getLocalSurfaceRenderChunksPerPass();
 
-  if (
+  while (
     hasPendingChunks &&
     performance.now() - workStart < workBudgetMs &&
     PS.render.surfaceRender.work.getDeadlineTimeRemaining(deadline) > 1
   ) {
-    var renderWork = PS.render.surfaceRender.work.advance(1);
+    var readinessBefore = PS.render.surfaceRender.work.getVisibleChunkReadiness();
+    var readyBefore = PS.render.surfaceRender.work.shouldCompositeVisibleChunks(
+      readinessBefore.readyChunks,
+      readinessBefore.totalChunks
+    );
+    var renderWork = PS.render.surfaceRender.work.advance(idleChunksPerPass);
 
     hasPendingChunks = renderWork.hasPendingChunks;
 
     if (renderWork.completedChunks > 0) {
+      var readinessAfter = PS.render.surfaceRender.work.getVisibleChunkReadiness();
+      var readyAfter = PS.render.surfaceRender.work.shouldCompositeVisibleChunks(
+        readinessAfter.readyChunks,
+        readinessAfter.totalChunks
+      );
+
+      if (readyAfter && !readyBefore) {
+        terrainCache = null;
+        world.needsRender = true;
+        PS.render.surfaceRender.work.requestIdle();
+        return;
+      }
+
       if (!PS.render.surfaceRender.work.drawCompletedToTerrainCache(renderWork.completedDraws)) {
         terrainCache = null;
         world.needsRender = true;
@@ -384,6 +426,9 @@ PS.render.surfaceRender.work.runIdle = function (deadline) {
       completedChunks += renderWork.completedChunks;
     }
 
+    if (renderWork.generatedThisPass <= 0) {
+      break;
+    }
   }
 
   if (completedChunks > 0) {

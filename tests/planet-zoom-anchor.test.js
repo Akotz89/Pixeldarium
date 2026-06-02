@@ -318,8 +318,30 @@ assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceUnderlayAccent, "func
 assert.strictEqual(typeof PS.render.raster.getLocalSurfaceMaterialMark, "function", "local underlay should expose material mark archetypes");
 assert.strictEqual(typeof PS.render.raster.drawLocalSurfaceMaterialMarks, "function", "local underlay should draw deterministic material marks");
 assert.strictEqual(typeof PS.render.surfaceRender.work.drawChunkOverUnderlay, "function", "surface chunk compositor should blend progressive chunks into the underlay");
+assert.strictEqual(typeof PS.render.surfaceRender.work.getVisibleChunkReadiness, "function", "surface chunk compositor should measure current viewport readiness");
 assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(12, 100), false, "surface chunk compositor should defer sparse partial chunk coverage");
-assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(80, 100), true, "surface chunk compositor should allow high-coverage chunk composition");
+assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(80, 100), false, "surface chunk compositor should defer visibly incomplete chunk islands");
+assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(96, 100), false, "surface chunk compositor should keep underlay fallback until coverage is complete");
+assert.strictEqual(PS.render.surfaceRender.work.shouldCompositeVisibleChunks(100, 100), true, "surface chunk compositor should allow complete visible chunk composition");
+world.planetView = { zoomLevel: finalGroundZoomIndex, latitude: 0, longitude: 0, panEastMeters: 0, panNorthMeters: 0 };
+world.isCameraInteracting = false;
+world.organisms = [];
+world.speed = 1;
+world.updateMs = 0;
+world.maxUpdateMs = 0;
+world.fps = 30;
+assert.ok(
+  getLocalSurfaceRenderCellsPerPass() > CONFIG.PLANET_SURFACE_STREAMING_CELLS_PER_PASS,
+  "idle local detail rendering should not be capped by the tiny streaming cell throttle"
+);
+assert.ok(
+  getLocalSurfaceRenderCellsPerPass() >= CONFIG.PLANET_SURFACE_CHUNK_SAMPLES * CONFIG.PLANET_SURFACE_CHUNK_SAMPLES,
+  "idle local detail rendering should complete at least one full chunk per scheduled chunk pass"
+);
+assert.ok(
+  getLocalSurfaceRenderChunksPerPass() >= CONFIG.PLANET_SURFACE_RENDER_IDLE_CHUNKS_PER_PASS,
+  "settled local detail rendering should use the idle chunk budget even while frame rate is recovering"
+);
 assert.ok(renderLayerIds.indexOf("terrain.base") < renderLayerIds.indexOf("resources.food"), "terrain layer should draw before resources");
 assert.ok(renderLayerIds.indexOf("settlement.routes") < renderLayerIds.indexOf("settlement.structures"), "routes should draw before settlement structures");
 assert.ok(renderLayerIds.indexOf("entities.organisms") < renderLayerIds.indexOf("status.selection"), "entities should draw before status/overlay layers");

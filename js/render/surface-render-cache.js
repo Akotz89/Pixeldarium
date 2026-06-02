@@ -87,7 +87,7 @@ PS.render.surfaceRender.getChunksPerPass = function () {
     Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_IDLE_CHUNKS_PER_PASS) || busyChunks)
   );
 
-  if (world.isCameraInteracting || PS.render.surfaceRender.isSimulationBusy()) {
+  if (world.isCameraInteracting) {
     return busyChunks;
   }
 
@@ -104,8 +104,12 @@ PS.render.surfaceRender.getCellsPerPass = function () {
     busyCells,
     Math.round(Number(CONFIG.PLANET_SURFACE_RENDER_IDLE_CELLS_PER_PASS) || busyCells)
   );
+  var chunkCells = Math.max(
+    idleCells,
+    Math.pow(Math.max(1, Math.round(Number(CONFIG.PLANET_SURFACE_CHUNK_SAMPLES) || 8)), 2)
+  );
 
-  if (world.isCameraInteracting || PS.render.surfaceRender.isSimulationBusy()) {
+  if (world.isCameraInteracting) {
     return Math.min(busyCells, streamingCells);
   }
 
@@ -113,7 +117,7 @@ PS.render.surfaceRender.getCellsPerPass = function () {
     return Math.min(busyCells, streamingCells);
   }
 
-  return Math.min(idleCells, streamingCells);
+  return chunkCells;
 };
 
 PS.render.surfaceRender.getFallbackChunksPerPass = function () {
