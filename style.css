@@ -1279,10 +1279,112 @@ h1 {
 }
 
 .timeline-list.empty {
-  padding: 10px;
   color: #c7d0f6;
   font-size: 12px;
   font-weight: 800;
+}
+
+.deep-time-bar {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  color: #dce5ff;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(160, 175, 255, 0.18);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.deep-time-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.deep-time-status b,
+.deep-time-status span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deep-time-status b {
+  color: #f4f7ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.deep-time-status span {
+  color: #aeb7d9;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.deep-time-track {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 42px;
+  overflow: hidden;
+  background: rgba(5, 8, 14, 0.64);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+.deep-time-era {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--era-width);
+  min-width: 44px;
+  height: 100%;
+  padding: 6px 4px;
+  color: #061016;
+  background: var(--era-color);
+  border: 0;
+  border-right: 1px solid rgba(5, 8, 14, 0.35);
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.deep-time-era span {
+  display: block;
+  min-width: 0;
+  line-height: 1.1;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.deep-time-era:hover,
+.deep-time-era:focus-visible,
+.deep-time-era.active {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72);
+  outline: none;
+}
+
+.deep-time-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(5, 8, 14, 0.8), 0 0 10px rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.timeline-empty {
+  padding: 10px;
+  color: #c7d0f6;
 }
 
 .timeline-event {

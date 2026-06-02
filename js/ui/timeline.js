@@ -11,8 +11,20 @@ PS.ui.timeline = (function() {
         return tickDelta;
       }
 
-      return (Number(a.deepTime) || 0) - (Number(b.deepTime) || 0);
+      return getEventYears(a) - getEventYears(b);
     });
+  }
+
+  function getEventYears(event) {
+    if (PS.deepTime && typeof PS.deepTime.getYears === "function") {
+      return PS.deepTime.getYears(event.deepTime);
+    }
+
+    if (event.deepTime && typeof event.deepTime === "object") {
+      return Math.max(0, Number(event.deepTime.years) || 0);
+    }
+
+    return Math.max(0, Number(event.deepTime) || 0);
   }
 
   function getFilter() {
@@ -40,10 +52,10 @@ PS.ui.timeline = (function() {
   }
 
   function formatEventTime(event) {
-    var deepTime = Number(event.deepTime);
+    var deepTime = getEventYears(event);
 
-    if (Number.isFinite(deepTime) && Math.abs(deepTime) >= 1000000) {
-      return (deepTime / 1000000).toLocaleString(undefined, { maximumFractionDigits: 2 }) + "M years";
+    if (PS.deepTime && typeof PS.deepTime.formatYears === "function" && deepTime > 0) {
+      return PS.deepTime.formatYears(deepTime);
     }
 
     if (Number.isFinite(deepTime) && Math.abs(deepTime) >= 1000) {
@@ -92,6 +104,43 @@ PS.ui.timeline = (function() {
     );
   }
 
+  function makeDeepTimeTimeline() {
+    if (!PS.deepTime || typeof PS.deepTime.getTimelineSegments !== "function") {
+      return "";
+    }
+
+    var segments = PS.deepTime.getTimelineSegments();
+    var progress = PS.deepTime.getProgressPercent();
+    var html = [
+      "<div class=\"deep-time-bar\" aria-label=\"Geological era timeline\">",
+      "<div class=\"deep-time-status\">",
+      "<b>" + escapeSummaryText(PS.deepTime.getCurrentEra().name) + "</b>",
+      "<span>" + escapeSummaryText(PS.deepTime.formatYears(PS.deepTime.getCurrentYears())) + "</span>",
+      "</div>",
+      "<div class=\"deep-time-track\">"
+    ];
+
+    for (var i = 0; i < segments.length; i++) {
+      var segment = segments[i];
+      var className = "deep-time-era" + (segment.active ? " active" : "");
+
+      html.push(
+        "<button class=\"" + className + "\" type=\"button\" data-deep-time-era=\"" + escapeSummaryText(segment.id) + "\" " +
+        "style=\"--era-color:" + escapeSummaryText(segment.color) + ";--era-width:" + segment.widthPercent.toFixed(2) + "%\">" +
+        "<span>" + escapeSummaryText(segment.label) + "</span>" +
+        "</button>"
+      );
+    }
+
+    html.push(
+      "<i class=\"deep-time-cursor\" style=\"left:" + progress.toFixed(2) + "%\"></i>",
+      "</div>",
+      "</div>"
+    );
+
+    return html.join("");
+  }
+
   function focusEvent(event) {
     world.selectedTimelineEvent = {
       type: event.type || "event",
@@ -131,13 +180,13 @@ PS.ui.timeline = (function() {
 
   function sync() {
     var events = getFilteredEvents();
-    var html = [];
+    var html = [makeDeepTimeTimeline()];
 
     syncFilters();
 
     if (events.length === 0) {
       setElementClass(timelineList, "timeline-list empty");
-      setElementText(timelineList, "TIMELINE: Waiting for " + getFilter() + " events");
+      setElementHtml(timelineList, html.join("") + "<div class=\"timeline-empty\">TIMELINE: Waiting for " + escapeSummaryText(getFilter()) + " events</div>");
       return;
     }
 
@@ -158,7 +207,16 @@ PS.ui.timeline = (function() {
     }
 
     timelineList.addEventListener("click", function(event) {
-      var target = event.target.closest("[data-timeline-index]");
+      var eraTarget = event.target.closest("[data-deep-time-era]");
+      var target;
+
+      if (eraTarget && PS.deepTime && typeof PS.deepTime.jumpToEra === "function") {
+        PS.deepTime.jumpToEra(eraTarget.getAttribute("data-deep-time-era"));
+        sync();
+        return;
+      }
+
+      target = event.target.closest("[data-timeline-index]");
 
       if (!target) {
         return;
@@ -180,6 +238,7 @@ PS.ui.timeline = (function() {
     setup: setup,
     sync: sync,
     getFilteredEvents: getFilteredEvents,
-    focusEvent: focusEvent
+    focusEvent: focusEvent,
+    makeDeepTimeTimeline: makeDeepTimeTimeline
   };
 })();

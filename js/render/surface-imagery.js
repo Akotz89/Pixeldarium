@@ -264,7 +264,7 @@ PS.render.surfaceImagery.getTileCompositedColor = function (tile) {
     color = blendHexColors(color, "#7fb7a7", shallowWater * 0.35);
     color = blendHexColors(color, "#a3d7ca", riverMouth * 0.38);
     color = blendHexColors(color, "#d9edf4", polar * 0.22);
-    return shadeHexColor(color, 0.48 + shallow * 0.22 + (1 - polar) * 0.05);
+    return PS.render.terrain.applyDeepTimeHexTint(shadeHexColor(color, 0.48 + shallow * 0.22 + (1 - polar) * 0.05));
   }
 
   if (visualBiome === "forest") {
@@ -303,8 +303,8 @@ PS.render.surfaceImagery.getTileCompositedColor = function (tile) {
     "#eef6f5",
     visualBiome === "ice" ? clamp(snowSignal * 0.42, 0, 0.52) : clamp(snowVisual * 0.85, 0, 0.22)
   );
-  return shadeHexColor(
+  return PS.render.terrain.applyDeepTimeHexTint(shadeHexColor(
     color,
     clamp(0.28 + terrainHillshade * 0.40 + elevation * 0.12 + moisture * 0.05 + ridge * 0.035 - dry * 0.05, 0, 1)
-  );
+  ));
 };

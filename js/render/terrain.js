@@ -1,7 +1,7 @@
 PS.render = PS.render || {};
 PS.render.terrain = PS.render.terrain || {};
 
-PS.render.terrain.getBiomeColor = function (biome) {
+PS.render.terrain.getBaseBiomeColor = function (biome) {
   switch (biome) {
     case "forest":
       return "#123f23";
@@ -25,6 +25,28 @@ PS.render.terrain.getBiomeColor = function (biome) {
     default:
       return "#07080f";
   }
+};
+
+PS.render.terrain.applyDeepTimeHexTint = function (hexColor) {
+  if (!PS.deepTime || typeof PS.deepTime.getTerrainTint !== "function") {
+    return hexColor;
+  }
+
+  var tint = PS.deepTime.getTerrainTint();
+  return PS.render.terrain.blendHexColors(hexColor, tint.color, tint.amount);
+};
+
+PS.render.terrain.applyDeepTimeRgbTint = function (rgb) {
+  if (!PS.deepTime || typeof PS.deepTime.getTerrainTint !== "function") {
+    return rgb;
+  }
+
+  var tint = PS.deepTime.getTerrainTint();
+  return PS.render.terrain.blendRgbWithHex(rgb, tint.color, tint.amount);
+};
+
+PS.render.terrain.getBiomeColor = function (biome) {
+  return PS.render.terrain.applyDeepTimeHexTint(PS.render.terrain.getBaseBiomeColor(biome));
 };
 
 PS.render.terrain.mixChannel = function (channel, target, amount) {

@@ -12,7 +12,9 @@ PS.render.terrainCache.getLocalSignature = function () {
     Number(view.latitude).toFixed(6),
     Number(view.longitude).toFixed(6),
     Number(scale.metersPerSample).toFixed(4),
-    getPlanetSurfaceChunkSampleCount()
+    getPlanetSurfaceChunkSampleCount(),
+    Math.floor((Number(world.deepTimeYears) || 0) / 10000000),
+    world.era || ""
   ].join(":");
 };
 
