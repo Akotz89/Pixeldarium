@@ -103,6 +103,84 @@ PS.render.observationOverlays.toRgba = function(color) {
   return "rgba(" + color.red + "," + color.green + "," + color.blue + "," + (color.alpha / 255).toFixed(3) + ")";
 };
 
+PS.render.observationOverlays.getGlyph = function(id, x, y, tile) {
+  var overlayId = String(id || "none");
+  var density = 0;
+  var glyph = {
+    shape: "heat-cell",
+    color: "rgba(255,255,255,0.24)",
+    count: 0,
+    density: 0
+  };
+
+  if (overlayId === "observation.population") {
+    density = Math.min(1, PS.render.observationOverlays.getDensityAt(world.organisms, x, y, 9) / 9);
+    glyph.shape = "agent-cluster";
+    glyph.color = "rgba(210,255,246,0.55)";
+  } else if (overlayId === "observation.resources") {
+    density = Math.min(1, PS.render.observationOverlays.getDensityAt(world.food, x, y, 8) / 10);
+    glyph.shape = "resource-sprout";
+    glyph.color = "rgba(255,250,170,0.56)";
+  } else if (overlayId === "observation.microbial") {
+    var microbialCell = PS.epochs && PS.epochs.microbial && typeof PS.epochs.microbial.getCellForTile === "function"
+      ? PS.epochs.microbial.getCellForTile(x, y)
+      : null;
+
+    density = microbialCell ? Math.max(0, Math.min(1, Number(microbialCell.bloomIntensity) || 0)) : 0;
+    glyph.shape = "bloom-mat";
+    glyph.color = "rgba(205,250,150,0.50)";
+  } else if (overlayId === "observation.temperature") {
+    var temperature = PS.render.observationOverlays.getTileTemperature(tile);
+    density = Math.max(0, Math.min(1, (temperature + 30) / 95));
+    glyph.shape = density > 0.56 ? "heat-rib" : "cold-rib";
+    glyph.color = density > 0.56 ? "rgba(255,225,170,0.36)" : "rgba(190,230,255,0.36)";
+  } else if (overlayId === "observation.atmosphere") {
+    density = PS.render.observationOverlays.getGasRatio().normalized;
+    glyph.shape = density > 0.5 ? "oxygen-dot" : "carbon-dot";
+    glyph.color = density > 0.5 ? "rgba(210,245,255,0.34)" : "rgba(255,190,150,0.34)";
+  }
+
+  glyph.density = density;
+  glyph.count = density <= 0.02 ? 0 : Math.max(1, Math.round(1 + density * 4));
+  return glyph;
+};
+
+PS.render.observationOverlays.drawGlyph = function(point, width, height, glyph, x, y) {
+  if (!glyph || glyph.count <= 0) {
+    return 0;
+  }
+
+  var drawn = 0;
+  var baseX = point.x - width / 2;
+  var baseY = point.y - height / 2;
+  var maxX = Math.max(1, width - 2);
+  var maxY = Math.max(1, height - 2);
+
+  ctx.fillStyle = glyph.color;
+
+  for (var i = 0; i < glyph.count; i++) {
+    var hash = Math.sin((x + 11 + i * 17) * 12.9898 + (y + 7 - i * 13) * 78.233) * 43758.5453;
+    var unit = hash - Math.floor(hash);
+    var px = Math.round(baseX + 1 + unit * maxX);
+    var py = Math.round(baseY + 1 + ((unit * 1.618) % 1) * maxY);
+    var markWidth = glyph.shape === "heat-rib" || glyph.shape === "cold-rib" ? Math.max(1, Math.round(width * 0.34)) : 1;
+    var markHeight = glyph.shape === "agent-cluster" || glyph.shape === "oxygen-dot" || glyph.shape === "carbon-dot" ? 1 : Math.max(1, Math.round(height * 0.18));
+
+    if (glyph.shape === "resource-sprout") {
+      markWidth = 1;
+      markHeight = Math.max(1, Math.round(height * 0.28));
+    } else if (glyph.shape === "bloom-mat") {
+      markWidth = Math.max(1, Math.round(width * 0.24));
+      markHeight = Math.max(1, Math.round(height * 0.18));
+    }
+
+    ctx.fillRect(px, py, markWidth, markHeight);
+    drawn++;
+  }
+
+  return drawn;
+};
+
 PS.render.observationOverlays.getOverlaySample = function(id, x, y, tile) {
   if (id === "observation.temperature") {
     var temperature = PS.render.observationOverlays.getTileTemperature(tile);
@@ -174,12 +252,24 @@ PS.render.observationOverlays.drawTileSamples = function(id, getColor) {
         continue;
       }
 
-      ctx.fillStyle = getColor(x, y, getPlanetTile(x, y));
+      var tile = getPlanetTile(x, y);
+      var sampleWidth = Math.max(3, step * CONFIG.TILE_SIZE * point.scale);
+      var sampleHeight = Math.max(3, step * CONFIG.TILE_SIZE * point.scale);
+
+      ctx.fillStyle = getColor(x, y, tile);
       ctx.fillRect(
-        point.x - Math.max(2, step * CONFIG.TILE_SIZE * 0.5 * point.scale),
-        point.y - Math.max(2, step * CONFIG.TILE_SIZE * 0.5 * point.scale),
-        Math.max(3, step * CONFIG.TILE_SIZE * point.scale),
-        Math.max(3, step * CONFIG.TILE_SIZE * point.scale)
+        point.x - Math.max(2, sampleWidth * 0.5),
+        point.y - Math.max(2, sampleHeight * 0.5),
+        sampleWidth,
+        sampleHeight
+      );
+      PS.render.observationOverlays.drawGlyph(
+        point,
+        sampleWidth,
+        sampleHeight,
+        PS.render.observationOverlays.getGlyph(id, x, y, tile),
+        x,
+        y
       );
       sampleCount++;
     }

@@ -134,6 +134,21 @@ expectedIds.forEach((id) => {
 
 assert.strictEqual(context.PS.render.observationOverlays.setActive("observation.temperature"), "observation.temperature");
 assert.strictEqual(context.world.needsRender, true, "activating an overlay should request render");
+assert.strictEqual(
+  context.PS.render.observationOverlays.getGlyph("observation.population", 8, 8, context.getPlanetTile(8, 8)).shape,
+  "agent-cluster",
+  "population overlay should expose an agent cluster glyph"
+);
+assert.strictEqual(
+  context.PS.render.observationOverlays.getGlyph("observation.resources", 18, 8, context.getPlanetTile(18, 8)).shape,
+  "resource-sprout",
+  "resource overlay should expose a sprout glyph"
+);
+assert.strictEqual(
+  context.PS.render.observationOverlays.getGlyph("observation.microbial", 2, 2, context.getPlanetTile(2, 2)).shape,
+  "bloom-mat",
+  "microbial overlay should expose a bloom mat glyph"
+);
 context.PS.render.overlays.drawRegistered();
 assert.ok(fills.length > 0, "active temperature overlay should draw sample cells");
 assert.strictEqual(fills[0].composite, "screen", "temperature overlay should use screen blend metadata");
@@ -145,11 +160,19 @@ context.PS.render.observationOverlays.setActive("observation.population");
 context.PS.render.overlays.drawRegistered();
 assert.ok(fills.length > 0, "population overlay should draw density cells");
 assert.strictEqual(fills[0].composite, "lighter", "population overlay should use additive blend metadata");
+assert.ok(
+  fills.length > context.world.overlayPerformance.lastSampleCount,
+  "population overlay should draw authored glyph marks in addition to sample cells"
+);
 
 fills.length = 0;
 context.PS.render.observationOverlays.setActive("observation.resources");
 context.PS.render.overlays.drawRegistered();
 assert.ok(fills.length > 0, "resource overlay should draw food density cells");
+assert.ok(
+  fills.length > context.world.overlayPerformance.lastSampleCount,
+  "resource overlay should draw authored glyph marks in addition to sample cells"
+);
 
 fills.length = 0;
 context.PS.render.observationOverlays.setActive("observation.atmosphere");
@@ -161,6 +184,10 @@ context.PS.render.observationOverlays.setActive("observation.microbial");
 context.PS.render.overlays.drawRegistered();
 assert.ok(fills.length > 0, "microbial overlay should draw bloom cells");
 assert.strictEqual(fills[0].composite, "lighter", "microbial overlay should use additive blend metadata");
+assert.ok(
+  fills.length > context.world.overlayPerformance.lastSampleCount,
+  "microbial overlay should draw authored glyph marks in addition to sample cells"
+);
 
 context.PS.render.observationOverlays.setActive("unknown");
 assert.strictEqual(context.world.activeObservationOverlay, "none", "unknown overlay should normalize to none");
