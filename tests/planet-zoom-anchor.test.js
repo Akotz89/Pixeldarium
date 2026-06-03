@@ -89,6 +89,7 @@ const source = [
   "js/render/surface-draw.js",
   "js/render/entity-sprites.js",
   "js/render/entities.js",
+  "js/render/entity-route-glyphs.js",
   "js/render/entity-ecology-presence.js",
   "js/render/entity-presence.js",
   "js/render/reference-grid.js",
@@ -507,7 +508,17 @@ world.settlements = [
   { id: 20, x: 1, y: 1, lineageId: 2, level: 2, isActive: true },
   { id: 21, x: 2, y: 2, lineageId: 2, level: 2, isActive: true }
 ];
-world.settlementRoutes = [{ id: 30, parentSettlementId: 20, childSettlementId: 21, lineageId: 2, isActive: true }];
+world.settlementRoutes = [{ id: 30, parentSettlementId: 20, childSettlementId: 21, lineageId: 2, isActive: true, foodTransferred: 24 }];
+var activeRouteGlyph = PS.render.entities.getRouteTrafficGlyph(
+  { id: 30, parentSettlementId: 20, childSettlementId: 21, lineageId: 2, isActive: true, foodTransferred: 24 },
+  { id: 20, level: 4, isColony: true },
+  { id: 21, level: 2, isOutpost: true }
+);
+var dormantRouteGlyph = PS.render.entities.getRouteTrafficGlyph(
+  { id: 31, parentSettlementId: 20, childSettlementId: 21, lineageId: 2, isActive: false, foodTransferred: 0 },
+  { id: 20, level: 1 },
+  { id: 21, level: 1 }
+);
 PS.render.entities.getSettlementRenderPosition = function(settlement) {
   return settlement.id === 20 ? null : { x: 24, y: 24, scale: 1, visible: true };
 };
@@ -525,6 +536,10 @@ PS.render.entities.getSettlementRenderPosition = function(settlement) {
   return settlement.id === 20 ? { x: 20, y: 20, scale: 1, visible: true } : { x: 72, y: 26, scale: 1, visible: true };
 };
 PS.render.entities.drawRouteTrafficMarks();
+assert.strictEqual(activeRouteGlyph.shape, "colony-supply-braid", "colony routes should expose braided supply glyphs");
+assert.strictEqual(activeRouteGlyph.cargoGlyph, "store-crate", "food-rich routes should expose store-crate cargo glyphs");
+assert.ok(activeRouteGlyph.tickCount > dormantRouteGlyph.tickCount, "active supplied routes should reserve denser traffic marks");
+assert.strictEqual(dormantRouteGlyph.shape, "dormant-track", "inactive routes should expose dormant track glyphs");
 assert.ok(infrastructureDrawOps.stroke >= 2, "active routes should draw a readable corridor halo and body");
 assert.ok(infrastructureDrawOps.fillRect >= 7, "active routes should draw multiple traffic ticks");
 infrastructureDrawOps.fillRect = 0;

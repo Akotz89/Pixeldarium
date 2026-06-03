@@ -117,8 +117,7 @@ PS.render.entities.drawRouteTrafficMarks = function () {
 
     var lineageColor = PS.render.entities.getLineageColorById(route.lineageId || parentSettlement.lineageId);
     var scale = Math.max(parentPoint.scale || 1, childPoint.scale || 1, 1);
-    var tickCount = route.isActive ? 7 : 4;
-    var trafficAlpha = route.isActive ? 0.54 : 0.24;
+    var glyph = PS.render.entities.getRouteTrafficGlyphScratch(route, parentSettlement, childSettlement);
     var corridorWidth = Math.max(3, Math.round((route.isActive ? 4 : 3) * scale));
 
     ctx.save();
@@ -136,16 +135,7 @@ PS.render.entities.drawRouteTrafficMarks = function () {
     ctx.moveTo(parentPoint.x, parentPoint.y);
     ctx.lineTo(childPoint.x, childPoint.y);
     ctx.stroke();
-
-    for (var tick = 1; tick <= tickCount; tick++) {
-      var amount = tick / (tickCount + 1);
-      var x = parentPoint.x + (childPoint.x - parentPoint.x) * amount;
-      var y = parentPoint.y + (childPoint.y - parentPoint.y) * amount;
-      var size = Math.max(2, Math.round((route.isActive ? 4 : 2) * scale));
-
-      ctx.fillStyle = PS.render.entities.getRgbaFromHex(tick % 2 === 0 ? "#d9b85f" : lineageColor, trafficAlpha);
-      ctx.fillRect(Math.round(x - size / 2), Math.round(y - size / 2), size, size);
-    }
+    PS.render.entities.drawRouteTrafficGlyphMarks(route, parentPoint, childPoint, glyph, lineageColor, scale);
 
     ctx.restore();
   }
