@@ -51,6 +51,51 @@ PS.render.entities.getSpriteVisualIdentity = function (spriteId) {
   };
 };
 
+PS.render.entities.getOrganismLineageBand = function (organism) {
+  var lineageId = Math.max(1, Math.round(Number(organism && organism.lineageId) || 1));
+  return "lineage-" + String(((lineageId - 1) % 6) + 1);
+};
+
+PS.render.entities.getOrganismHeadingCue = function (organism) {
+  var directionX = Math.round(Number(organism && organism.directionX) || 0);
+  var directionY = Math.round(Number(organism && organism.directionY) || 0);
+
+  if (Math.abs(directionX) > Math.abs(directionY)) {
+    return directionX > 0 ? "east-step" : "west-step";
+  }
+
+  if (directionY !== 0) {
+    return directionY > 0 ? "south-step" : "north-step";
+  }
+
+  return "still";
+};
+
+PS.render.entities.getOrganismBehaviorMarks = function (organism, state) {
+  var marks = [PS.render.entities.getOrganismLineageBand(organism)];
+  var energy = Number(organism && organism.energy) || 0;
+  var headingCue = PS.render.entities.getOrganismHeadingCue(organism);
+  var behaviorState = String(state || "idle");
+
+  if (behaviorState === "hungry" || energy < 60) {
+    marks.push("hunger-core");
+  } else if (energy > 200) {
+    marks.push("breeding-spark");
+  } else {
+    marks.push("active-core");
+  }
+
+  if (behaviorState === "move" || headingCue !== "still") {
+    marks.push(headingCue);
+  }
+
+  if (organism && organism.representativeId !== undefined) {
+    marks.push("representative-pin");
+  }
+
+  return marks;
+};
+
 PS.render.entities.getSpriteVariant = function (spriteId, entity, state) {
   var sprite = PS.render.entities.getSprite(spriteId);
   var idText = String(entity && entity.id !== undefined ? entity.id : spriteId);
@@ -89,6 +134,7 @@ PS.render.entities.getSpriteVariant = function (spriteId, entity, state) {
     var limbCount = clamp(Math.round(Number(traits.limbCount) || 4), 2, 8);
     var camouflage = clamp(Number(traits.camouflage) || 0, 0, 1);
     var energy = Number(entity && entity.energy) || 0;
+    var behaviorMarks = PS.render.entities.getOrganismBehaviorMarks(entity, state);
 
     return {
       spriteId: spriteId,
@@ -96,7 +142,11 @@ PS.render.entities.getSpriteVariant = function (spriteId, entity, state) {
       bodyScale: bodySize,
       limbCount: limbCount,
       camouflageAlpha: camouflage,
-      partCount: 5 + limbCount + (camouflage > 0.35 ? 3 : 1),
+      lineageBand: PS.render.entities.getOrganismLineageBand(entity),
+      headingCue: PS.render.entities.getOrganismHeadingCue(entity),
+      behaviorMarks: behaviorMarks,
+      markerCount: behaviorMarks.length,
+      partCount: 5 + limbCount + (camouflage > 0.35 ? 3 : 1) + behaviorMarks.length,
       vitalitySignal: energy < 60 ? "hungry" : (energy > 200 ? "breeding" : "active"),
       state: state || "idle"
     };
@@ -201,6 +251,26 @@ PS.render.entities.drawCreatureSprite = function (sprite, drawSize, phase, tint,
     ctx.fillStyle = PS.render.entities.getRgbaFromHex("#1f4a2c", 0.28 + variant.camouflageAlpha * 0.32);
     ctx.fillRect(-bodyWidth * 0.36, -drawSize * 0.08 + bob, bodyWidth * 0.28, Math.max(1, drawSize * 0.10));
     ctx.fillRect(bodyWidth * 0.08, drawSize * 0.04 + bob, bodyWidth * 0.30, Math.max(1, drawSize * 0.10));
+  }
+  if (variant && variant.lineageBand) {
+    ctx.fillStyle = PS.render.entities.getRgbaFromHex(tint, 0.72);
+    ctx.fillRect(-bodyWidth * 0.44, -drawSize * 0.24 + bob, Math.max(1, bodyWidth * 0.18), Math.max(1, drawSize * 0.14));
+  }
+  if (variant && variant.behaviorMarks && variant.behaviorMarks.indexOf("hunger-core") >= 0) {
+    ctx.fillStyle = "#ff9c69";
+    ctx.fillRect(-drawSize * 0.08, -drawSize * 0.14 + bob, Math.max(1, drawSize * 0.16), Math.max(1, drawSize * 0.16));
+  } else if (variant && variant.behaviorMarks && variant.behaviorMarks.indexOf("breeding-spark") >= 0) {
+    ctx.fillStyle = "#fff26b";
+    ctx.fillRect(-drawSize * 0.06, -drawSize * 0.58 + bob, Math.max(1, drawSize * 0.12), Math.max(1, drawSize * 0.14));
+  }
+  if (variant && variant.headingCue && variant.headingCue !== "still") {
+    var stepSign = variant.headingCue === "west-step" || variant.headingCue === "north-step" ? -1 : 1;
+    ctx.fillStyle = sprite.leg || "#2f321f";
+    ctx.fillRect(stepSign * drawSize * 0.42, drawSize * 0.28 + bob, Math.max(1, drawSize * 0.16), Math.max(1, drawSize * 0.14));
+  }
+  if (variant && variant.behaviorMarks && variant.behaviorMarks.indexOf("representative-pin") >= 0) {
+    ctx.fillStyle = "#72d7ff";
+    ctx.fillRect(drawSize * 0.30, -drawSize * 0.54 + bob, Math.max(1, drawSize * 0.12), Math.max(1, drawSize * 0.20));
   }
   ctx.fillStyle = sprite.eye || "#041018";
   ctx.fillRect(drawSize * 0.08, -drawSize * 0.36 + bob, Math.max(1, drawSize * 0.10), Math.max(1, drawSize * 0.10));

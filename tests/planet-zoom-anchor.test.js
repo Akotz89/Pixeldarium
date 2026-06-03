@@ -317,6 +317,23 @@ var scoutOrganismVariant = PS.render.entities.getSpriteVariant("entity.organism"
   energy: 70,
   traits: { bodySize: 0.8, limbCount: 4, camouflage: 0.12 }
 }, "idle");
+var hungryMovingOrganismVariant = PS.render.entities.getSpriteVariant("entity.organism", {
+  id: "organism:hungry-moving",
+  lineageId: 8,
+  representativeId: 99,
+  energy: 35,
+  directionX: -1,
+  directionY: 0,
+  traits: { bodySize: 1.1, limbCount: 4, camouflage: 0.18 }
+}, "move");
+var breedingOrganismVariant = PS.render.entities.getSpriteVariant("entity.organism", {
+  id: "organism:breeding",
+  lineageId: 2,
+  energy: 260,
+  directionX: 0,
+  directionY: 1,
+  traits: { bodySize: 1.3, limbCount: 5, camouflage: 0.22 }
+}, "idle");
 var colonyVariant = PS.render.entities.getSpriteVariant("settlement.core", {
   id: "settlement:colony",
   level: 4,
@@ -352,6 +369,14 @@ assert.ok(richFoodVariant.clusterCount > sparseFoodVariant.clusterCount, "richer
 assert.strictEqual(broadOrganismVariant.silhouette, "broad-body", "large organisms should get a distinct broad-body silhouette");
 assert.strictEqual(scoutOrganismVariant.silhouette, "scout", "small low-limb organisms should get a scout silhouette");
 assert.ok(broadOrganismVariant.partCount > scoutOrganismVariant.partCount, "more complex organism traits should produce richer sprite part counts");
+assert.strictEqual(typeof PS.render.entities.getOrganismBehaviorMarks, "function", "organism sprites should expose authored behavior mark metadata");
+assert.strictEqual(hungryMovingOrganismVariant.lineageBand, "lineage-2", "organism variants should expose stable lineage band marks");
+assert.strictEqual(hungryMovingOrganismVariant.headingCue, "west-step", "moving organisms should expose directional step marks");
+assert.ok(hungryMovingOrganismVariant.behaviorMarks.indexOf("hunger-core") >= 0, "hungry organisms should expose hunger core marks");
+assert.ok(hungryMovingOrganismVariant.behaviorMarks.indexOf("representative-pin") >= 0, "representative organisms should expose pinned identity marks");
+assert.ok(breedingOrganismVariant.behaviorMarks.indexOf("breeding-spark") >= 0, "high-energy organisms should expose breeding spark marks");
+assert.ok(hungryMovingOrganismVariant.markerCount >= 4, "stateful organisms should reserve multiple authored marker cells");
+assert.ok(hungryMovingOrganismVariant.partCount > scoutOrganismVariant.partCount, "behavior and lineage marks should increase organism sprite detail budget");
 assert.strictEqual(colonyVariant.silhouette, "colony-grid", "colonies should use a distinct settlement silhouette");
 assert.strictEqual(outpostVariant.silhouette, "outpost-post", "outposts should use a distinct settlement silhouette");
 assert.ok(colonyVariant.partCount > outpostVariant.partCount, "higher-level colonies should reserve more authored structure parts");
