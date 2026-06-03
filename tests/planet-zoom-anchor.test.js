@@ -931,6 +931,70 @@ assert.strictEqual(
   "barren",
   "dry rough lowland signals should resolve to barren visual biome"
 );
+var regionalAccentNoise = { broad: 0.48, regional: 0.66, local: 0.55, fine: 0.38, micro: 0.50 };
+var regionalAccentMeters = { eastMeters: 120000, northMeters: 90000 };
+var ridgeRegionalAccent = PS.render.surfaceImagery.getRegionalCartographicAccent("grassland", {
+  elevation: 1.4,
+  moisture: 0.8,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  ridgeStrength: 0.88,
+  roughness: 0.74,
+  snowSignal: 0.12
+}, regionalAccentNoise, regionalAccentMeters, 28);
+var shelfRegionalAccent = PS.render.surfaceImagery.getRegionalCartographicAccent("ocean", {
+  elevation: -0.2,
+  moisture: 1,
+  coastFactor: 0.66,
+  shallowWater: 0.84,
+  shelfStrength: 0.62,
+  riverStrength: 0,
+  ridgeStrength: 0,
+  roughness: 0.12,
+  snowSignal: 0
+}, regionalAccentNoise, regionalAccentMeters, 6);
+var forestRegionalAccent = PS.render.surfaceImagery.getRegionalCartographicAccent("forest", {
+  elevation: 0.2,
+  moisture: 1.6,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  ridgeStrength: 0.12,
+  roughness: 0.18,
+  snowSignal: 0
+}, regionalAccentNoise, regionalAccentMeters, 12);
+var iceRegionalAccent = PS.render.surfaceImagery.getRegionalCartographicAccent("ice", {
+  elevation: 0.8,
+  moisture: 0.8,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  ridgeStrength: 0.12,
+  roughness: 0.18,
+  snowSignal: 0.9
+}, regionalAccentNoise, regionalAccentMeters, 78);
+var baseRegionalRgb = { red: 84, green: 104, blue: 74 };
+var ridgeRegionalRgb = PS.render.surfaceImagery.applyRegionalCartographicAccent(baseRegionalRgb, "grassland", {
+  elevation: 1.4,
+  moisture: 0.8,
+  coastFactor: 0,
+  shallowWater: 0,
+  shelfStrength: 0,
+  riverStrength: 0,
+  ridgeStrength: 0.88,
+  roughness: 0.74,
+  snowSignal: 0.12
+}, regionalAccentNoise, regionalAccentMeters, 28);
+assert.strictEqual(ridgeRegionalAccent.type, "ridge-comb", "regional imagery should classify ridges as cartographic combs");
+assert.strictEqual(shelfRegionalAccent.type, "shelf-current", "regional imagery should classify shelves as current bands");
+assert.strictEqual(forestRegionalAccent.type, "canopy-mosaic", "regional imagery should classify forests as canopy mosaics");
+assert.strictEqual(iceRegionalAccent.type, "ice-grain", "regional imagery should keep ice accents out of field mosaics");
+assert.ok(ridgeRegionalAccent.amount > forestRegionalAccent.amount, "ridge map accents should be stronger than calm canopy mosaics");
+assert.ok(rgbDistance(ridgeRegionalRgb, baseRegionalRgb) > 4, "regional cartographic accent should visibly move RGB values");
 assert.ok(colorLuminance(litSlopeColor) > colorLuminance(shadowSlopeColor), "tile hillshade should affect terrain luminance");
 assert.ok(colorLuminance(shallowCoastColor) > colorLuminance(deepOceanColor), "coastal shallows should be lighter than deep ocean");
 

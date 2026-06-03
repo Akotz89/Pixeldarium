@@ -34,6 +34,90 @@ PS.render.surfaceImagery.getVisualBiome = function (biome, signals, latitude) {
   return normalizedBiome;
 };
 
+PS.render.surfaceImagery.getRegionalCartographicAccent = function (biome, signals, noise, surfaceMeters, latitude) {
+  var visualBiome = PS.render.surfaceImagery.getVisualBiome(biome, signals, latitude);
+  var regional = clamp(Number(noise && noise.regional) || 0.5, 0, 1);
+  var fine = clamp(Number(noise && noise.fine) || 0.5, 0, 1);
+  var eastMeters = Number(surfaceMeters && surfaceMeters.eastMeters) || 0;
+  var northMeters = Number(surfaceMeters && surfaceMeters.northMeters) || 0;
+  var contour = Math.sin(eastMeters * 0.000033 + northMeters * 0.000019) * 0.5 + 0.5;
+  var ridge = clamp(Number(signals && signals.ridgeStrength) || 0, 0, 1);
+  var roughness = clamp(Number(signals && signals.roughness) || 0, 0, 1);
+  var river = clamp(Number(signals && signals.riverStrength) || 0, 0, 1);
+  var coast = clamp(Number(signals && signals.coastFactor) || 0, 0, 1);
+  var shallowWater = clamp(Number(signals && signals.shallowWater) || 0, 0, 1);
+  var shelf = clamp(Number(signals && signals.shelfStrength) || 0, 0, 1);
+  var moisture = clamp((Number(signals && signals.moisture) || 0) / 1.8, 0, 1);
+  var snow = clamp(Number(signals && signals.snowSignal) || 0, 0, 1);
+
+  if (visualBiome === "ocean") {
+    return {
+      type: shallowWater + shelf + coast > 0.72 ? "shelf-current" : "deep-current",
+      color: shallowWater + shelf + coast > 0.72 ? "#8ccfc2" : "#0c5b83",
+      amount: clamp(0.035 + (shallowWater + shelf + coast) * 0.09 + contour * 0.035, 0.03, 0.18)
+    };
+  }
+
+  if (ridge > 0.42 || roughness > 0.68 || visualBiome === "mountain") {
+    return {
+      type: "ridge-comb",
+      color: snow > 0.42 ? "#e8f4f3" : "#c8bc86",
+      amount: clamp(0.04 + ridge * 0.16 + roughness * 0.07 + contour * 0.04, 0.04, 0.24)
+    };
+  }
+
+  if (river > 0.28 || coast > 0.48 || visualBiome === "wetland") {
+    return {
+      type: river > coast ? "river-thread" : "coast-thread",
+      color: river > coast ? "#7ec8ff" : "#d7bd78",
+      amount: clamp(0.035 + Math.max(river, coast) * 0.14 + regional * 0.035, 0.035, 0.22)
+    };
+  }
+
+  if (visualBiome === "forest") {
+    return {
+      type: "canopy-mosaic",
+      color: regional > fine ? "#071f12" : "#5d7041",
+      amount: clamp(0.035 + moisture * 0.06 + Math.abs(regional - fine) * 0.08, 0.035, 0.14)
+    };
+  }
+
+  if (visualBiome === "desert" || visualBiome === "barren") {
+    return {
+      type: "dry-contour",
+      color: visualBiome === "desert" ? "#c8a85b" : "#746a4e",
+      amount: clamp(0.035 + (1 - moisture) * 0.08 + contour * 0.035, 0.035, 0.16)
+    };
+  }
+
+  if (visualBiome === "ice" || visualBiome === "tundra") {
+    return {
+      type: visualBiome === "ice" ? "ice-grain" : "frost-mosaic",
+      color: visualBiome === "ice" ? "#d6eef7" : "#dce5df",
+      amount: clamp(0.025 + snow * 0.08 + contour * 0.025, 0.025, 0.13)
+    };
+  }
+
+  return {
+    type: "field-mosaic",
+    color: "#8fcf71",
+    amount: clamp(0.025 + regional * 0.035 + moisture * 0.035, 0.025, 0.12)
+  };
+};
+
+PS.render.surfaceImagery.applyRegionalCartographicAccent = function (rgb, biome, signals, noise, surfaceMeters, latitude) {
+  var accent = PS.render.surfaceImagery.getRegionalCartographicAccent(biome, signals, noise, surfaceMeters, latitude);
+  var grain = getPlanetSmoothMeterNoise(
+    Number(surfaceMeters && surfaceMeters.eastMeters) || 0,
+    Number(surfaceMeters && surfaceMeters.northMeters) || 0,
+    18000,
+    89
+  );
+  var amount = clamp(Number(accent.amount) * (0.62 + grain * 0.62), 0, 0.28);
+
+  return blendRgbWithHex(rgb, accent.color, amount);
+};
+
 PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surfaceMeters, noise, texture, normalizedLatitude, normalizedLongitude) {
   var visualBiome = PS.render.surfaceImagery.getVisualBiome(biome, signals, normalizedLatitude);
   var color = clampRgb(baseColor);
@@ -87,12 +171,12 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
     color = blendRgbWithHex(color, terrainBand.color, terrainBand.amount);
     color = blendRgbWithHex(color, landformIdentity.color, landformIdentity.amount);
     color = blendRgbWithHex(color, "#d9edf4", snowVisual);
-    return applyPlanetMaterialPixelAccents(
+    return PS.render.surfaceImagery.applyRegionalCartographicAccent(applyPlanetMaterialPixelAccents(
       clampRgb(shadeRgb(color, clamp(terrainShade - 0.02 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
       normalizedLatitude,
       normalizedLongitude,
       signalTile
-    );
+    ), biome, signals, noise, surfaceMeters, normalizedLatitude);
   }
 
   if (visualBiome === "forest") {
@@ -136,12 +220,12 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
   color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.13 + roughness * 0.05, 0, 0.24));
   color = blendRgbWithHex(color, "#e8f4f3", clamp(snowVisual + landformIdentity.snowcap, 0, visualBiome === "ice" ? 0.34 : 0.18));
-  return applyPlanetMaterialPixelAccents(
+  return PS.render.surfaceImagery.applyRegionalCartographicAccent(applyPlanetMaterialPixelAccents(
     clampRgb(shadeRgb(color, clamp(terrainShade - (1 - moisture) * 0.02, 0, 1))),
     normalizedLatitude,
     normalizedLongitude,
     signalTile
-  );
+  ), biome, signals, noise, surfaceMeters, normalizedLatitude);
 };
 
 PS.render.surfaceImagery.getRgbAtLatLon = function (latitude, longitude, tileRgbCache) {
