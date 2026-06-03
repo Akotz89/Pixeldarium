@@ -1,14 +1,19 @@
-# Pixeldarium Prompt Templates — gpt-image-2
+# Pixeldarium Prompt Templates — Agent Studio
 
 These templates produce consistent pixel art for the Pixeldarium game.
 Always use the post-processing pipeline after generation to enforce
 palette compliance and grid alignment.
 
+Do not hardcode provider model ids in reusable prompt templates. Choose the
+provider, model, endpoint, and live/dry-run mode in a reviewed job JSON and run
+that job through an approved adapter such as `run-openai-image-job.js`,
+`run-pixellab-job.js`, `run-comfy-workflow.js`, or `run-aseprite-export.js`.
+
 ## Usage
 
 1. Pick the appropriate template below
 2. Replace `{placeholders}` with specific values
-3. Generate with gpt-image-2 at the specified canvas size
+3. Generate through an approved adapter at the specified canvas size
 4. Run `pipeline_runner.py` on the output
 5. Validate with `verify-sprite-sheet.js`
 

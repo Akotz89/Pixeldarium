@@ -12,6 +12,7 @@
 | [Legacy Runtime Assessment](legacy-runtime-assessment.md) | `docs/legacy-runtime-assessment.md` | AZR-352 non-UI legacy runtime inventory and migration decisions |
 | [Biological Model Decision](biological-model-decision.md) | `docs/biological-model-decision.md` | AZR-361 aggregate population and representative organism model gate |
 | [Phase 2 Readiness](phase-2-readiness.md) | `docs/phase-2-readiness.md` | AZR-353 reconciliation of GDD, Linear Phase 2 stories, and current repo evidence |
+| [Agent Studio Handoff](agent-studio-handoff.md) | `docs/agent-studio-handoff.md` | Runtime-safe contract for accepting outputs from the private Pixeldarium Agent Studio repo |
 
 ## Planning Artifacts
 
@@ -34,6 +35,12 @@ All planning documents live in `skills/planning-artifacts/gdds/gdd-Pixeldarium-2
 | [Codex Setup](.codex/setup.sh) | `.codex/setup.sh` | Validation script (node --check, whitespace, line endings) |
 | [Codex Instructions](.codex/instructions.md) | `.codex/instructions.md` | Codex-specific project rules |
 | [GitHub Pages](../.github/workflows/pages.yml) | `.github/workflows/pages.yml` | Auto-deploy main to GitHub Pages |
+
+## Agent Studio Project
+
+- **Linear:** [Pixeldarium Agent Studio](https://linear.app/openclaw-mock-up/project/pixeldarium-agent-studio-35c2d43bfca8)
+- **Private GitHub:** `Akotz89/Pixeldarium-Agent-Studio`
+- **Local root:** `/mnt/c/Users/Aaron/Azyrra/projects/pixeldarium-agent-studio`
 
 ## Linear Project
 

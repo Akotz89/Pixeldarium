@@ -1,1 +1,13 @@
 _reference/
+__pycache__/
+*.pyc
+
+# BMAD symlink (points to monorepo root _bmad/)
+_bmad
+
+# Agent Studio is split into its own private repo:
+# /mnt/c/Users/Aaron/Azyrra/projects/pixeldarium-agent-studio
+tools/agent-studio/
+docs/agent-studio-pipeline.md
+docs/agent-studio-research.md
+tests/agent-studio-tools.test.js
