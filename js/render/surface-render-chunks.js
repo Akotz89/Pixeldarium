@@ -199,6 +199,102 @@ PS.render.surfaceRender.chunks.getGroundFeatureDrawStyle = function (feature, ad
   return style;
 };
 
+PS.render.surfaceRender.chunks.getGroundFeatureGlyph = function (feature, address) {
+  var sampleMeters = Math.max(0.25, Number(address && address.sampleMeters) || 1);
+  var type = String(feature && feature.type ? feature.type : "feature");
+  var glyph = {
+    type: type,
+    shape: "feature-dot",
+    accentColor: feature && feature.color ? feature.color : "#d9e7ff",
+    haloColor: "rgba(4, 9, 14, 0.72)",
+    alpha: clamp(0.18 + (8 - sampleMeters) / 8 * 0.38, 0.18, 0.62),
+    detailCount: sampleMeters <= 2 ? 5 : 3,
+    sampleMeters: sampleMeters
+  };
+
+  if (sampleMeters > 8 || !feature) {
+    return null;
+  }
+
+  if (type === "stream") {
+    glyph.shape = "water-run";
+    glyph.accentColor = "#d5faff";
+    glyph.detailCount = sampleMeters <= 2 ? 6 : 4;
+  } else if (type === "ridge") {
+    glyph.shape = "ridge-comb";
+    glyph.accentColor = "#eee2b6";
+    glyph.detailCount = sampleMeters <= 2 ? 6 : 4;
+  } else if (type === "swale") {
+    glyph.shape = "green-run";
+    glyph.accentColor = "#a9df9a";
+  } else if (type === "reef" || type === "shoal") {
+    glyph.shape = "shelf-dash";
+    glyph.accentColor = "#e1fff2";
+  } else if (type === "rockfield") {
+    glyph.shape = "stone-cluster";
+    glyph.accentColor = "#ece0c6";
+    glyph.detailCount = sampleMeters <= 2 ? 7 : 4;
+  } else if (type === "wetland") {
+    glyph.shape = "reed-patch";
+    glyph.accentColor = "#b8efaa";
+  } else if (type === "meadow" || type === "clearing") {
+    glyph.shape = "field-speckle";
+    glyph.accentColor = "#e0f3a7";
+  }
+
+  return glyph;
+};
+
+PS.render.surfaceRender.chunks.getGroundFeatureGlyphPoint = function (address, feature) {
+  if (!feature) {
+    return null;
+  }
+
+  if (feature.shape === "line") {
+    return PS.render.surfaceRender.chunks.getPointForMeters(
+      address,
+      ((Number(feature.east1) || 0) + (Number(feature.east2) || 0)) / 2,
+      ((Number(feature.north1) || 0) + (Number(feature.north2) || 0)) / 2
+    );
+  }
+
+  if (feature.shape === "rect") {
+    return PS.render.surfaceRender.chunks.getPointForMeters(address, feature.east, feature.north);
+  }
+
+  return null;
+};
+
+PS.render.surfaceRender.chunks.drawGroundFeatureGlyph = function (targetCtx, address, feature) {
+  var glyph = PS.render.surfaceRender.chunks.getGroundFeatureGlyph(feature, address);
+  var point = glyph ? PS.render.surfaceRender.chunks.getGroundFeatureGlyphPoint(address, feature) : null;
+
+  if (!glyph || !point) {
+    return;
+  }
+
+  var size = Math.max(2, Math.round(CONFIG.TILE_SIZE * (address.sampleMeters <= 2 ? 1.25 : 0.85)));
+  var half = Math.max(1, Math.round(size / 2));
+
+  targetCtx.save();
+  targetCtx.globalAlpha = glyph.alpha;
+  targetCtx.fillStyle = glyph.haloColor;
+  targetCtx.fillRect(Math.round(point.x - half), Math.round(point.y - half), size, size);
+  targetCtx.fillStyle = glyph.accentColor;
+
+  for (var i = 0; i < glyph.detailCount; i++) {
+    var noiseX = getDeterministicUnitNoise(feature.blockEast + i * 23, feature.blockNorth - i * 17, 9191);
+    var noiseY = getDeterministicUnitNoise(feature.blockEast - i * 19, feature.blockNorth + i * 29, 9209);
+    var offsetX = Math.round((noiseX - 0.5) * size);
+    var offsetY = Math.round((noiseY - 0.5) * size);
+    var pixel = glyph.shape === "ridge-comb" || glyph.shape === "water-run" ? 2 : 1;
+
+    targetCtx.fillRect(Math.round(point.x + offsetX), Math.round(point.y + offsetY), pixel, 1);
+  }
+
+  targetCtx.restore();
+};
+
 PS.render.surfaceRender.chunks.getGroundFeatureLinePoints = function (address, feature) {
   var start = PS.render.surfaceRender.chunks.getPointForMeters(address, feature.east1, feature.north1);
   var end = PS.render.surfaceRender.chunks.getPointForMeters(address, feature.east2, feature.north2);
@@ -295,6 +391,7 @@ PS.render.surfaceRender.chunks.drawGroundFeatureLine = function (targetCtx, addr
   PS.render.surfaceRender.chunks.strokeGroundFeaturePath(targetCtx, points);
   targetCtx.restore();
   PS.render.surfaceRender.chunks.drawGroundFeatureLineTicks(targetCtx, address, feature, points, style);
+  PS.render.surfaceRender.chunks.drawGroundFeatureGlyph(targetCtx, address, feature);
 };
 
 PS.render.surfaceRender.chunks.drawGroundFeatureRect = function (targetCtx, address, feature) {
@@ -360,6 +457,7 @@ PS.render.surfaceRender.chunks.drawGroundFeatureRect = function (targetCtx, addr
   }
 
   targetCtx.restore();
+  PS.render.surfaceRender.chunks.drawGroundFeatureGlyph(targetCtx, address, feature);
 };
 
 PS.render.surfaceRender.chunks.drawGroundFeatures = function (targetCtx, address) {

@@ -2866,12 +2866,62 @@ var distantStreamDrawStyle = PS.render.surfaceRender.chunks.getGroundFeatureDraw
   alpha: 0.2,
   color: "#7ec8ff"
 }, { sampleMeters: 25 });
+var streamFeatureGlyph = PS.render.surfaceRender.chunks.getGroundFeatureGlyph({
+  type: "stream",
+  shape: "line",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#7ec8ff"
+}, { sampleMeters: 1 });
+var ridgeFeatureGlyph = PS.render.surfaceRender.chunks.getGroundFeatureGlyph({
+  type: "ridge",
+  shape: "line",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#b9b081"
+}, { sampleMeters: 1 });
+var rockfieldFeatureGlyph = PS.render.surfaceRender.chunks.getGroundFeatureGlyph({
+  type: "rockfield",
+  shape: "rect",
+  widthMeters: 12,
+  heightMeters: 8,
+  alpha: 0.2,
+  color: "#a99d8a"
+}, { sampleMeters: 1 });
+var distantFeatureGlyph = PS.render.surfaceRender.chunks.getGroundFeatureGlyph({
+  type: "stream",
+  shape: "line",
+  widthMeters: 2,
+  alpha: 0.2,
+  color: "#7ec8ff"
+}, { sampleMeters: 25 });
+var featureGlyphOps = { fillRect: 0, save: 0, restore: 0 };
+var featureGlyphCtx = {
+  save: function() { featureGlyphOps.save++; },
+  restore: function() { featureGlyphOps.restore++; },
+  fillRect: function() { featureGlyphOps.fillRect++; },
+  fillStyle: "",
+  globalAlpha: 1
+};
 
 assert.ok(streamDrawStyle.alpha > distantStreamDrawStyle.alpha, "local feature draw style should strengthen ground features at close zoom");
 assert.ok(streamDrawStyle.haloAlpha > 0, "stream draw style should include a readable dark halo");
 assert.ok(streamDrawStyle.lineWidth >= 2, "stream draw style should keep water channels more than one pixel wide locally");
 assert.notStrictEqual(streamDrawStyle.strokeColor, ridgeDrawStyle.strokeColor, "feature draw style should preserve authored type identity");
 assert.ok(ridgeDrawStyle.tickSpacingMeters > 0, "ridge draw style should expose tick spacing for local pixel accents");
+assert.strictEqual(streamFeatureGlyph.shape, "water-run", "stream feature glyphs should expose a water-run map symbol");
+assert.strictEqual(ridgeFeatureGlyph.shape, "ridge-comb", "ridge feature glyphs should expose a comb map symbol");
+assert.strictEqual(rockfieldFeatureGlyph.shape, "stone-cluster", "rockfields should expose clustered stone glyphs");
+assert.ok(streamFeatureGlyph.detailCount > 3, "close feature glyphs should reserve multiple pixel details");
+assert.strictEqual(distantFeatureGlyph, null, "feature glyphs should stay gated off outside close ground zoom");
+PS.render.surfaceRender.chunks.drawGroundFeatureGlyph(featureGlyphCtx, {
+  sampleMeters: 1,
+  sampleEast: 0,
+  sampleNorth: 0,
+  chunkSamples: 16
+}, lineFeature);
+assert.ok(featureGlyphOps.fillRect >= 2, "ground feature glyph renderer should draw halo and authored pixel marks");
+assert.strictEqual(featureGlyphOps.save, featureGlyphOps.restore, "ground feature glyph renderer should restore canvas state");
 
 var rectFeature = groundFeatures.filter(function(feature) { return feature.shape === "rect"; })[0];
 var rectCenter = getLatLonFromSurfaceMeterCoordinate(rectFeature.east, rectFeature.north);
