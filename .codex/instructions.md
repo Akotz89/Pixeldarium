@@ -4,8 +4,11 @@
 
 Run `bash .codex/setup.sh` before committing. It checks:
 - `node --check` on all JS files (syntax validation)
+- `python3 -c "import ast; ast.parse()"` on all Python scripts (syntax validation)
 - `git diff --check` (whitespace errors)
 - Line ending consistency (must be LF)
+- Agent studio pipeline manifest consistency
+- Runtime boundary isolation (no tooling references in `js/` or `index.html`)
 
 Do not run inline WSL/bash loops through Antigravity `run_command`. If a
 validation command needs shell variables, loops, multiline bodies, or multiple
@@ -22,7 +25,53 @@ Key constraints that affect every edit:
 3. **Files < 500 lines** — Split if approaching limit
 4. **var only** — Use `var`, not `let` or `const` (broadest compat)
 5. **Hard crash on errors** — Use `PS.assert()`, never silently swallow
-6. **No dependencies** — No npm, no CDN, no frameworks
+6. **No dependencies** — No npm, no CDN, no frameworks *in runtime*
+
+## AI Game Studio Workflow
+
+When doing asset generation work, follow the workflow in AGENTS.md section
+"AI Game Studio". Key commands:
+
+### Generate a sprite
+```
+# Option 1: Use PixelLab MCP (preferred for pixel art)
+#   Tools: create_character, create_tileset, create_map_object
+#   See tools/agent-studio/docs/pixellab-api-reference.md
+
+# Option 2: Use SpriteCook MCP
+#   Tools: create_image_asset, animate_asset
+
+# Option 3: Use gpt-image-2 with prompt templates
+#   See tools/agent-studio/templates/prompt-templates.md
+
+# Output raw PNG to tools/agent-studio/exports/
+```
+
+### Post-process a generated sprite
+```bash
+python3 tools/agent-studio/scripts/pipeline_runner.py \
+  --input tools/agent-studio/exports/raw-sprite.png \
+  --palette tools/agent-studio/source/pixeldarium-palette.json \
+  --output tools/agent-studio/exports/processed/ \
+  --tile-size 16
+```
+
+### Validate a sprite sheet
+```bash
+node tools/agent-studio/verify-sprite-sheet.js \
+  tools/agent-studio/exports/processed/sprite-sheet.png
+```
+
+### Score acceptance
+```bash
+node tools/agent-studio/score-asset-acceptance.js \
+  tools/agent-studio/exports/processed/sprite-sheet.png
+```
+
+### Python dependencies for post-processing
+```bash
+pip install Pillow numpy
+```
 
 ## File Structure (Post-E0)
 
@@ -35,6 +84,10 @@ js/spatial/ — grid, chunks, queries
 js/epochs/  — registry, epoch-*.js
 js/ui/      — hud, menu, panels, inspect
 js/persist/ — save, load, migrate
+tools/agent-studio/          — AI asset production (see AGENTS.md)
+tools/agent-studio/scripts/  — Python post-processing pipeline
+tools/agent-studio/source/   — Palette, style refs
+tools/agent-studio/templates/ — Prompt templates
 ```
 
 ## Testing
@@ -53,5 +106,5 @@ Current version: 1. Do not change save format without version bump.
 
 - All work tracked under AZR team, Pixeldarium project
 - Branch naming: `aaronkotz89/azr-NNN-description`
-- Epics: AZR-254 to AZR-267
-- Stories: AZR-268 to AZR-339
+- Epics: AZR-254 to AZR-267 (game), AZR-404 (AI pipeline)
+- Pipeline issues: AZR-414 to AZR-417

@@ -82,12 +82,119 @@ shape is fragile because Windows/PowerShell layers can expand bash variables
 before WSL receives them. Put multi-step bash bodies in a checked-in or scratch
 `.sh` file and run `wsl -d Ubuntu-24.04 -- bash /mnt/c/.../script.sh`.
 
-## Constraints
+## Runtime Constraints
 
 - Must work from `file://` protocol (no server required)
 - No npm, no node_modules, no build step
 - No external CDN dependencies
 - GitHub Pages deploys from main branch root
+
+## AI Game Studio (`tools/agent-studio/`)
+
+The agent studio is the AI-controlled asset production pipeline. It lives
+entirely outside the game runtime. **Runtime is zero-dependency; tooling can
+use anything.**
+
+### Architecture Boundary
+
+```
+tools/agent-studio/           ← Tooling (Node, Python, external APIs)
+  ├── scripts/                ← Python post-processing pipeline
+  ├── source/                 ← Art bible palette, style references
+  ├── templates/              ← Prompt templates for AI generation
+  ├── exports/                ← Raw AI output (NOT runtime)
+  ├── work-orders/            ← Structured generation requests
+  ├── reports/                ← QA evidence, dashboards
+  ├── pipeline.manifest.json  ← Tool/lane discovery for agents
+  └── *.js                    ← Adapter scripts (Node.js)
+
+js/                           ← Runtime (zero-dependency, PS.* namespace)
+assets/                       ← Runtime-integrated sprites/audio
+```
+
+**NEVER** import tooling scripts, Node modules, or Python into the game
+runtime. The runtime boundary is enforced by `validate-pipeline.js`.
+
+### Post-Processing Pipeline (Python)
+
+All AI-generated sprites MUST pass through the post-processing pipeline
+before runtime integration. The pipeline is at `tools/agent-studio/scripts/`:
+
+| Step | Script | Purpose |
+|---|---|---|
+| 1 | `normalize_sprite.py` | Strip metadata, force RGBA PNG |
+| 2 | `grid_snap.py` | Nearest-neighbor snap to pixel grid |
+| 3 | `palette_snap.py` | Quantize to art bible palette via CIELAB ΔE |
+| 4 | `alpha_clean.py` | Threshold alpha, remove fringes |
+| 5 | `atlas_pack.py` | Pack frames → sprite sheet + JSON atlas |
+
+Run the full pipeline:
+```bash
+python3 tools/agent-studio/scripts/pipeline_runner.py \
+  --input exports/raw-sprite.png \
+  --palette source/pixeldarium-palette.json \
+  --output exports/processed/ \
+  --tile-size 16
+```
+
+Validate output:
+```bash
+node tools/agent-studio/verify-sprite-sheet.js exports/processed/sprite-sheet.png
+```
+
+**Dependencies:** Python 3.10+, Pillow, NumPy (tooling only, not runtime).
+
+### Art Bible & Palette
+
+- Palette: `tools/agent-studio/source/pixeldarium-palette.json` (24 colors)
+- All generated sprites MUST use only these 24 colors after post-processing
+- Tile sizes: 16×16 (terrain), 16×32 (entities), 32×32 (buildings)
+- Style: Songs of Syx-inspired, low-res pixel art, limited palette
+
+### Prompt Templates
+
+When generating sprites with `gpt-image-2` or PixelLab, use the prompt
+templates at `tools/agent-studio/templates/` for consistent output.
+Templates encode: canvas size, background transparency, palette constraints,
+animation frame layout, and art direction.
+
+### Generation Workflow
+
+1. Create work order (`create-work-order.js`) or use prompt template
+2. Generate raw sprite (gpt-image-2 / PixelLab / Aseprite)
+3. Post-process (`pipeline_runner.py` — normalize → grid → palette → alpha → pack)
+4. Validate (`verify-sprite-sheet.js` — format, bounds, color count)
+5. Score acceptance (`score-asset-acceptance.js` — palette compliance, readability)
+6. Integrate into runtime (manual gate — update `PS.assets`, add to `index.html`)
+
+### MCP Tools Available
+
+#### Sprite & Asset Generation
+- **PixelLab** (`pixellab`) — 4/8-direction characters, tilesets, animations,
+  map objects, rotations, inpaint. See `tools/agent-studio/docs/pixellab-api-reference.md`.
+  Env: `PIXELLAB_API_KEY`
+- **SpriteCook** (`spritecook`) — Agent-driven sprite generation, smart cropping,
+  animation, style consistency. Env: `SPRITECOOK_API_KEY`
+- **pixel-mcp** (`pixel-mcp`) — Aseprite integration for pixel-perfect editing,
+  palette management, animation via natural language. Needs Aseprite installed.
+- **gpt-image-2** — Built-in Codex image generation (when available)
+
+#### Audio & Music
+- **ElevenLabs** (`elevenlabs`) — Voice synthesis, music generation, sound
+  effects. Studio quality. Env: `ELEVENLABS_API_KEY`
+
+#### Project Management
+- **Hindsight** (`local-hindsight`) — Recall prior art decisions, style notes
+- **Linear** — Track generation issues under AZR epic structure
+- **GitHub** — Push commits, create PRs
+
+#### API Key Setup
+Set environment variables at User level (persist across sessions):
+```powershell
+[System.Environment]::SetEnvironmentVariable("PIXELLAB_API_KEY", "your-key", "User")
+[System.Environment]::SetEnvironmentVariable("SPRITECOOK_API_KEY", "your-key", "User")
+[System.Environment]::SetEnvironmentVariable("ELEVENLABS_API_KEY", "your-key", "User")
+```
 
 ## Planning Artifacts
 
@@ -101,6 +208,7 @@ All planning documents: `skills/planning-artifacts/gdds/gdd-Pixeldarium-2026-06-
 ## Linear Integration
 
 - Project: Pixeldarium (AZR team)
-- Epics: AZR-254 to AZR-267 (E0-E13)
+- Epics: AZR-254 to AZR-267 (E0-E13), AZR-404 (AI Pipeline Tooling)
 - Stories: AZR-268 to AZR-339
+- Pipeline issues: AZR-414 to AZR-417
 - Branch naming: `aaronkotz89/azr-NNN-title`
