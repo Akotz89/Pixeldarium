@@ -282,6 +282,10 @@ function getPlanetSurfaceLandmarkSwatches(sample, baseColor) {
   return PS.render.surfaceNatural.getLandmarkSwatches(sample, baseColor);
 }
 
+function getPlanetSurfaceHydrologySwatches(sample, baseColor) {
+  return PS.render.surfaceHydrology.getSwatches(sample, baseColor);
+}
+
 function getPlanetSurfaceReliefAccentStrength(sample) {
   return PS.render.surfaceRelief.getAccentStrength(sample);
 }

@@ -82,6 +82,7 @@ const source = [
   "js/render/surface-patterns.js",
   "js/render/surface-strata.js",
   "js/render/surface-natural.js",
+  "js/render/surface-hydrology.js",
   "js/render/surface-material.js",
   "js/render/surface-relief.js",
   "js/render/surface-draw.js",
@@ -2004,6 +2005,53 @@ var texturedWaterSample = {
     }
   }
 };
+var coastalWaterSample = Object.assign({}, texturedWaterSample, {
+  detail: Object.assign({}, texturedWaterSample.detail, {
+    materialSignals: {
+      shorelineStrength: 0.92,
+      shorelineWater: 0.78,
+      shorelineLand: 0.34,
+      shallowWater: 0.82,
+      shorelineBeach: 0.48,
+      chop: 0.38,
+      waterDepth: 0.18,
+      river: 0.08
+    }
+  })
+});
+var beachLandSample = Object.assign({}, texturedGrassSample, {
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    surface: "sand",
+    materialSignals: {
+      shorelineStrength: 0.88,
+      shorelineWater: 0.22,
+      shorelineLand: 0.74,
+      shallowWater: 0.18,
+      shorelineBeach: 0.82,
+      river: 0.05
+    }
+  })
+});
+var riverGrassSample = Object.assign({}, texturedGrassSample, {
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    materialSignals: {
+      wetness: 0.92,
+      river: 0.78,
+      shorelineStrength: 0,
+      shallowWater: 0
+    },
+    groundFeature: {
+      type: "stream",
+      influence: 0.82
+    }
+  })
+});
+var coarseCoastalWaterSample = Object.assign({}, coastalWaterSample, {
+  surfaceSampleMeters: 100,
+  detail: Object.assign({}, coastalWaterSample.detail, {
+    sampleMeters: 100
+  })
+});
 var alternateOrientationWaterSample = Object.assign({}, texturedWaterSample, {
   detail: Object.assign({}, texturedWaterSample.detail, {
     naturalElement: Object.assign({}, texturedWaterSample.detail.naturalElement, {
@@ -2142,6 +2190,11 @@ var waterLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedWaterSample
 var rockLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(slopedRockSample, "#665226");
 var regionGrassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(regionTexturedGrassSample, "#2f6531");
 var coarseGrassLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(coarseTexturedGrassSample, "#2f6531");
+var coastalHydrologySwatches = getPlanetSurfaceHydrologySwatches(coastalWaterSample, "#08365f");
+var repeatedCoastalHydrologySwatches = getPlanetSurfaceHydrologySwatches(coastalWaterSample, "#08365f");
+var beachHydrologySwatches = getPlanetSurfaceHydrologySwatches(beachLandSample, "#8b7740");
+var riverHydrologySwatches = getPlanetSurfaceHydrologySwatches(riverGrassSample, "#2f6531");
+var coarseHydrologySwatches = getPlanetSurfaceHydrologySwatches(coarseCoastalWaterSample, "#08365f");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
@@ -2156,6 +2209,7 @@ var alternateSeedStrataSwatches = getPlanetSurfaceStrataSwatches(texturedGrassSa
 var alternateSeedSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texturedGrassSample, "#2f6531");
 var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedGrassSample, "#2f6531");
+var alternateSeedHydrologySwatches = getPlanetSurfaceHydrologySwatches(coastalWaterSample, "#08365f");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
@@ -2330,6 +2384,27 @@ grassLandmarkSwatches.concat(waterLandmarkSwatches).concat(rockLandmarkSwatches)
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface landmark height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface landmark width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface landmark height should stay in cell");
+});
+assert.ok(coastalHydrologySwatches.length > 0, "coastal water should receive shoreline hydrology marks");
+assert.deepStrictEqual(repeatedCoastalHydrologySwatches, coastalHydrologySwatches, "coastal hydrology marks should be deterministic");
+assert.notDeepStrictEqual(alternateSeedHydrologySwatches, coastalHydrologySwatches, "coastal hydrology marks should vary by seed");
+assert.ok(coastalHydrologySwatches.some(function(swatch) {
+  return swatch.hydrologyType === "foam-edge" || swatch.hydrologyType === "shoal-band";
+}), "coastal water should expose foam or shoal bands");
+assert.ok(beachHydrologySwatches.some(function(swatch) {
+  return swatch.hydrologyType === "wet-beach" || swatch.hydrologyType === "shoreline-edge";
+}), "beach land should expose wet beach or shoreline edge marks");
+assert.strictEqual(riverHydrologySwatches[0].hydrologyType, "river-thread", "river samples should prioritize river thread marks");
+assert.deepStrictEqual(coarseHydrologySwatches, [], "broad hydrology samples should skip close shoreline marks");
+coastalHydrologySwatches.concat(beachHydrologySwatches).concat(riverHydrologySwatches).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "surface hydrology swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.58, "surface hydrology alpha should stay bounded");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "surface hydrology x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "surface hydrology y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "surface hydrology width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface hydrology height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface hydrology width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface hydrology height should stay in cell");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
 assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");
