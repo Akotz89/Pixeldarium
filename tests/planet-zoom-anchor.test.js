@@ -83,6 +83,7 @@ const source = [
   "js/render/surface-strata.js",
   "js/render/surface-natural.js",
   "js/render/surface-hydrology.js",
+  "js/render/surface-transitions.js",
   "js/render/surface-material.js",
   "js/render/surface-relief.js",
   "js/render/surface-draw.js",
@@ -2052,6 +2053,46 @@ var coarseCoastalWaterSample = Object.assign({}, coastalWaterSample, {
     sampleMeters: 100
   })
 });
+var forestDesertTransitionSample = Object.assign({}, boundarySample, {
+  surfaceSampleX: 12045,
+  surfaceSampleY: 8091,
+  surfaceSampleMeters: 1,
+  detail: Object.assign({}, boundarySample.detail, {
+    sampleMeters: 1
+  })
+});
+var regionForestDesertTransitionSample = Object.assign({}, forestDesertTransitionSample, {
+  surfaceSampleMeters: 25,
+  detail: Object.assign({}, forestDesertTransitionSample.detail, {
+    sampleMeters: 25
+  })
+});
+var coarseForestDesertTransitionSample = Object.assign({}, forestDesertTransitionSample, {
+  surfaceSampleMeters: 100,
+  detail: Object.assign({}, forestDesertTransitionSample.detail, {
+    sampleMeters: 100
+  })
+});
+var oceanGrassTransitionSample = Object.assign({}, texturedGrassSample, {
+  biome: "grassland",
+  tileBlend: {
+    transitionStrength: 0.58,
+    xAmount: 0.24,
+    yAmount: 0.52,
+    biomeWeights: {
+      grassland: 0.54,
+      ocean: 0.46
+    },
+    tiles: [
+      { weight: 0.54, tile: { biome: "grassland", elevation: 0.2, moisture: 1.0 } },
+      { weight: 0.46, tile: { biome: "ocean", elevation: -0.3, moisture: 2.0, shallowWater: 0.8 } }
+    ]
+  },
+  detail: Object.assign({}, texturedGrassSample.detail, {
+    surface: "grass",
+    sampleMeters: 1
+  })
+});
 var alternateOrientationWaterSample = Object.assign({}, texturedWaterSample, {
   detail: Object.assign({}, texturedWaterSample.detail, {
     naturalElement: Object.assign({}, texturedWaterSample.detail.naturalElement, {
@@ -2195,6 +2236,11 @@ var repeatedCoastalHydrologySwatches = getPlanetSurfaceHydrologySwatches(coastal
 var beachHydrologySwatches = getPlanetSurfaceHydrologySwatches(beachLandSample, "#8b7740");
 var riverHydrologySwatches = getPlanetSurfaceHydrologySwatches(riverGrassSample, "#2f6531");
 var coarseHydrologySwatches = getPlanetSurfaceHydrologySwatches(coarseCoastalWaterSample, "#08365f");
+var forestDesertTransitionSwatches = getPlanetSurfaceTransitionSwatches(forestDesertTransitionSample, "#123f23");
+var repeatedForestDesertTransitionSwatches = getPlanetSurfaceTransitionSwatches(forestDesertTransitionSample, "#123f23");
+var regionForestDesertTransitionSwatches = getPlanetSurfaceTransitionSwatches(regionForestDesertTransitionSample, "#123f23");
+var coarseForestDesertTransitionSwatches = getPlanetSurfaceTransitionSwatches(coarseForestDesertTransitionSample, "#123f23");
+var oceanGrassTransitionSwatches = getPlanetSurfaceTransitionSwatches(oceanGrassTransitionSample, "#2f6531");
 var rockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var repeatedRockReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 var alternateAspectReliefAccents = getPlanetSurfaceReliefAccentSwatches(alternateAspectRockSample, "#665226");
@@ -2210,6 +2256,7 @@ var alternateSeedSubcellBasePatches = getPlanetSurfaceSubcellBasePatches(texture
 var alternateSeedNaturalElementSwatches = getPlanetSurfaceNaturalElementSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedLandmarkSwatches = getPlanetSurfaceLandmarkSwatches(texturedGrassSample, "#2f6531");
 var alternateSeedHydrologySwatches = getPlanetSurfaceHydrologySwatches(coastalWaterSample, "#08365f");
+var alternateSeedTransitionSwatches = getPlanetSurfaceTransitionSwatches(forestDesertTransitionSample, "#123f23");
 var alternateSeedReliefAccents = getPlanetSurfaceReliefAccentSwatches(slopedRockSample, "#665226");
 setWorldSeed("PIXEL-2026");
 
@@ -2405,6 +2452,30 @@ coastalHydrologySwatches.concat(beachHydrologySwatches).concat(riverHydrologySwa
   assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface hydrology height should fit inside cell");
   assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface hydrology width should stay in cell");
   assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface hydrology height should stay in cell");
+});
+assert.ok(forestDesertTransitionSwatches.length > 0, "biome boundaries should receive local transition dither marks");
+assert.deepStrictEqual(repeatedForestDesertTransitionSwatches, forestDesertTransitionSwatches, "biome transition marks should be deterministic");
+assert.notDeepStrictEqual(alternateSeedTransitionSwatches, forestDesertTransitionSwatches, "biome transition marks should vary by seed");
+assert.ok(regionForestDesertTransitionSwatches.length > 0, "region-scale biome boundaries should still show transition marks");
+assert.deepStrictEqual(coarseForestDesertTransitionSwatches, [], "broad biome samples should skip close transition dither");
+assert.ok(forestDesertTransitionSwatches.some(function(swatch) {
+  return swatch.transitionType === "dry-edge" || swatch.transitionType === "canopy-edge";
+}), "forest/desert transitions should expose material-specific edge marks");
+assert.ok(forestDesertTransitionSwatches.some(function(swatch) {
+  return swatch.transitionBiome === "desert";
+}), "transition marks should name the neighboring biome material");
+assert.ok(oceanGrassTransitionSwatches.some(function(swatch) {
+  return swatch.transitionType === "coast-dither" && swatch.transitionBiome === "ocean";
+}), "land/ocean transitions should expose coast dither from neighbor biome");
+forestDesertTransitionSwatches.concat(regionForestDesertTransitionSwatches).concat(oceanGrassTransitionSwatches).forEach(function(swatch) {
+  assertRgbBounds(getRgbFromHex(swatch.color), "surface transition swatch");
+  assert.ok(swatch.alpha > 0 && swatch.alpha <= 0.48, "surface transition alpha should stay bounded");
+  assert.ok(swatch.x >= 0 && swatch.x < CONFIG.TILE_SIZE, "surface transition x should fit inside cell");
+  assert.ok(swatch.y >= 0 && swatch.y < CONFIG.TILE_SIZE, "surface transition y should fit inside cell");
+  assert.ok(swatch.width >= 1 && swatch.width <= CONFIG.TILE_SIZE, "surface transition width should fit inside cell");
+  assert.ok(swatch.height >= 1 && swatch.height <= CONFIG.TILE_SIZE, "surface transition height should fit inside cell");
+  assert.ok(swatch.x + swatch.width <= CONFIG.TILE_SIZE, "surface transition width should stay in cell");
+  assert.ok(swatch.y + swatch.height <= CONFIG.TILE_SIZE, "surface transition height should stay in cell");
 });
 assert.ok(rockReliefAccents.length > 0, "sloped close terrain should receive relief accents");
 assert.ok(rockReliefAccents.length <= 8, "relief accent count should stay bounded");

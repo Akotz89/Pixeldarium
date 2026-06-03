@@ -170,6 +170,7 @@ PS.render.surfaceDraw.drawBaseCell = function (tctx, sample, baseColor, screenX,
 
 PS.render.surfaceDraw.drawMicrotexture = function (tctx, sample, baseColor, screenX, screenY) {
   var swatches = getPlanetSurfaceFinePixelSwatches(sample, baseColor)
+    .concat(getPlanetSurfaceTransitionSwatches(sample, baseColor))
     .concat(getPlanetSurfaceReliefAccentSwatches(sample, baseColor))
     .concat(getPlanetSurfaceEdgeAccentSwatches(sample, baseColor))
     .concat(getPlanetSurfaceSilhouetteBreakupSwatches(sample, baseColor))

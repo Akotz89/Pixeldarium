@@ -286,6 +286,10 @@ function getPlanetSurfaceHydrologySwatches(sample, baseColor) {
   return PS.render.surfaceHydrology.getSwatches(sample, baseColor);
 }
 
+function getPlanetSurfaceTransitionSwatches(sample, baseColor) {
+  return PS.render.surfaceTransitions.getSwatches(sample, baseColor);
+}
+
 function getPlanetSurfaceReliefAccentStrength(sample) {
   return PS.render.surfaceRelief.getAccentStrength(sample);
 }
