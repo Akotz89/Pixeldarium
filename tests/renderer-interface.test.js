@@ -57,7 +57,18 @@ const context = {
         }
       },
       entityWebgl: {
-        state: { instanceDrawCount: 7, lastFrameMs: 5 }
+        state: {
+          frameInstanceDrawCount: 7,
+          settlementDrawCount: 2,
+          routeDrawCount: 3,
+          influenceDrawCount: 4,
+          foodDrawCount: 5,
+          organismDrawCount: 6,
+          lastFrameMs: 5
+        },
+        resetFrameStats() {
+          return true;
+        }
       },
       webglPresenter: {
         beginFrame() {
@@ -118,6 +129,11 @@ const stats = context.PS.render.renderer.endFrame();
 assert.strictEqual(stats.frameCount, 1, "renderer stats should count frames");
 assert.strictEqual(stats.tilemapWebglDraws, 2, "renderer stats should count WebGL tilemap submissions");
 assert.strictEqual(stats.entityDraws, 7, "renderer stats should include entity WebGL draws");
+assert.strictEqual(stats.settlementEntityDraws, 2, "renderer stats should include settlement entity draws");
+assert.strictEqual(stats.routeEntityDraws, 3, "renderer stats should include route entity draws");
+assert.strictEqual(stats.influenceEntityDraws, 4, "renderer stats should include influence entity draws");
+assert.strictEqual(stats.foodEntityDraws, 5, "renderer stats should include food entity draws");
+assert.strictEqual(stats.organismEntityDraws, 6, "renderer stats should include organism entity draws");
 assert.strictEqual(stats.terrainDraws, 12, "renderer stats should include terrain WebGL draws");
 assert.strictEqual(stats.gpuFrameMs, 5, "renderer stats should report the slowest GPU pass time");
 assert.strictEqual(stats.webglPresenterActive, true, "renderer stats should report active WebGL presenter state");

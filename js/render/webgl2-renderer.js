@@ -42,6 +42,9 @@ PS.render.WebGL2Renderer.prototype.beginFrame = function (camera) {
   this.particleQueue.length = 0;
   this.lightQueue.length = 0;
   this.stats.lastError = PS.render.webglEngine ? "" : "WebGL2 engine unavailable";
+  if (PS.render.entityWebgl && typeof PS.render.entityWebgl.resetFrameStats === "function") {
+    PS.render.entityWebgl.resetFrameStats();
+  }
   if (PS.render.webglPresenter && typeof PS.render.webglPresenter.beginFrame === "function" && typeof canvas !== "undefined") {
     PS.render.webglPresenter.beginFrame(canvas.width, canvas.height);
   }
@@ -165,7 +168,12 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   this.stats.frameBudgetMs = 16;
   this.stats.overBudget = gpuFrameMs > this.stats.frameBudgetMs;
   this.stats.rendererOverBudget = rendererGpuFrameMs > this.stats.frameBudgetMs;
-  this.stats.entityDraws = entityState ? entityState.instanceDrawCount : 0;
+  this.stats.entityDraws = entityState ? entityState.frameInstanceDrawCount : 0;
+  this.stats.settlementEntityDraws = entityState ? entityState.settlementDrawCount : 0;
+  this.stats.routeEntityDraws = entityState ? entityState.routeDrawCount : 0;
+  this.stats.influenceEntityDraws = entityState ? entityState.influenceDrawCount : 0;
+  this.stats.foodEntityDraws = entityState ? entityState.foodDrawCount : 0;
+  this.stats.organismEntityDraws = entityState ? entityState.organismDrawCount : 0;
   this.stats.terrainDraws = surfaceState ? surfaceState.tileDrawCount : 0;
   this.stats.terrainPageDraws = surfaceState ? surfaceState.pageDrawCount : 0;
   this.stats.terrainLastFrameMs = surfaceState ? surfaceState.lastFrameMs : 0;

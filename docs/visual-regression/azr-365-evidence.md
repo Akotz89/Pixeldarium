@@ -36,6 +36,10 @@ from aggregate civilization state.
     `entityDraws=1`, `terrainLastFrameMs=6.1`.
   - settlement band: `terrainDraws=16384`, `terrainPageDraws=4`,
     `entityDraws=1`, `terrainLastFrameMs=6.5`.
+- Direct `file://` scalar stats probe after facade metric aggregation:
+  `renderer=webgl2`, `zoomBand=settlement`, `terrainDraws=5888`,
+  `entityDraws=2`, `settlementEntityDraws=1`, `influenceEntityDraws=1`,
+  `routeEntityDraws=0`, `gpuFrameMs=6.6`, `lastError=""`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -52,8 +56,10 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   material variants now use unbounded deterministic surface-coordinate hashing
   instead of bounded tile-grid RANMAP lookup.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
-  boundary; WebGL terrain atlas instances stay chunk/page batched; settlement
-  evidence is derived from aggregate settlement and route state.
+  boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
+  facade metrics now aggregate across settlement, influence, route, organism,
+  and food draw batches; settlement evidence is derived from aggregate
+  settlement and route state.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels.
 - Player-perception contract: each reachable camera stop maps to the intended
@@ -63,8 +69,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   perception scale derived from the configured camera anchors; terrain variant
   hashing is deterministic but no longer uses bounded RANMAP tile coordinates.
 - Metric proving movement: pipeline stats now report reachable local and
-  settlement bands, with WebGL terrain/entity draw counts, direct file-runtime
-  interaction evidence, and high-coordinate terrain variant regression coverage.
+  settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
+  counters, direct file-runtime interaction evidence, and high-coordinate
+  terrain variant regression coverage.
 
 ## Current Visual Gap
 
@@ -72,5 +79,6 @@ The refreshed close-band screenshots prove the bands are reachable and no
 longer use stale AZR-341 evidence. The latest pass removes positional terrain
 jitter cracks and fixes the worst high-coordinate desert variant collapse, but
 it does not prove AZR-365 is complete. Local desert views still need richer
-biome variety, settlement/route visibility in organic simulation state, and
-more authored material families before the placeholder/debug-map feel is gone.
+biome variety, route visibility inside the active close-zoom footprint,
+settlement/route visibility in organic simulation state, and more authored
+material families before the placeholder/debug-map feel is gone.

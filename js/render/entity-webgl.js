@@ -17,6 +17,7 @@ PS.render.entityWebgl.state = {
   animationFrames: null,
   drawCount: 0,
   instanceDrawCount: 0,
+  frameInstanceDrawCount: 0,
   organismDrawCount: 0,
   foodDrawCount: 0,
   settlementDrawCount: 0,
@@ -36,6 +37,21 @@ PS.render.entityWebgl.shaderName = "entity-atlas";
 
 PS.render.entityWebgl.getMaxInstances = function () {
   return Math.max(1, Math.floor(Number(CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES) || 8192));
+};
+
+PS.render.entityWebgl.resetFrameStats = function () {
+  var state = PS.render.entityWebgl.state;
+
+  state.frameInstanceDrawCount = 0;
+  state.instanceDrawCount = 0;
+  state.organismDrawCount = 0;
+  state.foodDrawCount = 0;
+  state.settlementDrawCount = 0;
+  state.routeDrawCount = 0;
+  state.influenceDrawCount = 0;
+  state.pageDrawCount = 0;
+  state.culledCount = 0;
+  state.cappedCount = 0;
 };
 
 PS.render.entityWebgl.ensureCanvas = function (width, height) {
@@ -636,11 +652,12 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     }
     state.drawCount++;
     state.instanceDrawCount = drawnInstances;
-    state.organismDrawCount = batches.organisms;
-    state.foodDrawCount = batches.food;
-    state.settlementDrawCount = batches.settlements;
-    state.routeDrawCount = batches.routes;
-    state.influenceDrawCount = batches.influences;
+    state.frameInstanceDrawCount += drawnInstances;
+    state.organismDrawCount += batches.organisms;
+    state.foodDrawCount += batches.food;
+    state.settlementDrawCount += batches.settlements;
+    state.routeDrawCount += batches.routes;
+    state.influenceDrawCount += batches.influences;
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;

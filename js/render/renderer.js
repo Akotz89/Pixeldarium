@@ -27,6 +27,12 @@ PS.render.Renderer = function (name) {
     lodTierIndex: 0,
     lodTransitionAlpha: 0,
     preloadSurfaceLodIndex: 0,
+    entityDraws: 0,
+    settlementEntityDraws: 0,
+    routeEntityDraws: 0,
+    influenceEntityDraws: 0,
+    foodEntityDraws: 0,
+    organismEntityDraws: 0,
     lastError: ""
   };
 };

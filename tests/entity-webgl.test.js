@@ -48,6 +48,8 @@ assert.ok(entityWebglSource.indexOf("getSettlementInfluenceCell") >= 0, "entity 
 assert.ok(entityWebglSource.indexOf("buildSettlementInfluenceBatches") >= 0, "entity compositor should batch settlement influence markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementInfluence") >= 0, "entity compositor should expose influence rendering");
 assert.ok(entityWebglSource.indexOf("influenceDrawCount") >= 0, "entity compositor should report influence draw counts");
+assert.ok(entityWebglSource.indexOf("resetFrameStats") >= 0, "entity compositor should reset frame aggregate counters");
+assert.ok(entityWebglSource.indexOf("frameInstanceDrawCount") >= 0, "entity compositor should accumulate per-frame instance counts");
 
 assert.ok(entitiesSource.indexOf("entityWebgl.drawOrganisms(interpolation)") >= 0, "organism rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawFood()") >= 0, "food rendering should use the instanced path");
