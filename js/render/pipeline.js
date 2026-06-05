@@ -1,6 +1,44 @@
 PS.render = PS.render || {};
 PS.render.pipeline = PS.render.pipeline || {};
 PS.render.pipeline.layers = PS.render.pipeline.layers || [];
+PS.render.pipeline.stats = PS.render.pipeline.stats || {
+  frameCount: 0,
+  zoomLevel: 0,
+  zoomBand: "orbit",
+  lodTier: "galaxy",
+  lodTierIndex: 0,
+  transitionAlpha: 0,
+  preloadSurfaceLodIndex: 0,
+  submittedLayers: 0,
+  skippedLayers: 0,
+  blendedLayers: 0,
+  lastFrameMs: 0
+};
+
+PS.render.pipeline.bandOrder = {
+  orbit: 0,
+  planet: 1,
+  continent: 2,
+  region: 3,
+  local: 4,
+  settlement: 5
+};
+
+PS.render.pipeline.tierToBand = {
+  galaxy: "orbit",
+  planet: "planet",
+  continent: "continent",
+  region: "region",
+  local: "local"
+};
+
+PS.render.pipeline.tierOrder = {
+  galaxy: 0,
+  planet: 1,
+  continent: 2,
+  region: 3,
+  local: 4
+};
 
 PS.render.pipeline.registerLayer = function (id, layer) {
   var layerId = String(id || "").trim();
@@ -57,24 +95,204 @@ PS.render.pipeline.getLayerManifest = function () {
     return {
       id: layer.id,
       order: layer.order,
+      drawLayer: layer.drawLayer,
+      drawLayerName: PS.render.DrawLayerNames && PS.render.DrawLayerNames[layer.drawLayer],
       family: layer.family,
       semantic: layer.semantic,
       minBand: layer.minBand || "orbit",
-      maxBand: layer.maxBand || "settlement"
+      maxBand: layer.maxBand || "settlement",
+      minTier: layer.minTier || "",
+      maxTier: layer.maxTier || ""
     };
   });
 };
 
-PS.render.pipeline.drawLayer = function (layer) {
-  if (layer && typeof layer.draw === "function") {
-    layer.draw();
+PS.render.pipeline.getBandRank = function (band) {
+  var normalized = String(band || "orbit");
+  return Object.prototype.hasOwnProperty.call(PS.render.pipeline.bandOrder, normalized)
+    ? PS.render.pipeline.bandOrder[normalized]
+    : 0;
+};
+
+PS.render.pipeline.getTierRank = function (tierName) {
+  var normalized = String(tierName || "galaxy");
+  return Object.prototype.hasOwnProperty.call(PS.render.pipeline.tierOrder, normalized)
+    ? PS.render.pipeline.tierOrder[normalized]
+    : 0;
+};
+
+PS.render.pipeline.getLodState = function () {
+  var zoomLevel = world && world.planetView ? Number(world.planetView.zoomLevel) || 0 : 0;
+  var tier = PS.render.lod && typeof PS.render.lod.getTier === "function"
+    ? PS.render.lod.getTier(zoomLevel)
+    : {
+      name: "galaxy",
+      index: 0,
+      previousName: "galaxy",
+      nextName: "planet",
+      blendFromPrevious: 0,
+      blendToNext: 0,
+      transitionAlpha: 0
+    };
+  var preloadIndex = PS.render.lod && typeof PS.render.lod.getPreloadSurfaceLodIndex === "function"
+    ? PS.render.lod.getPreloadSurfaceLodIndex()
+    : 0;
+
+  return {
+    zoomLevel: zoomLevel,
+    zoomBand: PS.render.pipeline.getZoomBand(zoomLevel),
+    tier: tier,
+    tierName: tier.name,
+    tierIndex: tier.index,
+    previousTierName: tier.previousName,
+    nextTierName: tier.nextName,
+    previousBand: PS.render.pipeline.tierToBand[tier.previousName] || "orbit",
+    nextBand: PS.render.pipeline.tierToBand[tier.nextName] || "settlement",
+    transitionAlpha: Number(tier.transitionAlpha) || 0,
+    blendFromPrevious: Number(tier.blendFromPrevious) || 0,
+    blendToNext: Number(tier.blendToNext) || 0,
+    preloadSurfaceLodIndex: preloadIndex
+  };
+};
+
+PS.render.pipeline.isLayerInBand = function (layer, band) {
+  var rank = PS.render.pipeline.getBandRank(band);
+  var minRank = PS.render.pipeline.getBandRank(layer.minBand || "orbit");
+  var maxRank = PS.render.pipeline.getBandRank(layer.maxBand || "settlement");
+
+  return rank >= minRank && rank <= maxRank;
+};
+
+PS.render.pipeline.isLayerInTier = function (layer, tierName) {
+  if (!layer.minTier && !layer.maxTier) {
+    return PS.render.pipeline.isLayerInBand(
+      layer,
+      PS.render.pipeline.tierToBand[tierName] || "orbit"
+    );
   }
+
+  var rank = PS.render.pipeline.getTierRank(tierName);
+  var minRank = PS.render.pipeline.getTierRank(layer.minTier || "galaxy");
+  var maxRank = PS.render.pipeline.getTierRank(layer.maxTier || "local");
+
+  return rank >= minRank && rank <= maxRank;
+};
+
+PS.render.pipeline.getLayerLodAlpha = function (layer, lodState) {
+  if (!layer || !lodState) {
+    return 0;
+  }
+
+  if (PS.render.pipeline.isLayerInTier(layer, lodState.tierName)) {
+    return 1;
+  }
+
+  if (lodState.blendFromPrevious > 0 && PS.render.pipeline.isLayerInTier(layer, lodState.previousTierName)) {
+    return lodState.blendFromPrevious;
+  }
+
+  if (lodState.blendToNext > 0 && PS.render.pipeline.isLayerInTier(layer, lodState.nextTierName)) {
+    return lodState.blendToNext;
+  }
+
+  return 0;
+};
+
+PS.render.pipeline.publishFrameStats = function (lodState, frameStats, elapsed) {
+  var stats = PS.render.pipeline.stats;
+
+  stats.frameCount++;
+  stats.zoomLevel = lodState.zoomLevel;
+  stats.zoomBand = lodState.zoomBand;
+  stats.lodTier = lodState.tierName;
+  stats.lodTierIndex = lodState.tierIndex;
+  stats.transitionAlpha = lodState.transitionAlpha;
+  stats.preloadSurfaceLodIndex = lodState.preloadSurfaceLodIndex;
+  stats.submittedLayers = frameStats.submittedLayers;
+  stats.skippedLayers = frameStats.skippedLayers;
+  stats.blendedLayers = frameStats.blendedLayers;
+  stats.lastFrameMs = elapsed;
+
+  if (PS.render.renderer && PS.render.renderer.active && PS.render.renderer.active.stats) {
+    PS.render.renderer.active.stats.lodTier = stats.lodTier;
+    PS.render.renderer.active.stats.lodTierIndex = stats.lodTierIndex;
+    PS.render.renderer.active.stats.lodTransitionAlpha = stats.transitionAlpha;
+    PS.render.renderer.active.stats.preloadSurfaceLodIndex = stats.preloadSurfaceLodIndex;
+  }
+
+  return stats;
+};
+
+PS.render.pipeline.getStats = function () {
+  return Object.assign({}, PS.render.pipeline.stats);
+};
+
+PS.render.pipeline.drawLayer = function (layer, lodState, frameStats) {
+  var alpha = PS.render.pipeline.getLayerLodAlpha(layer, lodState);
+
+  if (!layer || typeof layer.draw !== "function") {
+    return;
+  }
+
+  if (alpha <= 0) {
+    if (frameStats) {
+      frameStats.skippedLayers++;
+    }
+    return;
+  }
+
+  if (frameStats) {
+    frameStats.submittedLayers++;
+    if (alpha < 1) {
+      frameStats.blendedLayers++;
+    }
+  }
+
+  if (PS.render.drawOrder && typeof PS.render.drawOrder.submit === "function") {
+    PS.render.drawOrder.submit(layer.drawLayer, {
+      id: layer.id,
+      draw: function () {
+        layer.draw(lodState, alpha);
+      },
+      lodAlpha: alpha,
+      lodState: lodState
+    });
+    return;
+  }
+
+  layer.draw(lodState, alpha);
 };
 
 PS.render.pipeline.drawWorld = function () {
-  for (var i = 0; i < PS.render.pipeline.layers.length; i++) {
-    PS.render.pipeline.drawLayer(PS.render.pipeline.layers[i]);
+  var startedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  var lodState = PS.render.pipeline.getLodState();
+  var frameStats = {
+    submittedLayers: 0,
+    skippedLayers: 0,
+    blendedLayers: 0
+  };
+
+  if (PS.render.renderer && typeof PS.render.renderer.beginFrame === "function") {
+    PS.render.renderer.beginFrame(PS.camera && PS.camera.unified ? PS.camera.unified.getState() : null);
   }
+
+  for (var i = 0; i < PS.render.pipeline.layers.length; i++) {
+    PS.render.pipeline.drawLayer(PS.render.pipeline.layers[i], lodState, frameStats);
+  }
+
+  if (PS.render.drawOrder && typeof PS.render.drawOrder.flush === "function") {
+    PS.render.drawOrder.flush(PS.render.renderer || null);
+  }
+
+  if (PS.render.renderer && typeof PS.render.renderer.endFrame === "function") {
+    PS.render.renderer.endFrame();
+  }
+
+  PS.render.pipeline.publishFrameStats(
+    lodState,
+    frameStats,
+    (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt
+  );
 };
 
 PS.render.pipeline.rebuildShaders = function () {};
@@ -104,101 +322,159 @@ PS.render.rebuildTextures = function () {
 PS.render.getSubsystems = function () {
   return [
     PS.camera,
-    PS.render.globe,
     PS.render.lod,
+    PS.render.webglEngine,
+    PS.render.webglCompositor,
+    PS.render.webglGbuffer,
     PS.render.webglGlobe,
-    PS.render.raster,
+    PS.render.surfaceTileWebgl,
+    PS.render.entityWebgl,
+    PS.render.renderer,
+    PS.render.webgl2Renderer,
     PS.render.terrain,
-    PS.render.surfaceRender,
     PS.render.surfaceStreaming,
     PS.render.entities,
-    PS.render.reference,
-    PS.render.overlays,
-    PS.render.atmosphere,
     PS.render.pipeline
   ];
 };
 
 PS.render.pipeline.registerLayer("terrain.base", {
   order: 20,
+  drawLayer: PS.render.DrawLayer.TERRAIN_BASE,
   family: "terrain",
   semantic: "base terrain, biome, elevation, water, and local surface materials",
+  minTier: "galaxy",
+  maxTier: "local",
   draw: function () { PS.render.terrain.draw(); }
 });
 
 PS.render.pipeline.registerLayer("overlays.reference", {
   order: 40,
+  drawLayer: PS.render.DrawLayer.DEBUG_OVERLAY,
   family: "overlays",
   semantic: "scale, grid, and camera orientation",
-  draw: function () { PS.render.overlays.drawReferenceGrid(); }
+  minTier: "galaxy",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("settlement.influence", {
   order: 50,
+  drawLayer: PS.render.DrawLayer.ROUTE_OVERLAY,
   family: "settlement",
   semantic: "claimed land and borders",
-  draw: function () { PS.render.entities.drawSettlementInfluence(); }
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("settlement.routes", {
   order: 60,
+  drawLayer: PS.render.DrawLayer.ROUTE_OVERLAY,
   family: "settlement",
   semantic: "routes, paths, and supply links",
-  draw: function () { PS.render.entities.drawSettlementRoutes(); }
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("resources.food", {
   order: 70,
+  drawLayer: PS.render.DrawLayer.ENTITY_GROUND,
   family: "resources",
   semantic: "food and resource objects",
+  minTier: "continent",
+  maxTier: "local",
   draw: function () { PS.render.entities.drawFood(); }
 });
 
 PS.render.pipeline.registerLayer("entities.presence", {
   order: 75,
+  drawLayer: PS.render.DrawLayer.ENTITY_GROUND,
   family: "entities",
   semantic: "local-scale resource clusters, organism traces, settlement parcels, and route traffic",
   minBand: "region",
   maxBand: "settlement",
-  draw: function () { PS.render.entities.drawLocalPresenceField(); }
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("settlement.structures", {
   order: 80,
+  drawLayer: PS.render.DrawLayer.BUILDING_WALL,
   family: "settlement",
   semantic: "settlement cores, outposts, and colonies",
-  draw: function () { PS.render.entities.drawSettlements(); }
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("entities.organisms", {
   order: 90,
+  drawLayer: PS.render.DrawLayer.ENTITY_SORTED,
   family: "entities",
   semantic: "living organisms and later citizens",
+  minTier: "region",
+  maxTier: "local",
   draw: function () { PS.render.entities.drawOrganisms(); }
+});
+
+PS.render.pipeline.registerLayer("weather.particles", {
+  order: 95,
+  drawLayer: PS.render.DrawLayer.WEATHER,
+  family: "weather",
+  semantic: "rain, snow, and weather particle effects",
+  minBand: "region",
+  maxBand: "settlement",
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {
+    if (PS.render.particles) {
+      PS.render.particles.update(1 / 60);
+      PS.render.particles.render(PS.camera && PS.camera.unified ? PS.camera.unified.getState() : null);
+    }
+  }
 });
 
 PS.render.pipeline.registerLayer("world.space", {
   order: 100,
+  drawLayer: PS.render.DrawLayer.UI_WORLD,
   family: "world",
   semantic: "orbital assets, bodies, probes, sectors, fleets, and star maps",
-  draw: function () {
-    PS.render.overlays.drawOrbitalAssets();
-    PS.render.overlays.drawPlanetaryBodies();
-    PS.render.overlays.drawProbeMissions();
-    PS.render.overlays.drawEmpireSectors();
-    PS.render.overlays.drawInterstellarFleets();
-    PS.render.overlays.drawEmpireLegacy();
-    PS.render.overlays.drawStarSystems();
-  }
+  minTier: "galaxy",
+  maxTier: "planet",
+  draw: function () {}
+});
+
+PS.render.pipeline.registerLayer("lighting.ambient", {
+  order: 110,
+  drawLayer: PS.render.DrawLayer.PARTICLE_BELOW,
+  family: "lighting",
+  semantic: "day/night cycle tint overlay",
+  minTier: "galaxy",
+  maxTier: "local",
+  draw: function () {}
 });
 
 PS.render.pipeline.registerLayer("status.selection", {
   order: 120,
+  drawLayer: PS.render.DrawLayer.SELECTION_OVERLAY,
   family: "icons",
   semantic: "selection rings, status icons, warnings, and scanlines",
-  draw: function () {
-    PS.render.overlays.drawInspectSelection();
-    PS.render.overlays.drawRegistered();
-    PS.render.overlays.drawScanlines();
-  }
+  minTier: "galaxy",
+  maxTier: "local",
+  draw: function () {}
+});
+
+PS.render.pipeline.registerLayer("ui.minimap", {
+  order: 130,
+  drawLayer: PS.render.DrawLayer.UI_SCREEN,
+  family: "ui",
+  semantic: "world overview minimap with organism positions and viewport rectangle",
+  minBand: "region",
+  maxBand: "settlement",
+  minTier: "region",
+  maxTier: "local",
+  draw: function () {}
 });

@@ -10,6 +10,13 @@ Pixeldarium will use aggregate population state as the authoritative planet-scal
 
 This preserves the watcher fantasy of following individual life without making the whole planet depend on high-detail brains for every organism.
 
+This is also the canonical example of the broader Pixeldarium optimization
+model in `docs/optimization-operating-model.md`: aggregate state is
+authoritative at scale, while representative detail is generated only where the
+watcher's attention needs it. Future microbial, civilization, climate, food-web,
+and event systems should use the same aggregate-plus-representative boundary
+unless a measured bottleneck proves a different representation is better.
+
 ## Current Code Baseline
 
 Current biology runtime is now owned by modern simulation modules:

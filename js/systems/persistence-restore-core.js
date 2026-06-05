@@ -22,21 +22,7 @@ function saveWorldToIndexedDB() {
 }
 
 function validateWorldSaveData(saveData) {
-  if (!saveData || saveData.id !== PIXELDARIUM_SAVE_ID) {
-    throw new Error("No Pixeldarium save found");
-  }
-
-  if (saveData.version !== PIXELDARIUM_SAVE_VERSION) {
-    throw new Error("Unsupported save version");
-  }
-
-  if (!Array.isArray(saveData.terrain) || saveData.terrain.length !== WORLD_WIDTH * WORLD_HEIGHT) {
-    throw new Error("Save terrain does not match this world size");
-  }
-
-  if (!Array.isArray(saveData.food) || !Array.isArray(saveData.organisms)) {
-    throw new Error("Save is missing food or organism data");
-  }
+  return PS.systems.saveMigration.validate(saveData);
 }
 
 function restoreFood(food) {

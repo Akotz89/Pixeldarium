@@ -39,6 +39,12 @@ register via `PS.epochs.register()`. No hardcoded era if/else chains.
 Spatial index chunks must align with render tile boundaries. Queries return
 chunk-local results.
 
+### Optimization Operating Model
+Follow `docs/optimization-operating-model.md` for scale-sensitive work. Every
+performance, rendering, streaming, or mass-simulation change must identify the
+bottleneck, representation change, chunk/batch/aggregate boundary, readiness
+state, perception contract, new constraint, and verification metric.
+
 ## File Structure
 
 ```
@@ -106,6 +112,10 @@ integration change that lands accepted assets and updates runtime manifests or
 script tags as needed. Raw outputs, work orders, reports, adapter jobs,
 provider credentials, generated evidence, and production-lane tooling stay in
 the private studio repo.
+
+When a runtime change needs image-generation source material, route the studio
+job through an approved private tooling adapter such as `run-openai-image-job.js`
+and import only reviewed runtime assets through a separate integration patch.
 
 Runtime boundary checks:
 

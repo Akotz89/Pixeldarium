@@ -259,6 +259,18 @@ function getWrappedTerrainNoiseCellX(cellX, columnCount) {
   return ((Math.round(Number(cellX) || 0) % normalizedColumnCount) + normalizedColumnCount) % normalizedColumnCount;
 }
 
+var terrainNoiseCache = {};
+
+function getTerrainNoise2D(seedOffset) {
+  var key = String(Math.round(Number(seedOffset) || 0));
+
+  if (!terrainNoiseCache[key]) {
+    terrainNoiseCache[key] = PS.core.createNoise2D("terrain:" + key);
+  }
+
+  return terrainNoiseCache[key];
+}
+
 function getTerrainValueNoise(x, y, scale, seedOffset) {
   var normalizedScale = Math.max(1, Number(scale) || 1);
   var columnCount = Math.max(1, Math.ceil(WORLD_WIDTH / normalizedScale));
@@ -272,10 +284,11 @@ function getTerrainValueNoise(x, y, scale, seedOffset) {
   var xAmount = smoothTerrainNoiseAmount(xCell - x0);
   var yAmount = smoothTerrainNoiseAmount(yCell - y0);
   var seed = Math.round(Number(seedOffset) || 0);
-  var topLeft = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y0, 0, rowCount - 1), seed);
-  var topRight = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y0, 0, rowCount - 1), seed);
-  var bottomLeft = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y1, 0, rowCount - 1), seed);
-  var bottomRight = getDeterministicUnitNoise(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y1, 0, rowCount - 1), seed);
+  var noise = getTerrainNoise2D(seed);
+  var topLeft = noise.unitHash(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y0, 0, rowCount - 1), seed);
+  var topRight = noise.unitHash(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y0, 0, rowCount - 1), seed);
+  var bottomLeft = noise.unitHash(getWrappedTerrainNoiseCellX(x0, columnCount), clamp(y1, 0, rowCount - 1), seed);
+  var bottomRight = noise.unitHash(getWrappedTerrainNoiseCellX(x1, columnCount), clamp(y1, 0, rowCount - 1), seed);
   var top = topLeft + (topRight - topLeft) * xAmount;
   var bottom = bottomLeft + (bottomRight - bottomLeft) * xAmount;
 

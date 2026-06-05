@@ -41,7 +41,7 @@ const source = [
 vm.runInNewContext(`${source}
 
 assert.strictEqual(PS.time.dt, 1000 / 30, "fixed timestep should default to 1000/30ms");
-assert.strictEqual(PS.time.maxTicksPerFrame, 4, "max ticks per frame should default to 4");
+assert.strictEqual(PS.time.maxTicksPerFrame, 3, "max ticks per frame should default to 3");
 assert.strictEqual(PS.time.timeScales.length, 7, "adaptive time table should cover all AZR-295 epochs");
 assert.strictEqual(PS.time.timeScales[0].yearsPerTick, 10000000, "cosmological scale should be 10M years per tick");
 assert.strictEqual(PS.time.timeScales[1].yearsPerTick, 100000, "primordial scale should be 100K years per tick");
@@ -83,9 +83,11 @@ assert.strictEqual(scaled.ticks, 1, "speed scale should advance accumulator fast
 world.speed = 1;
 PS.time.reset();
 var capped = PS.time.runFrame(250, simulateTick);
-assert.strictEqual(capped.ticks, 4, "spiral guard should cap ticks per frame");
+assert.strictEqual(capped.ticks, 3, "spiral guard should cap ticks per frame");
 assert.ok(capped.droppedMs > 0, "spiral guard should report dropped backlog");
 assert.ok(PS.time.accumulator <= PS.time.dt, "spiral guard should clamp accumulator backlog");
+assert.ok(PS.time.catchUpStats.droppedFrames > 0, "spiral guard should count dropped backlog frames");
+assert.ok(PS.time.catchUpStats.droppedTicks > 0, "spiral guard should count dropped backlog ticks");
 
 PS.config.sim.fixedDeltaMs = 25;
 PS.config.sim.maxUpdatesPerFrame = 2;

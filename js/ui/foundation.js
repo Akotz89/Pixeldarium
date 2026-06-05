@@ -243,7 +243,18 @@ function syncMenuPage() {
   var tabs = menuTabs.querySelectorAll("[data-menu-target]");
 
   for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-    pages[pageIndex].hidden = pages[pageIndex].getAttribute("data-menu-page") !== activePage;
+    var page = pages[pageIndex];
+    var isVisible = page.getAttribute("data-menu-page") === activePage;
+
+    if (PS.ui && PS.ui.panelManager && page.id && PS.ui.panelManager.get(page.id)) {
+      if (isVisible) {
+        PS.ui.panelManager.show(page.id);
+      } else {
+        PS.ui.panelManager.hide(page.id);
+      }
+    } else {
+      page.hidden = !isVisible;
+    }
   }
 
   for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {

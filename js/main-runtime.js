@@ -16,6 +16,25 @@ function clearWorld() {
     PS.pools.reset();
   }
 
+  // Initialize tile grid (AZR-491)
+  if (PS.tileGrid && typeof PS.tileGrid.init === "function") {
+    PS.tileGrid.init(WORLD_WIDTH, WORLD_HEIGHT);
+  }
+
+  // Initialize RANMAP for visual variety (AZR-499)
+  if (PS.ranmap && typeof PS.ranmap.init === "function") {
+    PS.ranmap.init(WORLD_WIDTH, WORLD_HEIGHT, world.rngState || 0x9E3779B9);
+  }
+
+  if (PS.render && PS.render.particles && typeof PS.render.particles.reset === "function") {
+    PS.render.particles.reset(world.rngState || 0x9E3779B9);
+  }
+
+  if (PS.atlas && typeof PS.atlas.reset === "function" && typeof PS.atlas.init === "function") {
+    PS.atlas.reset();
+    PS.atlas.init();
+  }
+
   world.tick = 0;
   world.deepTimeYears = 0;
   world.era = "Organisms";
@@ -157,6 +176,28 @@ function clearWorld() {
   world.empireLegacyReady = false;
   world.empireLegacyComplete = false;
   world.lastEmpireLegacyTick = 0;
+
+  if (PS.render && PS.render.particles && typeof PS.render.particles.loadDefinitions === "function") {
+    PS.render.particles.loadDefinitions(PS.assets ? PS.assets.particlesData : null);
+    if (CONFIG.PARTICLE_AMBIENT_ENABLED !== false) {
+      PS.render.particles.createEmitter("rain", {
+        id: "ambient.rain",
+        active: true,
+        bounds: { x: 0, y: -40, width: canvas.width, height: canvas.height + 80 }
+      });
+      PS.render.particles.createEmitter("snow", {
+        id: "ambient.snow",
+        active: true,
+        rate: 24,
+        bounds: { x: 0, y: -40, width: canvas.width, height: canvas.height + 80 }
+      });
+    }
+    PS.render.particles.birthEmitter = PS.render.particles.createEmitter("birth_sparkle", {
+      id: "event.birth_sparkle",
+      active: false,
+      position: { x: canvas.width * 0.5, y: canvas.height * 0.5 }
+    });
+  }
 
   if (typeof resetTraitHistory === "function") {
     resetTraitHistory();

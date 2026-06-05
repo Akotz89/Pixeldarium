@@ -103,129 +103,26 @@ function getFoodRunwayHistoryValue(sample, range) {
 }
 
 function drawEcosystemHistoryGuide(chart, ratio, color) {
-  var y = chart.y + clamp(Number(ratio) || 0, 0, 1) * chart.height;
-
-  ecosystemHistoryCtx.strokeStyle = color;
-  ecosystemHistoryCtx.lineWidth = 1;
-  ecosystemHistoryCtx.beginPath();
-  ecosystemHistoryCtx.moveTo(chart.x, y);
-  ecosystemHistoryCtx.lineTo(chart.x + chart.width, y);
-  ecosystemHistoryCtx.stroke();
+  return null;
 }
 
 function drawEcosystemHistoryLine(samples, getValue, color, chart, range) {
-  if (samples.length === 0) {
-    return;
-  }
-
-  ecosystemHistoryCtx.strokeStyle = color;
-  ecosystemHistoryCtx.fillStyle = color;
-  ecosystemHistoryCtx.lineWidth = 2;
-  ecosystemHistoryCtx.beginPath();
-  var hasActiveSegment = false;
-  var finitePointCount = 0;
-  var lastFinitePoint = null;
-
-  for (var i = 0; i < samples.length; i++) {
-    var x = chart.x;
-
-    if (samples.length > 1) {
-      x += (i / (samples.length - 1)) * chart.width;
-    }
-
-    var rawValue = getValue(samples[i]);
-
-    if (rawValue === null || typeof rawValue === "undefined") {
-      hasActiveSegment = false;
-      continue;
-    }
-
-    var value = Number(rawValue);
-
-    if (!Number.isFinite(value)) {
-      hasActiveSegment = false;
-      continue;
-    }
-
-    var y = chart.y + scaleHistoryValue(value, range.min, range.max, chart.height);
-    finitePointCount++;
-    lastFinitePoint = {
-      x: x,
-      y: y
-    };
-
-    if (!hasActiveSegment) {
-      ecosystemHistoryCtx.moveTo(x, y);
-      hasActiveSegment = true;
-    } else {
-      ecosystemHistoryCtx.lineTo(x, y);
-    }
-  }
-
-  ecosystemHistoryCtx.stroke();
-
-  if (finitePointCount === 1 && lastFinitePoint) {
-    ecosystemHistoryCtx.beginPath();
-    ecosystemHistoryCtx.arc(
-      lastFinitePoint.x,
-      lastFinitePoint.y,
-      3,
-      0,
-      Math.PI * 2
-    );
-    ecosystemHistoryCtx.fill();
-  }
+  return null;
 }
 
 function drawEcosystemHistory() {
-  var width = ecosystemHistoryCanvas.width;
-  var height = ecosystemHistoryCanvas.height;
-  var chart = {
-    x: 10,
-    y: 8,
-    width: width - 20,
-    height: height - 16
-  };
   var samples = Array.isArray(world.ecosystemHistory) ? world.ecosystemHistory : [];
+  var latest = samples.length ? samples[samples.length - 1] : null;
 
-  ecosystemHistoryCtx.clearRect(0, 0, width, height);
-  ecosystemHistoryCtx.fillStyle = "rgba(5, 6, 10, 0.86)";
-  ecosystemHistoryCtx.fillRect(0, 0, width, height);
-  ecosystemHistoryCtx.strokeStyle = "rgba(255, 255, 255, 0.10)";
-  ecosystemHistoryCtx.lineWidth = 1;
-
-  for (var i = 0; i <= 3; i++) {
-    drawEcosystemHistoryGuide(chart, i / 3, "rgba(255, 255, 255, 0.10)");
+  if (!ecosystemHistoryCanvas) {
+    return;
   }
 
-  drawEcosystemHistoryGuide(chart, 0.5, "rgba(255, 156, 105, 0.22)");
-
-  drawEcosystemHistoryLine(samples, function(sample) {
-    return sample.stabilityScore;
-  }, "#70f0d0", chart, { min: 0, max: 100 });
-
-  drawEcosystemHistoryLine(samples, function(sample) {
-    return sample.population;
-  }, "#72d7ff", chart, getHistoryRange(samples, function(sample) {
-    return sample.population;
-  }, CONFIG.STARTING_ORGANISMS));
-
-  drawEcosystemHistoryLine(samples, function(sample) {
-    return sample.food;
-  }, "#fff26b", chart, getHistoryRange(samples, function(sample) {
-    return sample.food;
-  }, CONFIG.STARTING_FOOD));
-
-  drawEcosystemHistoryLine(samples, function(sample) {
-    return sample.foodNetThisTick;
-  }, "#ff9c69", chart, getSymmetricHistoryRange(samples, function(sample) {
-    return sample.foodNetThisTick;
-  }, Math.ceil(CONFIG.STARTING_FOOD * 0.08)));
-
-  var runwayRange = getFoodRunwayHistoryRange(samples);
-  drawEcosystemHistoryLine(samples, function(sample) {
-    return getFoodRunwayHistoryValue(sample, runwayRange);
-  }, "#c884ff", chart, runwayRange);
+  ecosystemHistoryCanvas.textContent = latest
+    ? "HISTORY: stability " + Math.round(Number(latest.stabilityScore) || 0) +
+      " population " + Math.round(Number(latest.population) || 0) +
+      " food " + Math.round(Number(latest.food) || 0)
+    : "HISTORY: Waiting for samples";
 }
 
 function makeSummaryProgressChip(label, currentValue, targetValue, value, isReady, isComplete) {

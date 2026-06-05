@@ -3,7 +3,8 @@ PS.systems = PS.systems || {};
 PS.time = {
   accumulator: 0,
   dt: CONFIG.SIM_UPDATE_INTERVAL_MS || 1000 / 30,
-  maxTicksPerFrame: CONFIG.MAX_SIM_UPDATES_PER_FRAME || 4,
+  maxTicksPerFrame: CONFIG.MAX_SIM_UPDATES_PER_FRAME || 3,
+  lastDropLogTime: 0,
   transitionRate: 0.18,
   timeScales: [
     { id: "cosmological", label: "10M years/tick", yearsPerTick: 10000000, aliases: ["cosmological", "cosmos"] },
@@ -35,6 +36,13 @@ PS.time = {
     timeScaleLabel: "1K years/tick",
     yearsPerTick: 1000
   },
+  catchUpStats: {
+    droppedFrames: 0,
+    droppedMs: 0,
+    droppedTicks: 0,
+    lastDroppedMs: 0,
+    lastDroppedTicks: 0
+  },
   get tick() {
     return world.tick;
   },
@@ -64,7 +72,15 @@ PS.time = {
   reset: function() {
     this.accumulator = 0;
     this.dt = Math.max(1, Number(PS.config.sim.fixedDeltaMs) || 1000 / 30);
-    this.maxTicksPerFrame = Math.max(1, Math.round(Number(PS.config.sim.maxUpdatesPerFrame) || 4));
+    this.maxTicksPerFrame = Math.max(1, Math.round(Number(PS.config.sim.maxUpdatesPerFrame) || 3));
+    this.catchUpStats = {
+      droppedFrames: 0,
+      droppedMs: 0,
+      droppedTicks: 0,
+      lastDroppedMs: 0,
+      lastDroppedTicks: 0
+    };
+    this.lastDropLogTime = 0;
     this.updateAdaptiveTimeScale(true);
     this.lastFrame = {
       elapsedMs: 0,
@@ -187,7 +203,7 @@ PS.time = {
     var droppedMs = 0;
 
     this.dt = Math.max(1, Number(PS.config.sim.fixedDeltaMs) || this.dt || 1000 / 30);
-    this.maxTicksPerFrame = Math.max(1, Math.round(Number(PS.config.sim.maxUpdatesPerFrame) || this.maxTicksPerFrame || 4));
+    this.maxTicksPerFrame = Math.max(1, Math.round(Number(PS.config.sim.maxUpdatesPerFrame) || this.maxTicksPerFrame || 3));
     this.accumulator += scaledElapsed;
 
     while (this.accumulator >= this.dt && ticks < this.maxTicksPerFrame) {
@@ -200,6 +216,7 @@ PS.time = {
     if (ticks >= this.maxTicksPerFrame && this.accumulator > this.dt) {
       droppedMs = this.accumulator - this.dt;
       this.accumulator = this.dt;
+      this.recordDroppedBacklog(droppedMs);
     }
 
     var interpolation = this.dt > 0 ? Math.min(this.accumulator / this.dt, 1) : 0;
@@ -226,6 +243,29 @@ PS.time = {
     this.lastFrame.rendered = true;
     this.lastFrame.drawMs = elapsed;
     return this.lastFrame;
+  },
+  recordDroppedBacklog: function(droppedMs) {
+    var elapsed = Math.max(0, Number(droppedMs) || 0);
+    var droppedTicks = this.dt > 0 ? Math.floor(elapsed / this.dt) : 0;
+
+    this.catchUpStats.droppedFrames++;
+    this.catchUpStats.droppedMs += elapsed;
+    this.catchUpStats.droppedTicks += droppedTicks;
+    this.catchUpStats.lastDroppedMs = elapsed;
+    this.catchUpStats.lastDroppedTicks = droppedTicks;
+
+    var now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+
+    if (PS.log && typeof PS.log === "function" && now - this.lastDropLogTime >= 1000) {
+      this.lastDropLogTime = now;
+      PS.log("performance", "WARN", "Dropped simulation catch-up backlog", {
+        droppedMs: elapsed,
+        droppedTicks: droppedTicks,
+        maxTicksPerFrame: this.maxTicksPerFrame
+      });
+    }
+
+    return this.catchUpStats;
   }
 };
 

@@ -1,5 +1,4 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("game-webgl");
 
 const gameWrap = document.getElementById("game-wrap");
 const uiMenu = document.getElementById("ui-menu");
@@ -27,9 +26,7 @@ const timelineFilterButtons = typeof document.querySelectorAll === "function"
   : [];
 const timelineList = document.getElementById("timeline-list");
 const ecosystemHistoryCanvas = document.getElementById("ecosystem-history");
-const ecosystemHistoryCtx = ecosystemHistoryCanvas.getContext("2d", { willReadFrequently: true });
 const traitHistoryCanvas = document.getElementById("trait-history");
-const traitHistoryCtx = traitHistoryCanvas.getContext("2d", { willReadFrequently: true });
 
 const pauseButton = document.getElementById("pause-button");
 const stepButton = document.getElementById("step-button");
@@ -108,6 +105,7 @@ const world = {
   speed: 1,
   deepTimeYears: 0,
   seedText: CONFIG.DEFAULT_SEED,
+  prng: null,
   rngState: 1,
   interpolation: 0,
   fps: 0,

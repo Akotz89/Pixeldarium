@@ -1,0 +1,21 @@
+{
+  "archivedAt": "2026-06-04",
+  "linearIssue": "AZR-589",
+  "source": "js/legacy/manifest.json",
+  "runtimeLoaded": false,
+  "reason": "Legacy runtime shard inventory was empty and no active script manifest or index.html path loaded js/legacy/*.",
+  "domains": {
+    "state.js": [],
+    "utils.js": [],
+    "persistence.js": [],
+    "planet.js": [],
+    "terrain.js": [],
+    "render-terrain-cache.js": [],
+    "render.js": [],
+    "food.js": [],
+    "organisms.js": [],
+    "settlements.js": [],
+    "ui.js": [],
+    "main.js": []
+  }
+}

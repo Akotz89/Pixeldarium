@@ -35,6 +35,73 @@ integration change. That change should include:
 
 Do not integrate generated assets directly from raw studio exports.
 
+## Game-Ready Export Contract
+
+The studio-side export folder for a game-ready sheet is:
+
+```text
+exports/{category}/{name}/
+```
+
+The export must contain:
+
+```text
+{name}.png
+{name}.json
+```
+
+It may also contain:
+
+```text
+{name}_normal.png
+```
+
+Only reviewed static outputs cross into the game repo. The runtime destination
+is `assets/{category}/`, with `assets/manifest.json` and `assets/manifest.json.js`
+updated by the integration patch.
+
+The metadata JSON must match the Phase 0.2 grid format consumed by
+`PS.assets.SpriteSheet`:
+
+```json
+{
+  "type": "grid",
+  "tileWidth": 32,
+  "tileHeight": 32,
+  "columns": 8,
+  "rows": 1,
+  "names": [
+    "terrain.grass.0",
+    "terrain.grass.1"
+  ]
+}
+```
+
+Rules:
+
+- `type` is `grid`.
+- `tileWidth`, `tileHeight`, `columns`, and `rows` are positive integers.
+- Sheet width equals `tileWidth * columns`.
+- Sheet height equals `tileHeight * rows`.
+- `names`, when present, contains no more entries than grid cells.
+- Optional normal maps match the sprite sheet dimensions.
+
+## Studio Quality Gates
+
+Studio validation must run before a runtime integration patch is opened:
+
+- Required PNG and JSON files are present and named after the export directory.
+- Sheet dimensions match the grid metadata exactly.
+- Sheet dimensions are no larger than 2048x2048 pixels.
+- Tile dimensions are between 8 and 128 pixels.
+- Opaque pixels use colors from the Pixeldarium palette.
+- Alpha is clean: every pixel alpha value is either `0` or `255`.
+
+These gates belong in the private Studio repo. They can be implemented with
+Python, Node, Pillow, DCC tooling, AI adapters, or any other generation
+dependency needed for asset production. None of those dependencies may be
+required to run `index.html` or any game runtime script.
+
 ## Required Checks
 
 Run these from `/mnt/c/Users/Aaron/Azyrra/projects/pixeldarium` before accepting
@@ -58,6 +125,5 @@ npm run validate
 
 ## Cleanup Rule
 
-The old in-game-repo `tools/agent-studio` copy is retained only as split-review
-evidence until the cleanup is approved. New studio work should be created in
-the private studio repo.
+The old in-game-repo `tools/agent-studio` copy has been removed. New studio
+work should be created in the private studio repo.

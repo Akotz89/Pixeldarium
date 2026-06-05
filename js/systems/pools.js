@@ -61,8 +61,17 @@ function makeOrganismArrays(capacity) {
     generation: new Uint32Array(capacity),
     speciesId: new Uint32Array(capacity),
     populationId: new Uint32Array(capacity),
-    representativeId: new Uint32Array(capacity)
+    representativeId: new Uint32Array(capacity),
+    // Intrusive linked-list pointers for spatial tile grid (AZR-491)
+    nextInTile: new Int32Array(capacity),
+    prevInTile: new Int32Array(capacity)
   };
+
+  // Initialize tile pointers to -1 (no link)
+  arrays.nextInTile.fill(-1);
+  arrays.prevInTile.fill(-1);
+
+  return arrays;
 }
 
 function createOrganismFacade(index, arrays) {
@@ -169,11 +178,27 @@ function createOrganismPool(capacity) {
     },
     reset: function() {
       this.arrays.active.fill(0);
+      this.arrays.nextInTile.fill(-1);
+      this.arrays.prevInTile.fill(-1);
       this.freeList = createFreeList(this.capacity);
       this.freeTop = this.capacity;
       this.activeCount = 0;
     }
   };
+}
+
+function estimateOrganismPoolBytes(pool) {
+  var arrays = pool && pool.arrays ? pool.arrays : {};
+  var keys = Object.keys(arrays);
+  var bytes = 0;
+
+  for (var i = 0; i < keys.length; i++) {
+    bytes += Math.max(0, Number(arrays[keys[i]].byteLength) || 0);
+  }
+
+  bytes += Math.max(0, Number(pool && pool.freeList && pool.freeList.byteLength) || 0);
+  bytes += Math.max(0, Number(pool && pool.facades && pool.facades.length) || 0) * 96;
+  return bytes;
 }
 
 function createFoodPool(capacity) {
@@ -233,11 +258,15 @@ PS.pools = {
     var foodCapacity = Math.max(1, Math.round(Number(poolConfig.maxFoodParticles) || CONFIG.MAX_FOOD || 1));
 
     if (!this.organism || this.organism.capacity !== organismCapacity) {
-      this.organism = createOrganismPool(organismCapacity);
+      this.organism = PS.poolManager.register("organisms", createOrganismPool(organismCapacity), {
+        estimateMemoryBytes: estimateOrganismPoolBytes
+      });
     }
 
     if (!this.food || this.food.capacity !== foodCapacity) {
-      this.food = createFoodPool(foodCapacity);
+      this.food = PS.poolManager.register("food", createFoodPool(foodCapacity), {
+        bytesPerItem: 40
+      });
     }
 
     return this;
@@ -249,6 +278,7 @@ PS.pools = {
   },
   getStats: function() {
     this.ensure();
+    var managerStats = PS.poolManager.getStats();
 
     return {
       organismCapacity: this.organism.capacity,
@@ -258,7 +288,9 @@ PS.pools = {
       foodCapacity: this.food.capacity,
       activeFood: this.food.activeCount,
       freeFood: this.food.freeTop,
-      memoryBudgetMb: PS.config.pools.memoryBudgetMb
+      memoryBudgetMb: PS.config.pools.memoryBudgetMb,
+      pools: managerStats,
+      memory: managerStats.memory
     };
   }
 };

@@ -1,6 +1,9 @@
 
 function applyWorldSaveData(saveData) {
-  validateWorldSaveData(saveData);
+  var readySaveData = PS.systems.saveMigration.migrate(saveData);
+
+  validateWorldSaveData(readySaveData);
+  saveData = readySaveData;
   applySaveConfig(saveData.config);
 
   world.tick = Number(saveData.tick);
@@ -28,6 +31,9 @@ function applyWorldSaveData(saveData) {
   world.totalFoodHarvested = Math.max(0, Math.round(restoreNumber(saveData.totalFoodHarvested, 0)));
   world.seedText = normalizeSeedText(saveData.seedText);
   world.rngState = Math.max(1, Math.round(restoreNumber(saveData.rngState, hashSeedText(world.seedText)))) >>> 0;
+  world.prng = PS.core && typeof PS.core.createPRNG === "function"
+    ? PS.core.createPRNG(world.seedText + ":restored:" + world.rngState)
+    : null;
   restoreCameraState(saveData.camera);
   world.nextLineageId = Math.max(1, Math.round(restoreNumber(saveData.nextLineageId, 1)));
   world.nextSpeciesId = Math.max(1, Math.round(restoreNumber(saveData.nextSpeciesId, 1)));
@@ -186,6 +192,7 @@ function applyWorldSaveData(saveData) {
 
   drawWorld();
   updateHud();
+  return saveData;
 }
 
 function restoreCameraState(cameraState) {
@@ -211,9 +218,9 @@ function loadWorldFromIndexedDB() {
       request.onsuccess = function(event) {
         try {
           var saveData = event.target.result;
-          applyWorldSaveData(saveData);
+          var readySaveData = applyWorldSaveData(saveData);
           db.close();
-          resolve(saveData);
+          resolve(readySaveData);
         } catch (error) {
           db.close();
           reject(error);
@@ -260,8 +267,8 @@ function importWorldFromJsonFile(file) {
     reader.onload = function(event) {
       try {
         var saveData = JSON.parse(event.target.result);
-        applyWorldSaveData(saveData);
-        resolve(saveData);
+        var readySaveData = applyWorldSaveData(saveData);
+        resolve(readySaveData);
       } catch (error) {
         reject(error);
       }

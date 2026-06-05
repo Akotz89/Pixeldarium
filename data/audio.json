@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "music": {
+    "main_theme": {
+      "url": "assets/audio/music/silence.ogg",
+      "loop": true,
+      "loopStart": 0,
+      "loopEnd": 1,
+      "fadeMs": 1200
+    }
+  },
+  "ambient": {
+    "temperate": {
+      "url": "assets/audio/ambient/silence.ogg",
+      "loop": true,
+      "volume": 0.55
+    },
+    "forest": {
+      "url": "assets/audio/ambient/silence.ogg",
+      "loop": true,
+      "volume": 0.6
+    },
+    "grassland": {
+      "url": "assets/audio/ambient/silence.ogg",
+      "loop": true,
+      "volume": 0.5
+    },
+    "ocean": {
+      "url": "assets/audio/ambient/silence.ogg",
+      "loop": true,
+      "volume": 0.5
+    },
+    "desert": {
+      "url": "assets/audio/ambient/silence.ogg",
+      "loop": true,
+      "volume": 0.45
+    }
+  },
+  "sfx": {
+    "organism_birth": {
+      "url": "assets/audio/sfx/silence.ogg",
+      "volume": 0.45,
+      "event": "organism.born"
+    },
+    "settlement_founded": {
+      "url": "assets/audio/sfx/silence.ogg",
+      "volume": 0.7,
+      "event": "settlement.founded"
+    }
+  },
+  "events": {
+    "organism.born": "organism_birth",
+    "settlement.founded": "settlement_founded"
+  },
+  "biomes": {
+    "temperate": "temperate",
+    "forest": "forest",
+    "grassland": "grassland",
+    "ocean": "ocean",
+    "desert": "desert",
+    "wetland": "temperate",
+    "mountain": "temperate",
+    "tundra": "temperate",
+    "ice": "temperate",
+    "barren": "desert",
+    "volcanic": "desert"
+  }
+}

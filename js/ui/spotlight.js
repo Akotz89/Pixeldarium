@@ -28,7 +28,7 @@ PS.ui.spotlight = {
     }
 
     if (PS.events && typeof PS.events.on === "function") {
-      PS.events.on("milestone.reached", function(payload) {
+      PS.events.on(PS.events.types.MILESTONE_REACHED, function(payload) {
         if (payload && payload.watcher && payload.watcher.spotlight) {
           PS.ui.spotlight.show(payload);
         }

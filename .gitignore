@@ -1,6 +1,10 @@
 _reference/
 __pycache__/
 *.pyc
+node_modules/
+dist/
+.vite/
+tmp/
 
 # BMAD symlink (points to monorepo root _bmad/)
 _bmad

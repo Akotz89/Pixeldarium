@@ -2,7 +2,7 @@ const PIXELDARIUM_DB_NAME = "pixeldarium";
 const PIXELDARIUM_DB_VERSION = 1;
 const PIXELDARIUM_SAVE_STORE = "saves";
 const PIXELDARIUM_SAVE_ID = "latest";
-const PIXELDARIUM_SAVE_VERSION = 1;
+const PIXELDARIUM_SAVE_VERSION = 3;
 
 function openPixeldariumDatabase() {
   return new Promise(function(resolve, reject) {

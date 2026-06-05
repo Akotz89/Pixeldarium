@@ -36,6 +36,13 @@ Pixeldarium is a **planet-scale pixel simulation engine** inspired by the large-
 
 Pixeldarium uses a readable, simulation-first visual style: tiny pixel entities, layered terrain, zoom-dependent detail, and overlays that make emergent planetary history understandable at scale. The goal is not decorative complexity; it is clarity while thousands of systems move at once.
 
+## Optimization Model
+
+Pixeldarium's scale depends on authoritative aggregate state, chunk-aligned
+render/simulation boundaries, WebGL2 batched presentation, readiness-gated
+streaming, and representative local detail only where the watcher is focused.
+See [Optimization Operating Model](docs/optimization-operating-model.md).
+
 ---
 
 ## 🚀 Quick Start
@@ -128,8 +135,8 @@ Pixeldarium/
 ├── food.js                 # Food spawning & spatial indexing
 ├── organisms.js            # Organism lifecycle & traits
 ├── settlements.js          # Settlement → empire progression
-├── render.js               # All rendering (Canvas 2D → WebGL2)
-├── render-terrain-cache.js # Terrain chunk caching
+├── js/render/              # WebGL2 production rendering pipeline
+├── shaders/                # File-backed WebGL2 shaders
 ├── persistence.js          # IndexedDB save/load
 ├── ui.js                   # Menu, HUD, inspect panels
 ├── main.js                 # Game loop & initialization

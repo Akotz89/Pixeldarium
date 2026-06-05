@@ -1,0 +1,67 @@
+{
+  "seeds": [
+    {
+      "seed": "PIXEL-TEST-001",
+      "width": 200,
+      "height": 200,
+      "snapshot": {
+        "seed": "PIXEL-TEST-001",
+        "width": 200,
+        "height": 200,
+        "terrainDigest": "686002a0",
+        "organismCount": 24,
+        "foodCount": 420,
+        "biomeDistribution": {
+          "tundra": 6599,
+          "ice": 6700,
+          "ocean": 6657,
+          "desert": 6614,
+          "forest": 6747,
+          "grassland": 6683
+        }
+      }
+    },
+    {
+      "seed": "PIXEL-TEST-002",
+      "width": 100,
+      "height": 100,
+      "snapshot": {
+        "seed": "PIXEL-TEST-002",
+        "width": 100,
+        "height": 100,
+        "terrainDigest": "bef4037b",
+        "organismCount": 24,
+        "foodCount": 420,
+        "biomeDistribution": {
+          "grassland": 1670,
+          "forest": 1648,
+          "ocean": 1662,
+          "tundra": 1674,
+          "ice": 1671,
+          "desert": 1675
+        }
+      }
+    },
+    {
+      "seed": "PIXEL-TEST-003",
+      "width": 300,
+      "height": 300,
+      "snapshot": {
+        "seed": "PIXEL-TEST-003",
+        "width": 300,
+        "height": 300,
+        "terrainDigest": "5cbe73f7",
+        "organismCount": 24,
+        "foodCount": 420,
+        "biomeDistribution": {
+          "desert": 15048,
+          "tundra": 15082,
+          "ocean": 14900,
+          "forest": 15002,
+          "ice": 15273,
+          "grassland": 14695
+        }
+      }
+    }
+  ]
+}

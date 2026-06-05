@@ -41,6 +41,7 @@ const source = [
   "config.js",
   "js/core/config.js",
   "js/core/assert.js",
+  "js/core/event-types.js",
   "js/core/events.js"
 ].map(read).join("\n");
 

@@ -214,31 +214,7 @@ function syncLifecycleState() {
 }
 
 function seedWorld() {
-  clearWorld();
-  seedTerrain();
-
-  if (typeof buildTerrainCache === "function") {
-    buildTerrainCache();
-  }
-
-  var centerX = Math.floor(WORLD_WIDTH / 2);
-  var centerY = Math.floor(WORLD_HEIGHT / 2);
-
-  for (var i = 0; i < CONFIG.STARTING_ORGANISMS; i++) {
-    world.organisms.push(makeOrganism(
-      centerX + randomInt(41) - 20,
-      centerY + randomInt(41) - 20
-    ));
-  }
-
-  if (typeof refreshLineageRegistry === "function") {
-    refreshLineageRegistry();
-  }
-
-  for (var foodIndex = 0; foodIndex < CONFIG.STARTING_FOOD; foodIndex++) {
-    var position = randomFoodPosition();
-    addFoodAt(position.x, position.y);
-  }
+  PS.core.worldGen.generateWorld(world.seedText, CONFIG);
 
   if (PS.sim.representatives && typeof PS.sim.representatives.refresh === "function") {
     PS.sim.representatives.refresh();
@@ -302,6 +278,11 @@ function updateWorld(dt) {
 
   if (PS.sim.representatives && typeof PS.sim.representatives.refresh === "function" && shouldRefreshSummaries) {
     PS.sim.representatives.refresh();
+  }
+
+  // Update environmental modifiers periodically (AZR-493)
+  if (shouldRefreshSummaries && PS.traitRegistry && typeof PS.traitRegistry.updateEnvironmentalModifiers === "function") {
+    PS.traitRegistry.updateEnvironmentalModifiers();
   }
 
   tickProfile.organisms = performance.now() - profileStart;

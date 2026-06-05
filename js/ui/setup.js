@@ -3,6 +3,7 @@ window.setupControls = function() {
   var tabButtons = menuTabs.querySelectorAll("[data-menu-target]");
 
   prepareTouchInput();
+  registerSimulationInputActions();
 
   for (var tabIndex = 0; tabIndex < tabButtons.length; tabIndex++) {
     tabButtons[tabIndex].addEventListener("click", function(event) {
@@ -18,10 +19,18 @@ window.setupControls = function() {
     setMenuOpen(false);
   });
 
-  canvas.addEventListener("pointerdown", beginPlanetDrag);
-  window.addEventListener("pointermove", updatePlanetDrag);
-  window.addEventListener("pointerup", endPlanetDrag);
-  window.addEventListener("pointercancel", endPlanetDrag);
+  canvas.addEventListener("pointerdown", function(event) {
+    PS.input.handlePointer("pointer_down", event);
+  });
+  window.addEventListener("pointermove", function(event) {
+    PS.input.handlePointer("pointer_move", event);
+  });
+  window.addEventListener("pointerup", function(event) {
+    PS.input.handlePointer("pointer_up", event);
+  });
+  window.addEventListener("pointercancel", function(event) {
+    PS.input.handlePointer("pointer_cancel", event);
+  });
 
   canvas.addEventListener("click", function(event) {
     if (planetDragState.skipNextClick) {
@@ -41,13 +50,24 @@ window.setupControls = function() {
   });
 
   canvas.addEventListener("wheel", function(event) {
-    if (typeof event.preventDefault === "function") {
-      event.preventDefault();
-    }
-
-    var point = getCanvasPointFromEvent(event);
-    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25, point);
+    PS.input.handlePointer("wheel_zoom", event);
   }, { passive: false });
+
+  if (PS.ui && PS.ui.tooltip) {
+    PS.ui.tooltip.bindEntityHover(canvas, function(event) {
+      var tile = getTileFromCanvasEvent(event);
+      var entity = getInspectableEntityFromTile(tile.x, tile.y);
+
+      if (!entity) {
+        return null;
+      }
+
+      return {
+        title: entity.type === "settlement" || entity.type === "outpost" ? "Settlement" : (entity.type === "food" ? "Food" : "Organism"),
+        detail: "Tile " + tile.x + ", " + tile.y
+      };
+    });
+  }
 
   pauseButton.addEventListener("click", function() {
     toggleSimulationPaused();
@@ -116,20 +136,40 @@ window.setupControls = function() {
   syncMenuPage();
 
   restartButton.addEventListener("click", function() {
-    restartSimulationFromControls();
+    requestRestartSimulationFromControls();
   });
 
   document.addEventListener("keydown", handleSimulationShortcut);
+  document.addEventListener("keyup", function(event) {
+    if (PS.input && typeof PS.input.handleKeyUp === "function") {
+      PS.input.handleKeyUp(event);
+    }
+  });
 
   saveButton.addEventListener("click", function() {
-    setPersistenceStatus("SAVE: Saving...", false);
-    saveWorldToIndexedDB()
-      .then(function(saveData) {
-        setPersistenceStatus("SAVE: Saved tick " + saveData.tick, false);
+    var confirmSave = PS.ui && PS.ui.modal && typeof PS.ui.modal.confirm === "function"
+      ? PS.ui.modal.confirm({
+        title: "Save simulation",
+        message: "Save the current Pixeldarium state?",
+        confirmLabel: "Save",
+        cancelLabel: "Cancel"
       })
-      .catch(function(error) {
-        setPersistenceStatus("SAVE ERROR: " + error.message, true);
-      });
+      : Promise.resolve(true);
+
+    confirmSave.then(function(confirmed) {
+      if (!confirmed) {
+        return null;
+      }
+
+      setPersistenceStatus("SAVE: Saving...", false);
+      return saveWorldToIndexedDB()
+        .then(function(saveData) {
+          setPersistenceStatus("SAVE: Saved tick " + saveData.tick, false);
+        })
+        .catch(function(error) {
+          setPersistenceStatus("SAVE ERROR: " + error.message, true);
+        });
+    });
   });
 
   loadButton.addEventListener("click", function() {
@@ -179,6 +219,14 @@ window.setupControls = function() {
 
     if (PS.ui.panels) {
       PS.ui.panels.setup();
+    }
+
+    if (PS.ui.tooltip) {
+      PS.ui.tooltip.setup();
+    }
+
+    if (PS.ui.modal) {
+      PS.ui.modal.setup();
     }
 
     if (PS.ui.controls) {

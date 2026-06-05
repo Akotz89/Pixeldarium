@@ -9,7 +9,7 @@
 </head>
 <body>
   <main id="game-wrap">
-    <canvas id="game" width="1600" height="850"></canvas>
+    <canvas id="game-webgl" width="1600" height="850" aria-label="Pixeldarium simulation"></canvas>
     <button id="seed-copy-button" class="seed-copy-button" type="button">Seed</button>
     <div id="notification-toast" class="notification-toast" role="status" aria-live="polite" hidden></div>
     <section id="spotlight-panel" class="spotlight-panel" role="dialog" aria-label="Event spotlight" hidden>
@@ -115,7 +115,7 @@
           <span class="ecosystem-key flow">Food Net</span>
           <span class="ecosystem-key runway">Runway</span>
         </div>
-        <canvas id="ecosystem-history" width="900" height="72"></canvas>
+        <div id="ecosystem-history" class="history-sparkline" aria-label="Ecosystem history"></div>
       </div>
     </section>
 
@@ -148,7 +148,7 @@
         <span class="trait-key roam">Roam</span>
         <span class="trait-key habitat">Habitat</span>
       </div>
-      <canvas id="trait-history" width="900" height="92"></canvas>
+      <div id="trait-history" class="history-sparkline trait-history" aria-label="Trait history"></div>
     </section>
 
     <section id="event-panel" data-menu-page="log" aria-label="Simulation milestones" hidden>
@@ -186,6 +186,16 @@
     </aside>
   </main>
 
+  <section id="loading-screen" class="loading-screen" role="status" aria-live="polite">
+    <div class="loading-inner">
+      <h2>PIXELDARIUM</h2>
+      <div class="loading-bar" aria-hidden="true">
+        <div id="loading-progress-fill" class="loading-progress-fill"></div>
+      </div>
+      <div id="loading-progress-text" class="loading-progress-text">Loading... 0/0</div>
+    </div>
+  </section>
+
   <pre id="debug-output" style="position: fixed; left: 10px; bottom: 10px; max-width: 700px; max-height: 220px; overflow: auto; z-index: 9999; padding: 10px; background: rgba(120, 0, 0, 0.92); color: white; font: 13px monospace; border: 1px solid #ff9999; border-radius: 8px; display: none; text-align: left;"></pre>
 
   <script>
@@ -220,146 +230,8 @@
     });
   </script>
 
-  <!-- Core -->
+  <!-- Bootstrap -->
   <script src="js/core/namespace.js"></script>
-  <script src="config.js"></script>
-  <script src="js/core/config.js"></script>
-  <script src="js/core/events.js"></script>
-  <script src="js/core/math.js"></script>
-  <script src="js/core/assert.js"></script>
-  <script src="js/core/log.js"></script>
-  <script src="js/assets/registry.js"></script>
-
-  <!-- Systems -->
-  <script src="js/systems/state.js"></script>
-  <script src="js/systems/world.js"></script>
-  <script src="js/core/utils.js"></script>
-  <script src="js/core/world-grid.js"></script>
-  <script src="js/core/planet-metrics.js"></script>
-  <script src="js/systems/spatial.js"></script>
-  <script src="js/systems/pools.js"></script>
-  <script src="js/systems/persistence-db.js"></script>
-  <script src="js/systems/persistence-save-data.js"></script>
-  <script src="js/systems/persistence-restore-core.js"></script>
-  <script src="js/systems/persistence-restore-entities.js"></script>
-  <script src="js/systems/persistence-io.js"></script>
-  <script src="js/systems/persistence.js"></script>
-  <script src="js/systems/time.js"></script>
-  <script src="js/systems/deep-time.js"></script>
-
-  <!-- Rendering -->
-  <script src="js/render/planet-view.js"></script>
-  <script src="js/render/planet-surface.js"></script>
-  <script src="js/render/planet-grid.js"></script>
-  <script src="js/render/terrain-hydrology.js"></script>
-  <script src="js/render/terrain-seeding.js"></script>
-  <script src="js/render/terrain-cache-runtime.js"></script>
-  <script src="js/render/terrain-render-compat.js"></script>
-  <script src="js/render/pipeline-compat.js"></script>
-  <script src="js/render/gl.js"></script>
-  <script src="js/render/webgl-globe-shaders.js"></script>
-  <script src="js/render/webgl-globe.js"></script>
-  <script src="js/render/camera.js"></script>
-  <script src="js/render/lod.js"></script>
-  <script src="js/render/globe.js"></script>
-  <script src="js/render/projection.js"></script>
-  <script src="js/render/surface-address.js"></script>
-  <script src="js/render/surface-cache.js"></script>
-  <script src="js/render/surface-features.js"></script>
-  <script src="js/render/surface-feature-query.js"></script>
-  <script src="js/render/surface-noise.js"></script>
-  <script src="js/render/surface-geometry.js"></script>
-  <script src="js/render/surface-render-cache.js"></script>
-  <script src="js/render/surface-render-canvases.js"></script>
-  <script src="js/render/surface-render-chunks.js"></script>
-  <script src="js/render/surface-render-placeholders.js"></script>
-  <script src="js/render/surface-streaming.js"></script>
-  <script src="js/render/surface-render-work.js"></script>
-  <script src="js/render/raster.js"></script>
-  <script src="js/render/terrain.js"></script>
-  <script src="js/render/surface-landform.js"></script>
-  <script src="js/render/surface-imagery.js"></script>
-  <script src="js/render/surface-color.js"></script>
-  <script src="js/render/surface-texture.js"></script>
-  <script src="js/render/surface-patterns.js"></script>
-  <script src="js/render/surface-strata.js"></script>
-  <script src="js/render/surface-natural.js"></script>
-  <script src="js/render/surface-hydrology.js"></script>
-  <script src="js/render/surface-transitions.js"></script>
-  <script src="js/render/surface-material.js"></script>
-  <script src="js/render/surface-relief.js"></script>
-  <script src="js/render/surface-draw.js"></script>
-  <script src="js/render/entity-sprites.js"></script>
-  <script src="js/render/entities.js"></script>
-  <script src="js/render/entity-route-glyphs.js"></script>
-  <script src="js/render/entity-ecology-presence.js"></script>
-  <script src="js/render/entity-presence.js"></script>
-  <script src="js/render/reference-grid.js"></script>
-  <script src="js/render/overlays.js"></script>
-  <script src="js/render/observation-overlays.js"></script>
-  <script src="js/render/atmosphere.js"></script>
-  <script src="js/render/terrain-cache.js"></script>
-  <script src="js/render/pipeline.js"></script>
-
-  <!-- Simulation -->
-  <script src="js/sim/food-runtime.js"></script>
-  <script src="js/sim/food-growth.js"></script>
-  <script src="js/sim/food.js"></script>
-  <script src="js/sim/organisms-traits.js"></script>
-  <script src="js/sim/organisms-indexes.js"></script>
-  <script src="js/sim/organisms-behavior.js"></script>
-  <script src="js/sim/evolution.js"></script>
-  <script src="js/sim/organisms.js"></script>
-  <script src="js/sim/representatives.js"></script>
-  <script src="js/sim/settlements-state.js"></script>
-  <script src="js/sim/settlements-growth.js"></script>
-  <script src="js/sim/civilizations-orbital.js"></script>
-  <script src="js/sim/civilizations-probes.js"></script>
-  <script src="js/sim/civilizations-stars.js"></script>
-  <script src="js/sim/civilizations-empire.js"></script>
-  <script src="js/sim/settlements-founding.js"></script>
-  <script src="js/sim/settlements-routes.js"></script>
-  <script src="js/sim/settlements-runtime.js"></script>
-  <script src="js/sim/settlements.js"></script>
-  <script src="js/sim/civilizations.js"></script>
-
-  <!-- Epochs and layers -->
-  <script src="js/epochs/registry.js"></script>
-  <script src="js/epochs/primordial.js"></script>
-  <script src="js/epochs/microbial.js"></script>
-  <script src="js/layers/registry.js"></script>
-  <script src="js/layers/geology.js"></script>
-  <script src="js/layers/atmosphere.js"></script>
-
-  <!-- UI -->
-  <script src="js/ui/foundation.js"></script>
-  <script src="js/ui/summary.js"></script>
-  <script src="js/ui/history-summary.js"></script>
-  <script src="js/ui/inspect-history.js"></script>
-  <script src="js/ui/interaction.js"></script>
-  <script src="js/ui/touch.js"></script>
-  <script src="js/ui/spotlight.js"></script>
-  <script src="js/ui/observation-overlays.js"></script>
-  <script src="js/ui/timeline.js"></script>
-  <script src="js/ui/setup.js"></script>
-  <script src="js/ui/hud.js"></script>
-  <script src="js/ui/panels.js"></script>
-  <script src="js/ui/controls.js"></script>
-  <script src="js/ui/notifications.js"></script>
-
-  <!-- Debug -->
-  <script src="js/debug/performance.js"></script>
-  <script src="js/debug/console.js"></script>
-  <script src="js/debug/profiler.js"></script>
-  <script src="js/debug/overlays.js"></script>
-  <script src="js/debug/inspector.js"></script>
-
-  <!-- Entry point -->
-  <script src="js/main-runtime.js"></script>
-  <script src="js/main-ecosystem-stability.js"></script>
-  <script src="js/main-ecosystem-summary.js"></script>
-  <script src="js/main-simulation.js"></script>
-  <script src="js/main-loop.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/core/loader.js"></script>
 </body>
 </html>

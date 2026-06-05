@@ -10,9 +10,17 @@
 | [Save Format](save-format.md) | `docs/save-format.md` | Persistence schema version 1 |
 | [Legacy UI Assessment](legacy-ui-assessment.md) | `docs/legacy-ui-assessment.md` | Completed UI runtime shard retirement record |
 | [Legacy Runtime Assessment](legacy-runtime-assessment.md) | `docs/legacy-runtime-assessment.md` | AZR-352 non-UI legacy runtime inventory and migration decisions |
+| [Architecture](ARCHITECTURE.md) | `docs/ARCHITECTURE.md` | AZR-585 current runtime architecture, data flow, initialization order, and optimization boundaries |
+| [Rendering](RENDERING.md) | `docs/RENDERING.md` | AZR-586 current WebGL2 rendering pipeline, coordinate systems, zoom bands, atlas, shaders, and frame budget |
+| [Visual Quality Gate](visual-quality-gate.md) | `docs/visual-quality-gate.md` | AZR-364 Google-Earth smoothness and Songs-of-Syx-style simulation readability checklist |
 | [Biological Model Decision](biological-model-decision.md) | `docs/biological-model-decision.md` | AZR-361 aggregate population and representative organism model gate |
+| [Optimization Operating Model](optimization-operating-model.md) | `docs/optimization-operating-model.md` | Scale-first rendering/simulation rules derived from the YouTube deep-dive analysis |
+| [Optimization Implementation Gate](optimization-implementation-gate.md) | `docs/optimization-implementation-gate.md` | AZR-637 implementation handoff gate for rendering, streaming, performance, mass-simulation, and observation work |
 | [Phase 2 Readiness](phase-2-readiness.md) | `docs/phase-2-readiness.md` | AZR-353 reconciliation of GDD, Linear Phase 2 stories, and current repo evidence |
 | [Agent Studio Handoff](agent-studio-handoff.md) | `docs/agent-studio-handoff.md` | Runtime-safe contract for accepting outputs from the private Pixeldarium Agent Studio repo |
+| [Top-Down Simulation Art Contract](top-down-simulation-art-contract.md) | `docs/top-down-simulation-art-contract.md` | Pointer to the Agent Studio art bible controlling Songs-of-Syx-quality map-view art |
+| [Agent Studio Pipeline](agent-studio-pipeline.md) | `docs/agent-studio-pipeline.md` | Agent Studio Pipeline lane and tool configurations |
+| [Agent Studio Research](agent-studio-research.md) | `docs/agent-studio-research.md` | Technical research on Blender, Aseprite, ComfyUI, Playwright, and FFmpeg interop |
 
 ## Planning Artifacts
 

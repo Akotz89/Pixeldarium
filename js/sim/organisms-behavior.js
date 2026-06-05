@@ -139,8 +139,17 @@ function reproduceIfReady(organism) {
   child.prevY = child.y;
   world.organisms.push(child);
 
+  // Register child in tile grid (AZR-491)
+  if (PS.tileGrid && PS.tileGrid.grid) {
+    PS.tileGrid.insert(child);
+  }
+
   if (typeof recordOrganismBirth === "function") {
     recordOrganismBirth(1);
+  }
+
+  if (PS.render && PS.render.particles && typeof PS.render.particles.emitBirthSparkle === "function") {
+    PS.render.particles.emitBirthSparkle(child);
   }
 }
 
@@ -242,6 +251,12 @@ function updatePooledOrganismsForTick(organismsAtStartOfTick) {
         arrays.x[pooledIndex] = nextX;
         arrays.y[pooledIndex] = nextY;
         assignRandomSurfacePositionInTile(pooledOrganism);
+
+        // Update tile grid after position change (AZR-491)
+        if (PS.tileGrid && PS.tileGrid.grid) {
+          PS.tileGrid.move(pooledOrganism, x, y);
+        }
+
         x = nextX;
         y = nextY;
       }
@@ -284,10 +299,19 @@ function moveOrganismByTravelBudget(organism) {
   }
 
   organism.travelKm -= requiredTravelKm;
+
+  var oldX = organism.x;
+  var oldY = organism.y;
   organism.x = nextX;
   organism.y = nextY;
   clampToWorld(organism);
   assignRandomSurfacePositionInTile(organism);
+
+  // Update tile grid after position change (AZR-491)
+  if (PS.tileGrid && PS.tileGrid.grid) {
+    PS.tileGrid.move(organism, oldX, oldY);
+  }
+
   return true;
 }
 
@@ -306,9 +330,15 @@ function removeDeadOrganisms() {
       world.organisms[writeIndex] = organism;
       writeIndex++;
     } else {
-      if (PS.pools && PS.pools.organism) {
-        PS.pools.organism.release(organism);
+      if (PS.pools && PS.pools.organism && PS.poolManager) {
+        PS.poolManager.release("organisms", organism);
       }
+
+      // Remove from tile grid (AZR-491)
+      if (PS.tileGrid && PS.tileGrid.grid) {
+        PS.tileGrid.remove(organism);
+      }
+
       removedCount++;
     }
   }
@@ -337,7 +367,13 @@ function removeDeadPooledOrganisms() {
       world.organisms[writeIndex] = organism;
       writeIndex++;
     } else {
-      PS.pools.organism.release(organism);
+      PS.poolManager.release("organisms", organism);
+
+      // Remove from tile grid (AZR-491)
+      if (PS.tileGrid && PS.tileGrid.grid) {
+        PS.tileGrid.remove(organism);
+      }
+
       removedCount++;
     }
   }
@@ -356,8 +392,13 @@ function trimOrganismPopulation() {
     var trimmedCount = world.organisms.length - CONFIG.MAX_ORGANISMS;
 
     for (var i = CONFIG.MAX_ORGANISMS; i < world.organisms.length; i++) {
-      if (PS.pools && PS.pools.organism) {
-        PS.pools.organism.release(world.organisms[i]);
+      if (PS.pools && PS.pools.organism && PS.poolManager) {
+        PS.poolManager.release("organisms", world.organisms[i]);
+      }
+
+      // Remove from tile grid (AZR-491)
+      if (PS.tileGrid && PS.tileGrid.grid) {
+        PS.tileGrid.remove(world.organisms[i]);
       }
     }
 

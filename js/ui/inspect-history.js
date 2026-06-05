@@ -74,83 +74,22 @@ function scaleTraitValue(value, minValue, maxValue, height) {
 }
 
 function drawTraitHistoryLine(samples, getValue, minValue, maxValue, color, chart) {
-  if (samples.length === 0) {
-    return;
-  }
-
-  traitHistoryCtx.strokeStyle = color;
-  traitHistoryCtx.fillStyle = color;
-  traitHistoryCtx.lineWidth = 2;
-  traitHistoryCtx.beginPath();
-
-  for (var i = 0; i < samples.length; i++) {
-    var x = chart.x;
-
-    if (samples.length > 1) {
-      x += (i / (samples.length - 1)) * chart.width;
-    }
-
-    var y = chart.y + scaleTraitValue(getValue(samples[i]), minValue, maxValue, chart.height);
-
-    if (i === 0) {
-      traitHistoryCtx.moveTo(x, y);
-    } else {
-      traitHistoryCtx.lineTo(x, y);
-    }
-  }
-
-  traitHistoryCtx.stroke();
-
-  if (samples.length === 1) {
-    traitHistoryCtx.beginPath();
-    traitHistoryCtx.arc(chart.x, chart.y + scaleTraitValue(getValue(samples[0]), minValue, maxValue, chart.height), 3, 0, Math.PI * 2);
-    traitHistoryCtx.fill();
-  }
+  return null;
 }
 
 function drawTraitHistory() {
-  var width = traitHistoryCanvas.width;
-  var height = traitHistoryCanvas.height;
-  var chart = {
-    x: 10,
-    y: 8,
-    width: width - 20,
-    height: height - 16
-  };
+  var samples = Array.isArray(world.traitHistory) ? world.traitHistory : [];
+  var latest = samples.length ? samples[samples.length - 1] : null;
 
-  traitHistoryCtx.clearRect(0, 0, width, height);
-  traitHistoryCtx.fillStyle = "rgba(5, 6, 10, 0.86)";
-  traitHistoryCtx.fillRect(0, 0, width, height);
-  traitHistoryCtx.strokeStyle = "rgba(255, 255, 255, 0.10)";
-  traitHistoryCtx.lineWidth = 1;
-
-  for (var i = 0; i <= 3; i++) {
-    var y = chart.y + (i / 3) * chart.height;
-    traitHistoryCtx.beginPath();
-    traitHistoryCtx.moveTo(chart.x, y);
-    traitHistoryCtx.lineTo(chart.x + chart.width, y);
-    traitHistoryCtx.stroke();
+  if (!traitHistoryCanvas) {
+    return;
   }
 
-  drawTraitHistoryLine(world.traitHistory, function(sample) {
-    return sample.vision;
-  }, CONFIG.TRAIT_VISION_MIN, CONFIG.TRAIT_VISION_MAX, "#72d7ff", chart);
-
-  drawTraitHistoryLine(world.traitHistory, function(sample) {
-    return sample.metabolism;
-  }, CONFIG.TRAIT_METABOLISM_MIN, CONFIG.TRAIT_METABOLISM_MAX, "#ff9c69", chart);
-
-  drawTraitHistoryLine(world.traitHistory, function(sample) {
-    return sample.reproductionEnergy;
-  }, CONFIG.TRAIT_REPRODUCTION_ENERGY_MIN, CONFIG.TRAIT_REPRODUCTION_ENERGY_MAX, "#fff26b", chart);
-
-  drawTraitHistoryLine(world.traitHistory, function(sample) {
-    return sample.movementTendency;
-  }, CONFIG.TRAIT_MOVEMENT_TENDENCY_MIN, CONFIG.TRAIT_MOVEMENT_TENDENCY_MAX, "#c884ff", chart);
-
-  drawTraitHistoryLine(world.traitHistory, function(sample) {
-    return sample.terrainAffinity;
-  }, CONFIG.TRAIT_TERRAIN_AFFINITY_MIN, CONFIG.TRAIT_TERRAIN_AFFINITY_MAX, "#70f0d0", chart);
+  traitHistoryCanvas.textContent = latest
+    ? "TRAIT HISTORY: vision " + Number(latest.vision || 0).toFixed(1) +
+      " metabolism " + Number(latest.metabolism || 0).toFixed(1) +
+      " reproduce " + Number(latest.reproductionEnergy || 0).toFixed(0)
+    : "TRAIT HISTORY: Waiting for samples";
 }
 
 function updateInspectPanel() {

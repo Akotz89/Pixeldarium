@@ -27,6 +27,7 @@ const source = [
   "config.js",
   "js/core/config.js",
   "js/core/assert.js",
+  "js/core/event-types.js",
   "js/core/events.js",
   "js/epochs/registry.js",
   "js/layers/registry.js",
@@ -96,7 +97,7 @@ assert.deepStrictEqual(exited, ["microbial"], "previous epoch exit hook should r
 assert.deepStrictEqual(entered, ["primordial"], "next epoch enter hook should receive previous id");
 
 var receivedPayload = null;
-PS.events.on("milestone.reached", function(payload) {
+PS.events.on(PS.eventTypes.MILESTONE_REACHED, function(payload) {
   receivedPayload = payload;
 });
 

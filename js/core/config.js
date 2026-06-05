@@ -14,6 +14,8 @@ PS.config.sim = {
   updateIntervalMs: CONFIG.SIM_UPDATE_INTERVAL_MS,
   fixedDeltaMs: CONFIG.SIM_UPDATE_INTERVAL_MS,
   maxUpdatesPerFrame: CONFIG.MAX_SIM_UPDATES_PER_FRAME,
+  frameBudgetMs: CONFIG.FRAME_BUDGET_MS,
+  frameBudgetHistoryLimit: CONFIG.FRAME_BUDGET_HISTORY_LIMIT,
   hudUpdateIntervalMs: CONFIG.HUD_UPDATE_INTERVAL_MS,
   daysPerTick: CONFIG.SIM_DAYS_PER_TICK,
   ticksPerUpdate: CONFIG.TICKS_PER_SIM_UPDATE,

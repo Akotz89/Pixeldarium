@@ -1,0 +1,515 @@
+PS.render = PS.render || {};
+PS.render.entityWebgl = PS.render.entityWebgl || {};
+
+PS.render.entityWebgl.strideFloats = 13;
+
+PS.render.entityWebgl.state = {
+  canvas: null,
+  gl: null,
+  target: null,
+  program: null,
+  quadBuffer: null,
+  instanceBuffer: null,
+  textures: {},
+  textureOrder: [],
+  locations: null,
+  instanceData: null,
+  animationFrames: null,
+  drawCount: 0,
+  instanceDrawCount: 0,
+  organismDrawCount: 0,
+  foodDrawCount: 0,
+  pageDrawCount: 0,
+  textureUploadCount: 0,
+  traitSpriteCount: 0,
+  fallbackCount: 0,
+  culledCount: 0,
+  cappedCount: 0,
+  lastFrameMs: 0,
+  lastError: ""
+};
+
+PS.render.entityWebgl.shaderName = "entity-atlas";
+
+PS.render.entityWebgl.getMaxInstances = function () {
+  return Math.max(1, Math.floor(Number(CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES) || 8192));
+};
+
+PS.render.entityWebgl.ensureCanvas = function (width, height) {
+  var target = PS.render.webglEngine && PS.render.webglEngine.ensureTarget
+    ? PS.render.webglEngine.ensureTarget("entities", width, height, { alpha: true })
+    : null;
+
+  if (!target) {
+    return false;
+  }
+
+  PS.render.entityWebgl.state.target = target;
+  PS.render.entityWebgl.state.canvas = target.canvas;
+  PS.render.entityWebgl.state.gl = target.gl;
+  return true;
+};
+
+PS.render.entityWebgl.ensureAtlas = function () {
+  if (PS.atlas && !PS.atlas.initialized && typeof PS.atlas.init === "function") {
+    PS.atlas.init();
+  }
+
+  return Boolean(PS.atlas && PS.atlas.pages && PS.atlas.pages.length > 0);
+};
+
+PS.render.entityWebgl.initialize = function (width, height) {
+  var state = PS.render.entityWebgl.state;
+
+  if (
+    CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false ||
+    !PS.render.entityWebgl.ensureCanvas(width, height) ||
+    !PS.render.entityWebgl.ensureAtlas()
+  ) {
+    return false;
+  }
+
+  if (!state.gl) {
+    return false;
+  }
+
+  if (!state.program) {
+    var gl = state.gl;
+    var stride = PS.render.entityWebgl.strideFloats * Float32Array.BYTES_PER_ELEMENT;
+
+    state.program = PS.render.shaderManager.getProgram(gl, PS.render.entityWebgl.shaderName);
+    state.quadBuffer = PS.render.webglEngine.ensureBuffer(state.target, "entity-quad");
+    state.instanceBuffer = PS.render.webglEngine.ensureBuffer(state.target, "entity-instances");
+    state.locations = {
+      corner: gl.getAttribLocation(state.program, "a_corner"),
+      center: gl.getAttribLocation(state.program, "a_center"),
+      size: gl.getAttribLocation(state.program, "a_size"),
+      uvRect: gl.getAttribLocation(state.program, "a_uvRect"),
+      tint: gl.getAttribLocation(state.program, "a_tint"),
+      flipH: gl.getAttribLocation(state.program, "a_flipH"),
+      canvasSize: gl.getUniformLocation(state.program, "u_canvasSize"),
+      atlas: gl.getUniformLocation(state.program, "u_atlas"),
+      stride: stride
+    };
+    PS.render.webglEngine.updateBuffer(state.target, "entity-quad", new Float32Array([
+      -0.5, -0.5,
+      0.5, -0.5,
+      -0.5, 0.5,
+      0.5, 0.5
+    ]), gl.STATIC_DRAW);
+  }
+
+  if (!state.instanceData || state.instanceData.length < PS.render.entityWebgl.getMaxInstances() * PS.render.entityWebgl.strideFloats) {
+    state.instanceData = new Float32Array(PS.render.entityWebgl.getMaxInstances() * PS.render.entityWebgl.strideFloats);
+  }
+
+  return true;
+};
+
+PS.render.entityWebgl.parseColor = function (hexColor, alpha) {
+  var color = String(hexColor || "#ffffff").replace("#", "");
+
+  if (color.length !== 6) {
+    return [1, 1, 1, Number.isFinite(Number(alpha)) ? Number(alpha) : 1];
+  }
+
+  return [
+    parseInt(color.slice(0, 2), 16) / 255,
+    parseInt(color.slice(2, 4), 16) / 255,
+    parseInt(color.slice(4, 6), 16) / 255,
+    Number.isFinite(Number(alpha)) ? Number(alpha) : 1
+  ];
+};
+
+PS.render.entityWebgl.getOrganismCell = function (organism) {
+  var traits = organism && organism.traits ? organism.traits : {};
+  var bodyType = Math.max(0, Math.min(3, Math.floor((Number(traits.bodySize) || 1) * 1.5)));
+  var variant = PS.ranmap
+    ? PS.ranmap.variant(Math.round(organism.x || 0), Math.round(organism.y || 0), 4)
+    : 0;
+
+  if (PS.atlas && typeof PS.atlas.getTraitOrganismCell === "function") {
+    return PS.atlas.getTraitOrganismCell(organism, variant);
+  }
+
+  return PS.atlas.getOrganismCell(bodyType, variant);
+};
+
+PS.render.entityWebgl.getAnimatedOrganismCell = function (organism, dt, frameOverride) {
+  var traits = organism && organism.traits ? organism.traits : {};
+  var bodyType = Math.max(0, Math.min(3, Math.floor((Number(traits.bodySize) || 1) * 1.5)));
+  var frame = frameOverride || (PS.animation && typeof PS.animation.getVisibleOrganismFrame === "function"
+    ? PS.animation.getVisibleOrganismFrame(organism, dt)
+    : null);
+  var frameVariant = 0;
+  var cell = frame && PS.atlas ? PS.atlas.getCell(frame) : null;
+  var bodyFrame;
+
+  if (frame) {
+    frameVariant = Math.max(0, Math.min(3, Math.round(Number(String(frame).split(".").pop()) || 0)));
+  }
+
+  if (PS.atlas && typeof PS.atlas.getTraitOrganismCell === "function") {
+    return PS.atlas.getTraitOrganismCell(organism, frameVariant);
+  }
+
+  if (cell) {
+    return cell;
+  }
+
+  if (frame && frame.indexOf("entity.organism_") === 0) {
+    bodyFrame = frame.replace(/entity\.organism_\d+\./, "entity.organism_" + bodyType + ".");
+    cell = PS.atlas.getCell(bodyFrame);
+    if (cell) {
+      return cell;
+    }
+  }
+
+  return PS.render.entityWebgl.getOrganismCell(organism);
+};
+
+PS.render.entityWebgl.getFoodCell = function (food) {
+  var variant = PS.ranmap
+    ? PS.ranmap.variant(Math.round(food.x || 0), Math.round(food.y || 0), 4)
+    : 0;
+
+  return PS.atlas.getFoodCell(variant);
+};
+
+PS.render.entityWebgl.getTexture = function (pageIndex) {
+  var state = PS.render.entityWebgl.state;
+  var gl = state.gl;
+  var page = PS.atlas.pages[pageIndex];
+
+  if (!page || !PS.render.webglEngine) {
+    return null;
+  }
+
+  if (!page.data || !PS.render.webglEngine.getRgbaTexture) {
+    return null;
+  }
+
+  var texture = PS.render.webglEngine.getRgbaTexture(
+    "entity-atlas",
+    gl,
+    pageIndex + ":" + (page.version || 0),
+    page.width,
+    page.height,
+    page.data,
+    8
+  );
+  state.textures = texture.cache.textures;
+  state.textureOrder = texture.cache.order;
+
+  if (texture.uploaded) {
+    state.textureUploadCount++;
+  }
+
+  return texture.texture;
+};
+
+PS.render.entityWebgl.createBatches = function () {
+  return {
+    pages: {},
+    count: 0,
+    organisms: 0,
+    food: 0,
+    capped: 0,
+    culled: 0
+  };
+};
+
+PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH, kind) {
+  var maxInstances = PS.render.entityWebgl.getMaxInstances();
+  var width = PS.render.entityWebgl.state.target.width;
+  var height = PS.render.entityWebgl.state.target.height;
+  var drawSize = Math.max(1, Number(size) || 1);
+  var margin = drawSize + 2;
+  var alpha = point && Number.isFinite(Number(point.visibility)) ? clamp(Number(point.visibility), 0, 1) : 1;
+
+  if (!cell || !point || alpha <= 0) {
+    batches.culled++;
+    return;
+  }
+
+  if (point.visible === false || point.x < -margin || point.y < -margin || point.x > width + margin || point.y > height + margin) {
+    batches.culled++;
+    return;
+  }
+
+  if (batches.count >= maxInstances) {
+    batches.capped++;
+    return;
+  }
+
+  var pageIndex = cell.pageIndex || 0;
+  var page = batches.pages[pageIndex];
+
+  if (!page) {
+    page = [];
+    batches.pages[pageIndex] = page;
+  }
+
+  page.push(
+    point.x,
+    point.y,
+    drawSize,
+    drawSize,
+    cell.u0,
+    cell.v0,
+    cell.u1,
+    cell.v1,
+    tint[0],
+    tint[1],
+    tint[2],
+    tint[3] * alpha,
+    flipH ? 1 : 0
+  );
+  batches.count++;
+
+  if (kind === "food") {
+    batches.food++;
+  } else {
+    batches.organisms++;
+  }
+};
+
+PS.render.entityWebgl.buildOrganismBatches = function (interpolation) {
+  var batches = PS.render.entityWebgl.createBatches();
+  var amount = PS.render.entities.getInterpolationAmount(interpolation);
+  var animationStart = performance.now();
+  var animationLimit = PS.animation && PS.animation.stats
+    ? Math.max(0, Math.floor(Number(PS.animation.stats.maxVisibleControllers) || 5000))
+    : 0;
+  var animationDt = PS.time && Number.isFinite(Number(PS.time.dt)) ? PS.time.dt : 1 / 60;
+  var animationFrames = PS.render.entityWebgl.state.animationFrames;
+
+  if (!PS.render.entityWebgl.state.target && typeof canvas !== "undefined") {
+    PS.render.entityWebgl.initialize(canvas.width, canvas.height);
+  }
+
+  if (!PS.render.entityWebgl.state.target) {
+    batches.culled = typeof world !== "undefined" && Array.isArray(world.organisms) ? world.organisms.length : 0;
+    return batches;
+  }
+
+  if (PS.animation && typeof PS.animation.resetFrameStats === "function") {
+    PS.animation.resetFrameStats();
+  }
+
+  if (!animationFrames || animationFrames.length < world.organisms.length) {
+    animationFrames = new Array(world.organisms.length);
+    PS.render.entityWebgl.state.animationFrames = animationFrames;
+  }
+
+  if (PS.animation && typeof PS.animation.updateVisibleOrganismFrames === "function" && !world.isPaused) {
+    PS.animation.updateVisibleOrganismFrames(
+      world.organisms,
+      Math.min(world.organisms.length, animationLimit),
+      animationDt,
+      animationFrames
+    );
+  }
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var point = PS.render.entities.getRenderPosition(organism, amount);
+    var size = Math.max(1, CONFIG.ORGANISM_DRAW_SIZE * ((point && point.scale) || 1));
+    var tint = PS.render.entityWebgl.parseColor(PS.render.entities.getOrganismColor(organism), 1);
+    var flipH = PS.ranmap && PS.ranmap.flipH(Math.round(organism.x || 0), Math.round(organism.y || 0));
+    var cell = PS.render.entityWebgl.getOrganismCell(organism);
+
+    if (
+      PS.animation &&
+      i < animationLimit &&
+      point &&
+      point.visible !== false &&
+      !world.isPaused
+    ) {
+      cell = PS.render.entityWebgl.getAnimatedOrganismCell(organism, animationDt, animationFrames[i]);
+    }
+
+    PS.render.entityWebgl.submit(
+      batches,
+      cell,
+      point,
+      size,
+      tint,
+      flipH,
+      "organism"
+    );
+  }
+
+  if (PS.animation && PS.animation.stats && PS.animation.stats.lastUpdateMs <= 0) {
+    PS.animation.stats.lastUpdateMs = performance.now() - animationStart;
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.buildFoodBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+  var tint = PS.render.entityWebgl.parseColor("#58f06c", 1);
+
+  for (var i = 0; i < world.food.length; i++) {
+    var food = world.food[i];
+    var point = PS.render.entities.getRenderPosition(food, 1);
+    var size = Math.max(1, CONFIG.FOOD_DRAW_SIZE * ((point && point.scale) || 1));
+    var flipH = PS.ranmap && PS.ranmap.flipH(Math.round(food.x || 0), Math.round(food.y || 0));
+
+    PS.render.entityWebgl.submit(
+      batches,
+      PS.render.entityWebgl.getFoodCell(food),
+      point,
+      size,
+      tint,
+      flipH,
+      "food"
+    );
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.configureAttributes = function () {
+  var state = PS.render.entityWebgl.state;
+  var gl = state.gl;
+  var loc = state.locations;
+  var floatSize = Float32Array.BYTES_PER_ELEMENT;
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, state.quadBuffer);
+  gl.enableVertexAttribArray(loc.corner);
+  gl.vertexAttribPointer(loc.corner, 2, gl.FLOAT, false, 2 * floatSize, 0);
+  gl.vertexAttribDivisor(loc.corner, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer);
+  gl.enableVertexAttribArray(loc.center);
+  gl.vertexAttribPointer(loc.center, 2, gl.FLOAT, false, loc.stride, 0);
+  gl.vertexAttribDivisor(loc.center, 1);
+  gl.enableVertexAttribArray(loc.size);
+  gl.vertexAttribPointer(loc.size, 2, gl.FLOAT, false, loc.stride, 2 * floatSize);
+  gl.vertexAttribDivisor(loc.size, 1);
+  gl.enableVertexAttribArray(loc.uvRect);
+  gl.vertexAttribPointer(loc.uvRect, 4, gl.FLOAT, false, loc.stride, 4 * floatSize);
+  gl.vertexAttribDivisor(loc.uvRect, 1);
+  gl.enableVertexAttribArray(loc.tint);
+  gl.vertexAttribPointer(loc.tint, 4, gl.FLOAT, false, loc.stride, 8 * floatSize);
+  gl.vertexAttribDivisor(loc.tint, 1);
+  gl.enableVertexAttribArray(loc.flipH);
+  gl.vertexAttribPointer(loc.flipH, 1, gl.FLOAT, false, loc.stride, 12 * floatSize);
+  gl.vertexAttribDivisor(loc.flipH, 1);
+};
+
+PS.render.entityWebgl.drawBatches = function (batches) {
+  var state = PS.render.entityWebgl.state;
+  var startedAt = performance.now();
+
+  try {
+    if (!batches || batches.count <= 0 || !PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+      state.fallbackCount++;
+      return false;
+    }
+
+    var gl = state.gl;
+    var loc = state.locations;
+    var drawnInstances = 0;
+    var pageDraws = 0;
+
+    PS.render.webglEngine.beginTransparentPass(state.target);
+    gl.useProgram(state.program);
+    gl.uniform2f(loc.canvasSize, state.target.width, state.target.height);
+    gl.uniform1i(loc.atlas, 0);
+    PS.render.entityWebgl.configureAttributes();
+
+    Object.keys(batches.pages).forEach(function (pageIndex) {
+      var pageData = batches.pages[pageIndex];
+      var instanceCount = Math.floor(pageData.length / PS.render.entityWebgl.strideFloats);
+      var texture = PS.render.entityWebgl.getTexture(pageIndex);
+
+      if (!texture || instanceCount <= 0) {
+        return;
+      }
+
+      state.instanceData.set(pageData, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      PS.render.webglEngine.updateBuffer(
+        state.target,
+        "entity-instances",
+        state.instanceData.subarray(0, pageData.length),
+        gl.STREAM_DRAW
+      );
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount);
+      drawnInstances += instanceCount;
+      pageDraws++;
+    });
+
+    if (drawnInstances <= 0) {
+      state.fallbackCount++;
+      return false;
+    }
+
+    if (PS.render.webglPresenter && typeof PS.render.webglPresenter.presentTarget === "function") {
+      PS.render.webglPresenter.presentTarget(state.target);
+    }
+    state.drawCount++;
+    state.instanceDrawCount = drawnInstances;
+    state.organismDrawCount = batches.organisms;
+    state.foodDrawCount = batches.food;
+    state.pageDrawCount = pageDraws;
+    state.culledCount = batches.culled;
+    state.cappedCount = batches.capped;
+    state.traitSpriteCount = PS.atlas && PS.atlas.stats ? PS.atlas.stats.traitCells : 0;
+    state.lastFrameMs = performance.now() - startedAt;
+    state.lastError = "";
+    return true;
+  } catch (error) {
+    state.fallbackCount++;
+    state.lastError = String(error && error.message ? error.message : error);
+    return false;
+  }
+};
+
+PS.render.entityWebgl.drawOrganisms = function (interpolation) {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildOrganismBatches(interpolation));
+};
+
+PS.render.entityWebgl.drawFood = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildFoodBatches());
+};
+
+PS.render.entityWebgl.rebuildShaders = function () {
+  var state = PS.render.entityWebgl.state;
+  state.program = null;
+  state.quadBuffer = null;
+  state.instanceBuffer = null;
+  state.locations = null;
+};
+
+PS.render.entityWebgl.rebuildTextures = function () {
+  var state = PS.render.entityWebgl.state;
+  var cache = PS.render.webglEngine && PS.render.webglEngine.deleteTextureCache
+    ? PS.render.webglEngine.deleteTextureCache("entity-atlas", state.gl)
+    : { textures: {}, order: [] };
+
+  state.textures = cache.textures;
+  state.textureOrder = cache.order;
+};

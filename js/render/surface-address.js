@@ -3,18 +3,33 @@ PS.render.surface = PS.render.surface || {};
 
 PS.render.surface.getLocalAddress = function (gridX, gridY) {
   var scale = getPlanetViewScale();
-  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
-  var eastMeters = viewMeters.eastMeters + (gridX - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample;
-  var northMeters = viewMeters.northMeters - (gridY - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample;
-  var latLon = getLatLonFromSurfaceMeterCoordinate(eastMeters, northMeters);
+  var screenX = (Number(gridX) + 0.5) * CONFIG.TILE_SIZE;
+  var screenY = (Number(gridY) + 0.5) * CONFIG.TILE_SIZE;
+  var meters = PS.camera && PS.camera.unified
+    ? PS.camera.unified.screenToSurfaceMeters(screenX, screenY)
+    : null;
+  var viewMeters = PS.camera && PS.camera.unified
+    ? PS.camera.unified.getCenterSurfaceMeters()
+    : getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+  var latLon = meters
+    ? PS.camera.unified.getLatLonFromSurfaceMeters(meters.eastMeters, meters.northMeters)
+    : getLatLonFromSurfaceMeterCoordinate(viewMeters.eastMeters, viewMeters.northMeters);
+
+  if (!meters) {
+    meters = {
+      eastMeters: viewMeters.eastMeters + (Number(gridX) - WORLD_WIDTH / 2 + 0.5) * scale.metersPerSample,
+      northMeters: viewMeters.northMeters - (Number(gridY) - WORLD_HEIGHT / 2 + 0.5) * scale.metersPerSample
+    };
+    latLon = getLatLonFromSurfaceMeterCoordinate(meters.eastMeters, meters.northMeters);
+  }
 
   return {
     latitude: latLon.latitude,
     longitude: latLon.longitude,
-    eastKm: (eastMeters - viewMeters.eastMeters) / 1000,
-    northKm: (northMeters - viewMeters.northMeters) / 1000,
-    eastMeters: eastMeters,
-    northMeters: northMeters,
+    eastKm: (meters.eastMeters - viewMeters.eastMeters) / 1000,
+    northKm: (meters.northMeters - viewMeters.northMeters) / 1000,
+    eastMeters: meters.eastMeters,
+    northMeters: meters.northMeters,
     address: PS.render.surface.getSampleAddress(latLon.latitude, latLon.longitude)
   };
 };
@@ -105,14 +120,25 @@ PS.render.surface.getChunkLineageLabel = function (lineage) {
 PS.render.surface.getChunkScreenRect = function (address) {
   var currentScale = getPlanetViewScale();
   var samplePixelSize = CONFIG.TILE_SIZE * (address.sampleMeters / Math.max(0.1, currentScale.metersPerSample));
-  var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
   var minEastMeters = address.sampleEast * address.sampleMeters;
   var maxNorthMeters = (address.sampleNorth + address.chunkSamples) * address.sampleMeters;
   var sizePixels = address.chunkSamples * samplePixelSize;
+  var screenPoint = PS.camera && PS.camera.unified
+    ? PS.camera.unified.surfaceMetersToScreen(minEastMeters, maxNorthMeters)
+    : null;
+
+  if (!screenPoint) {
+    var viewMeters = getSurfaceMeterCoordinate(getPlanetView().latitude, getPlanetView().longitude);
+
+    screenPoint = {
+      screenX: canvas.width / 2 + ((minEastMeters - viewMeters.eastMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
+      screenY: canvas.height / 2 - ((maxNorthMeters - viewMeters.northMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE
+    };
+  }
 
   return {
-    x: canvas.width / 2 + ((minEastMeters - viewMeters.eastMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
-    y: canvas.height / 2 - ((maxNorthMeters - viewMeters.northMeters) / currentScale.metersPerSample) * CONFIG.TILE_SIZE,
+    x: screenPoint.screenX,
+    y: screenPoint.screenY,
     width: sizePixels,
     height: sizePixels,
     samplePixelSize: samplePixelSize

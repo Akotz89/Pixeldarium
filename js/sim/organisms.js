@@ -1,8 +1,11 @@
 PS.sim = PS.sim || {};
 
 PS.sim.organisms = {
-  make: function(x, y, lineageId) {
-    return makeOrganism(x, y, lineageId);
+  make: function(x, y, lineageId, typeId) {
+    return makeOrganism(x, y, lineageId, typeId);
+  },
+  create: function(typeId, position) {
+    return createOrganism(typeId, position);
   },
   ensureTraits: function(organism) {
     return ensureOrganismTraits(organism);

@@ -1,0 +1,77 @@
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+
+const root = path.resolve(__dirname, "..");
+
+function read(file) {
+  return fs.readFileSync(path.join(root, file), "utf8");
+}
+
+const gate = read("docs/visual-quality-gate.md");
+const index = read("docs/index.md");
+const rendering = read("docs/RENDERING.md");
+const packageJson = JSON.parse(read("package.json"));
+
+[
+  "Required Checklist",
+  "Zoom Band Contracts",
+  "Camera Contract",
+  "Simulation Readability Contract",
+  "Screenshot And Performance Evidence",
+  "Required Verification Commands"
+].forEach((section) => {
+  assert.ok(gate.indexOf(section) >= 0, "visual quality gate should include section: " + section);
+});
+
+[
+  "Orbit",
+  "Planet",
+  "Continent",
+  "Region",
+  "Local",
+  "Settlement/Ground",
+  "Space"
+].forEach((band) => {
+  assert.ok(gate.indexOf(band) >= 0, "visual quality gate should define zoom band: " + band);
+});
+
+[
+  "Smooth wheel zoom with stable screen anchor",
+  "Drag/pan without disorienting jumps",
+  "No visible black-frame gap",
+  "Direct `file://` playability",
+  "Decorative noise is not enough",
+  "must remain original"
+].forEach((contract) => {
+  assert.ok(gate.indexOf(contract) >= 0, "visual quality gate should require: " + contract);
+});
+
+[
+  "node tests/planet-zoom-anchor.test.js",
+  "node tests/globe-interaction.test.js",
+  "node tests/observation-overlays.test.js",
+  "node tests/no-canvas2d-source.test.js",
+  "file:///C:/Users/Aaron/Azyrra/projects/pixeldarium/index.html"
+].forEach((command) => {
+  assert.ok(gate.indexOf(command) >= 0, "visual quality gate should name verification: " + command);
+});
+
+assert.ok(
+  index.indexOf("Visual Quality Gate") >= 0 &&
+    index.indexOf("docs/visual-quality-gate.md") >= 0,
+  "docs index should expose the visual quality gate"
+);
+
+assert.ok(
+  rendering.indexOf("Zoom Bands") >= 0 &&
+    rendering.indexOf("Perception contract") >= 0,
+  "rendering documentation should retain zoom-band perception contracts"
+);
+
+assert.ok(
+  packageJson.scripts.test.indexOf("tests/visual-quality-gate.test.js") >= 0,
+  "npm test should include visual quality gate checks"
+);
+
+console.log("visual quality gate checks passed");

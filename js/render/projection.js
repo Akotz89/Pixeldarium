@@ -40,6 +40,10 @@ PS.render.projection.getChunkKeyForTile = function (x, y, zoomLevelIndex) {
 };
 
 PS.render.projection.getProjection = function () {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.getProjection();
+  }
+
   var zoomFactor = getPlanetZoomFactor();
   var radius = Math.floor(Math.min(canvas.width, canvas.height) * 0.46 * zoomFactor);
   var view = getPlanetView();
@@ -55,6 +59,10 @@ PS.render.projection.getProjection = function () {
 };
 
 PS.render.projection.wrapLongitudeDelta = function (degrees) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.wrapLongitudeDelta(degrees);
+  }
+
   var delta = Number(degrees) || 0;
 
   while (delta < -180) {
@@ -69,6 +77,10 @@ PS.render.projection.wrapLongitudeDelta = function (degrees) {
 };
 
 PS.render.projection.projectPoint = function (longitudeDeg, latitudeDeg) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.projectLatLon(longitudeDeg, latitudeDeg);
+  }
+
   var projection = PS.render.projection.getProjection();
   var latitude = (Number(latitudeDeg) || 0) * Math.PI / 180;
   var centerLatitude = projection.viewLatitudeDeg * Math.PI / 180;
@@ -134,6 +146,10 @@ PS.render.projection.getInterpolatedProjection = function (x, y) {
 };
 
 PS.render.projection.getTileFromCanvasPoint = function (canvasX, canvasY) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.screenToTile(canvasX, canvasY);
+  }
+
   var latLon = getPlanetLatLonFromCanvasPoint(canvasX, canvasY);
 
   if (!latLon) {

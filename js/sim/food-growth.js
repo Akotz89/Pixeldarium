@@ -85,6 +85,51 @@ function getFoodRecoveryAttemptCount(pressure) {
   );
 }
 
+// ── Tile-worker food growth (AZR-492) ──
+// Instead of random position sampling every tick, use a tile worker
+// to sweep all tiles over N frames. Each visited tile gets a growth check.
+
+var foodGrowthWorker = null;
+
+function ensureFoodGrowthWorker() {
+  if (foodGrowthWorker) { return foodGrowthWorker; }
+
+  var cycleFrames = Math.max(1, Math.round(
+    Number(CONFIG.FOOD_GROWTH_CYCLE_FRAMES) || 20
+  ));
+
+  foodGrowthWorker = PS.tileWorker.create("foodGrowth", {
+    cycleFrames: cycleFrames,
+    seed: world && world.rngState ? world.rngState : 0x5DEECE66D,
+    callback: function (tileX, tileY, tileIndex) {
+      if (world.food.length >= CONFIG.MAX_FOOD) { return; }
+
+      // Fertile tiles grow food at a higher rate
+      var growthChance = isFertile(tileX, tileY)
+        ? CONFIG.FERTILE_FOOD_GROWTH_CHANCE
+        : CONFIG.BARREN_FOOD_GROWTH_CHANCE;
+
+      // Scale chance by cycle length so total growth rate is preserved
+      // (original code ran 2 attempts per tick; now spread across cycleFrames)
+      var scaledChance = growthChance * (foodGrowthWorker ? foodGrowthWorker.cycleFrames : 1);
+
+      if (chance(scaledChance) && !foodExistsAt(tileX, tileY)) {
+        addFoodAt(tileX, tileY);
+
+        if (typeof recordFoodSpawned === "function") {
+          recordFoodSpawned(1);
+        }
+      }
+    }
+  });
+
+  return foodGrowthWorker;
+}
+
+function resetFoodGrowthWorker() {
+  foodGrowthWorker = null;
+}
+
 function growFood() {
   world.foodRecoveryPressure = 0;
   world.foodRecoveryAttemptsThisTick = 0;
@@ -93,13 +138,19 @@ function growFood() {
     return;
   }
 
-  tryGrowFoodAtPosition(randomFertilePosition(), CONFIG.FERTILE_FOOD_GROWTH_CHANCE);
+  // Tile-worker distributed growth (AZR-492)
+  if (PS.tileWorker) {
+    ensureFoodGrowthWorker().advance();
+  } else {
+    // Fallback: original random sampling
+    tryGrowFoodAtPosition(randomFertilePosition(), CONFIG.FERTILE_FOOD_GROWTH_CHANCE);
+    tryGrowFoodAtPosition({
+      x: randomInt(WORLD_WIDTH),
+      y: randomInt(WORLD_HEIGHT)
+    }, CONFIG.BARREN_FOOD_GROWTH_CHANCE);
+  }
 
-  tryGrowFoodAtPosition({
-    x: randomInt(WORLD_WIDTH),
-    y: randomInt(WORLD_HEIGHT)
-  }, CONFIG.BARREN_FOOD_GROWTH_CHANCE);
-
+  // Recovery pressure system (demand-driven, runs every tick)
   var recoveryPressure = getFoodRecoveryPressure();
   var recoveryAttempts = getFoodRecoveryAttemptCount(recoveryPressure);
   var recoveryChance = CONFIG.FERTILE_FOOD_GROWTH_CHANCE * (
