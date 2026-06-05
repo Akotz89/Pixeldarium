@@ -449,7 +449,7 @@ PS.atlas.getTerrainPatternAmount = function (pattern, x, y, variant) {
   return hash < 3 ? 0.22 : (hash > 13 ? -0.22 : 0);
 };
 
-PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition) {
+PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition, sample) {
   var palette = tileDefinition
     ? PS.atlas.getTerrainTilePalette(biome, tileDefinition)
     : PS.atlas.getTerrainPalette(biome);
@@ -466,7 +466,7 @@ PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition) {
   }
 
   if (typeof PS.atlas.drawTerrainDetailOverlay === "function") {
-    PS.atlas.drawTerrainDetailOverlay(cell, palette, variant, tileDefinition, biome);
+    PS.atlas.drawTerrainDetailOverlay(cell, palette, variant, tileDefinition, biome, sample);
   }
 };
 
@@ -513,12 +513,15 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
   var variant = PS.ranmap ? PS.ranmap.variant(tileX, tileY, variantCount) : 0;
   var materialId = tileDefinition ? tileDefinition.id : String(biome || "grass");
-  var name = "terrain." + materialId + "." + variant;
+  var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
+    ? PS.atlas.getTerrainTransitionKey(sample, biome)
+    : "plain";
+  var name = "terrain." + materialId + "." + variant + "." + transitionKey;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {
     cell = PS.atlas.allocateCell(name, 16, 16);
-    PS.atlas.drawTerrainCell(cell, biome, variant, tileDefinition);
+    PS.atlas.drawTerrainCell(cell, biome, variant, tileDefinition, sample);
     PS.atlas.stats.terrainCells++;
     PS.atlas.pages[cell.pageIndex].version++;
   }

@@ -113,6 +113,34 @@ const cliffCell = context.PS.atlas.getTerrainCell("mountain", 14, 5, {
     materialSignals: { surfaceRoughness: 0.92 }
   }
 });
+const plainGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  tileBlend: {
+    biomeWeights: { grassland: 1 },
+    transitionStrength: 0,
+    xAmount: 0.5,
+    yAmount: 0.5
+  }
+});
+const coastEdgeGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  tileBlend: {
+    biomeWeights: { grassland: 0.64, ocean: 0.36 },
+    transitionStrength: 0.36,
+    xAmount: 0.82,
+    yAmount: 0.5
+  }
+});
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
@@ -151,6 +179,11 @@ assert.ok(forestCell.name.indexOf("terrain.forest_floor.") === 0 || forestCell.n
 assert.ok(deepWaterCell.name.indexOf("terrain.water_deep.") === 0, "deep water samples should select the deep water tile");
 assert.ok(marshCell.name.indexOf("terrain.marsh.") === 0 || marshCell.name.indexOf("terrain.wetland.") === 0 || marshCell.name.indexOf("terrain.mud.") === 0, "wet samples should select wetland material tiles");
 assert.ok(cliffCell.name.indexOf("terrain.rock_cliff.") === 0 || cliffCell.name.indexOf("terrain.rock.") === 0, "rough mountain samples should select rock material tiles");
+assert.ok(plainGrassCell.name.indexOf(".plain") > 0, "plain terrain cells should keep an explicit plain transition key");
+assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples should encode bounded coast transition cells");
+assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
+assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
+assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
 assert.ok(stats.pageBytes > 0, "atlas stats should expose packed atlas bytes");
