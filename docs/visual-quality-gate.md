@@ -29,15 +29,18 @@ also pass `docs/optimization-operating-model.md` and
 
 ## Zoom Band Contracts
 
-| Band | Runtime zoom | Visual contract |
+| Band | Architecture zoom | Visual contract |
 | --- | --- | --- |
-| Orbit | `< 1` | Show the whole planet, climate/terrain fields, broad water/land forms, and event markers. Local representatives are not required. |
-| Planet | `1-3.999` | Preserve stable Google-Earth zoom anchors and coarse biome, coast, atmosphere, and range readability. |
-| Continent | `4-6.999` | Show chunked terrain families, large material regions, coastlines, water forms, and aggregate pressure without local clutter. |
-| Region | `7-9.999` | Show local surface chunks, territory/pressure overlays, selected representative clusters, and readable material transitions. |
-| Local | `10-12.999` | Show rich terrain material pixels, organisms/food/settlement facades, behavior cues, target cues, and inspectable context. |
-| Settlement/Ground | `>= 13` | Show building-scale, route, citizen, vegetation, shadow, particle, and UI-world detail without z-fighting or UI occlusion. |
+| Orbit | `< 3` | Show the whole planet, climate/terrain fields, broad water/land forms, and event markers. Local representatives are not required. |
+| Planet | `3-5.999` | Preserve stable Google-Earth zoom anchors and coarse biome, coast, atmosphere, and range readability. |
+| Continent | `6-9.999` | Show chunked terrain families, large material regions, coastlines, water forms, and aggregate pressure without local clutter. |
+| Region | `10-14.999` | Show local surface chunks, territory/pressure overlays, selected representative clusters, and readable material transitions. |
+| Local | `15-18.999` | Show rich terrain material pixels, organisms/food/settlement facades, behavior cues, target cues, and inspectable context. |
+| Settlement/Ground | `>= 19` | Show building-scale, route, citizen, vegetation, shadow, particle, and UI-world detail without z-fighting or UI occlusion. |
 | Space | Future space view | Show planetary bodies, orbital assets, probes, star systems, and influence fields as aggregate-readable maps before local facade detail. |
+
+Architecture zoom is derived from the configured camera anchor stops, so a
+small number of runtime stops can still cover the full perception contract.
 
 LOD must preserve player perception, not literal detail everywhere. Wider zooms
 show fields, flows, and markers. Closer zooms add representatives and material

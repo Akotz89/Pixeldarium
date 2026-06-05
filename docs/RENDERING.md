@@ -122,16 +122,19 @@ Configured zoom anchors live in `CONFIG.PLANET_ZOOM_LEVELS`:
 | 6 | Ground | 5 | 0.25 km |
 | 7 | Meter | 1 | 0.25 km |
 
-`PS.render.pipeline.getZoomBand()` classifies the user-facing bands:
+`PS.render.pipeline.getZoomBand()` classifies the user-facing bands from the
+normalized `PS.render.lod` architecture zoom. The configured camera currently
+has eight anchor stops, but those stops cover the full architecture-zoom range
+from broad globe view to meter-scale ground inspection.
 
-| Runtime zoom | Band | Perception contract |
+| Architecture zoom | Band | Perception contract |
 | --- | --- | --- |
-| `< 1` | orbit | Globe, broad fields, markers, no local detail dependency. |
-| `1-3.999` | planet | Surface projection and coarse range understanding. |
-| `4-6.999` | continent | Chunked terrain and large material families. |
-| `7-9.999` | region | Local surface chunks, territory, pressure, selected detail. |
-| `10-12.999` | local | Rich terrain materials and representative entities. |
-| `>= 13` | settlement | Building-scale and watcher-facing detail slots. |
+| `< 3` | orbit | Globe, broad fields, markers, no local detail dependency. |
+| `3-5.999` | planet | Surface projection and coarse range understanding. |
+| `6-9.999` | continent | Chunked terrain and large material families. |
+| `10-14.999` | region | Local surface chunks, territory, pressure, selected detail. |
+| `15-18.999` | local | Rich terrain materials and representative entities. |
+| `>= 19` | settlement | Building-scale and watcher-facing detail slots. |
 
 `PS.render.lod` maps the same zoom to architecture tiers `galaxy`, `planet`,
 `continent`, `region`, and `local` using a normalized 1-20 architecture zoom.

@@ -66,24 +66,27 @@ PS.render.pipeline.registerLayer = function (id, layer) {
 
 PS.render.pipeline.getZoomBand = function (zoomLevel) {
   var zoom = Number.isFinite(Number(zoomLevel)) ? Number(zoomLevel) : Number(world && world.planetView && world.planetView.zoomLevel) || 0;
+  var architectureZoom = PS.render.lod && typeof PS.render.lod.getArchitectureZoom === "function"
+    ? PS.render.lod.getArchitectureZoom(zoom)
+    : zoom;
 
-  if (zoom < 1) {
+  if (architectureZoom < 3) {
     return "orbit";
   }
 
-  if (zoom < 4) {
+  if (architectureZoom < 6) {
     return "planet";
   }
 
-  if (zoom < 7) {
+  if (architectureZoom < 10) {
     return "continent";
   }
 
-  if (zoom < 10) {
+  if (architectureZoom < 15) {
     return "region";
   }
 
-  if (zoom < 13) {
+  if (architectureZoom < 19) {
     return "local";
   }
 

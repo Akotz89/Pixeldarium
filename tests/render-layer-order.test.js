@@ -91,6 +91,9 @@ const context = {
         }
       },
       lod: {
+        getArchitectureZoom(zoomLevel) {
+          return 1 + (Number(zoomLevel) || 0) / 7 * 19;
+        },
         getTier(zoomLevel) {
           assert.strictEqual(zoomLevel, 7, "pipeline should pass the active zoom level into LOD tier lookup");
           return {
@@ -159,6 +162,11 @@ context.PS.weather = { type: "clear" };
 vm.createContext(context);
 vm.runInContext(drawOrderSource, context, { filename: "js/render/draw-order.js" });
 vm.runInContext(pipelineSource, context, { filename: "js/render/pipeline.js" });
+
+assert.strictEqual(context.PS.render.pipeline.getZoomBand(0), "orbit", "first camera stop should classify as orbit band");
+assert.strictEqual(context.PS.render.pipeline.getZoomBand(2), "continent", "mid camera stop should classify through architecture zoom");
+assert.strictEqual(context.PS.render.pipeline.getZoomBand(5.5), "local", "detail camera stop should classify as local band");
+assert.strictEqual(context.PS.render.pipeline.getZoomBand(7), "settlement", "final camera stop should classify as settlement band");
 
 assert.deepStrictEqual(
   Object.keys(context.PS.render.DrawLayer).map((key) => context.PS.render.DrawLayer[key]),
