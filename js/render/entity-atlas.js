@@ -17,6 +17,7 @@ PS.atlas = PS.atlas || {
     foodCells: 0,
     settlementCells: 0,
     routeCells: 0,
+    influenceCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
   }
@@ -35,6 +36,7 @@ PS.atlas.reset = function () {
   PS.atlas.stats.foodCells = 0;
   PS.atlas.stats.settlementCells = 0;
   PS.atlas.stats.routeCells = 0;
+  PS.atlas.stats.influenceCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
 };
@@ -413,6 +415,39 @@ PS.atlas.drawRouteCell = function (cell, shape, activityBucket, lineageId) {
   }
 };
 
+PS.atlas.drawInfluenceCell = function (cell, strengthBucket, lineageId) {
+  var colors = CONFIG && CONFIG.LINEAGE_COLORS ? CONFIG.LINEAGE_COLORS : ["#72d7ff"];
+  var baseRgb = PS.atlas.hexToRgb(colors[(Math.max(1, lineageId) - 1) % colors.length]);
+  var base = [baseRgb[0], baseRgb[1], baseRgb[2], strengthBucket <= 0 ? 125 : (strengthBucket === 1 ? 178 : 225)];
+  var glow = [
+    Math.min(255, baseRgb[0] + 62),
+    Math.min(255, baseRgb[1] + 62),
+    Math.min(255, baseRgb[2] + 62),
+    210
+  ];
+  var shadow = [8, 14, 22, 145];
+  var x;
+
+  PS.atlas.fillNormalHalf(cell);
+
+  for (x = 3; x <= 12; x++) {
+    if ((x + strengthBucket) % 3 !== 0) {
+      PS.atlas.writePixel(cell, x, 8, shadow);
+      PS.atlas.writePixel(cell, x, 7, base);
+    }
+  }
+
+  if (strengthBucket >= 1) {
+    PS.atlas.writePixel(cell, 5, 6, glow);
+    PS.atlas.writePixel(cell, 10, 6, glow);
+  }
+
+  if (strengthBucket >= 2) {
+    PS.atlas.writePixel(cell, 7, 5, glow);
+    PS.atlas.writePixel(cell, 8, 5, glow);
+  }
+};
+
 PS.atlas.terrainPalettes = {
   ocean: { base: [28, 82, 123], accent: [70, 145, 178], dark: [8, 32, 68], pattern: "wave" },
   coastal: { base: [84, 139, 144], accent: [194, 174, 114], dark: [27, 78, 99], pattern: "shore" },
@@ -704,6 +739,31 @@ PS.atlas.getRouteCell = function (route, shape) {
   return cell;
 };
 
+PS.atlas.getInfluenceStrengthBucket = function (settlement) {
+  var level = Math.max(1, Math.round(Number(settlement && settlement.level) || 1));
+  var claimed = Math.max(0, Math.round(Number(settlement && settlement.claimedTiles) || 0));
+
+  if (level >= 5 || claimed >= 220) { return 2; }
+  if (level >= 2 || claimed >= 60) { return 1; }
+  return 0;
+};
+
+PS.atlas.getSettlementInfluenceCell = function (settlement) {
+  var strengthBucket = PS.atlas.getInfluenceStrengthBucket(settlement);
+  var lineageBucket = ((Math.max(1, Math.round(Number(settlement && settlement.lineageId) || 1)) - 1) % 16) + 1;
+  var name = "entity.influence." + strengthBucket + "." + lineageBucket;
+  var cell = PS.atlas.cells[name];
+
+  if (!cell) {
+    cell = PS.atlas.allocateCell(name, 32, 16);
+    PS.atlas.drawInfluenceCell(cell, strengthBucket, lineageBucket);
+    PS.atlas.stats.influenceCells++;
+    PS.atlas.pages[cell.pageIndex].version++;
+  }
+
+  return cell;
+};
+
 PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var tileDefinition = PS.atlas.getTerrainMaterialTile(biome, tileX, tileY, sample);
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
@@ -740,6 +800,7 @@ PS.atlas.init = function () {
   }
   PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
   PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 0 }, "horizontal");
+  PS.atlas.getSettlementInfluenceCell({ lineageId: 1, level: 1, claimedTiles: 0 });
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
   return true;
@@ -755,6 +816,7 @@ PS.atlas.getStats = function () {
     foodCells: PS.atlas.stats.foodCells,
     settlementCells: PS.atlas.stats.settlementCells,
     routeCells: PS.atlas.stats.routeCells,
+    influenceCells: PS.atlas.stats.influenceCells,
     generatedCells: PS.atlas.stats.generatedCells,
     pageBytes: PS.atlas.stats.pageBytes,
     lastGenerationMs: PS.atlas.stats.lastGenerationMs

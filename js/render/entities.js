@@ -262,7 +262,11 @@ PS.render.entities.drawSettlements = function () {
 };
 
 PS.render.entities.drawSettlementInfluence = function () {
-  return false;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementInfluence());
 };
 
 PS.render.entities.drawSettlementRoutes = function () {

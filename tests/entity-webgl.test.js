@@ -44,11 +44,16 @@ assert.ok(entityWebglSource.indexOf("getRouteCell") >= 0, "entity compositor sho
 assert.ok(entityWebglSource.indexOf("buildSettlementRouteBatches") >= 0, "entity compositor should batch settlement route markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementRoutes") >= 0, "entity compositor should expose route rendering");
 assert.ok(entityWebglSource.indexOf("routeDrawCount") >= 0, "entity compositor should report route draw counts");
+assert.ok(entityWebglSource.indexOf("getSettlementInfluenceCell") >= 0, "entity compositor should request influence atlas cells");
+assert.ok(entityWebglSource.indexOf("buildSettlementInfluenceBatches") >= 0, "entity compositor should batch settlement influence markers");
+assert.ok(entityWebglSource.indexOf("drawSettlementInfluence") >= 0, "entity compositor should expose influence rendering");
+assert.ok(entityWebglSource.indexOf("influenceDrawCount") >= 0, "entity compositor should report influence draw counts");
 
 assert.ok(entitiesSource.indexOf("entityWebgl.drawOrganisms(interpolation)") >= 0, "organism rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawFood()") >= 0, "food rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlements()") >= 0, "settlement rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "settlement route rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");
 assert.strictEqual(entitiesSource.indexOf("ctx"), -1, "entity facade should not reference Canvas2D context");
 
 console.log("entity webgl checks passed");

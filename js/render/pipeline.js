@@ -365,7 +365,7 @@ PS.render.pipeline.registerLayer("settlement.influence", {
   semantic: "claimed land and borders",
   minTier: "region",
   maxTier: "local",
-  draw: function () {}
+  draw: function () { PS.render.entities.drawSettlementInfluence(); }
 });
 
 PS.render.pipeline.registerLayer("settlement.routes", {

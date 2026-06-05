@@ -21,6 +21,7 @@ assert.ok(pipelineSource.indexOf("PS.render.lod.getTier") >= 0, "pipeline should
 assert.ok(pipelineSource.indexOf("getPreloadSurfaceLodIndex") >= 0, "pipeline should consume preload LOD readiness state");
 assert.ok(pipelineSource.indexOf("transitionAlpha") >= 0, "pipeline should publish LOD transition alpha");
 assert.ok(pipelineSource.indexOf("getLayerLodAlpha") >= 0, "pipeline should gate layers through LOD alpha");
+assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementInfluence()") >= 0, "settlement influence layer should call the border renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementRoutes()") >= 0, "settlement route layer should call the route renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlements()") >= 0, "settlement structure layer should call the structure renderer");
 assert.ok(debugOverlaySource.indexOf("getDebugSnapshot") >= 0, "F4 overlay should expose draw-order layer stats");
@@ -225,6 +226,7 @@ assert.deepStrictEqual(
     "food",
     "organisms",
     "structures",
+    "influence",
     "routes",
     "end"
   ],
