@@ -20,6 +20,7 @@ PS.render.entityWebgl.state = {
   organismDrawCount: 0,
   foodDrawCount: 0,
   settlementDrawCount: 0,
+  routeDrawCount: 0,
   pageDrawCount: 0,
   textureUploadCount: 0,
   traitSpriteCount: 0,
@@ -185,6 +186,14 @@ PS.render.entityWebgl.getSettlementCell = function (settlement) {
   return null;
 };
 
+PS.render.entityWebgl.getRouteCell = function (route, shape) {
+  if (PS.atlas && typeof PS.atlas.getRouteCell === "function") {
+    return PS.atlas.getRouteCell(route, shape);
+  }
+
+  return null;
+};
+
 PS.render.entityWebgl.getTexture = function (pageIndex) {
   var state = PS.render.entityWebgl.state;
   var gl = state.gl;
@@ -224,6 +233,7 @@ PS.render.entityWebgl.createBatches = function () {
     organisms: 0,
     food: 0,
     settlements: 0,
+    routes: 0,
     capped: 0,
     culled: 0
   };
@@ -281,6 +291,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.food++;
   } else if (kind === "settlement") {
     batches.settlements++;
+  } else if (kind === "route") {
+    batches.routes++;
   } else {
     batches.organisms++;
   }
@@ -411,6 +423,83 @@ PS.render.entityWebgl.buildSettlementBatches = function () {
   return batches;
 };
 
+PS.render.entityWebgl.getRouteShape = function (dx, dy) {
+  var absX = Math.abs(Number(dx) || 0);
+  var absY = Math.abs(Number(dy) || 0);
+
+  if (absY > absX * 1.8) {
+    return "vertical";
+  }
+
+  if (absX > absY * 1.8) {
+    return "horizontal";
+  }
+
+  return "diag";
+};
+
+PS.render.entityWebgl.buildSettlementRouteBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlementRoutes)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlementRoutes.length; i++) {
+    var route = world.settlementRoutes[i];
+    var parentSettlement = PS.render.entities.getSettlementById(route.parentSettlementId);
+    var childSettlement = PS.render.entities.getSettlementById(route.childSettlementId);
+
+    if (!parentSettlement || !childSettlement) {
+      batches.culled++;
+      continue;
+    }
+
+    var parentPoint = PS.render.entities.getSettlementRenderPosition(parentSettlement);
+    var childPoint = PS.render.entities.getSettlementRenderPosition(childSettlement);
+
+    if (!parentPoint || !childPoint || parentPoint.visible === false || childPoint.visible === false) {
+      batches.culled++;
+      continue;
+    }
+
+    var dx = childPoint.x - parentPoint.x;
+    var dy = childPoint.y - parentPoint.y;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    var shape = PS.render.entityWebgl.getRouteShape(dx, dy);
+    var cell = PS.render.entityWebgl.getRouteCell(route, shape);
+    var tint = PS.render.entityWebgl.parseColor(PS.render.entities.getLineageColorById(route.lineageId || parentSettlement.lineageId || 1), route.isActive === false ? 0.42 : 0.78);
+    var step = Math.max(8, Math.min(22, 12 + distance * 0.015));
+    var markerCount = Math.max(1, Math.min(18, Math.floor(distance / step)));
+    var scale = Math.max(0.65, Math.min(1.8, ((parentPoint.scale || 1) + (childPoint.scale || 1)) * 0.5));
+    var size = Math.max(2, 4.5 * scale);
+
+    for (var marker = 1; marker <= markerCount; marker++) {
+      var amount = marker / (markerCount + 1);
+      var pulse = PS.ranmap ? PS.ranmap.variant(Math.round(route.id || i), marker, 4) : marker % 4;
+      var point = {
+        x: parentPoint.x + dx * amount,
+        y: parentPoint.y + dy * amount,
+        scale: scale,
+        visibility: route.isActive === false ? 0.42 : (0.62 + pulse * 0.08),
+        visible: true
+      };
+
+      PS.render.entityWebgl.submit(
+        batches,
+        cell,
+        point,
+        size,
+        tint,
+        dx < 0,
+        "route"
+      );
+    }
+  }
+
+  return batches;
+};
+
 PS.render.entityWebgl.configureAttributes = function () {
   var state = PS.render.entityWebgl.state;
   var gl = state.gl;
@@ -497,6 +586,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.organismDrawCount = batches.organisms;
     state.foodDrawCount = batches.food;
     state.settlementDrawCount = batches.settlements;
+    state.routeDrawCount = batches.routes;
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;
@@ -548,6 +638,19 @@ PS.render.entityWebgl.drawSettlements = function () {
   }
 
   return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementBatches());
+};
+
+PS.render.entityWebgl.drawSettlementRoutes = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementRouteBatches());
 };
 
 PS.render.entityWebgl.rebuildShaders = function () {

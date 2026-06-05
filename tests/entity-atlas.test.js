@@ -146,6 +146,9 @@ const richFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3, amount: 140 }
 const campCell = context.PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
 const colonyCell = context.PS.atlas.getSettlementCell({ lineageId: 2, level: 6, isColony: true });
 const outpostCell = context.PS.atlas.getSettlementCell({ lineageId: 3, level: 2, isOutpost: true });
+const inactiveRouteCell = context.PS.atlas.getRouteCell({ lineageId: 1, isActive: false, foodTransferred: 0 }, "horizontal");
+const activeRouteCell = context.PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 12 }, "horizontal");
+const busyRouteCell = context.PS.atlas.getRouteCell({ lineageId: 2, isActive: true, foodTransferred: 120 }, "diag");
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
@@ -199,10 +202,16 @@ assert.ok(colonyCell.name.indexOf("entity.settlement.colony.2.2") === 0, "coloni
 assert.ok(outpostCell.name.indexOf("entity.settlement.outpost.0.3") === 0, "outposts should encode their own bounded archetype");
 assert.notDeepStrictEqual(pixelAt(campCell, 9, 3), pixelAt(colonyCell, 9, 3), "settlement archetype and level should change visible pixels");
 assert.ok(uniqueColorCount(colonyCell) >= uniqueColorCount(campCell), "higher settlement levels should preserve authored detail density");
+assert.ok(inactiveRouteCell.name.indexOf("entity.route.horizontal.0.1") === 0, "inactive routes should encode a bounded activity bucket");
+assert.ok(activeRouteCell.name.indexOf("entity.route.horizontal.1.1") === 0, "active routes should encode the active traffic bucket");
+assert.ok(busyRouteCell.name.indexOf("entity.route.diag.2.2") === 0, "busy routes should encode shape, traffic bucket, and lineage bucket");
+assert.notDeepStrictEqual(pixelAt(inactiveRouteCell, 8, 7), pixelAt(activeRouteCell, 8, 7), "route activity should change visible route pixels");
+assert.notDeepStrictEqual(pixelAt(activeRouteCell, 8, 7), pixelAt(busyRouteCell, 8, 7), "route shape/lineage should change visible route pixels");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
 assert.ok(stats.foodCells >= 2, "atlas stats should count generated food resource cells");
 assert.ok(stats.settlementCells >= 3, "atlas stats should count generated settlement cells");
+assert.ok(stats.routeCells >= 3, "atlas stats should count generated route traffic cells");
 assert.ok(stats.pageBytes > 0, "atlas stats should expose packed atlas bytes");
 
 console.log("entity atlas checks passed");

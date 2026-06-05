@@ -375,7 +375,7 @@ PS.render.pipeline.registerLayer("settlement.routes", {
   semantic: "routes, paths, and supply links",
   minTier: "region",
   maxTier: "local",
-  draw: function () {}
+  draw: function () { PS.render.entities.drawSettlementRoutes(); }
 });
 
 PS.render.pipeline.registerLayer("resources.food", {
@@ -407,7 +407,7 @@ PS.render.pipeline.registerLayer("settlement.structures", {
   semantic: "settlement cores, outposts, and colonies",
   minTier: "region",
   maxTier: "local",
-  draw: function () {}
+  draw: function () { PS.render.entities.drawSettlements(); }
 });
 
 PS.render.pipeline.registerLayer("entities.organisms", {

@@ -266,7 +266,11 @@ PS.render.entities.drawSettlementInfluence = function () {
 };
 
 PS.render.entities.drawSettlementRoutes = function () {
-  return false;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementRoutes());
 };
 
 PS.render.entities.drawOrbitalAssets = function () {

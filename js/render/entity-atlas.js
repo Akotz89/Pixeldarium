@@ -16,6 +16,7 @@ PS.atlas = PS.atlas || {
     terrainCells: 0,
     foodCells: 0,
     settlementCells: 0,
+    routeCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
   }
@@ -33,6 +34,7 @@ PS.atlas.reset = function () {
   PS.atlas.stats.terrainCells = 0;
   PS.atlas.stats.foodCells = 0;
   PS.atlas.stats.settlementCells = 0;
+  PS.atlas.stats.routeCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
 };
@@ -362,6 +364,55 @@ PS.atlas.drawSettlementCell = function (cell, archetype, levelBucket, lineageId)
   }
 };
 
+PS.atlas.drawRouteCell = function (cell, shape, activityBucket, lineageId) {
+  var colors = CONFIG && CONFIG.LINEAGE_COLORS ? CONFIG.LINEAGE_COLORS : ["#72d7ff"];
+  var baseRgb = PS.atlas.hexToRgb(colors[(Math.max(1, lineageId) - 1) % colors.length]);
+  var base = [baseRgb[0], baseRgb[1], baseRgb[2], 255];
+  var shadow = [18, 24, 28, 210];
+  var highlight = [
+    Math.min(255, baseRgb[0] + 72),
+    Math.min(255, baseRgb[1] + 72),
+    Math.min(255, baseRgb[2] + 72),
+    255
+  ];
+  var alpha = activityBucket <= 0 ? 120 : (activityBucket === 1 ? 185 : 235);
+  var x;
+  var y;
+
+  PS.atlas.fillNormalHalf(cell);
+
+  if (shape === "vertical") {
+    for (y = 1; y < 15; y++) {
+      PS.atlas.writePixel(cell, 7, y, shadow);
+      PS.atlas.writePixel(cell, 8, y, [base[0], base[1], base[2], alpha]);
+      if (activityBucket >= 1 && y % 4 === 0) {
+        PS.atlas.writePixel(cell, 9, y, highlight);
+      }
+    }
+    return;
+  }
+
+  if (shape === "diag") {
+    for (x = 2; x < 14; x++) {
+      y = 13 - x;
+      PS.atlas.writePixel(cell, x, y + 1, shadow);
+      PS.atlas.writePixel(cell, x, y, [base[0], base[1], base[2], alpha]);
+      if (activityBucket >= 1 && x % 4 === 0) {
+        PS.atlas.writePixel(cell, x + 1, y, highlight);
+      }
+    }
+    return;
+  }
+
+  for (x = 1; x < 15; x++) {
+    PS.atlas.writePixel(cell, x, 8, shadow);
+    PS.atlas.writePixel(cell, x, 7, [base[0], base[1], base[2], alpha]);
+    if (activityBucket >= 1 && x % 4 === 0) {
+      PS.atlas.writePixel(cell, x, 6, highlight);
+    }
+  }
+};
+
 PS.atlas.terrainPalettes = {
   ocean: { base: [28, 82, 123], accent: [70, 145, 178], dark: [8, 32, 68], pattern: "wave" },
   coastal: { base: [84, 139, 144], accent: [194, 174, 114], dark: [27, 78, 99], pattern: "shore" },
@@ -630,6 +681,29 @@ PS.atlas.getSettlementCell = function (settlement) {
   return cell;
 };
 
+PS.atlas.getRouteActivityBucket = function (route) {
+  if (!route || route.isActive === false) { return 0; }
+  if (Math.max(0, Number(route.foodTransferred) || 0) >= 80) { return 2; }
+  return 1;
+};
+
+PS.atlas.getRouteCell = function (route, shape) {
+  var safeShape = String(shape || "horizontal");
+  var activityBucket = PS.atlas.getRouteActivityBucket(route);
+  var lineageBucket = ((Math.max(1, Math.round(Number(route && route.lineageId) || 1)) - 1) % 16) + 1;
+  var name = "entity.route." + safeShape + "." + activityBucket + "." + lineageBucket;
+  var cell = PS.atlas.cells[name];
+
+  if (!cell) {
+    cell = PS.atlas.allocateCell(name, 32, 16);
+    PS.atlas.drawRouteCell(cell, safeShape, activityBucket, lineageBucket);
+    PS.atlas.stats.routeCells++;
+    PS.atlas.pages[cell.pageIndex].version++;
+  }
+
+  return cell;
+};
+
 PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var tileDefinition = PS.atlas.getTerrainMaterialTile(biome, tileX, tileY, sample);
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
@@ -665,6 +739,7 @@ PS.atlas.init = function () {
     PS.atlas.getOrganismCell(i, 1);
   }
   PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
+  PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 0 }, "horizontal");
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
   return true;
@@ -679,6 +754,7 @@ PS.atlas.getStats = function () {
     terrainCells: PS.atlas.stats.terrainCells,
     foodCells: PS.atlas.stats.foodCells,
     settlementCells: PS.atlas.stats.settlementCells,
+    routeCells: PS.atlas.stats.routeCells,
     generatedCells: PS.atlas.stats.generatedCells,
     pageBytes: PS.atlas.stats.pageBytes,
     lastGenerationMs: PS.atlas.stats.lastGenerationMs
