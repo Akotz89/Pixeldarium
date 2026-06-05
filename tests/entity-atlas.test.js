@@ -141,6 +141,11 @@ const coastEdgeGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
     yAmount: 0.5
   }
 });
+const sparseFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3 });
+const richFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3, amount: 140 });
+const campCell = context.PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
+const colonyCell = context.PS.atlas.getSettlementCell({ lineageId: 2, level: 6, isColony: true });
+const outpostCell = context.PS.atlas.getSettlementCell({ lineageId: 3, level: 2, isOutpost: true });
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
@@ -184,8 +189,20 @@ assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples s
 assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
 assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
 assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
+assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
+assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");
+assert.notStrictEqual(sparseFoodCell.name, richFoodCell.name, "resource richness should not overwrite sparse food atlas cells");
+assert.ok(uniqueColorCount(richFoodCell) >= uniqueColorCount(sparseFoodCell), "rich food cells should carry denser resource detail");
+assert.notDeepStrictEqual(pixelAt(sparseFoodCell, 7, 7), pixelAt(richFoodCell, 7, 7), "resource richness should change visible atlas pixels");
+assert.ok(campCell.name.indexOf("entity.settlement.camp.0.1") === 0, "root camps should use bounded settlement atlas keys");
+assert.ok(colonyCell.name.indexOf("entity.settlement.colony.2.2") === 0, "colonies should encode archetype, level bucket, and lineage bucket");
+assert.ok(outpostCell.name.indexOf("entity.settlement.outpost.0.3") === 0, "outposts should encode their own bounded archetype");
+assert.notDeepStrictEqual(pixelAt(campCell, 9, 3), pixelAt(colonyCell, 9, 3), "settlement archetype and level should change visible pixels");
+assert.ok(uniqueColorCount(colonyCell) >= uniqueColorCount(campCell), "higher settlement levels should preserve authored detail density");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
+assert.ok(stats.foodCells >= 2, "atlas stats should count generated food resource cells");
+assert.ok(stats.settlementCells >= 3, "atlas stats should count generated settlement cells");
 assert.ok(stats.pageBytes > 0, "atlas stats should expose packed atlas bytes");
 
 console.log("entity atlas checks passed");

@@ -1,5 +1,68 @@
 PS.ui = PS.ui || {};
 PS.render = PS.render || {};
+PS.render.overlays = PS.render.overlays || {
+  manifest: [
+    {
+      id: "observation.temperature",
+      semantic: "Temperature",
+      blendMode: "screen",
+      alpha: 0.68,
+      shortcut: "O"
+    },
+    {
+      id: "observation.population",
+      semantic: "Population",
+      blendMode: "lighter",
+      alpha: 0.82,
+      shortcut: "O"
+    },
+    {
+      id: "observation.resources",
+      semantic: "Resources",
+      blendMode: "lighter",
+      alpha: 0.78,
+      shortcut: "O"
+    },
+    {
+      id: "observation.atmosphere",
+      semantic: "Atmosphere",
+      blendMode: "screen",
+      alpha: 0.58,
+      shortcut: "O"
+    },
+    {
+      id: "observation.microbial",
+      semantic: "Microbes",
+      blendMode: "lighter",
+      alpha: 0.78,
+      shortcut: "O"
+    }
+  ],
+  getManifest: function () {
+    return this.manifest.slice();
+  },
+  get: function (id) {
+    var targetId = String(id || "none");
+
+    for (var i = 0; i < this.manifest.length; i++) {
+      if (this.manifest[i].id === targetId) {
+        return this.manifest[i];
+      }
+    }
+
+    return null;
+  },
+  drawOrbitalAssets: function () { return false; },
+  drawPlanetaryBodies: function () { return false; },
+  drawProbeMissions: function () { return false; },
+  drawEmpireSectors: function () { return false; },
+  drawInterstellarFleets: function () { return false; },
+  drawEmpireLegacy: function () { return false; },
+  drawStarSystems: function () { return false; },
+  drawInspectSelection: function () { return false; },
+  drawScanlines: function () { return false; }
+};
+
 PS.render.observationOverlays = PS.render.observationOverlays || {
   ids: [
     "observation.temperature",
@@ -28,6 +91,79 @@ PS.render.observationOverlays = PS.render.observationOverlays || {
     var nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % options.length;
 
     return this.setActive(options[nextIndex]);
+  },
+  getDensityAt: function (items, tileX, tileY, radius) {
+    var count = 0;
+    var safeRadius = Math.max(1, Math.round(Number(radius) || 1));
+
+    if (!Array.isArray(items)) {
+      return 0;
+    }
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+
+      if (
+        Math.abs((Number(item.x) || 0) - tileX) <= safeRadius &&
+        Math.abs((Number(item.y) || 0) - tileY) <= safeRadius
+      ) {
+        count++;
+      }
+    }
+
+    return clamp(count / Math.max(1, safeRadius * safeRadius * 0.75), 0, 1);
+  },
+  getMicrobialCell: function (tileX, tileY) {
+    if (PS.epochs && PS.epochs.microbial && typeof PS.epochs.microbial.getCellForTile === "function") {
+      return PS.epochs.microbial.getCellForTile(tileX, tileY);
+    }
+
+    return null;
+  },
+  makeSample: function (red, green, blue, alpha) {
+    return {
+      red: clamp(Math.round(Number(red) || 0), 0, 255),
+      green: clamp(Math.round(Number(green) || 0), 0, 255),
+      blue: clamp(Math.round(Number(blue) || 0), 0, 255),
+      alpha: clamp(Math.round(Number(alpha) || 0), 0, 255)
+    };
+  },
+  getOverlaySample: function (id, tileX, tileY, tile) {
+    var activeId = String(id || "none");
+    var safeTile = tile || {};
+
+    if (activeId === "observation.temperature") {
+      var latitudeHeat = 1 - Math.abs(Number(safeTile.latitude) || 0) / 90;
+      var elevationCool = clamp(Number(safeTile.elevation) || 0, 0, 1) * 0.35;
+      var heat = clamp(latitudeHeat - elevationCool, 0, 1);
+      return this.makeSample(80 + heat * 190, 80 + heat * 90, 255 - heat * 180, 42 + heat * 120);
+    }
+
+    if (activeId === "observation.population") {
+      var population = this.getDensityAt(world.organisms, tileX, tileY, 2);
+      return this.makeSample(255, 214, 88, population * 220);
+    }
+
+    if (activeId === "observation.resources") {
+      var resources = this.getDensityAt(world.food, tileX, tileY, 2);
+      return this.makeSample(86, 255, 118, resources * 220);
+    }
+
+    if (activeId === "observation.atmosphere") {
+      var gases = world.atmosphere && world.atmosphere.gases ? world.atmosphere.gases : {};
+      var oxygen = clamp(Number(gases.o2) || 0, 0, 1);
+      var carbon = clamp(Number(gases.co2) || 0, 0, 1);
+      return this.makeSample(80 + oxygen * 120, 150 + oxygen * 80, 220 + carbon * 35, 70 + Math.max(oxygen, carbon) * 120);
+    }
+
+    if (activeId === "observation.microbial") {
+      var cell = this.getMicrobialCell(tileX, tileY);
+      var bloom = clamp(Number(cell && cell.bloomIntensity) || 0, 0, 1);
+      var stress = clamp(Number(cell && cell.stress) || 0, 0, 1);
+      return this.makeSample(80 + stress * 140, 255 - stress * 70, 146 + bloom * 80, bloom * 225);
+    }
+
+    return this.makeSample(0, 0, 0, 0);
   }
 };
 

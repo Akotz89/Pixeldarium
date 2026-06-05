@@ -254,7 +254,11 @@ PS.render.entities.drawSettlementMapBadge = function (settlement, point, size) {
 };
 
 PS.render.entities.drawSettlements = function () {
-  return false;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlements());
 };
 
 PS.render.entities.drawSettlementInfluence = function () {

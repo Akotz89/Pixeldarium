@@ -19,6 +19,7 @@ PS.render.entityWebgl.state = {
   instanceDrawCount: 0,
   organismDrawCount: 0,
   foodDrawCount: 0,
+  settlementDrawCount: 0,
   pageDrawCount: 0,
   textureUploadCount: 0,
   traitSpriteCount: 0,
@@ -173,7 +174,15 @@ PS.render.entityWebgl.getFoodCell = function (food) {
     ? PS.ranmap.variant(Math.round(food.x || 0), Math.round(food.y || 0), 4)
     : 0;
 
-  return PS.atlas.getFoodCell(variant);
+  return PS.atlas.getFoodCell(variant, food);
+};
+
+PS.render.entityWebgl.getSettlementCell = function (settlement) {
+  if (PS.atlas && typeof PS.atlas.getSettlementCell === "function") {
+    return PS.atlas.getSettlementCell(settlement);
+  }
+
+  return null;
 };
 
 PS.render.entityWebgl.getTexture = function (pageIndex) {
@@ -214,6 +223,7 @@ PS.render.entityWebgl.createBatches = function () {
     count: 0,
     organisms: 0,
     food: 0,
+    settlements: 0,
     capped: 0,
     culled: 0
   };
@@ -269,6 +279,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
 
   if (kind === "food") {
     batches.food++;
+  } else if (kind === "settlement") {
+    batches.settlements++;
   } else {
     batches.organisms++;
   }
@@ -371,6 +383,34 @@ PS.render.entityWebgl.buildFoodBatches = function () {
   return batches;
 };
 
+PS.render.entityWebgl.buildSettlementBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlements)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var point = PS.render.entities.getSettlementRenderPosition(settlement);
+    var size = Math.max(1, PS.render.entities.getSettlementDrawSize(settlement) * ((point && point.scale) || 1));
+    var tint = PS.render.entityWebgl.parseColor(PS.render.entities.getLineageColorById(settlement.lineageId || 1), 1);
+    var flipH = PS.ranmap && PS.ranmap.flipH(Math.round(settlement.x || 0), Math.round(settlement.y || 0));
+
+    PS.render.entityWebgl.submit(
+      batches,
+      PS.render.entityWebgl.getSettlementCell(settlement),
+      point,
+      size,
+      tint,
+      flipH,
+      "settlement"
+    );
+  }
+
+  return batches;
+};
+
 PS.render.entityWebgl.configureAttributes = function () {
   var state = PS.render.entityWebgl.state;
   var gl = state.gl;
@@ -456,6 +496,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.instanceDrawCount = drawnInstances;
     state.organismDrawCount = batches.organisms;
     state.foodDrawCount = batches.food;
+    state.settlementDrawCount = batches.settlements;
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;
@@ -494,6 +535,19 @@ PS.render.entityWebgl.drawFood = function () {
   }
 
   return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildFoodBatches());
+};
+
+PS.render.entityWebgl.drawSettlements = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementBatches());
 };
 
 PS.render.entityWebgl.rebuildShaders = function () {

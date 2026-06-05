@@ -14,6 +14,8 @@ PS.atlas = PS.atlas || {
     generatedCells: 0,
     traitCells: 0,
     terrainCells: 0,
+    foodCells: 0,
+    settlementCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
   }
@@ -29,6 +31,8 @@ PS.atlas.reset = function () {
   PS.atlas.stats.generatedCells = 0;
   PS.atlas.stats.traitCells = 0;
   PS.atlas.stats.terrainCells = 0;
+  PS.atlas.stats.foodCells = 0;
+  PS.atlas.stats.settlementCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
 };
@@ -250,14 +254,112 @@ PS.atlas.getTraitOrganismCell = function (organism, frameVariant) {
   return cell;
 };
 
-PS.atlas.drawFoodCell = function (cell, variant) {
-  var x = 5 + (variant % 2) * 3;
-  var y = 6 + Math.floor(variant / 2) * 2;
+PS.atlas.getFoodRichnessBucket = function (food) {
+  var amount = Math.max(
+    Number(food && food.amount) || 0,
+    Number(food && food.energy) || 0,
+    Number(food && food.biomass) || 0,
+    Number(food && food.value) || 0,
+    Number(food && food.nutrients) || 0
+  );
+
+  if (amount >= 120) { return 3; }
+  if (amount >= 60) { return 2; }
+  if (amount > 0) { return 1; }
+  return 0;
+};
+
+PS.atlas.drawFoodCell = function (cell, variant, richness) {
+  var safeRichness = clamp(Math.round(Number(richness) || 0), 0, 3);
+  var base = [
+    [58, 178, 74, 255],
+    [70, 210, 88, 255],
+    [118, 224, 92, 255],
+    [174, 238, 98, 255]
+  ][safeRichness];
+  var dark = [Math.max(0, base[0] - 36), Math.max(0, base[1] - 58), Math.max(0, base[2] - 36), 255];
+  var light = [Math.min(255, base[0] + 52), Math.min(255, base[1] + 34), Math.min(255, base[2] + 58), 255];
+  var podCount = 3 + safeRichness * 2;
+  var i;
+  var x;
+  var y;
 
   PS.atlas.fillNormalHalf(cell);
-  PS.atlas.writeDot(cell, x, y, 2, [70, 210, 88, 255]);
-  PS.atlas.writeDot(cell, x + 3, y + 1, 1, [130, 240, 100, 255]);
-  PS.atlas.writePixel(cell, x, y - 2, [205, 255, 145, 255]);
+
+  for (i = 0; i < podCount; i++) {
+    x = 3 + ((variant * 5 + i * 4) % 11);
+    y = 5 + ((variant * 3 + i * 5) % 7);
+    PS.atlas.writePixel(cell, x, y + 2, dark);
+    PS.atlas.writeDot(cell, x, y, i % 3 === 0 && safeRichness > 1 ? 2 : 1, base);
+    PS.atlas.writePixel(cell, x - 1, y - 1, light);
+  }
+
+  if (safeRichness >= 2) {
+    PS.atlas.writePixel(cell, 4 + variant, 12, dark);
+    PS.atlas.writePixel(cell, 9 + (variant % 3), 11, dark);
+    PS.atlas.writePixel(cell, 12, 7 + (variant % 2), light);
+  }
+};
+
+PS.atlas.getSettlementArchetype = function (settlement) {
+  if (settlement && settlement.isColony) { return "colony"; }
+  if (settlement && settlement.isOutpost) { return "outpost"; }
+  return "camp";
+};
+
+PS.atlas.getSettlementLevelBucket = function (settlement) {
+  return clamp(Math.floor((Math.max(1, Math.round(Number(settlement && settlement.level) || 1)) - 1) / 2), 0, 5);
+};
+
+PS.atlas.drawSettlementCell = function (cell, archetype, levelBucket, lineageId) {
+  var colors = CONFIG && CONFIG.LINEAGE_COLORS ? CONFIG.LINEAGE_COLORS : ["#72d7ff"];
+  var baseRgb = PS.atlas.hexToRgb(colors[(Math.max(1, lineageId) - 1) % colors.length]);
+  var wall = archetype === "outpost" ? [126, 104, 78, 255] : [144, 128, 96, 255];
+  var roof = archetype === "colony" ? [190, 92, 76, 255] : [164, 118, 72, 255];
+  var shadow = [54, 44, 42, 255];
+  var banner = [baseRgb[0], baseRgb[1], baseRgb[2], 255];
+  var light = [218, 202, 144, 255];
+  var x;
+  var y;
+  var buildingCount = archetype === "outpost" ? 2 : 3 + Math.min(3, levelBucket);
+
+  PS.atlas.fillNormalHalf(cell);
+
+  for (x = 2; x <= 13; x++) {
+    PS.atlas.writePixel(cell, x, 12, shadow);
+    if (archetype !== "camp" || x % 2 === 0) {
+      PS.atlas.writePixel(cell, x, 11, wall);
+    }
+  }
+
+  for (y = 0; y < buildingCount; y++) {
+    var bx = 3 + ((y * 4 + levelBucket) % 10);
+    var by = 8 - Math.min(3, Math.floor(y / 2));
+    PS.atlas.writePixel(cell, bx, by + 2, shadow);
+    PS.atlas.writePixel(cell, bx + 1, by + 2, shadow);
+    PS.atlas.writePixel(cell, bx, by + 1, wall);
+    PS.atlas.writePixel(cell, bx + 1, by + 1, wall);
+    PS.atlas.writePixel(cell, bx - 1, by, roof);
+    PS.atlas.writePixel(cell, bx, by - 1, roof);
+    PS.atlas.writePixel(cell, bx + 1, by, roof);
+    PS.atlas.writePixel(cell, bx + 1, by + 1, light);
+  }
+
+  if (archetype === "outpost") {
+    PS.atlas.writePixel(cell, 7, 4, wall);
+    PS.atlas.writePixel(cell, 7, 5, wall);
+    PS.atlas.writePixel(cell, 8, 4, banner);
+  } else {
+    PS.atlas.writePixel(cell, 8, 3, wall);
+    PS.atlas.writePixel(cell, 8, 4, wall);
+    PS.atlas.writePixel(cell, 9, 3, banner);
+    PS.atlas.writePixel(cell, 10, 3, banner);
+  }
+
+  if (levelBucket >= 2) {
+    PS.atlas.writePixel(cell, 5, 5, banner);
+    PS.atlas.writePixel(cell, 11, 6, banner);
+  }
 };
 
 PS.atlas.terrainPalettes = {
@@ -495,14 +597,34 @@ PS.atlas.getOrganismCell = function (bodyType, variant) {
   return cell;
 };
 
-PS.atlas.getFoodCell = function (variant) {
+PS.atlas.getFoodCell = function (variant, food) {
   var safeVariant = clamp(Math.round(Number(variant) || 0), 0, 3);
-  var name = "entity.food." + safeVariant;
+  var richness = PS.atlas.getFoodRichnessBucket(food);
+  var name = "entity.food." + safeVariant + "." + richness;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {
     cell = PS.atlas.allocateCell(name, 32, 16);
-    PS.atlas.drawFoodCell(cell, safeVariant);
+    PS.atlas.drawFoodCell(cell, safeVariant, richness);
+    PS.atlas.stats.foodCells++;
+    PS.atlas.pages[cell.pageIndex].version++;
+  }
+
+  return cell;
+};
+
+PS.atlas.getSettlementCell = function (settlement) {
+  var archetype = PS.atlas.getSettlementArchetype(settlement);
+  var levelBucket = PS.atlas.getSettlementLevelBucket(settlement);
+  var lineageBucket = ((Math.max(1, Math.round(Number(settlement && settlement.lineageId) || 1)) - 1) % 16) + 1;
+  var name = "entity.settlement." + archetype + "." + levelBucket + "." + lineageBucket;
+  var cell = PS.atlas.cells[name];
+
+  if (!cell) {
+    cell = PS.atlas.allocateCell(name, 32, 16);
+    PS.atlas.drawSettlementCell(cell, archetype, levelBucket, lineageBucket);
+    PS.atlas.stats.settlementCells++;
+    PS.atlas.pages[cell.pageIndex].version++;
   }
 
   return cell;
@@ -542,6 +664,7 @@ PS.atlas.init = function () {
     PS.atlas.getOrganismCell(i, 0);
     PS.atlas.getOrganismCell(i, 1);
   }
+  PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
   return true;
@@ -554,6 +677,8 @@ PS.atlas.getStats = function () {
     cellCount: Object.keys(PS.atlas.cells).length,
     traitCells: PS.atlas.stats.traitCells,
     terrainCells: PS.atlas.stats.terrainCells,
+    foodCells: PS.atlas.stats.foodCells,
+    settlementCells: PS.atlas.stats.settlementCells,
     generatedCells: PS.atlas.stats.generatedCells,
     pageBytes: PS.atlas.stats.pageBytes,
     lastGenerationMs: PS.atlas.stats.lastGenerationMs
