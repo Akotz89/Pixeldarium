@@ -1,6 +1,7 @@
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 
@@ -33,5 +34,74 @@ assert.ok(tileWebglSource.indexOf("terrainAtlasCell") >= 0, "surface tile compos
 assert.strictEqual(tileWebglSource.indexOf("drawTargetTo2d"), -1, "surface tile compositor should not copy back to Canvas2D");
 assert.ok(tileWebglSource.indexOf("drawArraysInstanced") >= 0, "surface tile compositor should submit instanced draws");
 assert.ok(tileWebglSource.indexOf("vertexAttribDivisor") >= 0, "surface tile compositor should configure per-instance attributes");
+
+const context = {
+  PS: {
+    render: {},
+    atlas: {
+      getTerrainCell() {
+        return {
+          name: "test.grass",
+          pageIndex: 0,
+          u0: 0,
+          v0: 0,
+          u1: 0.25,
+          v1: 0.25
+        };
+      }
+    },
+    ranmap: {
+      data: true,
+      jitterX() {
+        return 99;
+      },
+      jitterY() {
+        return 99;
+      },
+      flipH() {
+        return false;
+      }
+    }
+  },
+  CONFIG: {
+    TILE_SIZE: 16
+  },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  },
+  Float32Array,
+  Math,
+  Number,
+  Object,
+  String,
+  Boolean,
+  Array,
+  console
+};
+
+vm.createContext(context);
+vm.runInContext(tileWebglSource, context, { filename: "js/render/surface-tile-webgl.js" });
+
+const batches = context.PS.render.surfaceTileWebgl.makeBatches(
+  {
+    sampleEast: 4,
+    sampleNorth: 8,
+    renderScreenX: 10,
+    renderScreenY: 20,
+    renderSamplePixelSize: 12,
+    chunkSamples: 2
+  },
+  [
+    { sample: { biome: "grassland" }, screenX: 0, screenY: 16 },
+    { sample: { biome: "grassland" }, screenX: 16, screenY: 16 }
+  ],
+  1
+);
+const page = batches.pages[0];
+
+assert.strictEqual(page[0], 10, "terrain atlas x should stay grid-aligned and ignore positional jitter");
+assert.strictEqual(page[1], 32, "terrain atlas y should stay grid-aligned and ignore positional jitter");
+assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
+assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
 
 console.log("surface tile webgl checks passed");

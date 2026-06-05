@@ -527,7 +527,11 @@ PS.atlas.getTerrainMaterialScore = function (tileDefinition, sample, biome, tile
   var wetness = clamp(Number(signals.wetness) || 0, 0, 1);
   var roughness = clamp(Number(signals.surfaceRoughness) || Number(detail.roughness) || 0, 0, 1);
   var snow = clamp(Number(signals.snow) || 0, 0, 1);
-  var noise = PS.ranmap ? PS.ranmap.variant(tileX + tileDefinition.transitionPriority, tileY - tileDefinition.transitionPriority, 17) / 16 : 0;
+  var noise = PS.atlas.getTerrainSurfaceNoise(
+    tileX + Number(tileDefinition && tileDefinition.transitionPriority || 0),
+    tileY - Number(tileDefinition && tileDefinition.transitionPriority || 0),
+    17
+  );
 
   if (tileDefinition.biome === biome) { score += 20; }
   if (surface.indexOf("water") >= 0 && id.indexOf("water") >= 0) { score += 28 + waterDepth * 12; }
@@ -554,6 +558,22 @@ PS.atlas.getTerrainMaterialScore = function (tileDefinition, sample, biome, tile
   }
 
   return score + noise;
+};
+
+PS.atlas.getTerrainSurfaceNoise = function (sampleX, sampleY, salt) {
+  if (PS.math && typeof PS.math.deterministicUnitNoise === "function") {
+    return PS.math.deterministicUnitNoise(sampleX, sampleY, salt);
+  }
+
+  var value = Math.sin((Number(sampleX) || 0) * 12.9898 + (Number(sampleY) || 0) * 78.233 + (Number(salt) || 0) * 37.719) * 43758.5453;
+  return value - Math.floor(value);
+};
+
+PS.atlas.getTerrainVariant = function (tileX, tileY, variantCount, salt) {
+  var count = Math.max(1, Math.round(Number(variantCount) || 1));
+  var noise = PS.atlas.getTerrainSurfaceNoise(tileX, tileY, salt || count);
+
+  return clamp(Math.floor(noise * count), 0, count - 1);
 };
 
 PS.atlas.getTerrainMaterialTile = function (biome, tileX, tileY, sample) {
@@ -767,7 +787,7 @@ PS.atlas.getSettlementInfluenceCell = function (settlement) {
 PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var tileDefinition = PS.atlas.getTerrainMaterialTile(biome, tileX, tileY, sample);
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
-  var variant = PS.ranmap ? PS.ranmap.variant(tileX, tileY, variantCount) : 0;
+  var variant = PS.atlas.getTerrainVariant(tileX, tileY, variantCount, 29);
   var materialId = tileDefinition ? tileDefinition.id : String(biome || "grass");
   var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
     ? PS.atlas.getTerrainTransitionKey(sample, biome)

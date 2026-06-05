@@ -289,8 +289,8 @@ assert.ok(uniqueAtlasCellColorCount(desertCell) >= 5, "desert atlas cells should
 assert.ok(uniqueAtlasCellColorCount(cliffCell) >= 5, "mountain atlas cells should include ridge detail colors");
 
 var batchAddress = {
-  sampleEast: 0,
-  sampleNorth: 0,
+  sampleEast: 5,
+  sampleNorth: 7,
   renderScreenX: 0,
   renderScreenY: 0,
   renderSamplePixelSize: CONFIG.TILE_SIZE,

@@ -33,37 +33,44 @@ from aggregate civilization state.
   longitude.
 - Latest measured close-band frame metrics from the capture harness:
   - local band: `terrainDraws=12160`, `terrainPageDraws=3`,
-    `entityDraws=1`, `terrainLastFrameMs=5.6`.
+    `entityDraws=1`, `terrainLastFrameMs=6.1`.
   - settlement band: `terrainDraws=16384`, `terrainPageDraws=4`,
-    `entityDraws=1`, `terrainLastFrameMs=6.7`.
+    `entityDraws=1`, `terrainLastFrameMs=6.5`.
+- Close desert material cells now vary across high surface sample Y coordinates
+  instead of collapsing to RANMAP's clamped final tile row.
 
 Warnings were limited to a startup catch-up backlog message and Playwright
 `readPixels` GPU-stall warnings caused by the capture harness.
 
 ## Optimization Gate
 
-- Bottleneck targeted: incorrect close-zoom layer/evidence classification and
-  stale screenshot proof.
+- Bottleneck targeted: incorrect close-zoom layer/evidence classification,
+  stale screenshot proof, and close-band desert atlas striping from clamped
+  terrain variation.
 - Representation/lifecycle boundary changed: zoom-band classification now uses
-  normalized architecture zoom instead of raw camera stop indexes.
+  normalized architecture zoom instead of raw camera stop indexes; terrain
+  material variants now use unbounded deterministic surface-coordinate hashing
+  instead of bounded tile-grid RANMAP lookup.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
-  boundary; settlement evidence is derived from aggregate settlement and route
-  state.
+  boundary; WebGL terrain atlas instances stay chunk/page batched; settlement
+  evidence is derived from aggregate settlement and route state.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels.
 - Player-perception contract: each reachable camera stop maps to the intended
-  orbit, continent, region, local, or settlement visual contract.
+  orbit, continent, region, local, or settlement visual contract; close desert
+  terrain should read as granular material, not full-height repeated columns.
 - New constraint or encoding limit: architecture zoom is clamped to the `1..20`
-  perception scale derived from the configured camera anchors.
+  perception scale derived from the configured camera anchors; terrain variant
+  hashing is deterministic but no longer uses bounded RANMAP tile coordinates.
 - Metric proving movement: pipeline stats now report reachable local and
-  settlement bands, with WebGL terrain/entity draw counts and direct
-  file-runtime interaction evidence.
+  settlement bands, with WebGL terrain/entity draw counts, direct file-runtime
+  interaction evidence, and high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 
 The refreshed close-band screenshots prove the bands are reachable and no
-longer use stale AZR-341 evidence, but they do not prove AZR-365 is complete.
-Local and settlement captures still show obvious striping and coverage artifacts
-in the current terrain chunk presentation. The art-quality pass remains open
-until those artifacts are fixed and the map itself reads as rich simulation
-terrain without relying on inspectors.
+longer use stale AZR-341 evidence. The latest pass removes positional terrain
+jitter cracks and fixes the worst high-coordinate desert variant collapse, but
+it does not prove AZR-365 is complete. Local desert views still need richer
+biome variety, settlement/route visibility in organic simulation state, and
+more authored material families before the placeholder/debug-map feel is gone.

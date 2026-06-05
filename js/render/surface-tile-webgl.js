@@ -173,8 +173,6 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
       target.materialCounts[cell.name] = (target.materialCounts[cell.name] || 0) + 1;
     }
 
-    var jitterX = PS.ranmap && PS.ranmap.data ? PS.ranmap.jitterX(tileX, tileY) * 2 : 0;
-    var jitterY = PS.ranmap && PS.ranmap.data ? PS.ranmap.jitterY(tileX, tileY) * 2 : 0;
     var flipH = PS.ranmap && PS.ranmap.data && PS.ranmap.flipH(tileX, tileY);
     var page = target.pages[cell.pageIndex];
 
@@ -184,8 +182,8 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     }
 
     page.push(
-      screenOffsetX + cellData.screenX * (samplePixelSize / CONFIG.TILE_SIZE) + jitterX,
-      screenOffsetY + cellData.screenY * (samplePixelSize / CONFIG.TILE_SIZE) + jitterY,
+      screenOffsetX + cellData.screenX * (samplePixelSize / CONFIG.TILE_SIZE),
+      screenOffsetY + cellData.screenY * (samplePixelSize / CONFIG.TILE_SIZE),
       samplePixelSize,
       samplePixelSize,
       cell.u0,

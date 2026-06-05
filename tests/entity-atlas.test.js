@@ -141,6 +141,10 @@ const coastEdgeGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
     yAmount: 0.5
   }
 });
+const highSurfaceVariants = new Set();
+for (let y = 10000; y < 10016; y++) {
+  highSurfaceVariants.add(context.PS.atlas.getTerrainVariant(22, y, 4, 29));
+}
 const sparseFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3 });
 const richFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3, amount: 140 });
 const campCell = context.PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
@@ -194,6 +198,7 @@ assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples s
 assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
 assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
 assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
+assert.ok(highSurfaceVariants.size > 1, "terrain variants should keep Y variation for high surface sample coordinates");
 assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
 assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");
 assert.notStrictEqual(sparseFoodCell.name, richFoodCell.name, "resource richness should not overwrite sparse food atlas cells");
