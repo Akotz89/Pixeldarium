@@ -6,15 +6,4016 @@
       "meta": "assets/terrain/grass.json",
       "tileSize": 32,
       "sprites": [
-        { "id": "terrain.grass.0", "rect": [0, 0, 32, 32] },
-        { "id": "terrain.grass.1", "rect": [32, 0, 32, 32] },
-        { "id": "terrain.grass.2", "rect": [64, 0, 32, 32] },
-        { "id": "terrain.grass.3", "rect": [96, 0, 32, 32] },
-        { "id": "terrain.grass.4", "rect": [128, 0, 32, 32] },
-        { "id": "terrain.grass.5", "rect": [160, 0, 32, 32] },
-        { "id": "terrain.grass.6", "rect": [192, 0, 32, 32] },
-        { "id": "terrain.grass.7", "rect": [224, 0, 32, 32] }
+        {
+          "id": "terrain.grass.0",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.1",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.2",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.3",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.4",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.5",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.6",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "terrain.grass.7",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        }
       ]
+    },
+    "equivalence_terrain_materials_v0": {
+      "path": "assets/pixeldarium-equivalence/terrain/terrain_materials_v0.png",
+      "meta": "assets/pixeldarium-equivalence/terrain/terrain_materials_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.terrain_materials_v0.grass-lush.0",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.grass-lush.1",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.dirt-soil.0",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.dirt-soil.1",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.rock-mountain.0",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.rock-mountain.1",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.water-shallow.0",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.water-shallow.1",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.water-deep.0",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_materials_v0.water-deep.1",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_terrain_transitions_v0": {
+      "path": "assets/pixeldarium-equivalence/transitions/terrain_transitions_v0.png",
+      "meta": "assets/pixeldarium-equivalence/transitions/terrain_transitions_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.edge.n",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.edge.e",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.edge.s",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.edge.w",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.corner.ne",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.corner.nw",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.corner.se",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.corner.sw",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.inner-corner.ne",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.inner-corner.nw",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.inner-corner.se",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-water.inner-corner.sw",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.edge.n",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.edge.e",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.edge.s",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.edge.w",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.corner.ne",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.corner.nw",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.corner.se",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.corner.sw",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.inner-corner.ne",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.inner-corner.nw",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.inner-corner.se",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-sand.inner-corner.sw",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.edge.n",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.edge.e",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.edge.s",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.edge.w",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.corner.ne",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.corner.nw",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.corner.se",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.corner.sw",
+          "rect": [
+            992,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.inner-corner.ne",
+          "rect": [
+            1024,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.inner-corner.nw",
+          "rect": [
+            1056,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.inner-corner.se",
+          "rect": [
+            1088,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-rock.inner-corner.sw",
+          "rect": [
+            1120,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.edge.n",
+          "rect": [
+            1152,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.edge.e",
+          "rect": [
+            1184,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.edge.s",
+          "rect": [
+            1216,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.edge.w",
+          "rect": [
+            1248,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.corner.ne",
+          "rect": [
+            1280,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.corner.nw",
+          "rect": [
+            1312,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.corner.se",
+          "rect": [
+            1344,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.corner.sw",
+          "rect": [
+            1376,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.inner-corner.ne",
+          "rect": [
+            1408,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.inner-corner.nw",
+          "rect": [
+            1440,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.inner-corner.se",
+          "rect": [
+            1472,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.rock-snow.inner-corner.sw",
+          "rect": [
+            1504,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.edge.n",
+          "rect": [
+            1536,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.edge.e",
+          "rect": [
+            1568,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.edge.s",
+          "rect": [
+            1600,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.edge.w",
+          "rect": [
+            1632,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.corner.ne",
+          "rect": [
+            1664,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.corner.nw",
+          "rect": [
+            1696,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.corner.se",
+          "rect": [
+            1728,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.corner.sw",
+          "rect": [
+            1760,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.inner-corner.ne",
+          "rect": [
+            1792,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.inner-corner.nw",
+          "rect": [
+            1824,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.inner-corner.se",
+          "rect": [
+            1856,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.grass-forest-floor.inner-corner.sw",
+          "rect": [
+            1888,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.edge.n",
+          "rect": [
+            1920,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.edge.e",
+          "rect": [
+            1952,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.edge.s",
+          "rect": [
+            1984,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.edge.w",
+          "rect": [
+            2016,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.corner.ne",
+          "rect": [
+            2048,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.corner.nw",
+          "rect": [
+            2080,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.corner.se",
+          "rect": [
+            2112,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.corner.sw",
+          "rect": [
+            2144,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.inner-corner.ne",
+          "rect": [
+            2176,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.inner-corner.nw",
+          "rect": [
+            2208,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.inner-corner.se",
+          "rect": [
+            2240,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.sand-rock.inner-corner.sw",
+          "rect": [
+            2272,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.edge.n",
+          "rect": [
+            2304,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.edge.e",
+          "rect": [
+            2336,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.edge.s",
+          "rect": [
+            2368,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.edge.w",
+          "rect": [
+            2400,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.corner.ne",
+          "rect": [
+            2432,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.corner.nw",
+          "rect": [
+            2464,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.corner.se",
+          "rect": [
+            2496,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.corner.sw",
+          "rect": [
+            2528,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.inner-corner.ne",
+          "rect": [
+            2560,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.inner-corner.nw",
+          "rect": [
+            2592,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.inner-corner.se",
+          "rect": [
+            2624,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.water-ice.inner-corner.sw",
+          "rect": [
+            2656,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.edge.n",
+          "rect": [
+            2688,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.edge.e",
+          "rect": [
+            2720,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.edge.s",
+          "rect": [
+            2752,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.edge.w",
+          "rect": [
+            2784,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.corner.ne",
+          "rect": [
+            2816,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.corner.nw",
+          "rect": [
+            2848,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.corner.se",
+          "rect": [
+            2880,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.corner.sw",
+          "rect": [
+            2912,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.inner-corner.ne",
+          "rect": [
+            2944,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.inner-corner.nw",
+          "rect": [
+            2976,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.inner-corner.se",
+          "rect": [
+            3008,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-water.inner-corner.sw",
+          "rect": [
+            3040,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.edge.n",
+          "rect": [
+            3072,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.edge.e",
+          "rect": [
+            3104,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.edge.s",
+          "rect": [
+            3136,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.edge.w",
+          "rect": [
+            3168,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.corner.ne",
+          "rect": [
+            3200,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.corner.nw",
+          "rect": [
+            3232,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.corner.se",
+          "rect": [
+            3264,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.corner.sw",
+          "rect": [
+            3296,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.inner-corner.ne",
+          "rect": [
+            3328,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.inner-corner.nw",
+          "rect": [
+            3360,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.inner-corner.se",
+          "rect": [
+            3392,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.terrain_transitions_v0.wetland-grass.inner-corner.sw",
+          "rect": [
+            3424,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_vegetation_scatter_v0": {
+      "path": "assets/pixeldarium-equivalence/vegetation/vegetation_scatter_v0.png",
+      "meta": "assets/pixeldarium-equivalence/vegetation/vegetation_scatter_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.vegetation_scatter_v0.pine.0",
+          "rect": [
+            0,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.pine.1",
+          "rect": [
+            32,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.pine.2",
+          "rect": [
+            64,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.oak.0",
+          "rect": [
+            96,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.oak.1",
+          "rect": [
+            128,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.oak.2",
+          "rect": [
+            160,
+            0,
+            32,
+            48
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.dead-tree.0",
+          "rect": [
+            192,
+            16,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.dead-tree.1",
+          "rect": [
+            224,
+            16,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.berry-bush.0",
+          "rect": [
+            256,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.berry-bush.1",
+          "rect": [
+            272,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.leafy-bush.0",
+          "rect": [
+            288,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.leafy-bush.1",
+          "rect": [
+            304,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.flower.0",
+          "rect": [
+            320,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.flower.1",
+          "rect": [
+            336,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.flower.2",
+          "rect": [
+            352,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.grass-tuft.0",
+          "rect": [
+            368,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.grass-tuft.1",
+          "rect": [
+            384,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.mushroom.0",
+          "rect": [
+            400,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.mushroom.1",
+          "rect": [
+            416,
+            32,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.vegetation_scatter_v0.fallen-log.0",
+          "rect": [
+            432,
+            32,
+            16,
+            16
+          ]
+        }
+      ]
+    },
+    "equivalence_creature_npc_refined_v1": {
+      "path": "assets/pixeldarium-equivalence/creatures/creature_npc_refined_v1.png",
+      "meta": "assets/pixeldarium-equivalence/creatures/creature_npc_refined_v1.json",
+      "tileSize": 24,
+      "sprites": [
+        {
+          "id": "equivalence.creature_npc_refined_v1.rabbit.n",
+          "rect": [
+            4,
+            4,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.creature_npc_refined_v1.rabbit.e",
+          "rect": [
+            28,
+            4,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.creature_npc_refined_v1.rabbit.s",
+          "rect": [
+            52,
+            4,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.creature_npc_refined_v1.rabbit.w",
+          "rect": [
+            76,
+            4,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.creature_npc_refined_v1.bird.e",
+          "rect": [
+            100,
+            4,
+            16,
+            16
+          ]
+        },
+        {
+          "id": "equivalence.creature_npc_refined_v1.bird.w",
+          "rect": [
+            124,
+            4,
+            16,
+            16
+          ]
+        }
+      ]
+    },
+    "equivalence_settlement_structures_v0": {
+      "path": "assets/pixeldarium-equivalence/settlement/settlement_structures_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/settlement_structures_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.settlement_structures_v0.housing-room",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.workshop-room",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.granary-storage",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.stone-storage",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.stockpile-yard",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.farm-plot",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.orchard-plot",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.forge-room",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.well",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.dock",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.road-segment",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.stone-wall",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.fence",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.cart",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.crate",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.barrel",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.lumber-pile",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.stone-pile",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.metal-ingots",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.food-sacks",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.settlement_structures_v0.torch",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_resource_stockpiles_v0": {
+      "path": "assets/pixeldarium-equivalence/resources/resource_stockpiles_v0.png",
+      "meta": "assets/pixeldarium-equivalence/resources/resource_stockpiles_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.resource_stockpiles_v0.food-sacks",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.grain",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.bread",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.ration",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.fruit",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.vegetable",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.meat",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.fish",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.egg",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.mushroom",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.wood",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.stone",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.stonecut",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.clay",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.coal",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.ore",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.metal",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.sithilon",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.gem",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.cotton",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.fabric",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.clothes",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.leather",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.furniture",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.paper",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.pottery",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.tool",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.machinery",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.jewelry",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.alcohol",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.opiates",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.herb",
+          "rect": [
+            992,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.livestock",
+          "rect": [
+            1024,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.bow",
+          "rect": [
+            1056,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.weapon-short",
+          "rect": [
+            1088,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.weapon-spear",
+          "rect": [
+            1120,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.shield",
+          "rect": [
+            1152,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.leather-armour",
+          "rect": [
+            1184,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.resource_stockpiles_v0.plate-armour",
+          "rect": [
+            1216,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_world_weather_v0": {
+      "path": "assets/pixeldarium-equivalence/world/world_weather_v0.png",
+      "meta": "assets/pixeldarium-equivalence/world/world_weather_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.world_weather_v0.ground",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.forest",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.mountain",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.water",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.lake",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.river",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.coast-edge",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.town-human",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.town-normal",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.farm-centre",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.army-banner",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.road-route",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.trade-route",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.region-border",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.rain",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.snow",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.thunder",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.wind",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.fog",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.climate-temperate",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.climate-arid",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.climate-cold",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.climate-tropical",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.fertility",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.growth",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.minerals",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.fishery",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.danger",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.rebellion",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.port",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.world_weather_v0.caravan",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_work_status_overlays_v0": {
+      "path": "assets/pixeldarium-equivalence/overlays/work_status_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/work_status_overlays_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.work_status_overlays_v0.work-hammer",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.build-job",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.clear-job",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.repair-job",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.haul-cart",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.push-order",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.pull-order",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.delivery",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.barber-service",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.bath-service",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.physician-service",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.food-service",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.shrine-service",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.guard-post",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.admin-work",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.blocked-job",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.locked",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.disease",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.boost-up",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.degrade-down",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.need-food",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.need-water",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.need-home",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.need-sleep",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.standing-morale",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.stats-population",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.stats-stored",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.stats-law",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.maintenance-radius",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.service-radius",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.work_status_overlays_v0.room-problem",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_ui_status_icons_v0": {
+      "path": "assets/pixeldarium-equivalence/ui/ui_status_icons_v0.png",
+      "meta": "assets/pixeldarium-equivalence/ui/ui_status_icons_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.ui_status_icons_v0.ui-confirm",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.ui-cancel",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.ui-up",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.ui-down",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.stat-population",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.stat-health",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.stat-happiness",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.stat-law",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.env-sun",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.env-moon",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.env-rain",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.env-growth",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.resource-grain",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.resource-ore",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.resource-wood",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.resource-food",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.resource-coin",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.overlay-alert",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.buildpoints",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.equipment-tool",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.battle-sword",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.battle-shield",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.battle-bow",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.battle-spear",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.icon-settings",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.icon-knowledge",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.icon-chart",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.icon-panel",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.banner-red",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.banner-gold",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.work-hammer-icon",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.ui_status_icons_v0.work-logistics-icon",
+          "rect": [
+            992,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_battle_military_symbols_v0": {
+      "path": "assets/pixeldarium-equivalence/overlays/battle_military_symbols_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/battle_military_symbols_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-sword",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-spear",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-bow",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-shield",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.equipment-bow",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.equipment-shield",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.equipment-spear",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.equipment-sword",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.equipment-greatsword",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.formation-line",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.formation-wedge",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.formation-block",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.order-attack",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.order-move",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.order-hold",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.order-rout",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.division-banner-red",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.division-banner-blue",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.division-banner-green",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.world-army",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.world-raider",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.world-mercenary",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.barracks-room",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.training-yard",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.guard-post",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.artillery",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.catapult",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.target-map",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-result-victory",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.battle-result-defeat",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.supply-line",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.battle_military_symbols_v0.army-spotted",
+          "rect": [
+            992,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_culture_tech_symbols_v0": {
+      "path": "assets/pixeldarium-equivalence/ui/culture_tech_symbols_v0.png",
+      "meta": "assets/pixeldarium-equivalence/ui/culture_tech_symbols_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.culture_tech_symbols_v0.civic-admin",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.civic-law",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.civic-decree",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.civic-tax",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.noble-crown",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.faction-crest-sun",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.faction-crest-river",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.faction-crest-stone",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.faction-crest-cross",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.diplomacy-handshake",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.diplomacy-peace",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.trade-route",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.embassy-flag",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.knowledge-book",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.knowledge-library",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.education-school",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.research-gear",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.research-spark",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.research-lamp",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.tech-tier-1",
+          "rect": [
+            608,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.tech-tier-2",
+          "rect": [
+            640,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.tech-tier-3",
+          "rect": [
+            672,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.tech-tier-4",
+          "rect": [
+            704,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.culture-temple",
+          "rect": [
+            736,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.culture-festival",
+          "rect": [
+            768,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.culture-music",
+          "rect": [
+            800,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.culture-monument",
+          "rect": [
+            832,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.religion-shrine",
+          "rect": [
+            864,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.citizen-loyalty",
+          "rect": [
+            896,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.citizen-unrest",
+          "rect": [
+            928,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.species-origin",
+          "rect": [
+            960,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.language-script",
+          "rect": [
+            992,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.bureau-records",
+          "rect": [
+            1024,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.court-marker",
+          "rect": [
+            1056,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.academy-marker",
+          "rect": [
+            1088,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.culture_tech_symbols_v0.innovation-marker",
+          "rect": [
+            1120,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_infrastructure_props_v0": {
+      "path": "assets/pixeldarium-equivalence/settlement/infrastructure_props_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/infrastructure_props_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.infrastructure_props_v0.roof-2x",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.floor-extra",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.fortification-stairs",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.fortification-grand",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.fortification-stone",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.fortification-wood",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.structure-grand",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.structure-mud",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.structure-stone",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.structure-wood",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.boat-dingy",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.caravan",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.cart",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.debris",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.fire",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.rubbish",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.stairs-big",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.stairs",
+          "rect": [
+            544,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.infrastructure_props_v0.top",
+          "rect": [
+            576,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_room_mechanical_fixtures_v0": {
+      "path": "assets/pixeldarium-equivalence/settlement/room_mechanical_fixtures_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/room_mechanical_fixtures_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.basin",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.carpet",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.nursery",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.pipe",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.prison",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.shelves",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.mech",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.mech2",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.mechx2",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.room_mechanical_fixtures_v0.mech-conveyor",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_material_effect_overlays_v0": {
+      "path": "assets/pixeldarium-equivalence/effects/material_effect_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/effects/material_effect_overlays_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.material_effect_overlays_v0.decor-texture",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.organic-texture",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.stone-texture",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.wood-texture",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.bumps-overlay",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.displacement-big",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.displacement-low",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.displacement-small",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.displacement-tiny",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.dots-overlay",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.fire-effect",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.organic-blob",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.material_effect_overlays_v0.special-overlay",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    "equivalence_source_reviewed_overlays_v0": {
+      "path": "assets/pixeldarium-equivalence/overlays/source_reviewed_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/source_reviewed_overlays_v0.json",
+      "tileSize": 32,
+      "sprites": [
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.citizen-social",
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.event-framework",
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.incident-disaster",
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.incident-health",
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.incident-security",
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.map-event-control",
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.path-component-debug",
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.path-logistics",
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.path-request-debug",
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.path-target",
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.path-validity",
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.placement-landing",
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.placement-tile-grid",
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.placement-validity",
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.ambient-state",
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.time-cycle",
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ]
+        },
+        {
+          "id": "equivalence.source_reviewed_overlays_v0.time-interval",
+          "rect": [
+            512,
+            0,
+            32,
+            32
+          ]
+        }
+      ]
+    }
+  },
+  "handoffs": {
+    "azr797": {
+      "path": "assets/pixeldarium-equivalence/handoff-manifest.json",
+      "acceptedSheetCount": 15,
+      "reviewIssue": "AZR-795"
     }
   }
 }

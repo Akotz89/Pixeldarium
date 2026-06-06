@@ -10,6 +10,7 @@ function read(file) {
 }
 
 const manifest = JSON.parse(read("data/audio.json"));
+const audioHandoff = JSON.parse(read("assets/audio/pixeldarium-equivalence/handoff-manifest.json"));
 const sidecarContext = {
   PS: {
     assets: {
@@ -36,6 +37,24 @@ assert.strictEqual(
 ].forEach((file) => {
   assert.ok(fs.existsSync(path.join(root, file)), file + " should exist");
   assert.ok(fs.statSync(path.join(root, file)).size > 0, file + " should be a non-empty placeholder");
+});
+
+assert.strictEqual(audioHandoff.runtimeUse, true, "accepted audio handoff should be runtime-owned");
+assert.strictEqual(audioHandoff.acceptedPackCount, 3, "audio handoff should include accepted packs only");
+assert.strictEqual(audioHandoff.assetCount, 30, "audio handoff should include all accepted WAV candidates");
+assert.ok(manifest.handoffs && manifest.handoffs.azr798, "audio manifest should reference AZR-798 handoff");
+assert.strictEqual(manifest.handoffs.azr798.assetCount, 30, "audio manifest handoff should record accepted WAV count");
+
+audioHandoff.assets.forEach((asset) => {
+  assert.ok(fs.existsSync(path.join(root, asset.url)), asset.url + " should exist");
+  assert.ok(fs.statSync(path.join(root, asset.url)).size > 0, asset.url + " should be non-empty");
+  if (asset.loop) {
+    assert.ok(manifest.ambient[asset.id], asset.id + " should be registered as ambient loop");
+    assert.strictEqual(manifest.ambient[asset.id].runtimeUse, true, asset.id + " should be runtime accepted");
+  } else {
+    assert.ok(manifest.sfx[asset.id], asset.id + " should be registered as one-shot sfx");
+    assert.strictEqual(manifest.sfx[asset.id].runtimeUse, true, asset.id + " should be runtime accepted");
+  }
 });
 
 const addedListeners = {};

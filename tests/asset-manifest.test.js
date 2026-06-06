@@ -7,10 +7,12 @@ const root = path.resolve(__dirname, "..");
 const manifestPath = path.join(root, "assets/manifest.json");
 const grassMetaPath = path.join(root, "assets/terrain/grass.json");
 const grassPngPath = path.join(root, "assets/terrain/grass.png");
+const handoffManifestPath = path.join(root, "assets/pixeldarium-equivalence/handoff-manifest.json");
 const loaderSource = fs.readFileSync(path.join(root, "js/assets/loader.js"), "utf8");
 const spriteSheetSource = fs.readFileSync(path.join(root, "js/assets/sprite-sheet.js"), "utf8");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const grassMeta = JSON.parse(fs.readFileSync(grassMetaPath, "utf8"));
+const handoffManifest = JSON.parse(fs.readFileSync(handoffManifestPath, "utf8"));
 const png = fs.readFileSync(grassPngPath);
 
 function pngSize(buffer) {
@@ -33,6 +35,10 @@ assert.strictEqual(manifest.sheets.terrain_grass.sprites.length, 8, "terrain gra
 assert.deepStrictEqual(manifest.sheets.terrain_grass.sprites[7], { id: "terrain.grass.7", rect: [224, 0, 32, 32] }, "last grass sprite rect should match 8th tile");
 assert.deepStrictEqual(grassMeta.names, manifest.sheets.terrain_grass.sprites.map((sprite) => sprite.id), "grass grid metadata should match manifest sprite IDs");
 assert.deepStrictEqual(pngSize(png), { width: 256, height: 32 }, "grass PNG should be 256x32");
+assert.strictEqual(handoffManifest.runtimeUse, true, "accepted visual handoff should be runtime-owned");
+assert.strictEqual(handoffManifest.acceptedSheetCount, 15, "visual handoff should include accepted sheets only");
+assert.ok(handoffManifest.rejected.includes("creature_npc_original_v0"), "visual handoff should record rejected/superseded creature v0");
+assert.ok(!manifest.sheets.equivalence_creature_npc_original_v0, "runtime manifest should not include rejected creature v0");
 
 function createContext() {
   const fetchCalls = [];
@@ -87,6 +93,9 @@ function createContext() {
           if (url === "assets/terrain/grass.json") {
             return Promise.resolve(grassMeta);
           }
+          if (url.startsWith("assets/pixeldarium-equivalence/") && url.endsWith(".json")) {
+            return Promise.resolve(JSON.parse(fs.readFileSync(path.join(root, url), "utf8")));
+          }
           return Promise.resolve({});
         }
       });
@@ -107,11 +116,20 @@ function createContext() {
   const loadedManifest = await loader.loadManifest("assets/manifest.json");
   const loadedGrass = context.PS.assets.loadedSheets.terrain_grass;
   const grassCell = loadedGrass.sheet.getCell("terrain.grass.7");
+  const expectedMetaLoads = Object.values(manifest.sheets).map((sheet) => sheet.meta).filter(Boolean);
+  const expectedImageLoads = Object.values(manifest.sheets).map((sheet) => sheet.path).filter(Boolean);
+  const handoffSheet = context.PS.assets.loadedSheets.equivalence_creature_npc_refined_v1;
 
   assert.strictEqual(loadedManifest, manifest, "loadManifest should resolve the parsed manifest");
-  assert.deepStrictEqual(context.fetchCalls, ["assets/manifest.json", "assets/terrain/grass.json"], "loadManifest should fetch manifest and sheet metadata");
-  assert.deepStrictEqual(context.imageLoads, ["assets/terrain/grass.png"], "loadManifest should load the placeholder PNG");
+  assert.deepStrictEqual(context.fetchCalls, ["assets/manifest.json"].concat(expectedMetaLoads), "loadManifest should fetch manifest and all sheet metadata");
+  assert.deepStrictEqual(context.imageLoads, expectedImageLoads, "loadManifest should load every manifest PNG");
   assert.ok(loadedGrass.sheet, "loadManifest should populate loaded sprite sheet dictionary");
+  assert.ok(handoffSheet && handoffSheet.sheet, "loadManifest should populate accepted visual handoff sheets");
+  assert.strictEqual(
+    Object.keys(context.PS.assets.loadedSheets).length,
+    Object.keys(manifest.sheets).length,
+    "loaded sheet dictionary should match manifest sheet count"
+  );
   assert.deepStrictEqual(
     { x: grassCell.x, y: grassCell.y, w: grassCell.w, h: grassCell.h },
     { x: 224, y: 0, w: 32, h: 32 },

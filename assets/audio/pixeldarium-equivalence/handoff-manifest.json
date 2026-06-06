@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "issue": "AZR-798",
+  "reviewIssue": "AZR-796",
+  "generatedAt": "2026-06-06T10:06:05.332Z",
+  "runtimeUse": true,
+  "acceptedPackCount": 3,
+  "assetCount": 30,
+  "packs": [
+    {
+      "id": "audio_ambience_loops_v0",
+      "channel": "ambient",
+      "assets": [
+        "equivalence.audio_ambience_loops_v0.dawn-lowland-bed",
+        "equivalence.audio_ambience_loops_v0.workyard-air-bed",
+        "equivalence.audio_ambience_loops_v0.stonehall-room-bed",
+        "equivalence.audio_ambience_loops_v0.forest-edge-bed",
+        "equivalence.audio_ambience_loops_v0.night-settlement-bed",
+        "equivalence.audio_ambience_loops_v0.rain-soft-time-loop",
+        "equivalence.audio_ambience_loops_v0.wind-season-turn-loop",
+        "equivalence.audio_ambience_loops_v0.dusk-temperature-loop"
+      ],
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "audio_event_alert_battle_cues_v0",
+      "channel": "sfx",
+      "assets": [
+        "equivalence.audio_event_alert_battle_cues_v0.battle-muster-low",
+        "equivalence.audio_event_alert_battle_cues_v0.formation-confirm",
+        "equivalence.audio_event_alert_battle_cues_v0.threat-near-alert",
+        "equivalence.audio_event_alert_battle_cues_v0.blocked-action-alert",
+        "equivalence.audio_event_alert_battle_cues_v0.disease-warning-alert",
+        "equivalence.audio_event_alert_battle_cues_v0.event-arrival-stinger",
+        "equivalence.audio_event_alert_battle_cues_v0.incident-resolved-stinger",
+        "equivalence.audio_event_alert_battle_cues_v0.raid-impact-cue"
+      ],
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "audio_ui_settlement_cues_v0",
+      "channel": "sfx",
+      "assets": [
+        "equivalence.audio_ui_settlement_cues_v0.ui-hover-soft",
+        "equivalence.audio_ui_settlement_cues_v0.ui-select-confirm",
+        "equivalence.audio_ui_settlement_cues_v0.ui-cancel-back",
+        "equivalence.audio_ui_settlement_cues_v0.ui-tab-shift",
+        "equivalence.audio_ui_settlement_cues_v0.ui-build-place",
+        "equivalence.audio_ui_settlement_cues_v0.ui-build-denied",
+        "equivalence.audio_ui_settlement_cues_v0.ui-resource-pick",
+        "equivalence.audio_ui_settlement_cues_v0.ui-menu-open",
+        "equivalence.audio_ui_settlement_cues_v0.ui-menu-close",
+        "equivalence.audio_ui_settlement_cues_v0.ui-speed-toggle",
+        "equivalence.audio_ui_settlement_cues_v0.settlement-market-loop",
+        "equivalence.audio_ui_settlement_cues_v0.workshop-soft-loop",
+        "equivalence.audio_ui_settlement_cues_v0.hauler-yard-loop",
+        "equivalence.audio_ui_settlement_cues_v0.scribe-hall-loop"
+      ],
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    }
+  ],
+  "assets": [
+    {
+      "id": "equivalence.audio_ambience_loops_v0.dawn-lowland-bed",
+      "role": "ambience-bed",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/dawn-lowland-bed.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.workyard-air-bed",
+      "role": "ambience-bed",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/workyard-air-bed.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.stonehall-room-bed",
+      "role": "ambience-bed",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/stonehall-room-bed.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.forest-edge-bed",
+      "role": "ambience-bed",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/forest-edge-bed.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.night-settlement-bed",
+      "role": "ambience-bed",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/night-settlement-bed.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.rain-soft-time-loop",
+      "role": "weather-time-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/rain-soft-time-loop.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.wind-season-turn-loop",
+      "role": "weather-time-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/wind-season-turn-loop.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_ambience_loops_v0.dusk-temperature-loop",
+      "role": "weather-time-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/dusk-temperature-loop.wav",
+      "durationSeconds": 20,
+      "reviewedCandidate": "audio-ambience-loop-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.battle-muster-low",
+      "role": "battle-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/battle-muster-low.wav",
+      "durationSeconds": 1.4,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.formation-confirm",
+      "role": "battle-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/formation-confirm.wav",
+      "durationSeconds": 0.9,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.threat-near-alert",
+      "role": "alert",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/threat-near-alert.wav",
+      "durationSeconds": 0.75,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.blocked-action-alert",
+      "role": "alert",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/blocked-action-alert.wav",
+      "durationSeconds": 0.5,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.disease-warning-alert",
+      "role": "alert",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/disease-warning-alert.wav",
+      "durationSeconds": 1.2,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.event-arrival-stinger",
+      "role": "event-stinger",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/event-arrival-stinger.wav",
+      "durationSeconds": 1.8,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.incident-resolved-stinger",
+      "role": "event-stinger",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/incident-resolved-stinger.wav",
+      "durationSeconds": 1.1,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_event_alert_battle_cues_v0.raid-impact-cue",
+      "role": "battle-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/raid-impact-cue.wav",
+      "durationSeconds": 1.6,
+      "reviewedCandidate": "audio-event-alert-battle-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-hover-soft",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-hover-soft.wav",
+      "durationSeconds": 0.16,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-select-confirm",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-select-confirm.wav",
+      "durationSeconds": 0.28,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-cancel-back",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-cancel-back.wav",
+      "durationSeconds": 0.24,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-tab-shift",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-tab-shift.wav",
+      "durationSeconds": 0.2,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-build-place",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-build-place.wav",
+      "durationSeconds": 0.36,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-build-denied",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-build-denied.wav",
+      "durationSeconds": 0.32,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-resource-pick",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-resource-pick.wav",
+      "durationSeconds": 0.22,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-menu-open",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-menu-open.wav",
+      "durationSeconds": 0.34,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-menu-close",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-menu-close.wav",
+      "durationSeconds": 0.26,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.ui-speed-toggle",
+      "role": "ui-cue",
+      "loop": false,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-speed-toggle.wav",
+      "durationSeconds": 0.3,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.settlement-market-loop",
+      "role": "work-settlement-loop",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/settlement-market-loop.wav",
+      "durationSeconds": 12,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.workshop-soft-loop",
+      "role": "work-settlement-loop",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/workshop-soft-loop.wav",
+      "durationSeconds": 12,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.hauler-yard-loop",
+      "role": "work-settlement-loop",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/hauler-yard-loop.wav",
+      "durationSeconds": 12,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    },
+    {
+      "id": "equivalence.audio_ui_settlement_cues_v0.scribe-hall-loop",
+      "role": "work-settlement-loop",
+      "loop": true,
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/scribe-hall-loop.wav",
+      "durationSeconds": 12,
+      "reviewedCandidate": "audio-ui-settlement-cue-v0"
+    }
+  ]
+}

@@ -34,6 +34,105 @@
       "url": "assets/audio/ambient/silence.ogg",
       "loop": true,
       "volume": 0.45
+    },
+    "equivalence.audio_ambience_loops_v0.dawn-lowland-bed": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/dawn-lowland-bed.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "ambience-bed",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 20
+    },
+    "equivalence.audio_ambience_loops_v0.workyard-air-bed": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/workyard-air-bed.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "ambience-bed",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 20
+    },
+    "equivalence.audio_ambience_loops_v0.stonehall-room-bed": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/stonehall-room-bed.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "ambience-bed",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 20
+    },
+    "equivalence.audio_ambience_loops_v0.forest-edge-bed": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/forest-edge-bed.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "ambience-bed",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 20
+    },
+    "equivalence.audio_ambience_loops_v0.night-settlement-bed": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/night-settlement-bed.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "ambience-bed",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 20
+    },
+    "equivalence.audio_ui_settlement_cues_v0.settlement-market-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/settlement-market-loop.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "work-settlement-loop",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 12
+    },
+    "equivalence.audio_ui_settlement_cues_v0.workshop-soft-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/workshop-soft-loop.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "work-settlement-loop",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 12
+    },
+    "equivalence.audio_ui_settlement_cues_v0.hauler-yard-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/hauler-yard-loop.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "work-settlement-loop",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 12
+    },
+    "equivalence.audio_ui_settlement_cues_v0.scribe-hall-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/scribe-hall-loop.wav",
+      "volume": 0.45,
+      "loop": true,
+      "runtimeUse": true,
+      "role": "work-settlement-loop",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796",
+      "loopStart": 0,
+      "loopEnd": 12
     }
   },
   "sfx": {
@@ -46,11 +145,221 @@
       "url": "assets/audio/sfx/silence.ogg",
       "volume": 0.7,
       "event": "settlement.founded"
+    },
+    "equivalence.audio_ambience_loops_v0.rain-soft-time-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/rain-soft-time-loop.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "weather-time-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ambience_loops_v0.wind-season-turn-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/wind-season-turn-loop.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "weather-time-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ambience_loops_v0.dusk-temperature-loop": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ambience_loops_v0/dusk-temperature-loop.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "weather-time-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.battle-muster-low": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/battle-muster-low.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "battle-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.formation-confirm": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/formation-confirm.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "battle-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.threat-near-alert": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/threat-near-alert.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "alert",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.blocked-action-alert": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/blocked-action-alert.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "alert",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.disease-warning-alert": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/disease-warning-alert.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "alert",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.event-arrival-stinger": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/event-arrival-stinger.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "event-stinger",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.incident-resolved-stinger": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/incident-resolved-stinger.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "event-stinger",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_event_alert_battle_cues_v0.raid-impact-cue": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_event_alert_battle_cues_v0/raid-impact-cue.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "battle-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-hover-soft": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-hover-soft.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-select-confirm": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-select-confirm.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-cancel-back": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-cancel-back.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-tab-shift": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-tab-shift.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-build-place": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-build-place.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-build-denied": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-build-denied.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-resource-pick": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-resource-pick.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-menu-open": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-menu-open.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-menu-close": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-menu-close.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
+    },
+    "equivalence.audio_ui_settlement_cues_v0.ui-speed-toggle": {
+      "url": "assets/audio/pixeldarium-equivalence/audio_ui_settlement_cues_v0/ui-speed-toggle.wav",
+      "volume": 0.65,
+      "loop": false,
+      "runtimeUse": true,
+      "role": "ui-cue",
+      "handoffIssue": "AZR-798",
+      "reviewIssue": "AZR-796"
     }
   },
   "events": {
     "organism.born": "organism_birth",
-    "settlement.founded": "settlement_founded"
+    "settlement.founded": "settlement_founded",
+    "equivalence.rain-soft-time-loop": "equivalence.audio_ambience_loops_v0.rain-soft-time-loop",
+    "equivalence.wind-season-turn-loop": "equivalence.audio_ambience_loops_v0.wind-season-turn-loop",
+    "equivalence.dusk-temperature-loop": "equivalence.audio_ambience_loops_v0.dusk-temperature-loop",
+    "equivalence.battle-muster-low": "equivalence.audio_event_alert_battle_cues_v0.battle-muster-low",
+    "equivalence.formation-confirm": "equivalence.audio_event_alert_battle_cues_v0.formation-confirm",
+    "equivalence.threat-near-alert": "equivalence.audio_event_alert_battle_cues_v0.threat-near-alert",
+    "equivalence.blocked-action-alert": "equivalence.audio_event_alert_battle_cues_v0.blocked-action-alert",
+    "equivalence.disease-warning-alert": "equivalence.audio_event_alert_battle_cues_v0.disease-warning-alert",
+    "equivalence.event-arrival-stinger": "equivalence.audio_event_alert_battle_cues_v0.event-arrival-stinger",
+    "equivalence.incident-resolved-stinger": "equivalence.audio_event_alert_battle_cues_v0.incident-resolved-stinger",
+    "equivalence.raid-impact-cue": "equivalence.audio_event_alert_battle_cues_v0.raid-impact-cue",
+    "equivalence.ui-hover-soft": "equivalence.audio_ui_settlement_cues_v0.ui-hover-soft",
+    "equivalence.ui-select-confirm": "equivalence.audio_ui_settlement_cues_v0.ui-select-confirm",
+    "equivalence.ui-cancel-back": "equivalence.audio_ui_settlement_cues_v0.ui-cancel-back",
+    "equivalence.ui-tab-shift": "equivalence.audio_ui_settlement_cues_v0.ui-tab-shift",
+    "equivalence.ui-build-place": "equivalence.audio_ui_settlement_cues_v0.ui-build-place",
+    "equivalence.ui-build-denied": "equivalence.audio_ui_settlement_cues_v0.ui-build-denied",
+    "equivalence.ui-resource-pick": "equivalence.audio_ui_settlement_cues_v0.ui-resource-pick",
+    "equivalence.ui-menu-open": "equivalence.audio_ui_settlement_cues_v0.ui-menu-open",
+    "equivalence.ui-menu-close": "equivalence.audio_ui_settlement_cues_v0.ui-menu-close",
+    "equivalence.ui-speed-toggle": "equivalence.audio_ui_settlement_cues_v0.ui-speed-toggle"
   },
   "biomes": {
     "temperate": "temperate",
@@ -64,5 +373,13 @@
     "ice": "temperate",
     "barren": "desert",
     "volcanic": "desert"
+  },
+  "handoffs": {
+    "azr798": {
+      "path": "assets/audio/pixeldarium-equivalence/handoff-manifest.json",
+      "acceptedPackCount": 3,
+      "assetCount": 30,
+      "reviewIssue": "AZR-796"
+    }
   }
 }
