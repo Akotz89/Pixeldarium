@@ -650,6 +650,9 @@ PS.atlas.getTerrainPatternAmount = function (pattern, x, y, variant) {
   if (pattern === "lava") {
     return (hash === 0 || (x + y + variant) % 13 === 0) ? 0.85 : (hash < 6 ? -0.34 : 0);
   }
+  if (pattern === "microbial") {
+    return (hash < 5 || (x * 3 + y + variant) % 11 === 0) ? 0.46 : (hash > 12 ? -0.30 : 0);
+  }
   if (pattern === "grass") {
     return hash < 4 ? 0.28 : (hash > 12 ? -0.18 : 0);
   }
@@ -657,12 +660,86 @@ PS.atlas.getTerrainPatternAmount = function (pattern, x, y, variant) {
   return hash < 3 ? 0.22 : (hash > 13 ? -0.22 : 0);
 };
 
+PS.atlas.getTerrainBiologyInfo = function (sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var signals = detail.materialSignals || {};
+  var biology = sample && sample.biology ? sample.biology : {};
+  var microbial = sample && sample.microbial ? sample.microbial : {};
+  var bloom = Math.max(
+    Number(signals.microbialBloom) || 0,
+    Number(signals.biofilm) || 0,
+    Number(detail.microbialBloom) || 0,
+    Number(detail.biofilm) || 0,
+    Number(biology.microbialBloom) || 0,
+    Number(biology.density) || 0,
+    Number(microbial.bloomIntensity) || 0,
+    Number(microbial.density) || 0,
+    Number(sample && sample.microbialBloom) || 0
+  );
+  var organic = Math.max(
+    Number(signals.organicMatter) || 0,
+    Number(signals.ecology) || 0,
+    Number(detail.organicMatter) || 0,
+    Number(biology.organicMatter) || 0,
+    Number(sample && sample.ecology) || 0
+  );
+  var pressure = clamp(Math.max(bloom, organic * 0.72), 0, 1);
+
+  if (pressure < 0.18) {
+    return null;
+  }
+
+  return {
+    type: bloom >= organic * 0.65 ? "microbial" : "organic",
+    bucket: Math.min(3, Math.floor(pressure * 4)),
+    pressure: pressure
+  };
+};
+
+PS.atlas.getTerrainBiologyKey = function (sample) {
+  var biology = PS.atlas.getTerrainBiologyInfo(sample);
+
+  if (!biology) {
+    return "bio0";
+  }
+
+  return biology.type + "." + biology.bucket;
+};
+
+PS.atlas.applyTerrainBiologyPalette = function (palette, biology) {
+  if (!biology) {
+    return palette;
+  }
+
+  var microbialAccent = biology.type === "microbial" ? [84, 204, 139] : [116, 176, 72];
+  var microbialBase = biology.type === "microbial" ? [38, 114, 86] : [68, 126, 58];
+  var pressure = clamp(0.22 + biology.pressure * 0.38, 0, 0.62);
+
+  return {
+    base: [
+      Math.round(palette.base[0] * (1 - pressure) + microbialBase[0] * pressure),
+      Math.round(palette.base[1] * (1 - pressure) + microbialBase[1] * pressure),
+      Math.round(palette.base[2] * (1 - pressure) + microbialBase[2] * pressure)
+    ],
+    accent: [
+      Math.round(palette.accent[0] * (1 - pressure) + microbialAccent[0] * pressure),
+      Math.round(palette.accent[1] * (1 - pressure) + microbialAccent[1] * pressure),
+      Math.round(palette.accent[2] * (1 - pressure) + microbialAccent[2] * pressure)
+    ],
+    dark: palette.dark,
+    pattern: biology.type === "microbial" ? "microbial" : palette.pattern
+  };
+};
+
 PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition, sample) {
+  var biology = PS.atlas.getTerrainBiologyInfo(sample);
   var palette = tileDefinition
     ? PS.atlas.getTerrainTilePalette(biome, tileDefinition)
     : PS.atlas.getTerrainPalette(biome);
   var x;
   var y;
+
+  palette = PS.atlas.applyTerrainBiologyPalette(palette, biology);
 
   for (y = 0; y < cell.h; y++) {
     for (x = 0; x < cell.w; x++) {
@@ -789,10 +866,11 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
   var variant = PS.atlas.getTerrainVariant(tileX, tileY, variantCount, 29);
   var materialId = tileDefinition ? tileDefinition.id : String(biome || "grass");
+  var biologyKey = PS.atlas.getTerrainBiologyKey(sample);
   var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
     ? PS.atlas.getTerrainTransitionKey(sample, biome)
     : "plain";
-  var name = "terrain." + materialId + "." + variant + "." + transitionKey;
+  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + biologyKey;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {

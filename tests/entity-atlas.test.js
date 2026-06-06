@@ -141,6 +141,44 @@ const coastEdgeGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
     yAmount: 0.5
   }
 });
+const microbialMatCell = context.PS.atlas.getTerrainCell("wetland", 26, 12, {
+  detail: {
+    surface: "moss",
+    elevation: 0.24,
+    roughness: 0.12,
+    materialSignals: {
+      wetness: 0.82,
+      microbialBloom: 0.91,
+      organicMatter: 0.72
+    }
+  },
+  microbial: {
+    bloomIntensity: 0.91,
+    density: 0.84
+  },
+  tileBlend: {
+    biomeWeights: { wetland: 1 },
+    transitionStrength: 0,
+    xAmount: 0.5,
+    yAmount: 0.5
+  }
+});
+const ordinaryWetlandCell = context.PS.atlas.getTerrainCell("wetland", 26, 12, {
+  detail: {
+    surface: "moss",
+    elevation: 0.24,
+    roughness: 0.12,
+    materialSignals: {
+      wetness: 0.82
+    }
+  },
+  tileBlend: {
+    biomeWeights: { wetland: 1 },
+    transitionStrength: 0,
+    xAmount: 0.5,
+    yAmount: 0.5
+  }
+});
 const highSurfaceVariants = new Set();
 for (let y = 10000; y < 10016; y++) {
   highSurfaceVariants.add(context.PS.atlas.getTerrainVariant(22, y, 4, 29));
@@ -198,6 +236,11 @@ assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples s
 assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
 assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
 assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
+assert.ok(plainGrassCell.name.endsWith(".bio0"), "plain terrain cells should keep an explicit no-biology key");
+assert.ok(microbialMatCell.name.indexOf(".microbial.3") > 0, "microbial mat samples should encode a bounded biological material key");
+assert.notStrictEqual(microbialMatCell.name, ordinaryWetlandCell.name, "microbial mat cells should not overwrite ordinary wetland material cells");
+assert.notDeepStrictEqual(pixelAt(microbialMatCell, 7, 7), pixelAt(ordinaryWetlandCell, 7, 7), "microbial mat pressure should change visible terrain pixels");
+assert.ok(uniqueColorCount(microbialMatCell) >= uniqueColorCount(ordinaryWetlandCell), "microbial mat cells should preserve dense authored surface detail");
 assert.ok(highSurfaceVariants.size > 1, "terrain variants should keep Y variation for high surface sample coordinates");
 assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
 assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");

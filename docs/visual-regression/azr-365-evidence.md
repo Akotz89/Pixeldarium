@@ -44,6 +44,10 @@ from aggregate civilization state.
   `renderer=webgl2`, `zoomBand=settlement`, `terrainDraws=5888`,
   `entityDraws=37`, `settlementEntityDraws=1`, `routeEntityDraws=35`,
   `influenceEntityDraws=1`, `gpuFrameMs=6.5`, `lastError=""`.
+- Direct `file://` terrain atlas probe after biological material encoding:
+  ordinary wetland cell `terrain.wetland.2.plain.bio0`, microbial mat cell
+  `terrain.wetland.2.plain.microbial.3`; center pixels changed from
+  `[161,174,80,255]` to `[41,104,62,255]`; atlas page bytes stayed `262144`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -59,7 +63,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   normalized architecture zoom instead of raw camera stop indexes; terrain
   material variants now use unbounded deterministic surface-coordinate hashing
   instead of bounded tile-grid RANMAP lookup; close route facades now use
-  uncropped local endpoint projection clipped to the active canvas footprint.
+  uncropped local endpoint projection clipped to the active canvas footprint;
+  biological surface pressure now becomes bounded terrain atlas variants for
+  microbial/organic material cues.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -72,11 +78,14 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain should read as granular material, not full-height repeated columns.
 - New constraint or encoding limit: architecture zoom is clamped to the `1..20`
   perception scale derived from the configured camera anchors; terrain variant
-  hashing is deterministic but no longer uses bounded RANMAP tile coordinates.
+  hashing is deterministic but no longer uses bounded RANMAP tile coordinates;
+  terrain biology encoding is limited to `bio0`, `microbial.0..3`, and
+  `organic.0..3` atlas key suffixes.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
-  counters, direct file-runtime interaction evidence, and high-coordinate
-  terrain variant regression coverage.
+  counters, direct file-runtime interaction evidence, biological terrain atlas
+  identity/pixel evidence, and high-coordinate terrain variant regression
+  coverage.
 
 ## Current Visual Gap
 
@@ -85,4 +94,5 @@ longer use stale AZR-341 evidence. The latest pass removes positional terrain
 jitter cracks and fixes the worst high-coordinate desert variant collapse, but
 it does not prove AZR-365 is complete. Local desert views still need richer
 biome variety, settlement/route visibility in organic simulation state, and
-more authored material families before the placeholder/debug-map feel is gone.
+broader authored material families before the placeholder/debug-map feel is
+gone.
