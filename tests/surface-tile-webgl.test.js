@@ -103,6 +103,9 @@ const context = {
       },
       flipH() {
         return false;
+      },
+      normalizedBits() {
+        return 0.75;
       }
     }
   },
@@ -145,6 +148,7 @@ const page = context.PS.render.surfaceTileWebgl.finalizeBatchPages(batches).page
 
 assert.strictEqual(page[0], 10, "terrain atlas x should stay grid-aligned and ignore positional jitter");
 assert.strictEqual(page[1], 32, "terrain atlas y should stay grid-aligned and ignore positional jitter");
+assert.ok(Math.abs(page[9] - 0.18) < 0.0001, "terrain atlas instances should encode bounded RANMAP shade variation");
 assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
 assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
 

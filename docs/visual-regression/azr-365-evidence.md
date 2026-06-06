@@ -181,6 +181,14 @@ from aggregate civilization state.
   reed `[177,200,124,255]`. A direct interaction smoke changed zoom
   `0 -> 0.25`, changed latitude/longitude, and kept atlas page bytes at
   `262144`.
+- Direct `file://` terrain RANMAP instance-variation probe after packing a
+  deterministic shade bucket into the existing WebGL terrain instance
+  variation float: no page errors, no failed requests, `debugText=""`,
+  `renderer=webgl2`, `singleVisibleCanvas=true`, `ranmapReady=true`, and
+  `strideFloats=10`. Four ready grassland instances produced variation codes
+  `[0.16,0.16,1,0]`, `3` unique variation codes, and grid-aligned x positions
+  `[0,51.2,102.4,153.6]`. A direct interaction smoke changed zoom `0 -> 0.25`
+  and changed latitude/longitude.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -240,6 +248,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   before feature/biology/resource/civilization suffixes; civilization terrain
   footprints use the ready
   render sample/chunk cell and existing WebGL terrain atlas page batch;
+  RANMAP terrain instance variation uses the existing terrain instance batch
+  and atlas page boundary;
   food/resource entity facades use the existing entity atlas page batch and
   food-node aggregate/index surfaces; settlement readiness uses aggregate
   lineage records plus the current
@@ -290,6 +300,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   chunks are capped at `192` per frame; terrain upload segments are capped at
   `8192` instances; terrain atlas page buffers use the existing 10-float
   instance encoding and allocate transient typed capacity per atlas page;
+  RANMAP terrain variation is limited to the existing tenth instance float:
+  integer `0|1` horizontal flip plus fractional shade bucket `0..0.24`;
   terrain feature marks are limited to `feature0` or
   `feature.<type>.<bucket>` with feature types
   `foam|canopy|ridge|scrub|frost|ember|reed|field` and buckets `1..3`;
@@ -318,8 +330,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   and pixel evidence, direct-file sidecar-load evidence with zero failed
   requests, terrain feature-mark identity/unique-color evidence, civilization
   terrain-footprint identity/cache/pixel evidence, authored material-family
-  registry/identity/pixel evidence, and high-coordinate terrain variant
-  regression coverage.
+  registry/identity/pixel evidence, RANMAP terrain instance variation evidence,
+  and high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 
@@ -340,7 +352,9 @@ current screenshot still needs stronger authored biome/feature contrast and
 broader material families before the placeholder/debug-map feel is gone. The
 authored material-family pass adds registered river, tidal, lava, lichen, and
 reed cells, but it does not finish the complete art pass for every biome or all
-entity families. The close-band working
+entity families. The RANMAP terrain instance pass adds bounded per-tile flip and
+shade variation inside the existing WebGL batch, but does not replace the later
+data-texture renderer. The close-band working
 set and typed terrain page builder now move submission metrics, but headless
 evidence still reports over-budget frames, so further batching/data-texture work
 remains necessary. The settlement-readiness facade starts making civilization
