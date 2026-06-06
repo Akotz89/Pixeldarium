@@ -14,6 +14,7 @@ const tileRegistrySource = read("js/core/tile-registry.js");
 const atlasSource = read("js/render/entity-atlas.js");
 const atlasIntentSource = read("js/render/entity-atlas-intents.js");
 const atlasCivilizationSource = read("js/render/entity-atlas-civilization.js");
+const terrainAtlasCivilizationSource = read("js/render/terrain-atlas-civilization.js");
 const terrainAtlasDetailSource = read("js/render/terrain-atlas-detail.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
 const tilesData = JSON.parse(read("data/tiles.json"));
@@ -23,6 +24,8 @@ assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") > namespa
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "intent atlas sidecar should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") > namespaceSource.indexOf("js/render/entity-atlas-intents.js"), "civilization atlas sidecar should load after intent atlas helpers");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "civilization atlas sidecar should load before entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-civilization.js") > namespaceSource.indexOf("js/render/entity-atlas-civilization.js"), "terrain civilization atlas sidecar should load after entity civilization helpers");
+assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-civilization.js") < namespaceSource.indexOf("js/render/terrain-atlas-detail.js"), "terrain civilization atlas sidecar should load before terrain detail overlays");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-detail.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "terrain atlas detail should load after atlas core");
 assert.ok(entityWebglSource.indexOf("getTraitOrganismCell") >= 0, "entity WebGL should request trait-specific organism cells");
 assert.ok(entityWebglSource.indexOf("getRgbaTexture") >= 0, "entity WebGL should upload atlas pages as RGBA buffers");
@@ -62,6 +65,7 @@ vm.runInContext(tileRegistrySource, context, { filename: "js/core/tile-registry.
 vm.runInContext(atlasSource, context, { filename: "js/render/entity-atlas.js" });
 vm.runInContext(atlasIntentSource, context, { filename: "js/render/entity-atlas-intents.js" });
 vm.runInContext(atlasCivilizationSource, context, { filename: "js/render/entity-atlas-civilization.js" });
+vm.runInContext(terrainAtlasCivilizationSource, context, { filename: "js/render/terrain-atlas-civilization.js" });
 vm.runInContext(terrainAtlasDetailSource, context, { filename: "js/render/terrain-atlas-detail.js" });
 
 context.PS.core.TileRegistry.loadFromJSON(tilesData);
@@ -242,6 +246,54 @@ const activeEcologyCell = context.PS.atlas.getTerrainCell("grassland", 34, 18, {
     resourceRichness: 1
   }
 });
+const settlementFootprintCell = context.PS.atlas.getTerrainCell("grassland", 36, 18, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  civilization: {
+    key: "civ.settlement.3",
+    type: "settlement",
+    bucket: 3,
+    pressure: 0.9,
+    settlementPressure: 0.9,
+    lineageId: 1
+  }
+});
+const routeFootprintCell = context.PS.atlas.getTerrainCell("grassland", 37, 18, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  civilization: {
+    key: "civ.route.2",
+    type: "route",
+    bucket: 2,
+    pressure: 0.58,
+    routePressure: 0.58,
+    lineageId: 2
+  }
+});
+const borderFootprintCell = context.PS.atlas.getTerrainCell("grassland", 38, 18, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  civilization: {
+    key: "civ.border.2",
+    type: "border",
+    bucket: 2,
+    pressure: 0.52,
+    borderPressure: 0.52,
+    lineageId: 3
+  }
+});
 const highSurfaceVariants = new Set();
 for (let y = 10000; y < 10016; y++) {
   highSurfaceVariants.add(context.PS.atlas.getTerrainVariant(22, y, 4, 29));
@@ -329,7 +381,7 @@ assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples s
 assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
 assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
 assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
-assert.ok(plainGrassCell.name.endsWith(".bio0"), "plain terrain cells should keep an explicit no-biology key");
+assert.ok(plainGrassCell.name.indexOf(".bio0.civ0") > 0, "plain terrain cells should keep explicit no-biology and no-civilization keys");
 assert.notDeepStrictEqual(pixelAt(forestCell, 4, 4), pixelAt(noFeatureCell, 4, 4), "feature marks should change stable atlas pixels");
 assert.ok(microbialMatCell.name.indexOf(".microbial.3") > 0, "microbial mat samples should encode a bounded biological material key");
 assert.notStrictEqual(microbialMatCell.name, ordinaryWetlandCell.name, "microbial mat cells should not overwrite ordinary wetland material cells");
@@ -345,6 +397,13 @@ assert.ok(activeEcologyCell.name.indexOf(".ecoform.") > 0, "active ecology shoul
 assert.notStrictEqual(activeEcologyCell.name, ordinaryEcologyCell.name, "active ecology should not overwrite ordinary terrain cells");
 assert.notDeepStrictEqual(pixelAt(activeEcologyCell, 7, 7), pixelAt(ordinaryEcologyCell, 7, 7), "active ecology should change visible terrain pixels");
 assert.ok(uniqueColorCount(activeEcologyCell) >= uniqueColorCount(ordinaryEcologyCell) + 2, "active ecology cells should add sub-tile ecological microstructure");
+assert.ok(settlementFootprintCell.name.indexOf(".civ.settlement.3") > 0, "settlement terrain pressure should encode a bounded civilization footprint key");
+assert.ok(routeFootprintCell.name.indexOf(".civ.route.2") > 0, "route terrain pressure should encode a bounded civilization route key");
+assert.ok(borderFootprintCell.name.indexOf(".civ.border.2") > 0, "border terrain pressure should encode a bounded civilization border key");
+assert.notStrictEqual(settlementFootprintCell.name, ordinaryEcologyCell.name, "civilization footprint cells should not overwrite ordinary terrain cells");
+assert.notDeepStrictEqual(pixelAt(settlementFootprintCell, 7, 7), pixelAt(ordinaryEcologyCell, 7, 7), "settlement terrain pressure should change visible terrain pixels");
+assert.notDeepStrictEqual(pixelAt(routeFootprintCell, 7, 7), pixelAt(ordinaryEcologyCell, 7, 7), "route terrain pressure should change visible terrain pixels");
+assert.ok(uniqueColorCount(settlementFootprintCell) >= uniqueColorCount(ordinaryEcologyCell), "civilization terrain cells should preserve authored detail density");
 assert.ok(highSurfaceVariants.size > 1, "terrain variants should keep Y variation for high surface sample coordinates");
 assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
 assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");

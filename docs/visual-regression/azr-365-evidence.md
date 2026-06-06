@@ -152,6 +152,19 @@ from aggregate civilization state.
   `terrain.unknown.0.plain.feature0.bio0`. A direct interaction smoke in the
   same `file://` runtime changed zoom `0 -> 0.25`, changed latitude/longitude,
   reported no page errors or failed requests, and kept `debugText=""`.
+- Direct `file://` civilization terrain-footprint probe after mapping aggregate
+  settlement/route pressure into bounded terrain atlas keys: no page errors, no
+  failed requests, and `debugText=""`. Seeded aggregate state used `2`
+  settlements and `1` active route; `PS.render.surface.getCivilizationStats()`
+  reported `cacheEntries=2`, `activeCells=2`, `settlementCells=1`, and
+  `routeCells=1`. Browser atlas cells included
+  `terrain.grass_dry.1.plain.feature.field.1.bio0.civ.settlement.3`,
+  `terrain.grass_dry.0.plain.feature.field.1.bio0.civ.route.3`,
+  `terrain.grass_dry.3.plain.feature.field.1.bio0.civ.border.2`, and ordinary
+  fallback `terrain.grass_dry.0.plain.feature.field.1.bio0.civ0`; each sampled
+  cell reported `6` unique colors. A direct interaction smoke changed
+  latitude/longitude at zoom `7`, reported no page errors or failed requests,
+  and kept `debugText=""`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -189,9 +202,11 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   into one green-pod marker family; accepted runtime sheet metadata now ships
   `file://` JSON sidecars instead of being consumed only by fetch-capable
   contexts; terrain cells now include bounded feature-mark atlas identities
-  instead of relying only on broad material pattern families; the packed atlas
-  now grows by page instead of treating the first 256x256 page as a hard visual
-  density ceiling.
+  instead of relying only on broad material pattern families; aggregate
+  settlement, route, and border pressure now becomes bounded terrain atlas
+  identity/pixels instead of relying only on separate overlay markers; the
+  packed atlas now grows by page instead of treating the first 256x256 page as a
+  hard visual density ceiling.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -204,9 +219,11 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain instance upload segment as its GPU submission boundary; terrain atlas
   upload pages now use typed page buffers as the atlas-page batch boundary;
   terrain feature marks use the existing 16x16 terrain atlas cell and WebGL
-  atlas-page batch boundary; food/resource entity facades use the existing
-  entity atlas page batch and food-node aggregate/index surfaces; settlement
-  readiness uses aggregate lineage records plus the current
+  atlas-page batch boundary; civilization terrain footprints use the ready
+  render sample/chunk cell and existing WebGL terrain atlas page batch;
+  food/resource entity facades use the existing entity atlas page batch and
+  food-node aggregate/index surfaces; settlement readiness uses aggregate
+  lineage records plus the current
   representative-organism center as its facade boundary, with at most `6`
   readiness markers.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
@@ -217,6 +234,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   bounded pressure from current organism/food buckets; settlement readiness
   markers consume only current non-extinct lineage counts plus current
   representative positions and stop once real settlement aggregates exist;
+  civilization terrain footprint cells consume only current ready samples plus
+  current aggregate settlement/route indexes, and cached cells are regenerated
+  only when the bounded civilization key changes;
   runtime-owned sheet metadata is considered ready for direct `file://` only
   when its JSON sidecar has registered the metadata before manifest sheet load
   consumes it.
@@ -230,6 +250,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   center-footprint detail should remain readable while lower-priority edge
   chunks are deferred to keep zoom/pan smoother; near-founding lineage pressure
   should be visible as a map signal without creating a settlement early;
+  settlement footprints, routebeds, and borders should be legible from the map
+  surface itself without making every citizen, building, or road tile an
+  authoritative rendered object;
   resource and food nodes should communicate storage, produce, and raw-material
   identity on the map instead of relying on inspector text or a single generic
   dot.
@@ -251,6 +274,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain feature marks are limited to `feature0` or
   `feature.<type>.<bucket>` with feature types
   `foam|canopy|ridge|scrub|frost|ember|reed|field` and buckets `1..3`;
+  civilization terrain footprints are limited to `civ0` or
+  `civ.<settlement|route|border>.<1..3>` and are enabled at zoom `>=4` with a
+  route radius of `3` tiles;
   food/resource entity cells are limited to richness buckets `0..3` and family
   buckets `0..3`; runtime-owned visual sheet metadata requires matching
   `.json.js` sidecars for the direct static runtime;
@@ -268,8 +294,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   multi-page allocation coverage, settlement-readiness contrast pixel evidence
   from `[3,6,9,255]` to `[206,173,85,255]`, food/resource family atlas identity
   and pixel evidence, direct-file sidecar-load evidence with zero failed
-  requests, terrain feature-mark identity/unique-color evidence, and
-  high-coordinate terrain variant regression coverage.
+  requests, terrain feature-mark identity/unique-color evidence, civilization
+  terrain-footprint identity/cache/pixel evidence, and high-coordinate terrain
+  variant regression coverage.
 
 ## Current Visual Gap
 
@@ -277,20 +304,22 @@ The refreshed close-band screenshots prove the bands are reachable and no
 longer use stale AZR-341 evidence. The latest pass removes positional terrain
 jitter cracks and fixes the worst high-coordinate desert variant collapse, but
 it does not prove AZR-365 is complete. Local desert views still need richer
-biome variety, settlement/route visibility in organic simulation state, and
-broader authored material families before the placeholder/debug-map feel is
-gone. The representative intent slice proves selected local behavior/target
+biome variety and broader authored material families before the
+placeholder/debug-map feel is gone. The representative intent slice proves
+selected local behavior/target
 state now reaches the WebGL entity path, but the latest intent screenshot still
 reads mostly as terrain at full-frame scale, so the next visual pass should make
 local ecological cues more legible in ordinary captures. The active ecology
 material pass makes those cues visible in the terrain, but the current local
 capture can still become broad at single-tile zoom. This pass adds bounded
 sub-tile ecological structure and reduces single-cell repetition, but the
-current screenshot still needs stronger authored biome/feature contrast,
-settlement/route visibility in organic simulation state, and broader material
-families before the placeholder/debug-map feel is gone. The close-band working
+current screenshot still needs stronger authored biome/feature contrast and
+broader material families before the placeholder/debug-map feel is gone. The
+close-band working
 set and typed terrain page builder now move submission metrics, but headless
 evidence still reports over-budget frames, so further batching/data-texture work
 remains necessary. The settlement-readiness facade starts making civilization
-pressure visible before real settlements exist, but the captured marker is still
-a first readability pass rather than the final settlement/route visual language.
+pressure visible before real settlements exist, and the civilization terrain
+footprint pass starts moving settlement/route/border readability into the map
+surface itself. It is still a first readability pass rather than the final
+settlement/route visual language.

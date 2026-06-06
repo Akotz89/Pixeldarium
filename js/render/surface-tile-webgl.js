@@ -247,16 +247,19 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     var ay = Math.floor(i / address.chunkSamples);
     var tileX = baseWorldX + ax;
     var tileY = baseWorldY + ay;
+    if (PS.render.surface && typeof PS.render.surface.withCivilization === "function") {
+      sample = PS.render.surface.withCivilization(sample);
+    }
     var ecologyKey = sample && sample.ecology ? sample.ecology.key : "eco.0.0";
     if (sample && PS.atlas && typeof PS.atlas.getTerrainEcologyMicroKey === "function") {
       ecologyKey += PS.atlas.getTerrainEcologyMicroKey(sample, tileX, tileY);
     }
-    var cell = cellData.terrainAtlasEcologyKey === ecologyKey ? cellData.terrainAtlasCell || null : null;
-
+    var atlasKey = ecologyKey + "|" + (sample && sample.civilization ? sample.civilization.key : "civ0");
+    var cell = cellData.terrainAtlasEcologyKey === atlasKey ? cellData.terrainAtlasCell || null : null;
     if (!cell) {
       cell = PS.atlas.getTerrainCell(biome, tileX, tileY, sample);
       cellData.terrainAtlasCell = cell;
-      cellData.terrainAtlasEcologyKey = ecologyKey;
+      cellData.terrainAtlasEcologyKey = atlasKey;
     }
 
     if (!cell) {

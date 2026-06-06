@@ -22,6 +22,8 @@ assert.ok(/PLANET_SURFACE_TILE_WEBGL_ATLAS:\s*true/.test(configSource), "surface
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES:\s*8192/.test(configSource), "surface tile WebGL batching should have a capped batch size");
 assert.ok(/PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT:\s*192/.test(configSource), "close zoom terrain should use a bounded ready chunk working set");
 assert.ok(/PLANET_SURFACE_ECOLOGY_RADIUS_TILES:\s*16/.test(configSource), "surface ecology encoding should use a bounded tile radius aligned to spatial buckets");
+assert.ok(/PLANET_SURFACE_CIVILIZATION_ENABLED:\s*true/.test(configSource), "surface civilization encoding should be enabled by default");
+assert.ok(/PLANET_SURFACE_CIVILIZATION_ROUTE_RADIUS_TILES:\s*3/.test(configSource), "surface civilization routes should use a bounded tile radius");
 assert.ok(pipelineSource.indexOf("PS.render.surfaceTileWebgl") >= 0, "render rebuilds should include the surface tile WebGL subsystem");
 assert.ok(surfaceCacheSource.indexOf("PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT") >= 0, "surface cache should apply the close zoom working-set limit");
 assert.ok(surfaceCacheSource.indexOf("architectureZoom >= 15") >= 0, "close zoom working-set limit should start at the local perception band");
@@ -61,6 +63,15 @@ const context = {
           return Object.assign({}, sample, {
             ecology: { key: sample.ecologyKey }
           });
+        },
+        withCivilization(sample) {
+          if (!sample || !sample.civilizationKey) {
+            return sample;
+          }
+
+          return Object.assign({}, sample, {
+            civilization: { key: sample.civilizationKey }
+          });
         }
       }
     },
@@ -70,9 +81,10 @@ const context = {
       },
       getTerrainCell(biome, tileX, tileY, sample) {
         const microKey = context.PS.atlas.getTerrainEcologyMicroKey(sample, tileX, tileY);
+        const civKey = sample && sample.civilization ? sample.civilization.key : "civ0";
 
         return {
-          name: "test.grass." + (sample && sample.ecology ? sample.ecology.key : "eco.0.0") + microKey,
+          name: "test.grass." + (sample && sample.ecology ? sample.ecology.key : "eco.0.0") + microKey + "." + civKey,
           pageIndex: 0,
           u0: 0,
           v0: 0,
@@ -161,13 +173,16 @@ const ecologyAddress = {
   chunkSamples: 1
 };
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
-assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.0", "terrain cell cache should include the active ecology key and bounded micro phase");
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.0.civ0", "terrain cell cache should include the active ecology key and bounded micro phase");
 ecologyAddress.sampleEast = 1;
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
-assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.1", "terrain cell cache should invalidate when ecology micro phase changes");
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.1.civ0", "terrain cell cache should invalidate when ecology micro phase changes");
 ecologyCell.sample.ecologyKey = "eco.0.0";
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
-assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1", "terrain cell cache should invalidate when ecology key changes");
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1.civ0", "terrain cell cache should invalidate when ecology key changes");
+ecologyCell.sample.civilizationKey = "civ.route.2";
+context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1.civ.route.2", "terrain cell cache should invalidate when civilization terrain pressure changes");
 
 const finalized = context.PS.render.surfaceTileWebgl.finalizeBatchPages({
   pages: {
