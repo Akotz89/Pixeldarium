@@ -385,6 +385,9 @@ PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefini
 
   function finish() {
     PS.atlas.drawTerrainFeatureMarks(cell, palette, variant, sample, biome, tileDefinition);
+    if (typeof PS.atlas.drawTerrainCivilizationMarks === "function") {
+      PS.atlas.drawTerrainCivilizationMarks(cell, palette, variant, sample);
+    }
     PS.atlas.drawTerrainEcologyMicrostructure(cell, palette, variant, sample);
     if (transition) {
       PS.atlas.drawTerrainTransitionEdge(cell, palette, variant, transition);

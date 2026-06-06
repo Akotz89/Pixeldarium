@@ -951,6 +951,9 @@ PS.atlas.applyTerrainResourcePalette = function (palette, resource, biology) {
 PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition, sample) {
   var biology = PS.atlas.getTerrainBiologyInfo(sample);
   var resource = PS.atlas.getTerrainResourceInfo(sample);
+  var civilization = typeof PS.atlas.getTerrainCivilizationInfo === "function"
+    ? PS.atlas.getTerrainCivilizationInfo(sample)
+    : null;
   var palette = tileDefinition
     ? PS.atlas.getTerrainTilePalette(biome, tileDefinition)
     : PS.atlas.getTerrainPalette(biome);
@@ -959,6 +962,9 @@ PS.atlas.drawTerrainCell = function (cell, biome, variant, tileDefinition, sampl
 
   palette = PS.atlas.applyTerrainBiologyPalette(palette, biology);
   palette = PS.atlas.applyTerrainResourcePalette(palette, resource, biology);
+  if (typeof PS.atlas.applyTerrainCivilizationPalette === "function") {
+    palette = PS.atlas.applyTerrainCivilizationPalette(palette, civilization);
+  }
 
   for (y = 0; y < cell.h; y++) {
     for (x = 0; x < cell.w; x++) {
@@ -1088,6 +1094,9 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var materialId = tileDefinition ? tileDefinition.id : String(biome || "grass");
   var biologyKey = PS.atlas.getTerrainBiologyKey(sample);
   var resourceKey = PS.atlas.getTerrainResourceKey(sample);
+  var civilizationKey = typeof PS.atlas.getTerrainCivilizationKey === "function"
+    ? PS.atlas.getTerrainCivilizationKey(sample)
+    : "civ0";
   var ecologyMicroPhase = PS.atlas.getTerrainEcologyMicroPhase(sample, tileX, tileY);
   var ecologyMicroKey = ecologyMicroPhase >= 0 ? ".ecoform." + ecologyMicroPhase : "";
   var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
@@ -1099,7 +1108,7 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var drawSample = ecologyMicroPhase >= 0
     ? Object.assign({}, sample, { terrainEcologyMicroPhase: ecologyMicroPhase })
     : sample;
-  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + featureKey + "." + biologyKey + resourceKey + ecologyMicroKey;
+  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + featureKey + "." + biologyKey + resourceKey + "." + civilizationKey + ecologyMicroKey;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {
