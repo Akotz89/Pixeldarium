@@ -179,6 +179,30 @@ const ordinaryWetlandCell = context.PS.atlas.getTerrainCell("wetland", 26, 12, {
     yAmount: 0.5
   }
 });
+const ordinaryRockCell = context.PS.atlas.getTerrainCell("mountain", 30, 14, {
+  detail: {
+    surface: "rock",
+    elevation: 0.82,
+    roughness: 0.76,
+    materialSignals: { surfaceRoughness: 0.76 }
+  }
+});
+const mineralVeinCell = context.PS.atlas.getTerrainCell("mountain", 30, 14, {
+  detail: {
+    surface: "rock",
+    elevation: 0.82,
+    roughness: 0.76,
+    materialSignals: {
+      surfaceRoughness: 0.76,
+      mineralDensity: 0.88,
+      resourceDensity: 0.74
+    },
+    materialStrata: {
+      primary: "bedrock",
+      secondary: "mineral-vein"
+    }
+  }
+});
 const highSurfaceVariants = new Set();
 for (let y = 10000; y < 10016; y++) {
   highSurfaceVariants.add(context.PS.atlas.getTerrainVariant(22, y, 4, 29));
@@ -241,6 +265,10 @@ assert.ok(microbialMatCell.name.indexOf(".microbial.3") > 0, "microbial mat samp
 assert.notStrictEqual(microbialMatCell.name, ordinaryWetlandCell.name, "microbial mat cells should not overwrite ordinary wetland material cells");
 assert.notDeepStrictEqual(pixelAt(microbialMatCell, 7, 7), pixelAt(ordinaryWetlandCell, 7, 7), "microbial mat pressure should change visible terrain pixels");
 assert.ok(uniqueColorCount(microbialMatCell) >= uniqueColorCount(ordinaryWetlandCell), "microbial mat cells should preserve dense authored surface detail");
+assert.ok(mineralVeinCell.name.indexOf(".mineral.3") > 0, "mineral resource samples should encode a bounded resource material key");
+assert.notStrictEqual(mineralVeinCell.name, ordinaryRockCell.name, "mineral resource cells should not overwrite ordinary rock material cells");
+assert.notDeepStrictEqual(pixelAt(mineralVeinCell, 7, 7), pixelAt(ordinaryRockCell, 7, 7), "mineral pressure should change visible terrain pixels");
+assert.ok(uniqueColorCount(mineralVeinCell) >= uniqueColorCount(ordinaryRockCell), "mineral resource cells should preserve authored detail density");
 assert.ok(highSurfaceVariants.size > 1, "terrain variants should keep Y variation for high surface sample coordinates");
 assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
 assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");

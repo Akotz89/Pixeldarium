@@ -48,6 +48,10 @@ from aggregate civilization state.
   ordinary wetland cell `terrain.wetland.2.plain.bio0`, microbial mat cell
   `terrain.wetland.2.plain.microbial.3`; center pixels changed from
   `[161,174,80,255]` to `[41,104,62,255]`; atlas page bytes stayed `262144`.
+- Direct `file://` terrain atlas probe after resource material encoding:
+  ordinary rock cell `terrain.rock_cliff.2.plain.bio0`, mineral-vein cell
+  `terrain.rock_cliff.2.plain.bio0.mineral.3`; center pixels changed from
+  `[95,95,125,255]` to `[83,87,107,255]`; atlas page bytes stayed `262144`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -65,7 +69,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   instead of bounded tile-grid RANMAP lookup; close route facades now use
   uncropped local endpoint projection clipped to the active canvas footprint;
   biological surface pressure now becomes bounded terrain atlas variants for
-  microbial/organic material cues.
+  microbial/organic material cues; mineral and nutrient resource pressure now
+  becomes bounded terrain atlas variants for resource patch readability.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -80,12 +85,13 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   perception scale derived from the configured camera anchors; terrain variant
   hashing is deterministic but no longer uses bounded RANMAP tile coordinates;
   terrain biology encoding is limited to `bio0`, `microbial.0..3`, and
-  `organic.0..3` atlas key suffixes.
+  `organic.0..3` atlas key suffixes; terrain resource encoding is limited to
+  `mineral.0..3` and `nutrient.0..3` optional suffixes.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
-  identity/pixel evidence, and high-coordinate terrain variant regression
-  coverage.
+  identity/pixel evidence, resource terrain atlas identity/pixel evidence, and
+  high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 
