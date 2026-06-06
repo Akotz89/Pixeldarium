@@ -81,6 +81,14 @@ from aggregate civilization state.
   smoke confirmed wheel zoom `7 -> 6.75` and drag changed latitude/longitude.
   The headless capture frame reported `gpuFrameMs=108.8`, so this slice is
   treated as a visual-density movement, not a proven frame-time improvement.
+- Direct `file://` close-band working-set probe after adding the local/settlement
+  visible chunk cap: settlement-band view at zoom `7`, no page errors or failed
+  requests, `visibleLimit=192`, `lastVisibleCandidateChunks=902`,
+  `lastVisibleChunks=192`, `lastCulledChunks=710`, `terrainDraws=12288`,
+  `terrainPageDraws=3`, `gpuFrameMs=85.7`, `lastError=""`, and wheel/drag
+  changed the camera. This moves the prior close-band headless evidence from
+  `terrainDraws=16384`, `terrainPageDraws=4`, `gpuFrameMs=108.8` while still
+  leaving the frame over budget.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -105,7 +113,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   local active organism/food pressure now becomes terrain-facing ecology
   material encoding instead of relying only on entity overlays; active ecology
   terrain atlas cells now add bounded sub-tile microstructure phases to reduce
-  the single repeated material language at close zoom.
+  the single repeated material language at close zoom; local/settlement terrain
+  now uses a bounded ready-chunk working set instead of submitting every visible
+  candidate chunk.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -113,7 +123,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   settlement and route state; representative intent rendering is capped to the
   watched representative set; local ecology material encoding uses the render
   chunk/sample cell as the terrain boundary and bucket-backed organism/food
-  radius queries as the aggregate boundary.
+  radius queries as the aggregate boundary; close-band terrain submission uses
+  the prioritized visible chunk list as its working-set boundary.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels; representative intent cells are
   consumed only after atlas generation/versioning and a selected, pinned, or
@@ -126,7 +137,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   local watched organisms expose behavior/target cues on the map without
   making every organism brain a rendered authoritative object; local ecology
   pressure should be readable in the terrain itself when entity overlays are
-  visually subtle or temporarily overwritten by surface streaming.
+  visually subtle or temporarily overwritten by surface streaming; close-band
+  center-footprint detail should remain readable while lower-priority edge
+  chunks are deferred to keep zoom/pan smoother.
 - New constraint or encoding limit: architecture zoom is clamped to the `1..20`
   perception scale derived from the configured camera anchors; terrain variant
   hashing is deterministic but no longer uses bounded RANMAP tile coordinates;
@@ -138,14 +151,16 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain ecology encoding is enabled at zoom `>=4`, samples a `16` tile radius,
   and maps food/organism pressure into existing `organic.0..3` and
   `nutrient.0..3` terrain atlas suffixes; active ecology microstructure adds
-  only `ecoform.0..3` bounded atlas phases.
+  only `ecoform.0..3` bounded atlas phases; local/settlement ready terrain
+  chunks are capped at `192` per frame.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
   identity/pixel evidence, resource terrain atlas identity/pixel evidence,
   representative intent draw evidence, active ecology terrain atlas evidence,
   active ecology microstructure unique-color and `ecoform` key evidence, and
-  high-coordinate terrain variant regression coverage.
+  close-band terrain draw reduction evidence, and high-coordinate terrain
+  variant regression coverage.
 
 ## Current Visual Gap
 
@@ -164,4 +179,6 @@ capture can still become broad at single-tile zoom. This pass adds bounded
 sub-tile ecological structure and reduces single-cell repetition, but the
 current screenshot still needs stronger authored biome/feature contrast,
 settlement/route visibility in organic simulation state, and broader material
-families before the placeholder/debug-map feel is gone.
+families before the placeholder/debug-map feel is gone. The close-band working
+set now moves the frame metric, but headless evidence still reports over-budget
+frames, so further batching/data-texture work remains necessary.

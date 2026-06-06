@@ -13,14 +13,18 @@ const namespaceSource = read("js/core/namespace.js");
 const configSource = read("config.js");
 const pipelineSource = read("js/render/pipeline.js");
 const engineSource = read("js/render/webgl-engine.js");
+const surfaceCacheSource = read("js/render/surface-cache.js");
 const tileWebglSource = read("js/render/surface-tile-webgl.js");
 
 assert.ok(namespaceSource.indexOf("js/render/surface-tile-webgl.js") >= 0, "surface tile WebGL compositor should load in the runtime");
 assert.ok(namespaceSource.indexOf("js/render/surface-ecology.js") < namespaceSource.indexOf("js/render/surface-tile-webgl.js"), "surface ecology facade should load before terrain tile consumption");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_ATLAS:\s*true/.test(configSource), "surface tile WebGL atlas batching should be enabled by default");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES:\s*4096/.test(configSource), "surface tile WebGL batching should have a capped batch size");
+assert.ok(/PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT:\s*192/.test(configSource), "close zoom terrain should use a bounded ready chunk working set");
 assert.ok(/PLANET_SURFACE_ECOLOGY_RADIUS_TILES:\s*16/.test(configSource), "surface ecology encoding should use a bounded tile radius aligned to spatial buckets");
 assert.ok(pipelineSource.indexOf("PS.render.surfaceTileWebgl") >= 0, "render rebuilds should include the surface tile WebGL subsystem");
+assert.ok(surfaceCacheSource.indexOf("PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT") >= 0, "surface cache should apply the close zoom working-set limit");
+assert.ok(surfaceCacheSource.indexOf("architectureZoom >= 15") >= 0, "close zoom working-set limit should start at the local perception band");
 
 assert.ok(engineSource.indexOf('getContext("webgl2"') >= 0, "shared WebGL engine should create raw WebGL2 contexts");
 assert.ok(engineSource.indexOf("gl.NEAREST") >= 0, "shared WebGL engine should preserve pixel-art nearest-neighbor sampling");

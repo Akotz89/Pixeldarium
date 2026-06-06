@@ -216,6 +216,8 @@ Relevant current limits:
 - Particle render budget: `CONFIG.PARTICLE_RENDER_BUDGET_MS = 2`.
 - Simulation catch-up cap: `CONFIG.MAX_SIM_UPDATES_PER_FRAME = 3`.
 - Frame budget history: `CONFIG.FRAME_BUDGET_HISTORY_LIMIT = 120`.
+- Close-band ready surface chunks:
+  `CONFIG.PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT = 192`.
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 4096`.
 - Local ecology terrain encoding: enabled with
   `CONFIG.PLANET_SURFACE_ECOLOGY_ENABLED`, starts at
@@ -243,6 +245,12 @@ over-budget, and dropped catch-up frame counts.
 Rendering consumes ready data. Surface chunks must be completed and carry a
 ready `cellCache` before `surfaceTileWebgl` draws them. Pending chunks stay in
 the worker/cache lifecycle and must not block the frame.
+
+Local and settlement bands use a bounded ready-chunk working set. Candidate
+chunks are sorted by screen priority and pan direction, then capped by
+`PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT` before terrain atlas instances are
+submitted. This preserves center-footprint detail and keeps lower-priority edge
+chunks deferred instead of submitting every visible candidate each frame.
 
 Local ecology material encoding is a render facade over current organism and
 food buckets. It does not make visible organisms or food particles

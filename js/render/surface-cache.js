@@ -12,8 +12,18 @@ PS.render.surface.getChunkCacheLimit = function () {
 PS.render.surface.getVisibleChunkLimit = function () {
   var configuredLimit = Math.round(Number(CONFIG.PLANET_SURFACE_VISIBLE_CHUNK_LIMIT) || 96);
   var cacheLimited = Math.floor(PS.render.surface.getChunkCacheLimit() * 0.75);
+  var effectiveLimit = Math.max(16, configuredLimit);
+  var closeLimit = Math.round(Number(CONFIG.PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT) || effectiveLimit);
+  var view = typeof getPlanetView === "function" ? getPlanetView() : null;
+  var architectureZoom = PS.render.lod && typeof PS.render.lod.getArchitectureZoom === "function"
+    ? PS.render.lod.getArchitectureZoom(view ? view.zoomLevel : 0)
+    : Number(view && view.zoomLevel) || 0;
 
-  return Math.max(16, Math.min(Math.max(16, configuredLimit), Math.max(16, cacheLimited)));
+  if (architectureZoom >= 15) {
+    effectiveLimit = Math.min(effectiveLimit, Math.max(16, closeLimit));
+  }
+
+  return Math.max(16, Math.min(effectiveLimit, Math.max(16, cacheLimited)));
 };
 
 PS.render.surface.resetChunkCache = function () {
