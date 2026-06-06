@@ -40,6 +40,12 @@ assert.strictEqual(handoffManifest.acceptedSheetCount, 15, "visual handoff shoul
 assert.ok(handoffManifest.rejected.includes("creature_npc_original_v0"), "visual handoff should record rejected/superseded creature v0");
 assert.ok(!manifest.sheets.equivalence_creature_npc_original_v0, "runtime manifest should not include rejected creature v0");
 
+Object.values(manifest.sheets).forEach((sheet) => {
+  if (sheet.meta) {
+    assert.ok(fs.existsSync(path.join(root, sheet.meta + ".js")), sheet.meta + " should include a file:// JSON sidecar");
+  }
+});
+
 function createContext() {
   const fetchCalls = [];
   const imageLoads = [];

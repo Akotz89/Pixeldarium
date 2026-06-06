@@ -289,14 +289,79 @@ PS.atlas.getFoodRichnessBucket = function (food) {
   return 0;
 };
 
-PS.atlas.drawFoodCell = function (cell, variant, richness) {
+PS.atlas.getFoodFamilyBucket = function (food) {
+  var explicit = Number(food && food.resourceFamilyBucket);
+  var family = [
+    food && food.resourceFamily,
+    food && food.resourceType,
+    food && food.category,
+    food && food.drawFamily,
+    food && food.type,
+    food && food.kind
+  ].join(" ").toLowerCase();
+  var x = Math.round(Number(food && food.x) || 0);
+  var y = Math.round(Number(food && food.y) || 0);
+  var richness = PS.atlas.getFoodRichnessBucket(food);
+  var fallback;
+
+  if (Number.isFinite(explicit)) {
+    return clamp(Math.round(explicit), 0, 3);
+  }
+
+  if (
+    family.indexOf("stone") >= 0 ||
+    family.indexOf("ore") >= 0 ||
+    family.indexOf("metal") >= 0 ||
+    family.indexOf("mineral") >= 0 ||
+    family.indexOf("gem") >= 0 ||
+    family.indexOf("clay") >= 0 ||
+    family.indexOf("coal") >= 0 ||
+    family.indexOf("raw-material") >= 0
+  ) {
+    return 3;
+  }
+
+  if (
+    family.indexOf("fruit") >= 0 ||
+    family.indexOf("vegetable") >= 0 ||
+    family.indexOf("mushroom") >= 0 ||
+    family.indexOf("fungus") >= 0 ||
+    family.indexOf("meat") >= 0 ||
+    family.indexOf("fish") >= 0 ||
+    family.indexOf("egg") >= 0
+  ) {
+    return 2;
+  }
+
+  if (
+    family.indexOf("grain") >= 0 ||
+    family.indexOf("bread") >= 0 ||
+    family.indexOf("ration") >= 0 ||
+    family.indexOf("sack") >= 0 ||
+    family.indexOf("crate") >= 0 ||
+    family.indexOf("food") >= 0
+  ) {
+    return 1;
+  }
+
+  if (food && (Number.isFinite(Number(food.x)) || Number.isFinite(Number(food.y)))) {
+    fallback = PS.atlas.getTerrainSurfaceNoise(x, y, 61 + richness * 13);
+    return clamp(Math.floor(fallback * 3), 0, 2);
+  }
+
+  return 0;
+};
+
+PS.atlas.drawFoodCell = function (cell, variant, richness, familyBucket) {
   var safeRichness = clamp(Math.round(Number(richness) || 0), 0, 3);
-  var base = [
-    [58, 178, 74, 255],
-    [70, 210, 88, 255],
-    [118, 224, 92, 255],
-    [174, 238, 98, 255]
-  ][safeRichness];
+  var family = clamp(Math.round(Number(familyBucket) || 0), 0, 3);
+  var palette = [
+    [[58, 178, 74, 255], [70, 210, 88, 255], [118, 224, 92, 255], [174, 238, 98, 255]],
+    [[130, 94, 52, 255], [164, 124, 68, 255], [202, 166, 88, 255], [232, 204, 118, 255]],
+    [[138, 58, 96, 255], [190, 76, 92, 255], [224, 118, 92, 255], [244, 166, 104, 255]],
+    [[86, 88, 96, 255], [112, 116, 124, 255], [152, 148, 128, 255], [212, 190, 132, 255]]
+  ][family];
+  var base = palette[safeRichness];
   var dark = [Math.max(0, base[0] - 36), Math.max(0, base[1] - 58), Math.max(0, base[2] - 36), 255];
   var light = [Math.min(255, base[0] + 52), Math.min(255, base[1] + 34), Math.min(255, base[2] + 58), 255];
   var podCount = 3 + safeRichness * 2;
@@ -305,19 +370,52 @@ PS.atlas.drawFoodCell = function (cell, variant, richness) {
   var y;
 
   PS.atlas.fillNormalHalf(cell);
+  PS.atlas.writePixel(cell, 7, 7, base);
+  PS.atlas.writePixel(cell, 8, 7, light);
+  PS.atlas.writePixel(cell, 7, 8, dark);
 
   for (i = 0; i < podCount; i++) {
     x = 3 + ((variant * 5 + i * 4) % 11);
     y = 5 + ((variant * 3 + i * 5) % 7);
     PS.atlas.writePixel(cell, x, y + 2, dark);
-    PS.atlas.writeDot(cell, x, y, i % 3 === 0 && safeRichness > 1 ? 2 : 1, base);
-    PS.atlas.writePixel(cell, x - 1, y - 1, light);
+    if (family === 1) {
+      PS.atlas.writePixel(cell, x - 1, y, base);
+      PS.atlas.writePixel(cell, x, y, base);
+      PS.atlas.writePixel(cell, x + 1, y, base);
+      PS.atlas.writePixel(cell, x, y - 1, light);
+      PS.atlas.writePixel(cell, x - 1, y + 1, dark);
+    } else if (family === 3) {
+      PS.atlas.writePixel(cell, x - 1, y, dark);
+      PS.atlas.writePixel(cell, x, y - 1, light);
+      PS.atlas.writePixel(cell, x + 1, y, base);
+      PS.atlas.writePixel(cell, x, y + 1, base);
+    } else {
+      PS.atlas.writeDot(cell, x, y, i % 3 === 0 && safeRichness > 1 ? 2 : 1, base);
+      PS.atlas.writePixel(cell, x - 1, y - 1, light);
+      if (family === 2) {
+        PS.atlas.writePixel(cell, x + 1, y + 1, dark);
+      }
+    }
   }
 
   if (safeRichness >= 2) {
     PS.atlas.writePixel(cell, 4 + variant, 12, dark);
     PS.atlas.writePixel(cell, 9 + (variant % 3), 11, dark);
     PS.atlas.writePixel(cell, 12, 7 + (variant % 2), light);
+  }
+
+  if (family === 1) {
+    PS.atlas.writePixel(cell, 5, 4, light);
+    PS.atlas.writePixel(cell, 6, 4, light);
+    PS.atlas.writePixel(cell, 5, 5, dark);
+  } else if (family === 2) {
+    PS.atlas.writeDot(cell, 11, 4, safeRichness >= 2 ? 2 : 1, light);
+    PS.atlas.writePixel(cell, 11, 6, dark);
+  } else if (family === 3) {
+    PS.atlas.writePixel(cell, 6, 12, dark);
+    PS.atlas.writePixel(cell, 7, 11, base);
+    PS.atlas.writePixel(cell, 8, 10, light);
+    PS.atlas.writePixel(cell, 9, 11, base);
   }
 };
 
@@ -904,12 +1002,13 @@ PS.atlas.getOrganismCell = function (bodyType, variant) {
 PS.atlas.getFoodCell = function (variant, food) {
   var safeVariant = clamp(Math.round(Number(variant) || 0), 0, 3);
   var richness = PS.atlas.getFoodRichnessBucket(food);
-  var name = "entity.food." + safeVariant + "." + richness;
+  var familyBucket = PS.atlas.getFoodFamilyBucket(food);
+  var name = "entity.food." + safeVariant + "." + richness + "." + familyBucket;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {
     cell = PS.atlas.allocateCell(name, 32, 16);
-    PS.atlas.drawFoodCell(cell, safeVariant, richness);
+    PS.atlas.drawFoodCell(cell, safeVariant, richness, familyBucket);
     PS.atlas.stats.foodCells++;
     PS.atlas.pages[cell.pageIndex].version++;
   }

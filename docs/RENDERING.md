@@ -156,6 +156,12 @@ allocate additional 256x256 RGBA pages when authored terrain/entity cells exceed
 the current page capacity; renderers already batch by page index. Terrain
 material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
+Food/resource entity cells use bounded atlas identities:
+`entity.food.<variant>.<richness>.<family>`. Richness is bucketed `0..3`;
+family is bucketed `0..3` for living pods, storage/grain, produce/fungus, and
+raw material piles. Explicit resource fields win when available; otherwise the
+runtime uses deterministic coordinate-derived family selection so ordinary food
+nodes do not collapse to one visual language.
 
 `PS.render.surfaceTileWebgl` groups terrain instances by atlas page. Ready
 chunk cells are appended into pooled growable `Float32Array` page buffers, then
@@ -193,6 +199,11 @@ twice. They do not create or persist settlements.
 Shader sources are loaded from `shaders/` by `PS.render.shaderManager`.
 `file://` support is preserved by `.js` sidecars when direct text fetch is not
 available.
+
+Runtime-owned JSON metadata that is loaded from `assets/manifest.json` must also
+ship a `.json.js` sidecar through `PS.assets.registerJSON(...)`. This preserves
+the direct static `index.html` runtime when browser fetch cannot read local JSON
+files under `file://`.
 
 | Shader | Files | Purpose |
 | --- | --- | --- |

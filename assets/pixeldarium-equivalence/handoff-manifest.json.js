@@ -1,0 +1,118 @@
+PS.assets.registerJSON("assets/pixeldarium-equivalence/handoff-manifest.json", {
+  "version": 1,
+  "issue": "AZR-797",
+  "reviewIssue": "AZR-795",
+  "generatedAt": "2026-06-06T09:32:18.958Z",
+  "runtimeUse": true,
+  "acceptedSheetCount": 15,
+  "rejected": [
+    "creature_npc_original_v0"
+  ],
+  "sheets": [
+    {
+      "id": "equivalence_terrain_materials_v0",
+      "family": "terrain",
+      "path": "assets/pixeldarium-equivalence/terrain/terrain_materials_v0.png",
+      "meta": "assets/pixeldarium-equivalence/terrain/terrain_materials_v0.json",
+      "frameCount": 10
+    },
+    {
+      "id": "equivalence_terrain_transitions_v0",
+      "family": "transitions",
+      "path": "assets/pixeldarium-equivalence/transitions/terrain_transitions_v0.png",
+      "meta": "assets/pixeldarium-equivalence/transitions/terrain_transitions_v0.json",
+      "frameCount": 108
+    },
+    {
+      "id": "equivalence_vegetation_scatter_v0",
+      "family": "vegetation",
+      "path": "assets/pixeldarium-equivalence/vegetation/vegetation_scatter_v0.png",
+      "meta": "assets/pixeldarium-equivalence/vegetation/vegetation_scatter_v0.json",
+      "frameCount": 20
+    },
+    {
+      "id": "equivalence_creature_npc_refined_v1",
+      "family": "creatures",
+      "path": "assets/pixeldarium-equivalence/creatures/creature_npc_refined_v1.png",
+      "meta": "assets/pixeldarium-equivalence/creatures/creature_npc_refined_v1.json",
+      "frameCount": 6
+    },
+    {
+      "id": "equivalence_settlement_structures_v0",
+      "family": "settlement",
+      "path": "assets/pixeldarium-equivalence/settlement/settlement_structures_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/settlement_structures_v0.json",
+      "frameCount": 21
+    },
+    {
+      "id": "equivalence_resource_stockpiles_v0",
+      "family": "resources",
+      "path": "assets/pixeldarium-equivalence/resources/resource_stockpiles_v0.png",
+      "meta": "assets/pixeldarium-equivalence/resources/resource_stockpiles_v0.json",
+      "frameCount": 39
+    },
+    {
+      "id": "equivalence_world_weather_v0",
+      "family": "world",
+      "path": "assets/pixeldarium-equivalence/world/world_weather_v0.png",
+      "meta": "assets/pixeldarium-equivalence/world/world_weather_v0.json",
+      "frameCount": 31
+    },
+    {
+      "id": "equivalence_work_status_overlays_v0",
+      "family": "overlays",
+      "path": "assets/pixeldarium-equivalence/overlays/work_status_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/work_status_overlays_v0.json",
+      "frameCount": 31
+    },
+    {
+      "id": "equivalence_ui_status_icons_v0",
+      "family": "ui",
+      "path": "assets/pixeldarium-equivalence/ui/ui_status_icons_v0.png",
+      "meta": "assets/pixeldarium-equivalence/ui/ui_status_icons_v0.json",
+      "frameCount": 32
+    },
+    {
+      "id": "equivalence_battle_military_symbols_v0",
+      "family": "overlays",
+      "path": "assets/pixeldarium-equivalence/overlays/battle_military_symbols_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/battle_military_symbols_v0.json",
+      "frameCount": 32
+    },
+    {
+      "id": "equivalence_culture_tech_symbols_v0",
+      "family": "ui",
+      "path": "assets/pixeldarium-equivalence/ui/culture_tech_symbols_v0.png",
+      "meta": "assets/pixeldarium-equivalence/ui/culture_tech_symbols_v0.json",
+      "frameCount": 36
+    },
+    {
+      "id": "equivalence_infrastructure_props_v0",
+      "family": "settlement",
+      "path": "assets/pixeldarium-equivalence/settlement/infrastructure_props_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/infrastructure_props_v0.json",
+      "frameCount": 19
+    },
+    {
+      "id": "equivalence_room_mechanical_fixtures_v0",
+      "family": "settlement",
+      "path": "assets/pixeldarium-equivalence/settlement/room_mechanical_fixtures_v0.png",
+      "meta": "assets/pixeldarium-equivalence/settlement/room_mechanical_fixtures_v0.json",
+      "frameCount": 10
+    },
+    {
+      "id": "equivalence_material_effect_overlays_v0",
+      "family": "effects",
+      "path": "assets/pixeldarium-equivalence/effects/material_effect_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/effects/material_effect_overlays_v0.json",
+      "frameCount": 13
+    },
+    {
+      "id": "equivalence_source_reviewed_overlays_v0",
+      "family": "overlays",
+      "path": "assets/pixeldarium-equivalence/overlays/source_reviewed_overlays_v0.png",
+      "meta": "assets/pixeldarium-equivalence/overlays/source_reviewed_overlays_v0.json",
+      "frameCount": 17
+    }
+  ]
+});

@@ -1,0 +1,173 @@
+PS.assets.registerJSON("assets/pixeldarium-equivalence/effects/material_effect_overlays_v0.json", {
+  "schemaVersion": 1,
+  "type": "texturepacker",
+  "image": "material_effect_overlays_v0.png",
+  "tileSize": 32,
+  "frames": {
+    "decor-texture": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "game/texture/DECOR",
+      "category": "material-textures-and-effects",
+      "referencePath": "game/texture/DECOR.png",
+      "camera": "straight-down"
+    },
+    "organic-texture": {
+      "frame": {
+        "x": 32,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "game/texture/ORGANIC",
+      "category": "material-textures-and-effects",
+      "referencePath": "game/texture/ORGANIC.png",
+      "camera": "straight-down"
+    },
+    "stone-texture": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "game/texture/STONE",
+      "category": "material-textures-and-effects",
+      "referencePath": "game/texture/STONE.png",
+      "camera": "straight-down"
+    },
+    "wood-texture": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "game/texture/WOOD",
+      "category": "material-textures-and-effects",
+      "referencePath": "game/texture/WOOD.png",
+      "camera": "straight-down"
+    },
+    "bumps-overlay": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Bumps",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Bumps.png",
+      "camera": "straight-down"
+    },
+    "displacement-big": {
+      "frame": {
+        "x": 160,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Displacement_Big",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Displacement_Big.png",
+      "camera": "straight-down"
+    },
+    "displacement-low": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Displacement_low",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Displacement_low.png",
+      "camera": "straight-down"
+    },
+    "displacement-small": {
+      "frame": {
+        "x": 224,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Displacement_small",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Displacement_small.png",
+      "camera": "straight-down"
+    },
+    "displacement-tiny": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Displacement_tiny",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Displacement_tiny.png",
+      "camera": "straight-down"
+    },
+    "dots-overlay": {
+      "frame": {
+        "x": 288,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Dots",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Dots.png",
+      "camera": "straight-down"
+    },
+    "fire-effect": {
+      "frame": {
+        "x": 320,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "textures/Fire",
+      "category": "material-textures-and-effects",
+      "referencePath": "textures/Fire.png",
+      "camera": "straight-down"
+    },
+    "organic-blob": {
+      "frame": {
+        "x": 352,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "ORGANIC_BLOB",
+      "category": "organic-overlays",
+      "referencePath": "ORGANIC_BLOB.png",
+      "camera": "straight-down"
+    },
+    "special-overlay": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "special-overlays",
+      "referencePath": "SPECIAL.png",
+      "camera": "straight-down"
+    }
+  },
+  "meta": {
+    "app": "Pixeldarium",
+    "originalArt": true,
+    "runtimeUse": true,
+    "source": "pixeldarium-owned-generated-candidate",
+    "handoffIssue": "AZR-797",
+    "reviewIssue": "AZR-795",
+    "family": "effects"
+  }
+});
