@@ -155,15 +155,17 @@ color and the right half stores normal/height placeholder data. Terrain
 material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
 
-`PS.render.surfaceTileWebgl` groups terrain instances by atlas page. Each
-terrain instance currently packs 10 floats:
+`PS.render.surfaceTileWebgl` groups terrain instances by atlas page. Ready
+chunk cells are appended into pooled growable `Float32Array` page buffers, then
+finalized into typed upload ranges before WebGL submission. Each terrain
+instance currently packs 10 floats:
 
 ```text
 screenX, screenY, width, height, u0, v0, u1, v1, alpha, flipH
 ```
 
 The configured terrain upload limit is
-`CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES`, currently 4096 instances per
+`CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES`, currently 8192 instances per
 upload segment. Larger visible batches are split into multiple page draws.
 
 `PS.spriteBatch` supports up to 16384 sprite instances. Each sprite instance

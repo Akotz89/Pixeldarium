@@ -36,6 +36,14 @@ assert.ok(tileWebglSource.indexOf("beginTransparentPass") >= 0, "surface tile co
 assert.ok(tileWebglSource.indexOf("presentTarget") >= 0, "surface tile compositor should present through WebGL");
 assert.ok(tileWebglSource.indexOf("drawTerrainAtlasBatch") >= 0, "surface tile compositor should batch ready chunks into one viewport draw path");
 assert.ok(tileWebglSource.indexOf("appendBatches") >= 0, "surface tile compositor should append multiple chunks into shared atlas page batches");
+assert.ok(tileWebglSource.indexOf("getPageBuffer") >= 0, "surface tile compositor should build atlas batches in typed page buffers");
+assert.ok(tileWebglSource.indexOf("appendInstance") >= 0, "surface tile compositor should encode instances into typed page buffers");
+assert.ok(tileWebglSource.indexOf("finalizeBatchPages") >= 0, "surface tile compositor should finalize atlas pages before submission");
+assert.ok(tileWebglSource.indexOf("new Float32Array(page)") >= 0, "surface tile compositor should promote atlas page batches to typed arrays");
+assert.ok(tileWebglSource.indexOf("page.data.subarray(0, page.length)") >= 0, "surface tile compositor should finalize only ready typed page ranges");
+assert.ok(tileWebglSource.indexOf(".subarray(pageOffset, pageOffset + uploadFloats)") >= 0, "surface tile compositor should upload typed subarray segments");
+assert.strictEqual(tileWebglSource.indexOf("page.push"), -1, "surface tile compositor should not build upload pages as boxed JS arrays");
+assert.strictEqual(tileWebglSource.indexOf("for (var copyIndex = 0; copyIndex < uploadFloats; copyIndex++)"), -1, "surface tile compositor should not scalar-copy typed upload pages");
 assert.ok(tileWebglSource.indexOf("terrainAtlasCell") >= 0, "surface tile compositor should cache atlas material selection on ready chunk cells");
 assert.strictEqual(tileWebglSource.indexOf("drawTargetTo2d"), -1, "surface tile compositor should not copy back to Canvas2D");
 assert.ok(tileWebglSource.indexOf("drawArraysInstanced") >= 0, "surface tile compositor should submit instanced draws");
@@ -120,12 +128,28 @@ const batches = context.PS.render.surfaceTileWebgl.makeBatches(
   ],
   1
 );
-const page = batches.pages[0];
+const firstPageBuffer = batches.pages[0].data;
+const page = context.PS.render.surfaceTileWebgl.finalizeBatchPages(batches).pages[0];
 
 assert.strictEqual(page[0], 10, "terrain atlas x should stay grid-aligned and ignore positional jitter");
 assert.strictEqual(page[1], 32, "terrain atlas y should stay grid-aligned and ignore positional jitter");
 assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
 assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
+
+const reusedBatches = context.PS.render.surfaceTileWebgl.makeBatches(
+  {
+    sampleEast: 4,
+    sampleNorth: 8,
+    renderScreenX: 10,
+    renderScreenY: 20,
+    renderSamplePixelSize: 12,
+    chunkSamples: 1
+  },
+  [{ sample: { biome: "grassland" }, screenX: 0, screenY: 0 }],
+  1
+);
+assert.strictEqual(reusedBatches.pages[0].data, firstPageBuffer, "terrain atlas page builder should reuse typed page capacity across batches");
+assert.strictEqual(reusedBatches.pages[0].length, 10, "reused terrain atlas page builder should reset to the current ready range");
 
 const ecologyCell = { sample: { biome: "grassland", ecologyKey: "eco.3.2" }, screenX: 0, screenY: 0 };
 const ecologyAddress = {
@@ -144,5 +168,21 @@ assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecofor
 ecologyCell.sample.ecologyKey = "eco.0.0";
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
 assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1", "terrain cell cache should invalidate when ecology key changes");
+
+const finalized = context.PS.render.surfaceTileWebgl.finalizeBatchPages({
+  pages: {
+    0: { data: new Float32Array([1, 2, 3, 4, 99, 100]), length: 4 },
+    1: new Float32Array([5, 6, 7, 8]),
+    2: [9, 10, 11, 12]
+  },
+  count: 0,
+  culled: 0,
+  materialCounts: {}
+});
+assert.ok(finalized.pages[0] instanceof Float32Array, "finalized terrain page should be a typed upload buffer");
+assert.ok(finalized.pages[1] instanceof Float32Array, "already finalized terrain pages should stay typed");
+assert.strictEqual(finalized.pages[0][2], 3, "finalized terrain page should preserve instance values");
+assert.strictEqual(finalized.pages[0].length, 4, "finalized terrain page should expose only the ready range");
+assert.ok(finalized.pages[2] instanceof Float32Array, "legacy array terrain pages should be promoted to typed data");
 
 console.log("surface tile webgl checks passed");

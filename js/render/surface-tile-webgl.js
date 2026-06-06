@@ -22,7 +22,9 @@ PS.render.surfaceTileWebgl.state = {
   culledCount: 0,
   materialCounts: {},
   lastFrameMs: 0,
-  lastError: ""
+  lastError: "",
+  pageBuffers: {},
+  pageBufferToken: 0
 };
 
 PS.render.surfaceTileWebgl.shaderName = "terrain-tile";
@@ -128,20 +130,105 @@ PS.render.surfaceTileWebgl.getTexture = function (pageIndex) {
   return texture.texture;
 };
 
-PS.render.surfaceTileWebgl.makeBatches = function (address, cellCache, alpha) {
-  var batches = { pages: {}, count: 0, culled: 0, materialCounts: {} };
+PS.render.surfaceTileWebgl.beginBatches = function () {
+  var state = PS.render.surfaceTileWebgl.state;
 
-  return PS.render.surfaceTileWebgl.appendBatches(batches, address, cellCache, alpha);
+  state.pageBufferToken++;
+
+  return {
+    pages: {},
+    count: 0,
+    culled: 0,
+    materialCounts: {},
+    pageBufferToken: state.pageBufferToken
+  };
+};
+
+PS.render.surfaceTileWebgl.makeBatches = function (address, cellCache, alpha) {
+  return PS.render.surfaceTileWebgl.appendBatches(
+    PS.render.surfaceTileWebgl.beginBatches(),
+    address,
+    cellCache,
+    alpha
+  );
+};
+
+PS.render.surfaceTileWebgl.getPageBuffer = function (batches, pageIndex) {
+  var state = PS.render.surfaceTileWebgl.state;
+  var stride = PS.render.surfaceTileWebgl.strideFloats;
+  var key = String(pageIndex);
+  var page = state.pageBuffers[key];
+
+  if (!page) {
+    page = {
+      data: new Float32Array(Math.max(stride * 64, stride)),
+      length: 0,
+      token: 0
+    };
+    state.pageBuffers[key] = page;
+  }
+
+  if (page.token !== batches.pageBufferToken) {
+    page.length = 0;
+    page.token = batches.pageBufferToken;
+  }
+
+  if (page.length + stride > page.data.length) {
+    var nextLength = page.data.length;
+
+    while (page.length + stride > nextLength) {
+      nextLength *= 2;
+    }
+
+    var nextData = new Float32Array(nextLength);
+    nextData.set(page.data.subarray(0, page.length), 0);
+    page.data = nextData;
+  }
+
+  batches.pages[key] = page;
+  return page;
+};
+
+PS.render.surfaceTileWebgl.appendInstance = function (
+  page,
+  x,
+  y,
+  width,
+  height,
+  u0,
+  v0,
+  u1,
+  v1,
+  alpha,
+  flipH
+) {
+  var offset = page.length;
+
+  page.data[offset] = x;
+  page.data[offset + 1] = y;
+  page.data[offset + 2] = width;
+  page.data[offset + 3] = height;
+  page.data[offset + 4] = u0;
+  page.data[offset + 5] = v0;
+  page.data[offset + 6] = u1;
+  page.data[offset + 7] = v1;
+  page.data[offset + 8] = alpha;
+  page.data[offset + 9] = flipH;
+  page.length += PS.render.surfaceTileWebgl.strideFloats;
 };
 
 PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache, alpha) {
-  var target = batches || { pages: {}, count: 0, culled: 0, materialCounts: {} };
+  var target = batches || PS.render.surfaceTileWebgl.beginBatches();
   var baseWorldX = address.sampleEast || 0;
   var baseWorldY = address.sampleNorth || 0;
   var screenOffsetX = Number(address.renderScreenX) || 0;
   var screenOffsetY = Number(address.renderScreenY) || 0;
   var samplePixelSize = Math.max(1, Number(address.renderSamplePixelSize) || CONFIG.TILE_SIZE);
   var tileAlpha = clamp(Number(alpha) || 1, 0, 1);
+
+  if (target.pageBufferToken === undefined) {
+    target.pageBufferToken = ++PS.render.surfaceTileWebgl.state.pageBufferToken;
+  }
 
   for (var i = 0; i < cellCache.length; i++) {
     var cellData = cellCache[i];
@@ -182,14 +269,10 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     }
 
     var flipH = PS.ranmap && PS.ranmap.data && PS.ranmap.flipH(tileX, tileY);
-    var page = target.pages[cell.pageIndex];
+    var page = PS.render.surfaceTileWebgl.getPageBuffer(target, cell.pageIndex);
 
-    if (!page) {
-      page = [];
-      target.pages[cell.pageIndex] = page;
-    }
-
-    page.push(
+    PS.render.surfaceTileWebgl.appendInstance(
+      page,
       screenOffsetX + cellData.screenX * (samplePixelSize / CONFIG.TILE_SIZE),
       screenOffsetY + cellData.screenY * (samplePixelSize / CONFIG.TILE_SIZE),
       samplePixelSize,
@@ -233,6 +316,24 @@ PS.render.surfaceTileWebgl.configureAttributes = function () {
   gl.vertexAttribDivisor(loc.flipH, 1);
 };
 
+PS.render.surfaceTileWebgl.finalizeBatchPages = function (batches) {
+  if (!batches || !batches.pages) {
+    return batches;
+  }
+
+  Object.keys(batches.pages).forEach(function (pageIndex) {
+    var page = batches.pages[pageIndex];
+
+    if (page && page.data && typeof page.length === "number") {
+      batches.pages[pageIndex] = page.data.subarray(0, page.length);
+    } else if (page && !(page instanceof Float32Array)) {
+      batches.pages[pageIndex] = new Float32Array(page);
+    }
+  });
+
+  return batches;
+};
+
 PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
   var state = PS.render.surfaceTileWebgl.state;
   var gl = state.gl;
@@ -240,6 +341,7 @@ PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
   var drawnInstances = 0;
   var pageDraws = 0;
   var drawOptions = options || {};
+  var readyBatches = PS.render.surfaceTileWebgl.finalizeBatchPages(batches);
 
   if (!drawOptions.skipBeginPass) {
     PS.render.webglEngine.beginTransparentPass(state.target);
@@ -249,8 +351,8 @@ PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
   gl.uniform1i(state.locations.atlas, 0);
   PS.render.surfaceTileWebgl.configureAttributes();
 
-  Object.keys(batches.pages).forEach(function (pageIndex) {
-    var pageData = batches.pages[pageIndex];
+  Object.keys(readyBatches.pages).forEach(function (pageIndex) {
+    var pageData = readyBatches.pages[pageIndex];
     var texture = PS.render.surfaceTileWebgl.getTexture(pageIndex);
     var strideFloats = PS.render.surfaceTileWebgl.strideFloats;
     var maxUploadFloats = Math.max(strideFloats, Math.floor(state.instanceData.length / strideFloats) * strideFloats);
@@ -272,15 +374,12 @@ PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
       }
 
       var instanceCount = Math.floor(uploadFloats / strideFloats);
-
-      for (var copyIndex = 0; copyIndex < uploadFloats; copyIndex++) {
-        state.instanceData[copyIndex] = pageData[pageOffset + copyIndex];
-      }
+      var uploadData = pageData.subarray(pageOffset, pageOffset + uploadFloats);
 
       PS.render.webglEngine.updateBuffer(
         state.target,
         "surface-tile-instances",
-        state.instanceData.subarray(0, uploadFloats),
+        uploadData,
         gl.STREAM_DRAW
       );
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount);
@@ -300,8 +399,8 @@ PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
   state.drawCount++;
   state.tileDrawCount = drawnInstances;
   state.pageDrawCount = pageDraws;
-  state.culledCount = batches.culled;
-  state.materialCounts = Object.assign({}, batches.materialCounts || {});
+  state.culledCount = readyBatches.culled;
+  state.materialCounts = Object.assign({}, readyBatches.materialCounts || {});
   state.lastFrameMs = performance.now() - startedAt;
   state.lastError = "";
   return true;
@@ -320,7 +419,7 @@ PS.render.surfaceTileWebgl.drawTerrainAtlasBatch = function (chunks, alpha, opti
       return false;
     }
 
-    var batches = { pages: {}, count: 0, culled: 0, materialCounts: {} };
+    var batches = PS.render.surfaceTileWebgl.beginBatches();
 
     for (var i = 0; i < list.length; i++) {
       var item = list[i];
