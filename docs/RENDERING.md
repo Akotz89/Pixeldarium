@@ -156,6 +156,11 @@ allocate additional 256x256 RGBA pages when authored terrain/entity cells exceed
 the current page capacity; renderers already batch by page index. Terrain
 material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
+Registered terrain material families include bounded IDs for shallow rivers,
+tidal mud, lava flows, lichen tundra, and reed mats. These families are
+selected from sample material signals such as flow, wet shore, lava/heat,
+lichen, and reed density before the cell receives feature, biology/resource,
+ecology, or civilization suffixes.
 Terrain cells also encode a bounded feature-mark key before biology/resource
 suffixes: `feature0` or `feature.<type>.<bucket>`. Feature types currently
 cover foam, canopy, ridge, dry scrub, frost, ember, reed, and field marks;
@@ -252,6 +257,10 @@ Relevant current limits:
 - Close-band ready surface chunks:
   `CONFIG.PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT = 192`.
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 8192`.
+- Authored material families added for AZR-365 are finite registered tile IDs:
+  `river_shallow`, `tidal_mud`, `lava_flow`, `lichen_tundra`, and `reed_mat`.
+  They still use the existing 16x16 terrain atlas cell, feature key, and
+  chunk/page WebGL batching path.
 - Local ecology terrain encoding: enabled with
   `CONFIG.PLANET_SURFACE_ECOLOGY_ENABLED`, starts at
   `CONFIG.PLANET_SURFACE_ECOLOGY_MIN_ZOOM = 4`, and samples a bounded

@@ -281,7 +281,7 @@ PS.atlas.getTerrainFeatureInfo = function (sample, biome, tileDefinition) {
   );
   var type = "field";
 
-  if (pattern === "wave" || pattern === "shore" || surface.indexOf("water") >= 0) {
+  if (pattern === "wave" || pattern === "shore" || pattern === "stream" || surface.indexOf("water") >= 0 || surface.indexOf("river") >= 0) {
     type = "foam";
     pressure = Math.max(pressure, Number(signals.waterDepth) || Number(tileDefinition && tileDefinition.waterDepth) || 0.4);
   } else if (pattern === "canopy" || surface.indexOf("wood") >= 0 || surface.indexOf("canopy") >= 0) {
@@ -293,9 +293,9 @@ PS.atlas.getTerrainFeatureInfo = function (sample, biome, tileDefinition) {
   } else if (pattern === "dune" || surface.indexOf("sand") >= 0 || surface.indexOf("dune") >= 0) {
     type = "scrub";
     pressure = Math.max(pressure, 0.46);
-  } else if (pattern === "frost" || pattern === "crack" || surface.indexOf("snow") >= 0 || surface.indexOf("ice") >= 0) {
+  } else if (pattern === "frost" || pattern === "crack" || pattern === "lichen" || surface.indexOf("snow") >= 0 || surface.indexOf("ice") >= 0 || surface.indexOf("lichen") >= 0) {
     type = "frost";
-    pressure = Math.max(pressure, Number(signals.snow) || 0.52);
+    pressure = Math.max(pressure, Number(signals.snow) || Number(signals.lichen) || 0.52);
   } else if (pattern === "lava") {
     type = "ember";
     pressure = 1;
@@ -402,6 +402,14 @@ PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefini
     return;
   }
 
+  if (pattern === "stream") {
+    PS.atlas.writeTerrainDash(cell, 5, 0, 16, false, shadow);
+    PS.atlas.writeTerrainDash(cell, 6 + offset % 3, 0, 16, false, light);
+    PS.atlas.writeTerrainDash(cell, 9, 2, 12, false, warm);
+    finish();
+    return;
+  }
+
   if (pattern === "shore") {
     PS.atlas.writeTerrainDash(cell, 0, 5 + offset % 4, 6, true, light);
     PS.atlas.writeTerrainDash(cell, 7, 7, 7, true, warm);
@@ -454,6 +462,14 @@ PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefini
     PS.atlas.writeTerrainDash(cell, 2, 3, 11, true, light);
     PS.atlas.writeTerrainDash(cell, 5, 8, 8, true, shadow);
     PS.atlas.writeTerrainDash(cell, 10, 1, 8, false, light);
+    finish();
+    return;
+  }
+
+  if (pattern === "lichen") {
+    PS.atlas.writeDot(cell, 4, 4, 2, light);
+    PS.atlas.writeDot(cell, 11, 6, 1, warm);
+    PS.atlas.writeDot(cell, 7 + offset % 4, 12, 2, shadow);
     finish();
     return;
   }
