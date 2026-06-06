@@ -89,6 +89,13 @@ from aggregate civilization state.
   changed the camera. This moves the prior close-band headless evidence from
   `terrainDraws=16384`, `terrainPageDraws=4`, `gpuFrameMs=108.8` while still
   leaving the frame over budget.
+- Direct `file://` terrain upload-segment probe after raising
+  `PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES` to `8192`: the same close-band
+  smoke reported `visibleLimit=192`, `terrainDraws=12288`,
+  `terrainPageDraws=2`, `drawCalls=67`, `gpuFrameMs=82.8`, `lastError=""`, no
+  page errors or failed requests, and working wheel/drag. This moves the prior
+  capped-working-set evidence from `terrainPageDraws=3`, `drawCalls=102`,
+  `gpuFrameMs=85.7` while still leaving the frame over budget.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -115,7 +122,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain atlas cells now add bounded sub-tile microstructure phases to reduce
   the single repeated material language at close zoom; local/settlement terrain
   now uses a bounded ready-chunk working set instead of submitting every visible
-  candidate chunk.
+  candidate chunk; terrain upload segmentation now batches more ready instances
+  per WebGL submission.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -124,7 +132,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   watched representative set; local ecology material encoding uses the render
   chunk/sample cell as the terrain boundary and bucket-backed organism/food
   radius queries as the aggregate boundary; close-band terrain submission uses
-  the prioritized visible chunk list as its working-set boundary.
+  the prioritized visible chunk list as its working-set boundary and the
+  terrain instance upload segment as its GPU submission boundary.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels; representative intent cells are
   consumed only after atlas generation/versioning and a selected, pinned, or
@@ -152,15 +161,16 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   and maps food/organism pressure into existing `organic.0..3` and
   `nutrient.0..3` terrain atlas suffixes; active ecology microstructure adds
   only `ecoform.0..3` bounded atlas phases; local/settlement ready terrain
-  chunks are capped at `192` per frame.
+  chunks are capped at `192` per frame; terrain upload segments are capped at
+  `8192` instances.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
   identity/pixel evidence, resource terrain atlas identity/pixel evidence,
   representative intent draw evidence, active ecology terrain atlas evidence,
   active ecology microstructure unique-color and `ecoform` key evidence, and
-  close-band terrain draw reduction evidence, and high-coordinate terrain
-  variant regression coverage.
+  close-band terrain draw reduction and upload-segment evidence, and
+  high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 

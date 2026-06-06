@@ -218,7 +218,7 @@ Relevant current limits:
 - Frame budget history: `CONFIG.FRAME_BUDGET_HISTORY_LIMIT = 120`.
 - Close-band ready surface chunks:
   `CONFIG.PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT = 192`.
-- Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 4096`.
+- Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 8192`.
 - Local ecology terrain encoding: enabled with
   `CONFIG.PLANET_SURFACE_ECOLOGY_ENABLED`, starts at
   `CONFIG.PLANET_SURFACE_ECOLOGY_MIN_ZOOM = 4`, and samples a bounded
