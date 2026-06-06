@@ -16,8 +16,10 @@ const engineSource = read("js/render/webgl-engine.js");
 const tileWebglSource = read("js/render/surface-tile-webgl.js");
 
 assert.ok(namespaceSource.indexOf("js/render/surface-tile-webgl.js") >= 0, "surface tile WebGL compositor should load in the runtime");
+assert.ok(namespaceSource.indexOf("js/render/surface-ecology.js") < namespaceSource.indexOf("js/render/surface-tile-webgl.js"), "surface ecology facade should load before terrain tile consumption");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_ATLAS:\s*true/.test(configSource), "surface tile WebGL atlas batching should be enabled by default");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES:\s*4096/.test(configSource), "surface tile WebGL batching should have a capped batch size");
+assert.ok(/PLANET_SURFACE_ECOLOGY_RADIUS_TILES:\s*16/.test(configSource), "surface ecology encoding should use a bounded tile radius aligned to spatial buckets");
 assert.ok(pipelineSource.indexOf("PS.render.surfaceTileWebgl") >= 0, "render rebuilds should include the surface tile WebGL subsystem");
 
 assert.ok(engineSource.indexOf('getContext("webgl2"') >= 0, "shared WebGL engine should create raw WebGL2 contexts");
@@ -37,11 +39,23 @@ assert.ok(tileWebglSource.indexOf("vertexAttribDivisor") >= 0, "surface tile com
 
 const context = {
   PS: {
-    render: {},
+    render: {
+      surface: {
+        withEcology(sample) {
+          if (!sample || !sample.ecologyKey) {
+            return sample;
+          }
+
+          return Object.assign({}, sample, {
+            ecology: { key: sample.ecologyKey }
+          });
+        }
+      }
+    },
     atlas: {
-      getTerrainCell() {
+      getTerrainCell(biome, tileX, tileY, sample) {
         return {
-          name: "test.grass",
+          name: "test.grass." + (sample && sample.ecology ? sample.ecology.key : "eco.0.0"),
           pageIndex: 0,
           u0: 0,
           v0: 0,
@@ -103,5 +117,20 @@ assert.strictEqual(page[0], 10, "terrain atlas x should stay grid-aligned and ig
 assert.strictEqual(page[1], 32, "terrain atlas y should stay grid-aligned and ignore positional jitter");
 assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
 assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
+
+const ecologyCell = { sample: { biome: "grassland", ecologyKey: "eco.3.2" }, screenX: 0, screenY: 0 };
+const ecologyAddress = {
+  sampleEast: 0,
+  sampleNorth: 0,
+  renderScreenX: 0,
+  renderScreenY: 0,
+  renderSamplePixelSize: 12,
+  chunkSamples: 1
+};
+context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2", "terrain cell cache should include the active ecology key");
+ecologyCell.sample.ecologyKey = "eco.0.0";
+context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0", "terrain cell cache should invalidate when ecology key changes");
 
 console.log("surface tile webgl checks passed");

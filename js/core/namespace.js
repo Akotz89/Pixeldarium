@@ -71,6 +71,7 @@ PS.core.manifest = [
   "js/render/webgl-globe-shaders.js",
   "js/render/webgl-globe.js",
   "js/render/surface-worker-client.js",
+  "js/render/surface-ecology.js",
   "js/render/surface-tile-webgl.js",
   "js/render/entity-webgl.js",
   "js/render/renderer.js",

@@ -207,6 +207,29 @@ const mineralVeinCell = context.PS.atlas.getTerrainCell("mountain", 30, 14, {
     }
   }
 });
+const ordinaryEcologyCell = context.PS.atlas.getTerrainCell("grassland", 34, 18, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  }
+});
+const activeEcologyCell = context.PS.atlas.getTerrainCell("grassland", 34, 18, {
+  detail: {
+    surface: "grass",
+    elevation: 0.42,
+    roughness: 0.2,
+    materialSignals: {}
+  },
+  ecology: {
+    key: "eco.3.2",
+    foodPressure: 1,
+    organismPressure: 0.67,
+    organicMatter: 0.67,
+    resourceRichness: 1
+  }
+});
 const highSurfaceVariants = new Set();
 for (let y = 10000; y < 10016; y++) {
   highSurfaceVariants.add(context.PS.atlas.getTerrainVariant(22, y, 4, 29));
@@ -285,6 +308,10 @@ assert.ok(mineralVeinCell.name.indexOf(".mineral.3") > 0, "mineral resource samp
 assert.notStrictEqual(mineralVeinCell.name, ordinaryRockCell.name, "mineral resource cells should not overwrite ordinary rock material cells");
 assert.notDeepStrictEqual(pixelAt(mineralVeinCell, 7, 7), pixelAt(ordinaryRockCell, 7, 7), "mineral pressure should change visible terrain pixels");
 assert.ok(uniqueColorCount(mineralVeinCell) >= uniqueColorCount(ordinaryRockCell), "mineral resource cells should preserve authored detail density");
+assert.ok(activeEcologyCell.name.indexOf(".organic.") > 0, "active organism ecology should encode bounded organic terrain pressure");
+assert.ok(activeEcologyCell.name.indexOf(".nutrient.") > 0, "active food ecology should encode bounded nutrient terrain pressure");
+assert.notStrictEqual(activeEcologyCell.name, ordinaryEcologyCell.name, "active ecology should not overwrite ordinary terrain cells");
+assert.notDeepStrictEqual(pixelAt(activeEcologyCell, 7, 7), pixelAt(ordinaryEcologyCell, 7, 7), "active ecology should change visible terrain pixels");
 assert.ok(highSurfaceVariants.size > 1, "terrain variants should keep Y variation for high surface sample coordinates");
 assert.ok(sparseFoodCell.name.indexOf("entity.food.0.0") === 0, "food cells should encode bounded richness buckets");
 assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells should use the highest bounded resource bucket");

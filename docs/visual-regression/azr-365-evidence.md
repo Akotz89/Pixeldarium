@@ -17,6 +17,8 @@ Updated screenshots:
 - `azr-365-settlement-local.png`: runtime zoom `7`, architecture zoom `20`, band `settlement`.
 - `azr-365-intent-local.png`: direct `file://` seeded local representative
   intent smoke at runtime zoom `7`.
+- `azr-365-ecology-local.png`: direct `file://` local active ecology material
+  smoke at runtime zoom `7`.
 
 The settlement/route/border captures use deterministic seeded aggregate facade
 state inside the browser session only. Runtime files are unchanged by that
@@ -61,6 +63,13 @@ from aggregate civilization state.
   `organismEntityDraws=1`, `terrainDraws=5888`, `entityLastFrameMs=0.10`,
   `lastError=""`, `entityLastError=""`, `atlasIntentCells=2`, and atlas page
   bytes stayed `262144`.
+- Direct `file://` active ecology terrain probe after adding bucket-backed
+  local surface ecology encoding: `terrainDraws=5888`, `terrainPageDraws=2`,
+  `entityDraws=1`, `gpuFrameMs=39.3`, `lastError=""`; ecology stats reported
+  `cacheEntries=1`, `activeCells=1`, `foodPressureCells=1`,
+  `organismPressureCells=1`; generated atlas keys included
+  `terrain.water_deep.3.plain.organic.1.nutrient.2`; atlas page bytes stayed
+  `262144`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -81,22 +90,30 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   microbial/organic material cues; mineral and nutrient resource pressure now
   becomes bounded terrain atlas variants for resource patch readability;
   selected/pinned/bookmarked representative behavior and target state now
-  becomes watcher-facing intent atlas facades instead of inspector-only data.
+  becomes watcher-facing intent atlas facades instead of inspector-only data;
+  local active organism/food pressure now becomes terrain-facing ecology
+  material encoding instead of relying only on entity overlays.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
   intent, and food draw batches; settlement evidence is derived from aggregate
   settlement and route state; representative intent rendering is capped to the
-  watched representative set.
+  watched representative set; local ecology material encoding uses the render
+  chunk/sample cell as the terrain boundary and bucket-backed organism/food
+  radius queries as the aggregate boundary.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels; representative intent cells are
   consumed only after atlas generation/versioning and a selected, pinned, or
-  bookmarked representative record are ready.
+  bookmarked representative record are ready; active ecology material cells are
+  consumed from current ready chunk samples after the ecology facade derives
+  bounded pressure from current organism/food buckets.
 - Player-perception contract: each reachable camera stop maps to the intended
   orbit, continent, region, local, or settlement visual contract; close desert
   terrain should read as granular material, not full-height repeated columns;
   local watched organisms expose behavior/target cues on the map without
-  making every organism brain a rendered authoritative object.
+  making every organism brain a rendered authoritative object; local ecology
+  pressure should be readable in the terrain itself when entity overlays are
+  visually subtle or temporarily overwritten by surface streaming.
 - New constraint or encoding limit: architecture zoom is clamped to the `1..20`
   perception scale derived from the configured camera anchors; terrain variant
   hashing is deterministic but no longer uses bounded RANMAP tile coordinates;
@@ -104,13 +121,16 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   `organic.0..3` atlas key suffixes; terrain resource encoding is limited to
   `mineral.0..3` and `nutrient.0..3` optional suffixes; representative intent
   encoding is limited to behavior buckets `0..4`, target buckets `0..3`, watch
-  buckets `0..3`, lineage buckets `1..16`, and `128` watched markers per frame.
+  buckets `0..3`, lineage buckets `1..16`, and `128` watched markers per frame;
+  terrain ecology encoding is enabled at zoom `>=4`, samples a `16` tile radius,
+  and maps food/organism pressure into existing `organic.0..3` and
+  `nutrient.0..3` terrain atlas suffixes.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
   identity/pixel evidence, resource terrain atlas identity/pixel evidence,
-  representative intent draw evidence, and high-coordinate terrain variant
-  regression coverage.
+  representative intent draw evidence, active ecology terrain atlas evidence,
+  and high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 
@@ -123,4 +143,8 @@ broader authored material families before the placeholder/debug-map feel is
 gone. The representative intent slice proves selected local behavior/target
 state now reaches the WebGL entity path, but the latest intent screenshot still
 reads mostly as terrain at full-frame scale, so the next visual pass should make
-local ecological cues more legible in ordinary captures.
+local ecological cues more legible in ordinary captures. The active ecology
+material pass makes those cues visible in the terrain, but the current local
+capture can still become broad at single-tile zoom; later passes should add
+more varied sub-tile ecological structure instead of a single repeated material
+language.

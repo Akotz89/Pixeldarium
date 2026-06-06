@@ -217,6 +217,10 @@ Relevant current limits:
 - Simulation catch-up cap: `CONFIG.MAX_SIM_UPDATES_PER_FRAME = 3`.
 - Frame budget history: `CONFIG.FRAME_BUDGET_HISTORY_LIMIT = 120`.
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 4096`.
+- Local ecology terrain encoding: enabled with
+  `CONFIG.PLANET_SURFACE_ECOLOGY_ENABLED`, starts at
+  `CONFIG.PLANET_SURFACE_ECOLOGY_MIN_ZOOM = 4`, and samples a bounded
+  `CONFIG.PLANET_SURFACE_ECOLOGY_RADIUS_TILES = 16`.
 - Entity instances: `CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES = 8192`.
 - Watched representative intent markers: `CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS = 128`.
 - Active particle cap: `CONFIG.PARTICLE_MAX_ACTIVE = 10000`.
@@ -235,6 +239,11 @@ over-budget, and dropped catch-up frame counts.
 Rendering consumes ready data. Surface chunks must be completed and carry a
 ready `cellCache` before `surfaceTileWebgl` draws them. Pending chunks stay in
 the worker/cache lifecycle and must not block the frame.
+
+Local ecology material encoding is a render facade over current organism and
+food buckets. It does not make visible organisms or food particles
+authoritative; it derives bounded `organic.0..3` and `nutrient.0..3` terrain
+atlas suffixes from current ready samples and current bucket pressure.
 
 At orbit zoom, the renderer preserves global comprehension: globe shape,
 terrain fields, overlays, and event markers. At local zoom, it spends detail on

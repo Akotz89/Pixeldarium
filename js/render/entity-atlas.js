@@ -689,6 +689,8 @@ PS.atlas.getTerrainBiologyInfo = function (sample) {
     Number(signals.ecology) || 0,
     Number(detail.organicMatter) || 0,
     Number(biology.organicMatter) || 0,
+    Number(sample && sample.ecology && sample.ecology.organismPressure) || 0,
+    Number(sample && sample.ecology && sample.ecology.organicMatter) || 0,
     Number(sample && sample.ecology) || 0
   );
   var pressure = clamp(Math.max(bloom, organic * 0.72), 0, 1);
@@ -758,6 +760,7 @@ PS.atlas.getTerrainResourceInfo = function (sample) {
     Number(signals.resourceFertility) || 0,
     Number(detail.nutrientRichness) || 0,
     Number(detail.resourceFertility) || 0,
+    Number(sample && sample.ecology && sample.ecology.foodPressure) || 0,
     Number(sample && sample.resourceRichness) || 0
   );
   var pressure = clamp(Math.max(mineral, nutrient), 0, 1);
