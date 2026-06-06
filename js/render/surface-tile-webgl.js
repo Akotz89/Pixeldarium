@@ -271,7 +271,8 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
       target.materialCounts[cell.name] = (target.materialCounts[cell.name] || 0) + 1;
     }
 
-    var flipH = PS.ranmap && PS.ranmap.data && PS.ranmap.flipH(tileX, tileY);
+    var shadeBucket = PS.ranmap && PS.ranmap.data && PS.ranmap.normalizedBits ? PS.ranmap.normalizedBits(tileX, tileY, 20, 2) * 0.24 : 0;
+    var flipH = (PS.ranmap && PS.ranmap.data && PS.ranmap.flipH(tileX, tileY) ? 1 : 0) + shadeBucket;
     var page = PS.render.surfaceTileWebgl.getPageBuffer(target, cell.pageIndex);
 
     PS.render.surfaceTileWebgl.appendInstance(
@@ -285,7 +286,7 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
       cell.u1,
       cell.v1,
       tileAlpha,
-      flipH ? 1 : 0
+      flipH
     );
     target.count++;
   }

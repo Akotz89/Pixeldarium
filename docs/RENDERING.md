@@ -185,8 +185,13 @@ finalized into typed upload ranges before WebGL submission. Each terrain
 instance currently packs 10 floats:
 
 ```text
-screenX, screenY, width, height, u0, v0, u1, v1, alpha, flipH
+screenX, screenY, width, height, u0, v0, u1, v1, alpha, variation
 ```
+
+`variation` keeps the existing horizontal-flip bit and packs a bounded RANMAP
+shade bucket into the fractional portion. The terrain shaders use it to flip
+and subtly brighten/darken repeated material cells without changing the chunk
+grid or adding a draw-call family.
 
 The configured terrain upload limit is
 `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES`, currently 8192 instances per
@@ -257,6 +262,8 @@ Relevant current limits:
 - Close-band ready surface chunks:
   `CONFIG.PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT = 192`.
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 8192`.
+- Terrain RANMAP variation stays inside the existing 10-float instance encoding:
+  integer `0|1` for horizontal flip plus a fractional shade bucket in `0..0.24`.
 - Authored material families added for AZR-365 are finite registered tile IDs:
   `river_shallow`, `tidal_mud`, `lava_flow`, `lichen_tundra`, and `reed_mat`.
   They still use the existing 16x16 terrain atlas cell, feature key, and
