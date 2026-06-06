@@ -1093,10 +1093,13 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
     ? PS.atlas.getTerrainTransitionKey(sample, biome)
     : "plain";
+  var featureKey = typeof PS.atlas.getTerrainFeatureKey === "function"
+    ? PS.atlas.getTerrainFeatureKey(sample, biome, tileDefinition)
+    : "feature0";
   var drawSample = ecologyMicroPhase >= 0
     ? Object.assign({}, sample, { terrainEcologyMicroPhase: ecologyMicroPhase })
     : sample;
-  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + biologyKey + resourceKey + ecologyMicroKey;
+  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + featureKey + "." + biologyKey + resourceKey + ecologyMicroKey;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {

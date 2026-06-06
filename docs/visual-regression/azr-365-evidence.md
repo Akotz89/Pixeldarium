@@ -141,6 +141,17 @@ from aggregate civilization state.
   `entity.food.0.0.1`, `entity.food.1.0.0`, and `entity.food.2.0.2`. A follow-up
   direct interaction smoke loaded `16` runtime sheets, kept `debugText=""`,
   changed zoom `0 -> 0.25`, and changed latitude/longitude through drag.
+- Direct `file://` terrain feature-mark probe after adding bounded terrain
+  feature keys inside generated atlas cells: no page errors, no failed
+  requests, and `debugText=""`. Browser atlas cells included
+  `terrain.forest_floor.3.plain.feature.canopy.3.organic.2` with `5` unique
+  colors, `terrain.water_shallow.3.plain.feature.foam.3.bio0` with `5` unique
+  colors, `terrain.rock_cliff.0.plain.feature.ridge.3.bio0` with `5` unique
+  colors, `terrain.sand_dune.1.plain.feature.scrub.1.bio0` with `6` unique
+  colors, and explicit no-feature fallback
+  `terrain.unknown.0.plain.feature0.bio0`. A direct interaction smoke in the
+  same `file://` runtime changed zoom `0 -> 0.25`, changed latitude/longitude,
+  reported no page errors or failed requests, and kept `debugText=""`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -177,8 +188,10 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   bounded resource-family atlas identity instead of collapsing visible resources
   into one green-pod marker family; accepted runtime sheet metadata now ships
   `file://` JSON sidecars instead of being consumed only by fetch-capable
-  contexts; the packed atlas now grows by page instead of treating the first
-  256x256 page as a hard visual density ceiling.
+  contexts; terrain cells now include bounded feature-mark atlas identities
+  instead of relying only on broad material pattern families; the packed atlas
+  now grows by page instead of treating the first 256x256 page as a hard visual
+  density ceiling.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -190,10 +203,12 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   the prioritized visible chunk list as its working-set boundary and the
   terrain instance upload segment as its GPU submission boundary; terrain atlas
   upload pages now use typed page buffers as the atlas-page batch boundary;
-  food/resource entity facades use the existing entity atlas page batch and
-  food-node aggregate/index surfaces; settlement readiness uses aggregate
-  lineage records plus the current representative-organism center as its facade
-  boundary, with at most `6` readiness markers.
+  terrain feature marks use the existing 16x16 terrain atlas cell and WebGL
+  atlas-page batch boundary; food/resource entity facades use the existing
+  entity atlas page batch and food-node aggregate/index surfaces; settlement
+  readiness uses aggregate lineage records plus the current
+  representative-organism center as its facade boundary, with at most `6`
+  readiness markers.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels; representative intent cells are
   consumed only after atlas generation/versioning and a selected, pinned, or
@@ -233,6 +248,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   chunks are capped at `192` per frame; terrain upload segments are capped at
   `8192` instances; terrain atlas page buffers use the existing 10-float
   instance encoding and allocate transient typed capacity per atlas page;
+  terrain feature marks are limited to `feature0` or
+  `feature.<type>.<bucket>` with feature types
+  `foam|canopy|ridge|scrub|frost|ember|reed|field` and buckets `1..3`;
   food/resource entity cells are limited to richness buckets `0..3` and family
   buckets `0..3`; runtime-owned visual sheet metadata requires matching
   `.json.js` sidecars for the direct static runtime;
@@ -250,7 +268,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   multi-page allocation coverage, settlement-readiness contrast pixel evidence
   from `[3,6,9,255]` to `[206,173,85,255]`, food/resource family atlas identity
   and pixel evidence, direct-file sidecar-load evidence with zero failed
-  requests, and high-coordinate terrain variant regression coverage.
+  requests, terrain feature-mark identity/unique-color evidence, and
+  high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 

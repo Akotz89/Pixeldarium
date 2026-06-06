@@ -156,6 +156,11 @@ allocate additional 256x256 RGBA pages when authored terrain/entity cells exceed
 the current page capacity; renderers already batch by page index. Terrain
 material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
+Terrain cells also encode a bounded feature-mark key before biology/resource
+suffixes: `feature0` or `feature.<type>.<bucket>`. Feature types currently
+cover foam, canopy, ridge, dry scrub, frost, ember, reed, and field marks;
+buckets are `1..3`. These marks add close-band terrain identity inside the same
+16x16 atlas cell and do not add a draw-call family.
 Food/resource entity cells use bounded atlas identities:
 `entity.food.<variant>.<richness>.<family>`. Richness is bucketed `0..3`;
 family is bucketed `0..3` for living pods, storage/grain, produce/fungus, and
