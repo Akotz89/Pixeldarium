@@ -466,6 +466,134 @@ PS.render.entityWebgl.getRouteShape = function (dx, dy) {
   return "diag";
 };
 
+PS.render.entityWebgl.getSettlementRouteCanvasPoint = function (settlement) {
+  var point = PS.render.entities.getSettlementRenderPosition(settlement);
+
+  if (point || typeof isPlanetLocalView !== "function" || !isPlanetLocalView()) {
+    return point;
+  }
+
+  if (typeof getEntitySurfacePosition !== "function" || typeof getPlanetLocalCanvasPoint !== "function") {
+    return null;
+  }
+
+  var surfacePosition = getEntitySurfacePosition(settlement);
+  var canvasPoint = surfacePosition
+    ? getPlanetLocalCanvasPoint(surfacePosition.longitude, surfacePosition.latitude)
+    : null;
+
+  if (
+    !canvasPoint &&
+    surfacePosition &&
+    typeof getSurfaceMeterCoordinate === "function" &&
+    typeof getPlanetView === "function" &&
+    typeof getPlanetViewScale === "function"
+  ) {
+    var state = PS.render.entityWebgl.state;
+    var target = state.target || {};
+    var width = Number(target.width) || (typeof canvas !== "undefined" ? canvas.width : 0);
+    var height = Number(target.height) || (typeof canvas !== "undefined" ? canvas.height : 0);
+    var scale = getPlanetViewScale();
+    var view = getPlanetView();
+    var viewMeters = getSurfaceMeterCoordinate(view.latitude, view.longitude);
+    var targetMeters = getSurfaceMeterCoordinate(surfacePosition.latitude, surfacePosition.longitude);
+
+    if (scale && Number(scale.metersPerSample) > 0 && width > 0 && height > 0) {
+      canvasPoint = {
+        x: width / 2 + ((targetMeters.eastMeters - viewMeters.eastMeters) / scale.metersPerSample) * CONFIG.TILE_SIZE,
+        y: height / 2 - ((targetMeters.northMeters - viewMeters.northMeters) / scale.metersPerSample) * CONFIG.TILE_SIZE
+      };
+    }
+  }
+
+  return canvasPoint ? {
+    x: canvasPoint.x,
+    y: canvasPoint.y,
+    scale: 1,
+    visibility: 1,
+    visible: true
+  } : null;
+};
+
+PS.render.entityWebgl.getVisibleRouteSegment = function (fromPoint, toPoint, margin) {
+  var state = PS.render.entityWebgl.state;
+  var target = state.target || {};
+  var width = Number(target.width) || (typeof canvas !== "undefined" ? canvas.width : 0);
+  var height = Number(target.height) || (typeof canvas !== "undefined" ? canvas.height : 0);
+  var x0 = Number(fromPoint && fromPoint.x);
+  var y0 = Number(fromPoint && fromPoint.y);
+  var x1 = Number(toPoint && toPoint.x);
+  var y1 = Number(toPoint && toPoint.y);
+  var left = -margin;
+  var right = width + margin;
+  var top = -margin;
+  var bottom = height + margin;
+  var t0 = 0;
+  var t1 = 1;
+  var dx = x1 - x0;
+  var dy = y1 - y0;
+
+  function clip(p, q) {
+    var ratio;
+
+    if (p === 0) {
+      return q >= 0;
+    }
+
+    ratio = q / p;
+
+    if (p < 0) {
+      if (ratio > t1) {
+        return false;
+      }
+      if (ratio > t0) {
+        t0 = ratio;
+      }
+    } else if (p > 0) {
+      if (ratio < t0) {
+        return false;
+      }
+      if (ratio < t1) {
+        t1 = ratio;
+      }
+    }
+
+    return true;
+  }
+
+  if (
+    !Number.isFinite(x0) ||
+    !Number.isFinite(y0) ||
+    !Number.isFinite(x1) ||
+    !Number.isFinite(y1) ||
+    width <= 0 ||
+    height <= 0 ||
+    !clip(-dx, x0 - left) ||
+    !clip(dx, right - x0) ||
+    !clip(-dy, y0 - top) ||
+    !clip(dy, bottom - y0)
+  ) {
+    return null;
+  }
+
+  return {
+    from: {
+      x: x0 + dx * t0,
+      y: y0 + dy * t0,
+      scale: fromPoint.scale || 1,
+      visibility: fromPoint.visibility || 1,
+      visible: true
+    },
+    to: {
+      x: x0 + dx * t1,
+      y: y0 + dy * t1,
+      scale: toPoint.scale || 1,
+      visibility: toPoint.visibility || 1,
+      visible: true
+    }
+  };
+};
+
 PS.render.entityWebgl.buildSettlementRouteBatches = function () {
   var batches = PS.render.entityWebgl.createBatches();
 
@@ -483,13 +611,24 @@ PS.render.entityWebgl.buildSettlementRouteBatches = function () {
       continue;
     }
 
-    var parentPoint = PS.render.entities.getSettlementRenderPosition(parentSettlement);
-    var childPoint = PS.render.entities.getSettlementRenderPosition(childSettlement);
+    var parentPoint = PS.render.entityWebgl.getSettlementRouteCanvasPoint(parentSettlement);
+    var childPoint = PS.render.entityWebgl.getSettlementRouteCanvasPoint(childSettlement);
+    var routeSegment;
 
     if (!parentPoint || !childPoint || parentPoint.visible === false || childPoint.visible === false) {
       batches.culled++;
       continue;
     }
+
+    routeSegment = PS.render.entityWebgl.getVisibleRouteSegment(parentPoint, childPoint, 32);
+
+    if (!routeSegment) {
+      batches.culled++;
+      continue;
+    }
+
+    parentPoint = routeSegment.from;
+    childPoint = routeSegment.to;
 
     var dx = childPoint.x - parentPoint.x;
     var dy = childPoint.y - parentPoint.y;

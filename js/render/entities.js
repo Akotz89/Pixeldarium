@@ -224,8 +224,13 @@ PS.render.entities.getSettlementDrawSize = function (settlement) {
 };
 
 PS.render.entities.getSettlementById = function (settlementId) {
+  var indexedSettlement = null;
+
   if (typeof getSettlementById === "function") {
-    return getSettlementById(settlementId);
+    indexedSettlement = getSettlementById(settlementId);
+    if (indexedSettlement) {
+      return indexedSettlement;
+    }
   }
 
   if (!Array.isArray(world.settlements)) {
@@ -233,7 +238,7 @@ PS.render.entities.getSettlementById = function (settlementId) {
   }
 
   for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].id === settlementId) {
+    if (String(world.settlements[i].id) === String(settlementId)) {
       return world.settlements[i];
     }
   }

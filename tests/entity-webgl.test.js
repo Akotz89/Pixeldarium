@@ -1,6 +1,7 @@
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 
@@ -44,6 +45,8 @@ assert.ok(entityWebglSource.indexOf("getRouteCell") >= 0, "entity compositor sho
 assert.ok(entityWebglSource.indexOf("buildSettlementRouteBatches") >= 0, "entity compositor should batch settlement route markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementRoutes") >= 0, "entity compositor should expose route rendering");
 assert.ok(entityWebglSource.indexOf("routeDrawCount") >= 0, "entity compositor should report route draw counts");
+assert.ok(entityWebglSource.indexOf("getVisibleRouteSegment") >= 0, "entity compositor should clip route facades to the active viewport");
+assert.ok(entityWebglSource.indexOf("getSettlementRouteCanvasPoint") >= 0, "entity compositor should recover local route endpoints outside visible settlement markers");
 assert.ok(entityWebglSource.indexOf("getSettlementInfluenceCell") >= 0, "entity compositor should request influence atlas cells");
 assert.ok(entityWebglSource.indexOf("buildSettlementInfluenceBatches") >= 0, "entity compositor should batch settlement influence markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementInfluence") >= 0, "entity compositor should expose influence rendering");
@@ -56,6 +59,76 @@ assert.ok(entitiesSource.indexOf("entityWebgl.drawFood()") >= 0, "food rendering
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlements()") >= 0, "settlement rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "settlement route rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("String(world.settlements[i].id) === String(settlementId)") >= 0, "settlement route facades should fall back to current aggregate settlement arrays");
 assert.strictEqual(entitiesSource.indexOf("ctx"), -1, "entity facade should not reference Canvas2D context");
+
+const routeContext = {
+  CONFIG: {
+    PLANET_ENTITY_WEBGL_MAX_INSTANCES: 8192
+  },
+  PS: {
+    render: {
+      entities: {
+        getSettlementById(id) {
+          return routeContext.world.settlements.find((settlement) => settlement.id === id) || null;
+        },
+        getSettlementRenderPosition(settlement) {
+          if (settlement.id === 1) {
+            return { x: 50, y: 50, scale: 1, visibility: 1, visible: true };
+          }
+          return null;
+        },
+        getLineageColorById() {
+          return "#ffffff";
+        }
+      },
+      webglEngine: {},
+      shaderManager: {}
+    },
+    atlas: {
+      pages: [{ width: 256, height: 256, data: new Uint8Array(256 * 256 * 4), version: 1 }],
+      getRouteCell() {
+        return { pageIndex: 0, u0: 0, v0: 0, u1: 0.0625, v1: 0.0625 };
+      }
+    },
+    ranmap: {
+      variant() {
+        return 1;
+      }
+    }
+  },
+  world: {
+    settlements: [
+      { id: 1, x: 10, y: 10, longitude: 0, latitude: 0, lineageId: 1 },
+      { id: 2, x: 11, y: 10, longitude: 1, latitude: 0, lineageId: 1 }
+    ],
+    settlementRoutes: [
+      { id: 1, parentSettlementId: 1, childSettlementId: 2, isActive: true, lineageId: 1 }
+    ]
+  },
+  canvas: { width: 100, height: 100 },
+  performance: { now() { return 0; } },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  },
+  isPlanetLocalView() {
+    return true;
+  },
+  getEntitySurfacePosition(settlement) {
+    return { longitude: settlement.longitude, latitude: settlement.latitude };
+  },
+  getPlanetLocalCanvasPoint(longitude) {
+    return { x: longitude > 0 ? 900 : 50, y: 50 };
+  }
+};
+
+routeContext.PS.render.entityWebgl = {};
+vm.createContext(routeContext);
+vm.runInContext(entityWebglSource, routeContext, { filename: "js/render/entity-webgl.js" });
+routeContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
+
+const routeBatches = routeContext.PS.render.entityWebgl.buildSettlementRouteBatches();
+assert.ok(routeBatches.routes > 0, "route compositor should keep visible clipped route markers when a settlement endpoint is offscreen");
+assert.strictEqual(routeBatches.capped, 0, "clipped route markers should stay inside the configured batch cap");
 
 console.log("entity webgl checks passed");
