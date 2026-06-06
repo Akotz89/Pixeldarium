@@ -1,0 +1,27 @@
+PS.assets.registerJSON("data/keybindings.json", {
+  "version": 1,
+  "bindings": {
+    "close_menu": ["Escape"],
+    "toggle_performance": ["F3"],
+    "toggle_overlays": ["F4"],
+    "toggle_profiler": ["F5"],
+    "toggle_console": ["Backquote", "`"],
+    "cycle_observation_overlay": ["KeyO", "o"],
+    "toggle_menu": ["KeyM", "m"],
+    "toggle_pause": ["Space", " "],
+    "step_once": ["KeyN", "n"],
+    "zoom_in_large": ["BracketRight", "]"],
+    "zoom_out_large": ["BracketLeft", "["],
+    "zoom_in": ["Equal", "NumpadAdd", "+", "="],
+    "zoom_out": ["Minus", "NumpadSubtract", "-", "_"],
+    "pan_up": ["ArrowUp", "KeyW", "w"],
+    "pan_down": ["ArrowDown", "KeyS", "s"],
+    "pan_left": ["ArrowLeft", "KeyA", "a"],
+    "pan_right": ["ArrowRight", "KeyD", "d"],
+    "restart": ["KeyR", "r"],
+    "menu_page_controls": ["Digit1"],
+    "menu_page_status": ["Digit2"],
+    "menu_page_ecosystem": ["Digit3"],
+    "menu_page_log": ["Digit4"]
+  }
+});

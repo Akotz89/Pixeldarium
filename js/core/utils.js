@@ -17,18 +17,31 @@ function hashSeedText(seedText) {
 
 function setWorldSeed(seedValue) {
   world.seedText = normalizeSeedText(seedValue);
-  world.rngState = hashSeedText(world.seedText);
+  world.prng = PS.core && typeof PS.core.createPRNG === "function"
+    ? PS.core.createPRNG(world.seedText)
+    : null;
+  world.rngState = world.prng ? world.prng.getState32() : hashSeedText(world.seedText);
   return world.seedText;
 }
 
 function ensureRandomState() {
-  if (typeof world.rngState !== "number" || !Number.isFinite(world.rngState) || world.rngState <= 0) {
+  if (!world.prng && PS.core && typeof PS.core.createPRNG === "function") {
+    world.prng = PS.core.createPRNG(world.seedText || CONFIG.DEFAULT_SEED);
+  }
+
+  if (!world.prng && (typeof world.rngState !== "number" || !Number.isFinite(world.rngState) || world.rngState <= 0)) {
     setWorldSeed(world.seedText);
   }
 }
 
 function randomUnit() {
   ensureRandomState();
+
+  if (world.prng) {
+    var value = world.prng.next();
+    world.rngState = world.prng.getState32();
+    return value;
+  }
 
   var state = world.rngState >>> 0;
   state ^= state << 13;

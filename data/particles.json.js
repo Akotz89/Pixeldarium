@@ -1,0 +1,52 @@
+PS.assets.registerJSON("data/particles.json", {
+  "version": 1,
+  "effects": {
+    "rain": {
+      "type": "area",
+      "rate": 200,
+      "lifetime": 1.5,
+      "velocity": { "x": [-1, 1], "y": [180, 260] },
+      "color": "#6688cc",
+      "size": [1, 2],
+      "fadeOut": 0.3
+    },
+    "snow": {
+      "type": "area",
+      "rate": 80,
+      "lifetime": 4,
+      "velocity": { "x": [-38, 38], "y": [28, 70] },
+      "color": "#ffffff",
+      "size": [2, 3],
+      "fadeIn": 0.5,
+      "fadeOut": 1
+    },
+    "dust": {
+      "type": "point",
+      "rate": 5,
+      "lifetime": 2,
+      "velocity": { "x": [-24, 24], "y": [-12, 12] },
+      "color": "#aa8866",
+      "size": [1, 3],
+      "fadeOut": 0.8
+    },
+    "campfire": {
+      "type": "point",
+      "rate": 15,
+      "lifetime": 1.2,
+      "velocity": { "x": [-18, 18], "y": [-90, -30] },
+      "gravity": -18,
+      "color": ["#ff6600", "#ffaa00", "#ff4400"],
+      "size": [2, 4],
+      "fadeOut": 0.4
+    },
+    "birth_sparkle": {
+      "type": "point",
+      "rate": 0,
+      "lifetime": 0.8,
+      "velocity": { "x": [-90, 90], "y": [-90, 90] },
+      "color": "#ffff88",
+      "size": [1, 2],
+      "fadeOut": 0.6
+    }
+  }
+});

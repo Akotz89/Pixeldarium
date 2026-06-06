@@ -3,9 +3,9 @@ PS.render.surfaceLandform = PS.render.surfaceLandform || {};
 
 PS.render.surfaceLandform.applyMaterialPixelAccents = function (color, latitude, longitude, tile) {
   var biome = tile && tile.biome ? tile.biome : "unknown";
-  var coarse = getPlanetMaterialPixelNoise(latitude, longitude, 18000, 503);
-  var fine = getPlanetMaterialPixelNoise(latitude, longitude, 6200, 607);
-  var fleck = getPlanetMaterialPixelNoise(latitude, longitude, 2200, 709);
+  var coarse = PS.render.terrain.getMaterialPixelNoise(latitude, longitude, 18000, 503);
+  var fine = PS.render.terrain.getMaterialPixelNoise(latitude, longitude, 6200, 607);
+  var fleck = PS.render.terrain.getMaterialPixelNoise(latitude, longitude, 2200, 709);
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var coast = clamp(tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0, 0, 1);
@@ -92,6 +92,10 @@ PS.render.surfaceLandform.getCloudlessSnowVisualAmount = function (biome, snowSi
 
   return clamp(normalizedSnow * mountainGate * 0.075, 0, 0.09);
 };
+
+function getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge) {
+  return PS.render.surfaceLandform.getCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
+}
 
 PS.render.surfaceLandform.getGlobeLandformIdentity = function (biome, signals, noise, surfaceMeters, normalizedLatitude) {
   var normalizedBiome = biome || "unknown";
@@ -234,3 +238,7 @@ PS.render.surfaceLandform.getTerrainBand = function (biome, signals, noise, norm
     bandNoise: bandNoise
   };
 };
+
+function getPlanetLandformTerrainBand(biome, signals, noise, normalizedLatitude) {
+  return PS.render.surfaceLandform.getTerrainBand(biome, signals, noise, normalizedLatitude);
+}

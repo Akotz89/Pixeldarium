@@ -39,6 +39,7 @@ const source = [
   "js/core/utils.js",
   "js/core/config.js",
   "js/core/world-grid.js",
+  "js/systems/pool-manager.js",
   "js/systems/pools.js",
   "js/sim/food-runtime.js",
   "js/sim/food-growth.js",

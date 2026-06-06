@@ -1,0 +1,17 @@
+PS.assets.registerJSON("assets/terrain/grass.json", {
+  "type": "grid",
+  "tileWidth": 32,
+  "tileHeight": 32,
+  "columns": 8,
+  "rows": 1,
+  "names": [
+    "terrain.grass.0",
+    "terrain.grass.1",
+    "terrain.grass.2",
+    "terrain.grass.3",
+    "terrain.grass.4",
+    "terrain.grass.5",
+    "terrain.grass.6",
+    "terrain.grass.7"
+  ]
+});

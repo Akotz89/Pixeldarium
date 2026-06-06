@@ -56,7 +56,9 @@ function getPlanetInterpolatedProjection(x, y) {
 }
 
 function getPlanetTileFromCanvasPoint(canvasX, canvasY) {
-  return PS.render.projection.getTileFromCanvasPoint(canvasX, canvasY);
+  return PS.camera && PS.camera.unified
+    ? PS.camera.unified.screenToTile(canvasX, canvasY)
+    : PS.render.projection.getTileFromCanvasPoint(canvasX, canvasY);
 }
 
 function getPlanetTileAreaKm2(latitude) {

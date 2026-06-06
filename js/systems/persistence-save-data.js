@@ -316,6 +316,7 @@ function createWorldSaveData() {
       ascendantEmpireLegacyLevel: CONFIG.ASCENDANT_EMPIRE_LEGACY_LEVEL
     },
     terrain: world.terrain.slice(),
+    terrainTileIds: getTerrainTileIdsForSave(world.terrain),
     food: world.food.map(copyFoodForSave),
     biologyPopulations: copyLayerStateForSave(Array.isArray(world.biologyPopulations) ? world.biologyPopulations : []),
     biologyRepresentatives: copyLayerStateForSave(

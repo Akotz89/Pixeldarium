@@ -3,6 +3,11 @@ PS.events = PS.events || {};
 PS.events.listeners = PS.events.listeners || {};
 PS.events.history = PS.events.history || [];
 PS.events.historyLimit = PS.events.historyLimit || 256;
+PS.events.types = PS.eventTypes || PS.events.types || {};
+PS.events.payloads = PS.eventPayloads || PS.events.payloads || {};
+PS.events.emitCounts = PS.events.emitCounts || {};
+PS.events.handlerErrors = PS.events.handlerErrors || [];
+PS.events.maxHandlerErrors = PS.events.maxHandlerErrors || 50;
 PS.events.categories = {
   biology: { label: "Biology", sources: ["biology", "life", "organisms", "species"] },
   geology: { label: "Geology", sources: ["geology", "tectonics"] },
@@ -55,8 +60,12 @@ PS.events.emit = function (name, payload) {
   var entry = {
     name: name,
     payload: payload,
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    handlerCount: 0,
+    errorCount: 0
   };
+
+  PS.events.emitCounts[name] = (PS.events.emitCounts[name] || 0) + 1;
 
   PS.events.history.push(entry);
 
@@ -65,12 +74,77 @@ PS.events.emit = function (name, payload) {
   }
 
   var handlers = PS.events.listeners[name] || [];
+  entry.handlerCount = handlers.length;
 
   for (var i = 0; i < handlers.length; i++) {
-    handlers[i](payload, entry);
+    try {
+      handlers[i](payload, entry);
+    } catch (error) {
+      entry.errorCount++;
+      PS.events.recordHandlerError(name, error, i, entry);
+    }
   }
 
   return entry;
+};
+
+PS.events.recordHandlerError = function (name, error, index, entry) {
+  var payload = {
+    eventName: name,
+    handlerIndex: index,
+    message: error && error.message ? error.message : String(error),
+    stack: error && error.stack ? error.stack : null,
+    emittedAt: entry ? entry.time : null
+  };
+
+  PS.events.handlerErrors.push(payload);
+
+  if (PS.events.handlerErrors.length > PS.events.maxHandlerErrors) {
+    PS.events.handlerErrors.shift();
+  }
+
+  if (PS.runtime && typeof PS.runtime.recordError === "function") {
+    PS.runtime.recordError("event.handler.error", payload);
+  } else if (typeof console !== "undefined" && typeof console.error === "function") {
+    console.error("[Pixeldarium] event.handler.error", payload);
+  }
+
+  return payload;
+};
+
+PS.events.stats = function () {
+  var counts = {};
+  var names = Object.keys(PS.events.emitCounts);
+
+  for (var i = 0; i < names.length; i++) {
+    counts[names[i]] = PS.events.emitCounts[names[i]];
+  }
+
+  return {
+    emitCounts: counts,
+    totalEmits: names.reduce(function(total, name) {
+      return total + (PS.events.emitCounts[name] || 0);
+    }, 0),
+    listenerCounts: PS.events.getListenerCounts(),
+    handlerErrors: PS.events.handlerErrors.slice(),
+    payloads: PS.events.payloads
+  };
+};
+
+PS.events.getListenerCounts = function () {
+  var counts = {};
+  var names = Object.keys(PS.events.listeners);
+
+  for (var i = 0; i < names.length; i++) {
+    counts[names[i]] = PS.events.listeners[names[i]].length;
+  }
+
+  return counts;
+};
+
+PS.events.clearStats = function () {
+  PS.events.emitCounts = {};
+  PS.events.handlerErrors.length = 0;
 };
 
 PS.events.clearHistory = function () {
@@ -231,7 +305,7 @@ PS.events.appendMilestoneToWorldLog = function (payload) {
 PS.events.emitMilestone = function (payload) {
   var normalized = PS.events.normalizeMilestonePayload(payload);
   var logEntry = PS.events.appendMilestoneToWorldLog(normalized);
-  var eventEntry = PS.events.emit("milestone.reached", normalized);
+  var eventEntry = PS.events.emit(PS.events.types.MILESTONE_REACHED, normalized);
 
   return {
     payload: normalized,

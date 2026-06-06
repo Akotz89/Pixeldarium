@@ -258,3 +258,271 @@ PS.render.surfaceColor.getSurfaceColor = function (sample) {
   color = PS.render.surfaceColor.blendWithTileBlend(sample, color);
   return shadeHexColor(color, reliefShade);
 };
+
+// ── Packed-color fast path ─────────────────────────────────────────
+// All hex constants pre-parsed to uint32. Zero string allocation in the
+// entire getSurfaceColorPacked() call chain.
+
+// Pre-parsed surface color constants
+PS.render.surfaceColor._pc = {
+  whitecap:      0xb7e9f4,
+  deepOcean:     0x08365f,
+  shallowOcean:  0x16658a,
+  deepWater:     0x020b1f,
+  clearingDark:  0x2e6835,
+  clearingLight: 0x7c8f3e,
+  denseCanopy:   0x082716,
+  woodland:      0x123f23,
+  brush:         0x346337,
+  grass:         0x2f6531,
+  rockDark:      0x454640,
+  rockLight:     0x7c7b6f,
+  sandDark:      0x755f2d,
+  sandLight:     0xb9964e,
+  scrub:         0x334739,
+  iceDark:       0x9cc8d8,
+  iceLight:      0xeaf6f8,
+  snow:          0xe5f3f7,
+  slopeGray:     0x56544c,
+  snowWhite:     0xf1f6f4,
+  riverBlue:     0x1d5265,
+  coastYellow:   0xaaa05e,
+  shallowTeal:   0x7fb7a7
+};
+
+PS.render.surfaceColor.getSurfaceColorPacked = function (sample) {
+  var pc = PS.render.surfaceColor._pc;
+  var blend = PS.render.terrain.blendPacked;
+  var shade = PS.render.terrain.shadePacked;
+  var hexToPacked = PS.render.terrain.hexToPacked;
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var detail = sample && sample.detail ? sample.detail : null;
+  var baseColor = PS.render.terrain.getBiomePackedColorTinted(biome);
+
+  if (!detail) {
+    return baseColor;
+  }
+
+  var reliefShade = clamp(
+    (Number(detail.shade) || 0.5) * 0.54 +
+      (Number(detail.elevation) || 0.5) * 0.12 +
+      (Number(detail.roughness) || 0) * 0.08 +
+      (Number(detail.hillshade) || 0.5) * 0.26,
+    0, 1
+  );
+  var heightMeters = Number(detail.heightMeters) || 0;
+  var slope = clamp(Number(detail.slope) || 0, 0, 1);
+  var materialSignals = detail.materialSignals || {};
+  var snowLine = Number.isFinite(Number(materialSignals.snow))
+    ? clamp(Number(materialSignals.snow), 0, 1)
+    : (biome === "ice" ? 0.35 : clamp((heightMeters - 1800) / 2200, 0, 1));
+  var shadow = clamp(1 - (Number(detail.hillshade) || 0.5), 0, 1);
+  var river = sample && sample.tile ? clamp(Number(sample.tile.riverStrength) || 0, 0, 1) : 0;
+  var coast = sample && sample.tile ? clamp(Number(sample.tile.coastFactor) || 0, 0, 1) : 0;
+  var shallowWater = sample && sample.tile ? clamp(Number(sample.tile.shallowWater) || 0, 0, 1) : 0;
+  var highland = clamp((heightMeters - 900) / 2600, 0, 1);
+  var finalShade = clamp(reliefShade + highland * 0.08 - shadow * 0.10, 0, 1);
+  var color;
+  var surface = detail.surface;
+
+  if (surface === "whitecap") {
+    color = pc.whitecap;
+  } else if (surface === "open water") {
+    color = blend(pc.deepOcean, pc.shallowOcean, clamp((heightMeters + 4200) / 4200, 0, 1));
+  } else if (surface === "deep water") {
+    color = pc.deepWater;
+  } else if (surface === "clearing" || surface === "meadow") {
+    color = blend(pc.clearingDark, pc.clearingLight, clamp(Number(detail.roughness) || 0, 0, 1) * 0.22);
+  } else if (surface === "dense canopy") {
+    color = pc.denseCanopy;
+  } else if (surface === "woodland") {
+    color = pc.woodland;
+  } else if (surface === "brush") {
+    color = pc.brush;
+  } else if (surface === "grass") {
+    color = pc.grass;
+  } else if (surface === "rock" || surface === "stone") {
+    color = blend(pc.rockDark, pc.rockLight, slope * 0.55);
+  } else if (surface === "dune" || surface === "sand") {
+    color = blend(pc.sandDark, pc.sandLight, clamp(1 - slope, 0, 1) * 0.35);
+  } else if (surface === "scrub" || surface === "moss") {
+    color = pc.scrub;
+  } else if (surface === "ridge ice" || surface === "ice") {
+    color = blend(pc.iceDark, pc.iceLight, slope * 0.32);
+  } else if (surface === "snow") {
+    color = pc.snow;
+  } else {
+    color = baseColor;
+  }
+
+  if (biome === "ocean") {
+    color = blend(color, pc.shallowTeal, shallowWater * 0.34);
+  } else {
+    color = blend(color, pc.riverBlue, river * 0.46);
+    color = blend(color, pc.coastYellow, coast * 0.16);
+  }
+
+  color = blend(color, pc.slopeGray, slope * 0.26);
+  color = blend(color, pc.snowWhite, snowLine * 0.48);
+
+  // Terrain band tint (packed path)
+  var terrainBand = PS.render.surfaceColor.getLocalTerrainBandTintPacked(sample);
+  if (terrainBand.amount > 0.001) {
+    color = blend(color, terrainBand.color, terrainBand.amount);
+  }
+
+  // Material strata tint (packed path)
+  var strata = PS.render.surfaceColor.getMaterialStrataTintPacked(sample);
+  if (strata.amount > 0.001) {
+    color = blend(color, strata.color, strata.amount);
+  }
+
+  // Tile blend transition (packed path)
+  color = PS.render.surfaceColor.blendWithTileBlendPacked(sample, color);
+
+  return shade(color, finalShade);
+};
+
+PS.render.surfaceColor._defaultStrataPacked = { color: 0x6c6552, amount: 0 };
+
+PS.render.surfaceColor.getMaterialStrataTintPacked = function (sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var strata = detail.materialStrata || null;
+  var surface = detail.surface || "ground";
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var closeScale = sampleMeters <= 1 ? 1 : (sampleMeters <= 5 ? 0.72 : (sampleMeters <= 25 ? 0.34 : 0));
+  var strongSurfaceScale = 1;
+  var amount;
+
+  if (!strata || closeScale <= 0) {
+    return PS.render.surfaceColor._defaultStrataPacked;
+  }
+
+  if (surface === "whitecap" || surface === "deep water" || surface === "snow" || surface === "ice") {
+    strongSurfaceScale = 0.38;
+  } else if (surface === "open water" || surface === "ridge ice") {
+    strongSurfaceScale = 0.58;
+  } else if (surface === "rock" || surface === "stone" || surface === "sand" || surface === "dune") {
+    strongSurfaceScale = 0.86;
+  }
+
+  amount = clamp(
+    (0.05 + (Number(strata.granularity) || 0) * 0.05 +
+      (Number(strata.organicCover) || 0) * 0.04 +
+      (Number(strata.rockExposure) || 0) * 0.04 +
+      (Number(strata.depthMix) || 0) * 0.03
+    ) * closeScale * strongSurfaceScale, 0, 0.18
+  );
+
+  var tintColor = strata._tintPacked;
+  if (typeof tintColor !== "number") {
+    tintColor = strata.tintColor ? PS.render.terrain.hexToPacked(strata.tintColor) : 0x6c6552;
+    strata._tintPacked = tintColor;
+  }
+
+  return { color: tintColor, amount: amount };
+};
+
+PS.render.surfaceColor.getLocalTerrainBandTintPacked = function (sample) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var materialSignals = detail.materialSignals || {};
+  var tile = sample && sample.tile ? sample.tile : {};
+  var biome = sample && sample.biome ? sample.biome : "unknown";
+  var surface = detail.surface || "ground";
+  var sampleMeters = Math.max(1, Number(sample && sample.surfaceSampleMeters) || Number(detail.sampleMeters) || 1);
+  var elevationSignal = tile && Number.isFinite(Number(tile.elevation))
+    ? Number(tile.elevation)
+    : ((Number.isFinite(Number(detail.elevation)) ? Number(detail.elevation) : 0.5) - 0.5) * 2;
+  var signals = {
+    elevation: elevationSignal,
+    moisture: tile && Number.isFinite(Number(tile.moisture))
+      ? Number(tile.moisture)
+      : clamp(Number.isFinite(Number(materialSignals.moisture)) ? Number(materialSignals.moisture) : 0.35, 0, 1) * 1.8,
+    ridgeStrength: Number.isFinite(Number(materialSignals.ridge))
+      ? Number(materialSignals.ridge)
+      : (tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0),
+    roughness: Number.isFinite(Number(materialSignals.surfaceRoughness))
+      ? Number(materialSignals.surfaceRoughness)
+      : (Number.isFinite(Number(detail.roughness)) ? Number(detail.roughness) : 0),
+    terrainSlope: Number.isFinite(Number(detail.slope)) ? Number(detail.slope) : 0,
+    terrainHillshade: Number.isFinite(Number(detail.hillshade)) ? Number(detail.hillshade) : 0.55,
+    coastFactor: Number.isFinite(Number(materialSignals.coast))
+      ? Number(materialSignals.coast)
+      : (tile && Number.isFinite(Number(tile.coastFactor)) ? Number(tile.coastFactor) : 0),
+    shallowWater: Number.isFinite(Number(materialSignals.shallowWater))
+      ? Number(materialSignals.shallowWater)
+      : (tile && Number.isFinite(Number(tile.shallowWater)) ? Number(tile.shallowWater) : 0),
+    shelfStrength: Number.isFinite(Number(materialSignals.shelfStrength))
+      ? Number(materialSignals.shelfStrength)
+      : (tile && Number.isFinite(Number(tile.shelfStrength)) ? Number(tile.shelfStrength) : 0),
+    riverStrength: Number.isFinite(Number(materialSignals.river))
+      ? Number(materialSignals.river)
+      : (tile && Number.isFinite(Number(tile.riverStrength)) ? Number(tile.riverStrength) : 0)
+  };
+  var noise = {
+    regional: Number.isFinite(Number(detail.meterNoise))
+      ? Number(detail.meterNoise)
+      : (Number.isFinite(Number(detail.elevation)) ? Number(detail.elevation) : 0.5),
+    fine: Number.isFinite(Number(detail.microNoise))
+      ? Number(detail.microNoise)
+      : (Number.isFinite(Number(detail.roughness)) ? Number(detail.roughness) : 0.5)
+  };
+  var band = getPlanetLandformTerrainBand(biome, signals, noise, Number(sample && sample.latitude) || Number(tile.latitude) || 0);
+  var strongSurfaceScale = 1;
+  var scaleAmount = sampleMeters <= 1 ? 0.68 : (sampleMeters <= 5 ? 0.54 : 0.38);
+
+  if (surface === "whitecap" || surface === "deep water" || surface === "ridge ice" || surface === "snow") {
+    strongSurfaceScale = 0.18;
+  } else if (surface === "open water" || surface === "rock" || surface === "stone" || surface === "ice") {
+    strongSurfaceScale = 0.46;
+  } else if (surface === "sand" || surface === "dune") {
+    strongSurfaceScale = 0.78;
+  }
+
+  var bandColorPacked = band._colorPacked;
+  if (typeof bandColorPacked !== "number") {
+    bandColorPacked = PS.render.terrain.hexToPacked(band.color);
+    band._colorPacked = bandColorPacked;
+  }
+
+  return {
+    color: bandColorPacked,
+    amount: clamp(band.amount * scaleAmount * strongSurfaceScale, 0, 0.18),
+    relief: band.relief,
+    bandNoise: band.bandNoise,
+    surfaceScale: strongSurfaceScale
+  };
+};
+
+PS.render.surfaceColor.blendWithTileBlendPacked = function (sample, packedColor) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var surface = detail.surface || "";
+  var transitionStrength = PS.render.surfaceColor.getBiomeTransitionStrength(sample);
+  var strongSurfaceScale = 1;
+
+  if (transitionStrength <= 0.01) {
+    return packedColor;
+  }
+
+  var targetRgb = PS.render.surfaceColor.getTileBlendRgb(sample.tileBlend);
+  if (!targetRgb) {
+    return packedColor;
+  }
+
+  if (surface === "whitecap" || surface === "deep water" || surface === "ridge ice" || surface === "snow") {
+    strongSurfaceScale = 0.18;
+  } else if (surface === "open water" || surface === "rock" || surface === "stone") {
+    strongSurfaceScale = 0.62;
+  }
+
+  var targetPacked = PS.render.terrain.packRgb(
+    clamp(Math.round(targetRgb.red), 0, 255),
+    clamp(Math.round(targetRgb.green), 0, 255),
+    clamp(Math.round(targetRgb.blue), 0, 255)
+  );
+
+  return PS.render.terrain.blendPacked(
+    packedColor, targetPacked,
+    clamp(transitionStrength * 0.34 * strongSurfaceScale, 0, 0.34)
+  );
+};

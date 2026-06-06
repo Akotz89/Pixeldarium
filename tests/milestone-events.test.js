@@ -32,6 +32,7 @@ const source = [
   "config.js",
   "js/core/config.js",
   "js/core/assert.js",
+  "js/core/event-types.js",
   "js/core/events.js"
 ].map(read).join("\n");
 
@@ -44,7 +45,7 @@ assert.ok(registry.primordial.some(function(definition) {
 }), "first life milestone should be registered");
 
 var emittedPayloads = [];
-PS.events.on("milestone.reached", function(payload) {
+PS.events.on(PS.eventTypes.MILESTONE_REACHED, function(payload) {
   emittedPayloads.push(payload);
 });
 
@@ -55,7 +56,7 @@ var firstLife = PS.events.detectMilestones();
 assert.strictEqual(firstLife.length, 1, "first organism should emit first-life milestone");
 assert.strictEqual(firstLife[0].payload.type, "life.first", "first life milestone type should emit");
 assert.strictEqual(firstLife[0].payload.details.value, 1, "milestone payload should include details");
-assert.strictEqual(PS.events.history[0].name, "milestone.reached", "milestone detector should emit milestone.reached");
+assert.strictEqual(PS.events.history[0].name, PS.eventTypes.MILESTONE_REACHED, "milestone detector should emit milestone.reached");
 assert.strictEqual(world.eventLog.length, 1, "milestones should log to visible event log");
 assert.strictEqual(world.timelineEvents.length, 1, "milestones should log to timeline playback stream");
 assert.strictEqual(PS.events.detectMilestones().length, 0, "milestones should not duplicate after firing once");

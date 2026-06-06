@@ -17,11 +17,22 @@ var REPRESENTATIVE_TRAIT_KEYS = [
   "waterDependency"
 ];
 
+var representativePerfStats = {
+  lastRefreshMs: 0,
+  lastRefreshOrganisms: 0,
+  lastTraitEnsureCalls: 0,
+  lastFullSyncCount: 0,
+  lastSummarySyncCount: 0,
+  lastFoodSearchCount: 0,
+  lastSkippedOrganisms: 0
+};
+
 function ensureRepresentativeState() {
   world.biologyPopulations = Array.isArray(world.biologyPopulations) ? world.biologyPopulations : [];
   world.biologyPopulationById = world.biologyPopulationById || {};
   world.biologyRepresentatives = Array.isArray(world.biologyRepresentatives) ? world.biologyRepresentatives : [];
   world.biologyRepresentativeById = world.biologyRepresentativeById || {};
+  world.biologyWatchedRepresentativeIds = world.biologyWatchedRepresentativeIds || {};
 }
 
 function getBiologyPopulationById(populationId) {
@@ -34,8 +45,108 @@ function getBiologyRepresentativeById(representativeId) {
   return world.biologyRepresentativeById[String(representativeId)] || null;
 }
 
+function markWatchedRepresentative(representativeId, watched) {
+  ensureRepresentativeState();
+  var key = String(Math.max(1, Math.round(Number(representativeId) || 0)));
+
+  if (watched === false) {
+    delete world.biologyWatchedRepresentativeIds[key];
+  } else {
+    world.biologyWatchedRepresentativeIds[key] = true;
+  }
+}
+
+function getRepresentativeAggregateSignature() {
+  return [
+    Array.isArray(world.organisms) ? world.organisms.length : 0,
+    Math.max(0, Math.round(Number(world.totalBirths) || 0)),
+    Math.max(0, Math.round(Number(world.totalDeaths) || 0)),
+    Math.max(0, Math.round(Number(world.nextBiologyRepresentativeId) || 0)),
+    Math.max(0, Math.round(Number(world.nextBiologyPopulationId) || 0)),
+    Math.max(0, Math.round(Number(world.nextSpeciesId) || 0))
+  ].join(":");
+}
+
+function syncWatchedRepresentativesFromActiveOrganisms() {
+  var watched = world.biologyWatchedRepresentativeIds || {};
+  var watchedKeys = Object.keys(watched);
+
+  if (watchedKeys.length <= 0) {
+    return 0;
+  }
+
+  var wanted = {};
+  var synced = 0;
+
+  for (var keyIndex = 0; keyIndex < watchedKeys.length; keyIndex++) {
+    wanted[watchedKeys[keyIndex]] = true;
+  }
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var representativeId = String(Math.max(1, Math.round(Number(organism.representativeId) || 0)));
+
+    if (wanted[representativeId]) {
+      syncBiologyRepresentative(organism);
+      representativePerfStats.lastFullSyncCount++;
+      synced++;
+      delete wanted[representativeId];
+
+      if (synced >= watchedKeys.length) {
+        break;
+      }
+    }
+  }
+
+  return synced;
+}
+
+function ensureRepresentativeIdentity(organism) {
+  if (typeof organism.lineageId !== "number" || organism.lineageId < 1) {
+    organism.lineageId = allocateLineageId();
+  }
+
+  if (typeof organism.lineageParentId !== "number") {
+    organism.lineageParentId = 0;
+  }
+
+  if (typeof organism.generation !== "number") {
+    organism.generation = 0;
+  }
+
+  if (typeof organism.speciesId !== "number" || organism.speciesId < 1) {
+    organism.speciesId = organism.lineageId;
+  }
+
+  if (typeof organism.populationId !== "number" || organism.populationId < 1) {
+    organism.populationId = organism.lineageId;
+  }
+
+  if (typeof organism.representativeId !== "number" || organism.representativeId < 1) {
+    organism.representativeId = allocateBiologyRepresentativeId();
+  }
+
+  if (organism.lineageId >= world.nextLineageId) {
+    world.nextLineageId = organism.lineageId + 1;
+  }
+
+  if (organism.speciesId >= world.nextSpeciesId) {
+    world.nextSpeciesId = organism.speciesId + 1;
+  }
+
+  if (organism.populationId >= world.nextBiologyPopulationId) {
+    world.nextBiologyPopulationId = organism.populationId + 1;
+  }
+
+  if (organism.representativeId >= world.nextBiologyRepresentativeId) {
+    world.nextBiologyRepresentativeId = organism.representativeId + 1;
+  }
+
+  return organism.lineageId;
+}
+
 function makeBiologyPopulation(organism) {
-  var lineageId = ensureOrganismLineage(organism);
+  var lineageId = ensureRepresentativeIdentity(organism);
   var populationId = Math.max(1, Math.round(Number(organism.populationId) || lineageId));
   var record = {
     id: populationId,
@@ -67,7 +178,7 @@ function makeBiologyPopulation(organism) {
 
 function ensureBiologyPopulation(organism) {
   ensureRepresentativeState();
-  ensureOrganismLineage(organism);
+  ensureRepresentativeIdentity(organism);
 
   var populationId = Math.max(1, Math.round(Number(organism.populationId) || organism.lineageId));
   var record = getBiologyPopulationById(populationId);
@@ -83,12 +194,16 @@ function ensureBiologyPopulation(organism) {
 }
 
 function copyRepresentativeTraits(organism) {
-  var traits = ensureOrganismTraits(organism);
+  return copyRepresentativeTraitsFrom(organism, ensureOrganismTraits(organism));
+}
+
+function copyRepresentativeTraitsFrom(organism, traits) {
+  var source = traits || ensureOrganismTraits(organism);
   var copy = {};
 
   for (var i = 0; i < REPRESENTATIVE_TRAIT_KEYS.length; i++) {
     var key = REPRESENTATIVE_TRAIT_KEYS[i];
-    copy[key] = traits[key];
+    copy[key] = source[key];
   }
 
   return copy;
@@ -119,6 +234,7 @@ function getRepresentativeTarget(organism, traits) {
     return null;
   }
 
+  representativePerfStats.lastFoodSearchCount++;
   var food = findNearestFoodInBuckets(organism.x, organism.y, traits.vision);
 
   if (!food) {
@@ -130,6 +246,56 @@ function getRepresentativeTarget(organism, traits) {
     x: food.x,
     y: food.y
   };
+}
+
+function ensureBiologyRepresentativeSummary(organism, population, traits) {
+  ensureRepresentativeState();
+
+  var representativeId = Math.max(1, Math.round(Number(organism.representativeId) || 0));
+  var record = getBiologyRepresentativeById(representativeId);
+  var tick = Math.max(0, Math.round(Number(world.tick) || 0));
+
+  if (!record) {
+    record = {
+      id: representativeId,
+      history: [],
+      pinned: false,
+      selected: false,
+      bookmarkScore: 0,
+      createdTick: tick
+    };
+    world.biologyRepresentatives.push(record);
+    world.biologyRepresentativeById[String(representativeId)] = record;
+  }
+
+  record.populationId = population.id;
+  record.speciesId = population.speciesId;
+  record.lineageId = population.lineageId;
+  record.x = organism.x;
+  record.y = organism.y;
+  record.latitude = organism.latitude;
+  record.longitude = organism.longitude;
+  record.energy = Math.round(Number(organism.energy) || 0);
+  record.age = Math.max(0, Number(organism.age) || 0);
+  record.traits = traits;
+  record.isActive = true;
+  record.lastSeenTick = tick;
+
+  if (!record.behavior) {
+    record.behavior = "watching";
+  }
+  if (record.target === undefined) {
+    record.target = null;
+  }
+
+  return record;
+}
+
+function shouldFullSyncRepresentative(organism) {
+  var representativeId = Math.max(1, Math.round(Number(organism && organism.representativeId) || 0));
+  var record = getBiologyRepresentativeById(representativeId);
+
+  return Boolean(record && (record.pinned || record.selected || record.bookmarkScore > 0));
 }
 
 function appendRepresentativeHistory(record, behavior, target) {
@@ -195,39 +361,59 @@ function syncBiologyRepresentative(organism, options) {
   if (options && options.selected) {
     record.selected = true;
     record.lastSelectedTick = tick;
+    markWatchedRepresentative(record.id, true);
   }
 
   appendRepresentativeHistory(record, behavior, target);
   return record;
 }
 
-function getPopulationTraitStats(organisms) {
+function getPopulationTraitStats(organisms, traitsList) {
   var mean = {};
   var variance = {};
 
-  for (var keyIndex = 0; keyIndex < REPRESENTATIVE_TRAIT_KEYS.length; keyIndex++) {
-    var key = REPRESENTATIVE_TRAIT_KEYS[keyIndex];
-    var total = 0;
-    var count = 0;
+  var state = {};
+  var keyIndex;
+  var i;
 
-    for (var i = 0; i < organisms.length; i++) {
-      var value = Number(ensureOrganismTraits(organisms[i])[key]);
+  for (keyIndex = 0; keyIndex < REPRESENTATIVE_TRAIT_KEYS.length; keyIndex++) {
+    state[REPRESENTATIVE_TRAIT_KEYS[keyIndex]] = {
+      count: 0,
+      mean: 0,
+      m2: 0
+    };
+  }
 
-      if (Number.isFinite(value)) {
-        total += value;
-        count++;
+  for (i = 0; i < organisms.length; i++) {
+    var traits = traitsList && traitsList[i] ? traitsList[i] : ensureOrganismTraits(organisms[i]);
+
+    if (!traitsList || !traitsList[i]) {
+      representativePerfStats.lastTraitEnsureCalls++;
+    }
+
+    for (keyIndex = 0; keyIndex < REPRESENTATIVE_TRAIT_KEYS.length; keyIndex++) {
+      var key = REPRESENTATIVE_TRAIT_KEYS[keyIndex];
+      var value = Number(traits[key]);
+      var item = state[key];
+      var delta;
+
+      if (!Number.isFinite(value)) {
+        continue;
       }
+
+      item.count++;
+      delta = value - item.mean;
+      item.mean += delta / item.count;
+      item.m2 += delta * (value - item.mean);
     }
+  }
 
-    mean[key] = count > 0 ? total / count : 0;
-    variance[key] = 0;
+  for (keyIndex = 0; keyIndex < REPRESENTATIVE_TRAIT_KEYS.length; keyIndex++) {
+    var statKey = REPRESENTATIVE_TRAIT_KEYS[keyIndex];
+    var stat = state[statKey];
 
-    for (var j = 0; j < organisms.length; j++) {
-      var diff = Number(ensureOrganismTraits(organisms[j])[key]) - mean[key];
-      variance[key] += Number.isFinite(diff) ? diff * diff : 0;
-    }
-
-    variance[key] = count > 0 ? variance[key] / count : 0;
+    mean[statKey] = stat.count > 0 ? stat.mean : 0;
+    variance[statKey] = stat.count > 0 ? stat.m2 / stat.count : 0;
   }
 
   return {
@@ -266,7 +452,7 @@ function getPopulationTerritoryCells(organisms) {
   return cells.slice(0, REPRESENTATIVE_TERRITORY_LIMIT);
 }
 
-function getPopulationPressure(organisms, energyReserve) {
+function getPopulationPressure(organisms, energyReserve, traitsList) {
   var foodCount = 0;
   var terrainMismatch = 0;
 
@@ -276,7 +462,11 @@ function getPopulationPressure(organisms, energyReserve) {
     }
 
     if (typeof getTerrainMismatchForTraits === "function") {
-      terrainMismatch += getTerrainMismatchForTraits(ensureOrganismTraits(organisms[i]), organisms[i].x, organisms[i].y);
+      var traits = traitsList && traitsList[i] ? traitsList[i] : ensureOrganismTraits(organisms[i]);
+      if (!traitsList || !traitsList[i]) {
+        representativePerfStats.lastTraitEnsureCalls++;
+      }
+      terrainMismatch += getTerrainMismatchForTraits(traits, organisms[i].x, organisms[i].y);
     }
   }
 
@@ -288,47 +478,129 @@ function getPopulationPressure(organisms, energyReserve) {
   };
 }
 
-function updatePopulationFromOrganisms(population, organisms) {
-  var stats = getPopulationTraitStats(organisms);
+function updatePopulationFromOrganisms(population, organisms, signature) {
+  var traitsList = new Array(organisms.length);
+  var stats;
   var biomass = 0;
   var representativeIds = [];
 
   for (var i = 0; i < organisms.length; i++) {
-    var record = syncBiologyRepresentative(organisms[i]);
+    traitsList[i] = ensureOrganismTraits(organisms[i]);
+    representativePerfStats.lastTraitEnsureCalls++;
+
+    var record = shouldFullSyncRepresentative(organisms[i])
+      ? syncBiologyRepresentative(organisms[i])
+      : ensureBiologyRepresentativeSummary(organisms[i], population, copyRepresentativeTraitsFrom(organisms[i], traitsList[i]));
+
+    if (record.selected || record.pinned || record.bookmarkScore > 0) {
+      representativePerfStats.lastFullSyncCount++;
+    } else {
+      representativePerfStats.lastSummarySyncCount++;
+    }
+
     representativeIds.push(record.id);
     biomass += Math.max(0, Number(organisms[i].energy) || 0);
   }
 
+  stats = getPopulationTraitStats(organisms, traitsList);
   population.count = organisms.length;
   population.biomass = Math.round(biomass);
   population.energyReserve = organisms.length > 0 ? biomass / organisms.length : 0;
   population.territoryCells = getPopulationTerritoryCells(organisms);
   population.traitMean = stats.mean;
   population.traitVariance = stats.variance;
-  population.pressure = getPopulationPressure(organisms, population.energyReserve);
+  population.pressure = getPopulationPressure(organisms, population.energyReserve, traitsList);
   population.representativeIds = representativeIds;
   population.lastUpdatedTick = Math.max(0, Math.round(Number(world.tick) || 0));
   population.isActive = organisms.length > 0;
+  population.refreshSignature = signature || "";
 }
 
 function refreshBiologyRepresentatives() {
+  var startedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   ensureRepresentativeState();
-  rebuildOrganismIndexes();
+  representativePerfStats.lastTraitEnsureCalls = 0;
+  representativePerfStats.lastFullSyncCount = 0;
+  representativePerfStats.lastSummarySyncCount = 0;
+  representativePerfStats.lastFoodSearchCount = 0;
+  representativePerfStats.lastSkippedOrganisms = 0;
+  representativePerfStats.lastRefreshOrganisms = world.organisms.length;
+
+  var aggregateSignature = getRepresentativeAggregateSignature();
+
+  if (world.biologyAggregateRefreshSignature === aggregateSignature && world.biologyPopulations.length > 0) {
+    representativePerfStats.lastSkippedOrganisms = world.organisms.length;
+    syncWatchedRepresentativesFromActiveOrganisms();
+    representativePerfStats.lastRefreshMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
+    return world.biologyPopulations;
+  }
+
   var activeIds = {};
   var grouped = {};
 
   for (var i = 0; i < world.organisms.length; i++) {
     var organism = world.organisms[i];
-    var population = ensureBiologyPopulation(organism);
-    var key = String(population.id);
-    grouped[key] = grouped[key] || [];
-    grouped[key].push(organism);
-    activeIds[String(organism.representativeId)] = true;
+    ensureRepresentativeIdentity(organism);
+    var key = String(Math.max(1, Math.round(Number(organism.populationId) || organism.lineageId)));
+    var group = grouped[key];
+    var representativeId = Math.max(1, Math.round(Number(organism.representativeId) || 0));
+    var watchedRecord = getBiologyRepresentativeById(representativeId);
+
+    if (!group) {
+      group = {
+        population: ensureBiologyPopulation(organism),
+        organisms: [],
+        count: 0,
+        energySum: 0,
+        xSum: 0,
+        ySum: 0,
+        representativeIdSum: 0,
+        watched: []
+      };
+      grouped[key] = group;
+    }
+
+    group.organisms.push(organism);
+    group.count++;
+    group.energySum += Math.round(Number(organism.energy) || 0);
+    group.xSum += Math.round(Number(organism.x) || 0);
+    group.ySum += Math.round(Number(organism.y) || 0);
+    group.representativeIdSum += representativeId;
+
+    if (watchedRecord && (watchedRecord.pinned || watchedRecord.selected || watchedRecord.bookmarkScore > 0)) {
+      group.watched.push(organism);
+    }
+
+    activeIds[String(representativeId)] = true;
   }
 
   for (var populationKey in grouped) {
     if (Object.prototype.hasOwnProperty.call(grouped, populationKey)) {
-      updatePopulationFromOrganisms(getBiologyPopulationById(populationKey), grouped[populationKey]);
+      var groupedPopulation = grouped[populationKey];
+      var signature = [
+        groupedPopulation.count,
+        groupedPopulation.energySum,
+        groupedPopulation.xSum,
+        groupedPopulation.ySum,
+        groupedPopulation.representativeIdSum
+      ].join(":");
+
+      if (
+        groupedPopulation.population.refreshSignature === signature &&
+        Array.isArray(groupedPopulation.population.representativeIds) &&
+        groupedPopulation.population.representativeIds.length === groupedPopulation.count
+      ) {
+        groupedPopulation.population.lastUpdatedTick = Math.max(0, Math.round(Number(world.tick) || 0));
+        groupedPopulation.population.isActive = groupedPopulation.count > 0;
+        representativePerfStats.lastSkippedOrganisms += groupedPopulation.count;
+
+        for (var watchedIndex = 0; watchedIndex < groupedPopulation.watched.length; watchedIndex++) {
+          syncBiologyRepresentative(groupedPopulation.watched[watchedIndex]);
+          representativePerfStats.lastFullSyncCount++;
+        }
+      } else {
+        updatePopulationFromOrganisms(groupedPopulation.population, groupedPopulation.organisms, signature);
+      }
     }
   }
 
@@ -337,6 +609,8 @@ function refreshBiologyRepresentatives() {
     record.isActive = Boolean(activeIds[String(record.id)]);
   }
 
+  representativePerfStats.lastRefreshMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
+  world.biologyAggregateRefreshSignature = getRepresentativeAggregateSignature();
   return world.biologyPopulations;
 }
 
@@ -350,6 +624,7 @@ function setRepresentativePinned(organismOrId, pinned) {
   }
 
   record.pinned = pinned !== false;
+  markWatchedRepresentative(record.id, record.pinned || record.selected || record.bookmarkScore > 0);
   return record;
 }
 
@@ -363,6 +638,7 @@ function setRepresentativeBookmark(organismOrId, score) {
   }
 
   record.bookmarkScore = clamp(Number(score), 0, 1);
+  markWatchedRepresentative(record.id, record.pinned || record.selected || record.bookmarkScore > 0);
   return record;
 }
 
@@ -374,6 +650,7 @@ function selectRepresentative(organismOrId) {
   if (record) {
     record.selected = true;
     record.lastSelectedTick = Math.max(0, Math.round(Number(world.tick) || 0));
+    markWatchedRepresentative(record.id, true);
   }
 
   return record;
@@ -402,5 +679,8 @@ PS.sim.representatives = {
   select: selectRepresentative,
   inspect: inspectBiologyRepresentative,
   getRepresentative: getBiologyRepresentativeById,
-  getPopulation: getBiologyPopulationById
+  getPopulation: getBiologyPopulationById,
+  getPerfStats: function () {
+    return Object.assign({}, representativePerfStats);
+  }
 };

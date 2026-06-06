@@ -48,6 +48,7 @@ const source = [
   "js/core/utils.js",
   "js/core/config.js",
   "js/core/world-grid.js",
+  "js/systems/pool-manager.js",
   "js/systems/pools.js",
   "js/sim/food-runtime.js",
   "js/sim/organisms-traits.js",
@@ -117,11 +118,17 @@ PS.pools.reset();
 
 assert.strictEqual(PS.pools.organism.capacity, 4, "organism capacity should be configurable");
 assert.strictEqual(PS.pools.food.capacity, 3, "food capacity should be configurable");
+assert.ok(PS.poolManager.pools.organisms, "organism pool should register with pool manager");
+assert.ok(PS.poolManager.pools.food, "food pool should register with pool manager");
 assert.ok(PS.pools.organism.arrays.x instanceof Float32Array, "organism x should be typed-array backed");
-assert.strictEqual(Object.keys(PS.pools.organism.arrays).length, 34, "organism pool should expose biology identity and trait arrays");
+assert.strictEqual(Object.keys(PS.pools.organism.arrays).length, 36, "organism pool should expose biology identity, trait, and tile-link arrays");
+assert.strictEqual(PS.pools.organism.arrays.nextInTile[0], -1, "organism tile-grid next pointer should default to no link");
+assert.strictEqual(PS.pools.organism.arrays.prevInTile[0], -1, "organism tile-grid previous pointer should default to no link");
 
 var organism = makeOrganism(5, 6);
 assert.strictEqual(PS.pools.getStats().activeOrganisms, 1, "makeOrganism should acquire from pool");
+assert.strictEqual(PS.poolManager.getStats().organisms.used, 1, "pool manager should track organism usage");
+assert.strictEqual(PS.poolManager.getStats().organisms.free, 3, "pool manager should track organism free count");
 assert.strictEqual(organism.x, 5, "pooled organism should expose x");
 organism.energy = 42;
 organism.traits.vision = 27;
@@ -149,6 +156,7 @@ assert.strictEqual(reused, organism, "free-list should reuse released organism f
 
 var food = addFoodAt(2, 3);
 assert.strictEqual(PS.pools.getStats().activeFood, 1, "addFoodAt should acquire pooled food");
+assert.strictEqual(PS.poolManager.getStats().food.used, 1, "pool manager should track food usage");
 assert.strictEqual(food.x, 2, "pooled food should expose x");
 assert.strictEqual(removeFood(food), food, "removeFood should preserve returned identity");
 assert.strictEqual(PS.pools.getStats().activeFood, 0, "removed food should return to pool");
@@ -156,11 +164,33 @@ assert.strictEqual(PS.pools.getStats().activeFood, 0, "removed food should retur
 var foodAgain = addFoodAt(4, 5);
 assert.strictEqual(foodAgain, food, "food pool should reuse released particle");
 
+assert.strictEqual(makeOrganism(9, 9).poolIndex >= 0, true, "second organism should acquire");
+assert.strictEqual(makeOrganism(10, 10).poolIndex >= 0, true, "third organism should acquire");
+assert.strictEqual(makeOrganism(11, 11).poolIndex >= 0, true, "fourth organism should acquire");
+assert.throws(function() {
+  makeOrganism(12, 12);
+}, new RegExp("Pool overflow: organisms used 4/4"), "organism pool overflow should identify pool and utilization");
+
+addFoodAt(6, 7);
+addFoodAt(8, 9);
+assert.throws(function() {
+  addFoodAt(10, 11);
+}, new RegExp("Pool overflow: food used 3/3"), "food pool overflow should identify pool and utilization");
+
+var managerStats = PS.poolManager.getStats();
+assert.strictEqual(managerStats.organisms.total, 4, "pool manager stats should expose organism total");
+assert.strictEqual(managerStats.organisms.used, 4, "pool manager stats should expose organism used count");
+assert.strictEqual(managerStats.organisms.free, 0, "pool manager stats should expose organism free count");
+assert.strictEqual(managerStats.food.total, 3, "pool manager stats should expose food total");
+assert.ok(managerStats.memory.totalBytes > 0, "pool manager should estimate pool memory");
+assert.strictEqual(managerStats.memory.budgetMb, 96, "pool manager should expose memory budget");
+
 var memoryLabel = PS.debug.performance.getMemoryLabel();
 var poolLabel = PS.debug.performance.getPoolLabel();
 assert.ok(memoryLabel.indexOf("MB est") > -1, "performance debug should estimate memory when performance.memory is unavailable");
-assert.ok(poolLabel.indexOf("org 1/4") > -1, "performance debug should report organism pool usage");
-assert.ok(poolLabel.indexOf("food 1/3") > -1, "performance debug should report food pool usage");
+assert.ok(poolLabel.indexOf("org 4/4") > -1, "performance debug should report organism pool usage");
+assert.ok(poolLabel.indexOf("food 3/3") > -1, "performance debug should report food pool usage");
+assert.ok(poolLabel.indexOf("poolMB") > -1, "performance debug should report pool memory usage");
 
 console.log("pool checks passed");
 `, context);

@@ -39,7 +39,7 @@ PS.gl.bindContextLossHandlers = function (targetCanvas) {
     PS.gl.state.contextLossCount++;
 
     if (PS.events) {
-      PS.events.emit("render.gl.contextlost", { count: PS.gl.state.contextLossCount });
+      PS.events.emit(PS.events.types.RENDER_GL_CONTEXT_LOST, { count: PS.gl.state.contextLossCount });
     }
   }, false);
 
@@ -58,7 +58,7 @@ PS.gl.bindContextLossHandlers = function (targetCanvas) {
     }
 
     if (PS.events) {
-      PS.events.emit("render.gl.contextrestored", { count: PS.gl.state.contextRestoreCount });
+      PS.events.emit(PS.events.types.RENDER_GL_CONTEXT_RESTORED, { count: PS.gl.state.contextRestoreCount });
     }
   }, false);
 };

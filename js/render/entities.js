@@ -118,30 +118,7 @@ PS.render.entities.getRenderPosition = function (entity, interpolation) {
 };
 
 PS.render.entities.drawSurfaceEntity = function (entity, interpolation, size, color, spriteId, state) {
-  var point = PS.render.entities.getRenderPosition(entity, interpolation);
-
-  if (!point) {
-    return;
-  }
-
-  if (spriteId && typeof PS.render.entities.drawRegisteredSprite === "function") {
-    PS.render.entities.drawRegisteredSprite(
-      spriteId,
-      entity,
-      point,
-      Math.max(1, size * (point.scale || 1)),
-      color,
-      state
-    );
-    return;
-  }
-
-  drawEntityAtCanvasPosition(
-    point.x,
-    point.y,
-    Math.max(1, size * (point.scale || 1)),
-    color
-  );
+  return false;
 };
 
 PS.render.entities.shouldDrawGlobeScaleEntities = function () {
@@ -156,9 +133,8 @@ PS.render.entities.drawFood = function () {
     return;
   }
 
-  for (var i = 0; i < world.food.length; i++) {
-    var food = world.food[i];
-    PS.render.entities.drawSurfaceEntity(food, 1, CONFIG.FOOD_DRAW_SIZE, "#58f06c", "resource.food", "idle");
+  if (PS.render.entityWebgl && PS.render.entityWebgl.drawFood()) {
+    return;
   }
 };
 
@@ -198,36 +174,25 @@ PS.render.entities.getOrganismColor = function (organism) {
 };
 
 PS.render.entities.drawRepresentativeMarker = function (organism, interpolation) {
-  if (!PS.sim || !PS.sim.representatives || !PS.sim.representatives.getRepresentative) {
+  return false;
+};
+
+PS.render.entities.drawRepresentativeIntents = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;
   }
 
-  var representative = PS.sim.representatives.getRepresentative(organism.representativeId);
-
-  if (!representative || (!representative.selected && !representative.pinned && representative.bookmarkScore <= 0)) {
+  if (PS.render.entityWebgl && PS.render.entityWebgl.drawRepresentativeIntents(world.interpolation)) {
     return;
   }
+};
 
-  var point = PS.render.entities.getRenderPosition(organism, interpolation);
-
-  if (!point) {
-    return;
+PS.render.entities.drawSettlementReadiness = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
   }
 
-  var size = Math.max(4, CONFIG.ORGANISM_DRAW_SIZE * (point.scale || 1) * 2.2);
-  ctx.save();
-  ctx.strokeStyle = representative.pinned ? "#fff26b" : "#72d7ff";
-  ctx.lineWidth = Math.max(1, size * 0.18);
-  ctx.beginPath();
-  ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
-  ctx.stroke();
-
-  if (representative.bookmarkScore > 0) {
-    ctx.fillStyle = PS.render.entities.getRgbaFromHex("#fff26b", clamp(representative.bookmarkScore, 0.2, 0.75));
-    ctx.fillRect(point.x - size * 0.18, point.y - size * 1.45, size * 0.36, size * 0.70);
-  }
-
-  ctx.restore();
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementReadiness());
 };
 
 PS.render.entities.drawOrganisms = function () {
@@ -245,18 +210,7 @@ PS.render.entities.drawOrganisms = function () {
     interpolation = 1;
   }
 
-  for (var i = 0; i < world.organisms.length; i++) {
-    var organism = world.organisms[i];
-    PS.render.entities.drawSurfaceEntity(
-      organism,
-      interpolation,
-      CONFIG.ORGANISM_DRAW_SIZE,
-      PS.render.entities.getOrganismColor(organism),
-      "entity.organism",
-      PS.render.entities.getOrganismSpriteState(organism)
-    );
-    PS.render.entities.drawRepresentativeMarker(organism, interpolation);
-  }
+  PS.render.entityWebgl && PS.render.entityWebgl.drawOrganisms(interpolation);
 };
 
 PS.render.entities.getSettlementDrawSize = function (settlement) {
@@ -266,8 +220,13 @@ PS.render.entities.getSettlementDrawSize = function (settlement) {
 };
 
 PS.render.entities.getSettlementById = function (settlementId) {
+  var indexedSettlement = null;
+
   if (typeof getSettlementById === "function") {
-    return getSettlementById(settlementId);
+    indexedSettlement = getSettlementById(settlementId);
+    if (indexedSettlement) {
+      return indexedSettlement;
+    }
   }
 
   if (!Array.isArray(world.settlements)) {
@@ -275,7 +234,7 @@ PS.render.entities.getSettlementById = function (settlementId) {
   }
 
   for (var i = 0; i < world.settlements.length; i++) {
-    if (world.settlements[i].id === settlementId) {
+    if (String(world.settlements[i].id) === String(settlementId)) {
       return world.settlements[i];
     }
   }
@@ -292,179 +251,59 @@ PS.render.entities.getSettlementRenderPosition = function (settlement) {
 };
 
 PS.render.entities.drawSettlementMapBadge = function (settlement, point, size) {
-  var level = Math.max(1, Math.round(Number(settlement.level) || 1));
-  var scale = point.scale || 1;
-  var badgeSize = Math.max(8, size * (settlement.isColony ? 1.18 : 1.02));
-  var blockSize = Math.max(3, Math.round((3 + Math.min(level, 5)) * scale));
-  var lineageColor = settlement.isActive
-    ? PS.render.entities.getLineageColorById(settlement.lineageId)
-    : "#d9d2c0";
-
-  ctx.save();
-  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#02070c", settlement.isColony ? 0.72 : 0.56);
-  ctx.fillRect(
-    Math.round(point.x - badgeSize * 0.62),
-    Math.round(point.y - badgeSize * 0.52),
-    Math.round(badgeSize * 1.24),
-    Math.round(badgeSize * 1.04)
-  );
-  ctx.strokeStyle = PS.render.entities.getRgbaFromHex(lineageColor, settlement.isColony ? 0.82 : 0.62);
-  ctx.lineWidth = Math.max(1, Math.round(1.5 * scale));
-  ctx.strokeRect(
-    Math.round(point.x - badgeSize * 0.66),
-    Math.round(point.y - badgeSize * 0.56),
-    Math.round(badgeSize * 1.32),
-    Math.round(badgeSize * 1.12)
-  );
-  ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
-  ctx.fillRect(Math.round(point.x - blockSize * 1.7), Math.round(point.y - blockSize * 0.4), blockSize, blockSize);
-  ctx.fillRect(Math.round(point.x - blockSize * 0.4), Math.round(point.y - blockSize * 1.3), blockSize, Math.round(blockSize * 1.5));
-  ctx.fillRect(Math.round(point.x + blockSize * 0.9), Math.round(point.y - blockSize * 0.1), blockSize, blockSize);
-  ctx.fillStyle = PS.render.entities.getRgbaFromHex("#c8bea0", settlement.isColony ? 0.52 : 0.36);
-  ctx.fillRect(Math.round(point.x - badgeSize * 0.42), Math.round(point.y + blockSize * 0.85), Math.round(badgeSize * 0.84), Math.max(1, Math.round(scale)));
-  ctx.restore();
+  return false;
 };
 
 PS.render.entities.drawSettlements = function () {
-  if (!Array.isArray(world.settlements)) {
-    return;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
   }
 
-  for (var i = 0; i < world.settlements.length; i++) {
-    var settlement = world.settlements[i];
-    var point = PS.render.entities.getSettlementRenderPosition(settlement);
-
-    if (!point) {
-      continue;
-    }
-
-    var size = PS.render.entities.getSettlementDrawSize(settlement) * (point.scale || 1);
-    var markerSize = Math.min(7, 3 + Math.max(0, Math.round(Number(settlement.level) || 1) - 1)) * (point.scale || 1);
-
-    PS.render.entities.drawSettlementMapBadge(settlement, point, size);
-    PS.render.entities.drawRegisteredSprite(
-      "settlement.core",
-      settlement,
-      point,
-      size,
-      settlement.isActive ? PS.render.entities.getLineageColorById(settlement.lineageId) : "rgba(255, 255, 255, 0.42)",
-      settlement.isColony ? "colony" : (settlement.isOutpost ? "outpost" : "core")
-    );
-    ctx.fillStyle = settlement.isColony ? "#70f0d0" : (settlement.isOutpost ? "#fff26b" : "#f2b85b");
-    ctx.fillRect(point.x - markerSize / 2, point.y - markerSize / 2, markerSize, markerSize);
-
-    if (settlement.isColony && world.spaceProgramReady) {
-      ctx.beginPath();
-      ctx.moveTo(point.x, point.y - size / 2 - 10);
-      ctx.lineTo(point.x + 5, point.y - size / 2 - 2);
-      ctx.lineTo(point.x - 5, point.y - size / 2 - 2);
-      ctx.closePath();
-      ctx.fillStyle = world.orbitalLaunches > 0 ? "#ffffff" : "#72d7ff";
-      ctx.fill();
-    }
-  }
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlements());
 };
 
 PS.render.entities.drawSettlementInfluence = function () {
-  if (!Array.isArray(world.settlements)) {
-    return;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
   }
 
-  for (var i = 0; i < world.settlements.length; i++) {
-    var settlement = world.settlements[i];
-    var radius = Math.max(1, Math.round(Number(settlement.influenceRadius) || CONFIG.SETTLEMENT_INFLUENCE_BASE_RADIUS));
-    var point = PS.render.entities.getSettlementRenderPosition(settlement);
-
-    if (!point) {
-      continue;
-    }
-
-    var canvasRadius = radius * CONFIG.TILE_SIZE * (point.scale || 1);
-    var lineageColor = PS.render.entities.getLineageColorById(settlement.lineageId);
-
-    ctx.beginPath();
-    ctx.moveTo(point.x, point.y - canvasRadius);
-    ctx.lineTo(point.x + canvasRadius, point.y);
-    ctx.lineTo(point.x, point.y + canvasRadius);
-    ctx.lineTo(point.x - canvasRadius, point.y);
-    ctx.closePath();
-    ctx.fillStyle = PS.render.entities.getRgbaFromHex(lineageColor, settlement.isActive ? 0.07 : 0.035);
-    ctx.fill();
-    ctx.strokeStyle = PS.render.entities.getRgbaFromHex(lineageColor, settlement.isActive ? 0.22 : 0.12);
-    ctx.lineWidth = Math.min(3, Math.max(1, Math.round(Number(settlement.level) || 1)));
-    ctx.stroke();
-  }
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementInfluence());
 };
 
 PS.render.entities.drawSettlementRoutes = function () {
-  if (!Array.isArray(world.settlementRoutes)) {
-    return;
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
   }
 
-  for (var i = 0; i < world.settlementRoutes.length; i++) {
-    var route = world.settlementRoutes[i];
-    var parentSettlement = PS.render.entities.getSettlementById(route.parentSettlementId);
-    var childSettlement = PS.render.entities.getSettlementById(route.childSettlementId);
-
-    if (!parentSettlement || !childSettlement) {
-      continue;
-    }
-
-    var parentPoint = PS.render.entities.getSettlementRenderPosition(parentSettlement);
-    var childPoint = PS.render.entities.getSettlementRenderPosition(childSettlement);
-
-    if (!parentPoint || !childPoint) {
-      continue;
-    }
-
-    var lineageColor = PS.render.entities.getLineageColorById(route.lineageId || parentSettlement.lineageId);
-    var isColonyRoute = parentSettlement.isColony || childSettlement.isColony;
-    var routeWidth = isColonyRoute ? 4 : (route.isActive ? 3 : 2);
-
-    ctx.beginPath();
-    ctx.moveTo(parentPoint.x, parentPoint.y);
-    ctx.lineTo(childPoint.x, childPoint.y);
-    ctx.strokeStyle = "rgba(2, 7, 12, 0.62)";
-    ctx.lineWidth = routeWidth + 2;
-    ctx.setLineDash([]);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(parentPoint.x, parentPoint.y);
-    ctx.lineTo(childPoint.x, childPoint.y);
-    ctx.strokeStyle = isColonyRoute ? "rgba(112, 240, 208, 0.68)" : PS.render.entities.getRgbaFromHex(lineageColor, route.isActive ? 0.52 : 0.20);
-    ctx.lineWidth = routeWidth;
-    ctx.setLineDash(isColonyRoute ? [10, 3] : (route.isActive ? [6, 4] : [2, 5]));
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementRoutes());
 };
 
 PS.render.entities.drawOrbitalAssets = function () {
-  return PS.render.overlays.drawOrbitalAssets();
+  return false;
 };
 
 PS.render.entities.drawPlanetaryBodies = function () {
-  return PS.render.overlays.drawPlanetaryBodies();
+  return false;
 };
 
 PS.render.entities.drawProbeMissions = function () {
-  return PS.render.overlays.drawProbeMissions();
+  return false;
 };
 
 PS.render.entities.drawStarSystems = function () {
-  return PS.render.overlays.drawStarSystems();
+  return false;
 };
 
 PS.render.entities.drawEmpireSectors = function () {
-  return PS.render.overlays.drawEmpireSectors();
+  return false;
 };
 
 PS.render.entities.drawInterstellarFleets = function () {
-  return PS.render.overlays.drawInterstellarFleets();
+  return false;
 };
 
 PS.render.entities.drawEmpireLegacy = function () {
-  return PS.render.overlays.drawEmpireLegacy();
+  return false;
 };
 
 PS.render.entities.rebuildShaders = function () {};

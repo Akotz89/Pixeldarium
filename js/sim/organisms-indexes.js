@@ -46,6 +46,11 @@ function rebuildOrganismIndexes() {
   world.organismBuckets = {};
   world.organismsByLineage = {};
 
+  // Rebuild tile grid if available (AZR-491)
+  if (PS.tileGrid && typeof PS.tileGrid.rebuildFromOrganisms === "function") {
+    PS.tileGrid.rebuildFromOrganisms();
+  }
+
   for (var i = 0; i < world.organisms.length; i++) {
     registerOrganismInIndexes(world.organisms[i]);
   }
@@ -63,6 +68,12 @@ function getIndexedOrganismsForLineage(lineageId) {
 }
 
 function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
+  // Use tile grid fast path when available (AZR-491)
+  if (PS.tileGrid && PS.tileGrid.grid && typeof PS.tileGrid.collectInRadius === "function") {
+    return PS.tileGrid.collectInRadius(x, y, radius, lineageId, limit);
+  }
+
+  // Fallback to bucket-based lookup
   ensureOrganismIndexes();
 
   var bucketSize = getOrganismBucketSize();
@@ -108,6 +119,12 @@ function collectOrganismsInRadius(x, y, radius, lineageId, limit) {
 }
 
 function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
+  // Use tile grid fast path when available (AZR-491)
+  if (PS.tileGrid && PS.tileGrid.grid && typeof PS.tileGrid.countInRadius === "function") {
+    return PS.tileGrid.countInRadius(x, y, radius, lineageId);
+  }
+
+  // Fallback to bucket-based lookup
   ensureOrganismIndexes();
 
   var bucketSize = getOrganismBucketSize();
@@ -144,6 +161,12 @@ function countOrganismsInRadiusForLineage(x, y, radius, lineageId) {
 }
 
 function getNearestOrganismInRadius(x, y, radius) {
+  // Use tile grid fast path when available (AZR-491)
+  if (PS.tileGrid && PS.tileGrid.grid && typeof PS.tileGrid.nearestInRadius === "function") {
+    return PS.tileGrid.nearestInRadius(x, y, radius);
+  }
+
+  // Fallback to bucket-based lookup
   ensureOrganismIndexes();
 
   var bucketSize = getOrganismBucketSize();

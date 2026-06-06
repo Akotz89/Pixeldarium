@@ -10,7 +10,9 @@ PS.render.lod.tiers = [
 ];
 
 PS.render.lod.getArchitectureZoom = function (zoomLevel) {
-  var levels = PS.camera.getZoomLevels();
+  var levels = PS.camera && typeof PS.camera.getZoomLevels === "function"
+    ? PS.camera.getZoomLevels()
+    : [{}, {}];
   var maxIndex = Math.max(1, levels.length - 1);
   var normalizedZoom = clamp(Number(zoomLevel) || 0, 0, maxIndex);
 
@@ -63,14 +65,27 @@ PS.render.lod.getTier = function (zoomLevel) {
 };
 
 PS.render.lod.getZoomDirection = function () {
-  var view = PS.camera.getView();
+  var view = PS.camera && typeof PS.camera.getView === "function"
+    ? PS.camera.getView()
+    : world && world.planetView
+      ? world.planetView
+      : {};
 
   return Number(view.zoomDirection) || 0;
 };
 
 PS.render.lod.getPreloadSurfaceLodIndex = function () {
+  if (!PS.camera || typeof PS.camera.getSurfaceLodZoomIndex !== "function" || typeof PS.camera.getZoomLevels !== "function") {
+    return 0;
+  }
+
   var direction = PS.render.lod.getZoomDirection();
-  var current = PS.camera.getSurfaceLodZoomIndex(PS.camera.getView().zoomLevel);
+  var view = typeof PS.camera.getView === "function"
+    ? PS.camera.getView()
+    : world && world.planetView
+      ? world.planetView
+      : {};
+  var current = PS.camera.getSurfaceLodZoomIndex(view.zoomLevel);
   var levels = PS.camera.getZoomLevels();
 
   if (direction > 0) {

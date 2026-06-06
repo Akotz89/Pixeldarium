@@ -6,6 +6,8 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 
 const source = [
+  "js/core/namespace.js",
+  "js/core/input.js",
   "js/systems/persistence-save-data.js",
   "js/systems/persistence-restore-core.js",
   "js/systems/persistence-io.js",
@@ -54,6 +56,7 @@ const context = {
   },
   window: {
     PS: {},
+    addEventListener() {},
     setTimeout(callback) {
       return callback();
     },
@@ -150,7 +153,21 @@ context.panPlanetViewByScreenDelta = function (deltaX, deltaY) {
 
 vm.runInNewContext(`${source}
 
+PS.camera = {
+  unified: {
+    clientToScreen: function(clientX, clientY) {
+      var rect = canvas.getBoundingClientRect();
+      return {
+        canvasX: (Number(clientX) - rect.left) * (canvas.width / rect.width),
+        canvasY: (Number(clientY) - rect.top) * (canvas.height / rect.height)
+      };
+    }
+  }
+};
+
 prepareTouchInput();
+registerSimulationInputActions();
+assert.ok(PS.input.bindings.zoom_in.indexOf("Equal") >= 0, "input manager should expose zoom-in keybinding");
 assert.strictEqual(canvas.style.touchAction, "none", "touch input should disable browser touch gestures on the canvas");
 
 var selected = getInspectableEntityFromTile(10, 12);
@@ -174,6 +191,9 @@ handleSimulationShortcut({
   preventDefault: function() { this.prevented = true; }
 });
 assert.ok(world.planetView.zoomLevel > zoomBefore, "plus shortcut should zoom the camera");
+assert.strictEqual(PS.input.isDown("zoom_in"), true, "input manager should track active zoom action");
+PS.input.handleKeyUp({ key: "+", code: "Equal" });
+assert.strictEqual(PS.input.isDown("zoom_in"), false, "input manager should clear active zoom action on keyup");
 
 var pinchZoomBefore = world.planetView.zoomLevel;
 beginPlanetDrag({

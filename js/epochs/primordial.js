@@ -204,7 +204,7 @@ function makeAbiogenesisSite(state, cellX, cellY, index, signals) {
 
 function emitAbiogenesisTransition(site) {
   if (PS.events && typeof PS.events.emit === "function") {
-    PS.events.emit("epoch.transition", {
+    PS.events.emit(PS.events.types.EPOCH_TRANSITION, {
       from: "primordial",
       to: "microbial",
       siteId: site.id,

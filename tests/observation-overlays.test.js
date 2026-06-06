@@ -9,39 +9,15 @@ function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
 }
 
-const fills = [];
 const context = {
   console,
-  performance: {
-    now() {
-      return Date.now();
-    }
-  },
   WORLD_WIDTH: 28,
   WORLD_HEIGHT: 16,
   CONFIG: {
     TILE_SIZE: 5
   },
-  canvas: {
-    width: 140,
-    height: 80
-  },
-  ctx: {
-    globalCompositeOperation: "source-over",
-    globalAlpha: 1,
-    fillStyle: "",
-    fillRect(x, y, width, height) {
-      fills.push({
-        x,
-        y,
-        width,
-        height,
-        fillStyle: this.fillStyle,
-        composite: this.globalCompositeOperation,
-        alpha: this.globalAlpha
-      });
-    }
-  },
+  observationOverlayButtons: [],
+  observationOverlayStatus: null,
   world: {
     activeObservationOverlay: "none",
     needsRender: false,
@@ -72,16 +48,6 @@ const context = {
       }
     }
   },
-  getPlanetTile(x, y) {
-    return {
-      x,
-      y,
-      latitude: (y / 16) * 180 - 90,
-      longitude: (x / 28) * 360 - 180,
-      elevation: x % 4 === 0 ? 0.8 : 0.1,
-      moisture: y % 3 === 0 ? 0.75 : 0.25
-    };
-  },
   PS: {
     epochs: {
       microbial: {
@@ -97,21 +63,19 @@ const context = {
         }
       }
     },
-    render: {
-      entities: {
-        getTileRenderPosition(x, y) {
-          return {
-            x: x * 5,
-            y: y * 5,
-            scale: 1
-          };
-        }
-      }
+    render: {}
+  },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  },
+  setElementText(element, text) {
+    if (element) {
+      element.textContent = text;
     }
   }
 };
 
-vm.runInNewContext(read("js/render/overlays.js") + "\n" + read("js/render/observation-overlays.js"), context);
+vm.runInNewContext(read("js/ui/observation-overlays.js"), context);
 
 const expectedIds = [
   "observation.temperature",
@@ -121,80 +85,47 @@ const expectedIds = [
   "observation.microbial"
 ];
 const manifest = context.PS.render.overlays.getManifest();
-const webglShaderSource = read("js/render/webgl-globe-shaders.js");
 const webglGlobeSource = read("js/render/webgl-globe.js");
+const shaderSource = read("shaders/globe-sphere.frag");
 
 expectedIds.forEach((id) => {
   const entry = manifest.find((overlay) => overlay.id === id);
 
   assert.ok(entry, `${id} should be registered`);
-  assert.ok(entry.blendMode === "screen" || entry.blendMode === "lighter", `${id} should expose blend metadata`);
+  assert.ok(entry.blendMode === "screen" || entry.blendMode === "lighter", `${id} should expose WebGL blend metadata`);
   assert.strictEqual(entry.shortcut, "O", `${id} should expose keyboard shortcut metadata`);
 });
 
 assert.strictEqual(context.PS.render.observationOverlays.setActive("observation.temperature"), "observation.temperature");
 assert.strictEqual(context.world.needsRender, true, "activating an overlay should request render");
-assert.strictEqual(
-  context.PS.render.observationOverlays.getGlyph("observation.population", 8, 8, context.getPlanetTile(8, 8)).shape,
-  "agent-cluster",
-  "population overlay should expose an agent cluster glyph"
-);
-assert.strictEqual(
-  context.PS.render.observationOverlays.getGlyph("observation.resources", 18, 8, context.getPlanetTile(18, 8)).shape,
-  "resource-sprout",
-  "resource overlay should expose a sprout glyph"
-);
-assert.strictEqual(
-  context.PS.render.observationOverlays.getGlyph("observation.microbial", 2, 2, context.getPlanetTile(2, 2)).shape,
-  "bloom-mat",
-  "microbial overlay should expose a bloom mat glyph"
-);
-context.PS.render.overlays.drawRegistered();
-assert.ok(fills.length > 0, "active temperature overlay should draw sample cells");
-assert.strictEqual(fills[0].composite, "screen", "temperature overlay should use screen blend metadata");
-assert.ok(context.world.overlayPerformance.lastFrameMs >= 0, "overlay draw should record frame timing");
-assert.ok(context.world.overlayPerformance.lastSampleCount > 0, "overlay draw should record sample count");
-
-fills.length = 0;
-context.PS.render.observationOverlays.setActive("observation.population");
-context.PS.render.overlays.drawRegistered();
-assert.ok(fills.length > 0, "population overlay should draw density cells");
-assert.strictEqual(fills[0].composite, "lighter", "population overlay should use additive blend metadata");
-assert.ok(
-  fills.length > context.world.overlayPerformance.lastSampleCount,
-  "population overlay should draw authored glyph marks in addition to sample cells"
-);
-
-fills.length = 0;
-context.PS.render.observationOverlays.setActive("observation.resources");
-context.PS.render.overlays.drawRegistered();
-assert.ok(fills.length > 0, "resource overlay should draw food density cells");
-assert.ok(
-  fills.length > context.world.overlayPerformance.lastSampleCount,
-  "resource overlay should draw authored glyph marks in addition to sample cells"
-);
-
-fills.length = 0;
-context.PS.render.observationOverlays.setActive("observation.atmosphere");
-context.PS.render.overlays.drawRegistered();
-assert.ok(fills.length > 0, "atmosphere overlay should draw gas composition cells");
-
-fills.length = 0;
-context.PS.render.observationOverlays.setActive("observation.microbial");
-context.PS.render.overlays.drawRegistered();
-assert.ok(fills.length > 0, "microbial overlay should draw bloom cells");
-assert.strictEqual(fills[0].composite, "lighter", "microbial overlay should use additive blend metadata");
-assert.ok(
-  fills.length > context.world.overlayPerformance.lastSampleCount,
-  "microbial overlay should draw authored glyph marks in addition to sample cells"
-);
-
-context.PS.render.observationOverlays.setActive("unknown");
-assert.strictEqual(context.world.activeObservationOverlay, "none", "unknown overlay should normalize to none");
+assert.strictEqual(context.PS.render.observationOverlays.setActive("unknown"), "none", "unknown overlay should normalize to none");
 assert.strictEqual(context.PS.render.observationOverlays.cycle(), "observation.temperature", "cycle should move from none to first overlay");
-assert.ok(webglShaderSource.indexOf("uniform sampler2D u_overlay") >= 0, "WebGL shader should accept observation overlay texture");
-assert.ok(webglShaderSource.indexOf("u_overlayMode") >= 0, "WebGL shader should expose overlay blend mode");
+
+const hotSample = context.PS.render.observationOverlays.getOverlaySample("observation.temperature", 8, 2, {
+  latitude: 5,
+  elevation: 0.1
+});
+const coldSample = context.PS.render.observationOverlays.getOverlaySample("observation.temperature", 8, 14, {
+  latitude: 82,
+  elevation: 0.9
+});
+const populationSample = context.PS.render.observationOverlays.getOverlaySample("observation.population", 9, 8, {});
+const resourceSample = context.PS.render.observationOverlays.getOverlaySample("observation.resources", 18, 8, {});
+const atmosphereSample = context.PS.render.observationOverlays.getOverlaySample("observation.atmosphere", 1, 1, {});
+const microbialSample = context.PS.render.observationOverlays.getOverlaySample("observation.microbial", 2, 2, {});
+const noneSample = context.PS.render.observationOverlays.getOverlaySample("none", 2, 2, {});
+
+assert.ok(hotSample.red > coldSample.red, "temperature samples should encode warmer low-latitude tiles");
+assert.ok(populationSample.alpha > 0, "population overlay should encode organism density into texture alpha");
+assert.ok(resourceSample.alpha > 0, "resource overlay should encode food density into texture alpha");
+assert.ok(atmosphereSample.alpha > 0, "atmosphere overlay should encode gas composition into texture alpha");
+assert.ok(microbialSample.alpha > 0, "microbial overlay should encode bloom intensity into texture alpha");
+assert.strictEqual(noneSample.red + noneSample.green + noneSample.blue + noneSample.alpha, 0, "inactive overlay samples should be transparent");
+
 assert.ok(webglGlobeSource.indexOf("uploadObservationOverlayTexture") >= 0, "WebGL globe should upload active observation overlay texture");
 assert.ok(webglGlobeSource.indexOf('compositor = "webgl2"') >= 0, "WebGL globe should record webgl2 compositor evidence");
+assert.ok(shaderSource.indexOf("uniform sampler2D u_overlay") >= 0, "WebGL shader should accept observation overlay texture");
+assert.ok(shaderSource.indexOf("u_overlayMode") >= 0, "WebGL shader should expose overlay blend mode");
+assert.strictEqual(webglGlobeSource.indexOf("fillRect"), -1, "observation overlay upload should not depend on Canvas2D drawing");
 
 console.log("observation overlay checks passed");

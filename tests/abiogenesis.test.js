@@ -69,13 +69,14 @@ vm.runInNewContext([
   read("js/core/namespace.js"),
   read("js/core/math.js"),
   read("js/core/assert.js"),
+  read("js/core/event-types.js"),
   read("js/core/events.js"),
   read("js/epochs/registry.js"),
   read("js/epochs/primordial.js"),
   read("js/epochs/microbial.js")
 ].join("\n"), context);
 
-context.PS.events.on("epoch.transition", function(payload) {
+context.PS.events.on(context.PS.eventTypes.EPOCH_TRANSITION, function(payload) {
   emitted.push(payload);
 });
 

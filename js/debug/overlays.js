@@ -23,9 +23,19 @@ PS.debug.overlays = {
     }
 
     this.element.hidden = !this.visible;
+    var layerText = "";
+    if (PS.render && PS.render.drawOrder && typeof PS.render.drawOrder.getDebugSnapshot === "function") {
+      layerText = " | layers " + PS.render.drawOrder.getDebugSnapshot().filter(function (layer) {
+        return layer.drawCalls > 0;
+      }).map(function (layer) {
+        return layer.layerName + ":" + layer.drawCalls;
+      }).join(",");
+    }
+
     this.element.textContent =
       "Overlays | food buckets " + Object.keys(world.foodBuckets || {}).length +
       " | organism buckets " + Object.keys(world.organismBuckets || {}).length +
-      " | settlement buckets " + Object.keys(world.settlementBuckets || {}).length;
+      " | settlement buckets " + Object.keys(world.settlementBuckets || {}).length +
+      layerText;
   }
 };

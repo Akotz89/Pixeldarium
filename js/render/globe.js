@@ -14,6 +14,10 @@ PS.render.globe.getProjection = function () {
 };
 
 PS.render.globe.getLatLonFromCanvasPoint = function (canvasX, canvasY) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.screenToLatLon(canvasX, canvasY);
+  }
+
   if (isGlobeRenderMode() && isPlanetLocalView()) {
     return PS.render.globe.getLocalLatLonFromCanvasPoint(canvasX, canvasY);
   }
@@ -177,6 +181,10 @@ PS.render.globe.getLatLonFromSurfaceMeters = function (eastMeters, northMeters) 
 };
 
 PS.render.globe.getSurfaceMeters = function (latitude, longitude) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.getSurfaceMeters(latitude, longitude);
+  }
+
   return {
     northMeters: (Number(latitude) || 0) * PS.render.globe.getLatitudeDistanceKmPerDegree() * 1000,
     eastMeters: PS.render.globe.normalizeLongitude(longitude) * PS.render.globe.getLongitudeDistanceKmPerDegree(latitude) * 1000
@@ -184,6 +192,10 @@ PS.render.globe.getSurfaceMeters = function (latitude, longitude) {
 };
 
 PS.render.globe.getLocalLatLonFromCanvasPoint = function (canvasX, canvasY) {
+  if (PS.camera && PS.camera.unified) {
+    return PS.camera.unified.screenToLatLon(canvasX, canvasY);
+  }
+
   var scale = getPlanetViewScale();
   var sampleX = (Number(canvasX) || 0) / CONFIG.TILE_SIZE;
   var sampleY = (Number(canvasY) || 0) / CONFIG.TILE_SIZE;
@@ -195,6 +207,15 @@ PS.render.globe.getLocalLatLonFromCanvasPoint = function (canvasX, canvasY) {
 };
 
 PS.render.globe.getLocalCanvasPoint = function (longitude, latitude) {
+  if (PS.camera && PS.camera.unified) {
+    var point = PS.camera.unified.latLonToScreen(latitude, longitude);
+
+    return point ? {
+      x: point.screenX,
+      y: point.screenY
+    } : null;
+  }
+
   var scale = getPlanetViewScale();
   var viewMeters = PS.render.globe.getSurfaceMeters(getPlanetView().latitude, getPlanetView().longitude);
   var targetMeters = PS.render.globe.getSurfaceMeters(latitude, longitude);

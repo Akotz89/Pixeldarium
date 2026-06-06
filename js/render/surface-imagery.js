@@ -107,12 +107,10 @@ PS.render.surfaceImagery.getRegionalCartographicAccent = function (biome, signal
 
 PS.render.surfaceImagery.applyRegionalCartographicAccent = function (rgb, biome, signals, noise, surfaceMeters, latitude) {
   var accent = PS.render.surfaceImagery.getRegionalCartographicAccent(biome, signals, noise, surfaceMeters, latitude);
-  var grain = getPlanetSmoothMeterNoise(
-    Number(surfaceMeters && surfaceMeters.eastMeters) || 0,
-    Number(surfaceMeters && surfaceMeters.northMeters) || 0,
-    18000,
-    89
-  );
+  var grain = PS.render.surfaceNoise.getLayerNoise({
+    eastMeters: Number(surfaceMeters && surfaceMeters.eastMeters) || 0,
+    northMeters: Number(surfaceMeters && surfaceMeters.northMeters) || 0
+  }, 18000, 89);
   var amount = clamp(Number(accent.amount) * (0.62 + grain * 0.62), 0, 0.28);
 
   return blendRgbWithHex(rgb, accent.color, amount);
@@ -139,12 +137,12 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
   var ridge = clamp(signals.ridgeStrength, 0, 1);
   var roughness = clamp(signals.roughness, 0, 1);
   var snowSignal = clamp(signals.snowSignal, 0, 1);
-  var signalTile = makePlanetImagerySignalTile(visualBiome, signals, normalizedLatitude);
+  var signalTile = PS.render.surfaceLandform.makeImagerySignalTile(visualBiome, signals, normalizedLatitude);
   var wetlandStrength = clamp(river * 0.55 + coast * 0.28 + shallowWater * 0.18 + moisture * 0.20, 0, 1);
   var reliefBand = clamp(highland * 0.38 + ridge * 0.34 + roughness * 0.16 + regional * 0.12, 0, 1);
   var weathering = clamp((broad - 0.5) * 0.34 + (local - 0.5) * 0.22 + (fine - 0.5) * 0.14 + 0.5, 0, 1);
   var terrainGrain = clamp((regional - 0.5) * 0.36 + (fine - 0.5) * 0.28 + (micro - 0.5) * 0.18 + 0.5, 0, 1);
-  var snowVisual = getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
+  var snowVisual = PS.render.surfaceLandform.getCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
   var terrainShade = clamp(
     0.50 +
       texture * 0.68 +
@@ -155,8 +153,8 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
     0,
     1
   );
-  var terrainBand = getPlanetLandformTerrainBand(biome, signals, noise, normalizedLatitude);
-  var landformIdentity = getPlanetGlobeLandformIdentity(biome, signals, noise, surfaceMeters, normalizedLatitude);
+  var terrainBand = PS.render.surfaceLandform.getTerrainBand(biome, signals, noise, normalizedLatitude);
+  var landformIdentity = PS.render.surfaceLandform.getGlobeLandformIdentity(biome, signals, noise, surfaceMeters, normalizedLatitude);
 
   if (visualBiome === "ocean") {
     var current = Math.sin((surfaceMeters.eastMeters * 0.000021) + (surfaceMeters.northMeters * 0.000011)) * 0.5 + 0.5;
@@ -171,7 +169,7 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
     color = blendRgbWithHex(color, terrainBand.color, terrainBand.amount);
     color = blendRgbWithHex(color, landformIdentity.color, landformIdentity.amount);
     color = blendRgbWithHex(color, "#d9edf4", snowVisual);
-    return PS.render.surfaceImagery.applyRegionalCartographicAccent(applyPlanetMaterialPixelAccents(
+    return PS.render.surfaceImagery.applyRegionalCartographicAccent(PS.render.surfaceLandform.applyMaterialPixelAccents(
       clampRgb(shadeRgb(color, clamp(terrainShade - 0.02 + current * 0.035 + shelf * 0.08 - depth * 0.05, 0, 1))),
       normalizedLatitude,
       normalizedLongitude,
@@ -220,7 +218,7 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
   color = blendRgbWithHex(color, "#c8bd82", coast * 0.08);
   color = blendRgbWithHex(color, "#6f6b5d", clamp(highland * 0.11 + ridge * 0.13 + roughness * 0.05, 0, 0.24));
   color = blendRgbWithHex(color, "#e8f4f3", clamp(snowVisual + landformIdentity.snowcap, 0, visualBiome === "ice" ? 0.34 : 0.18));
-  return PS.render.surfaceImagery.applyRegionalCartographicAccent(applyPlanetMaterialPixelAccents(
+  return PS.render.surfaceImagery.applyRegionalCartographicAccent(PS.render.surfaceLandform.applyMaterialPixelAccents(
     clampRgb(shadeRgb(color, clamp(terrainShade - (1 - moisture) * 0.02, 0, 1))),
     normalizedLatitude,
     normalizedLongitude,
@@ -231,15 +229,15 @@ PS.render.surfaceImagery.getBiomeRgb = function (baseColor, biome, signals, surf
 PS.render.surfaceImagery.getRgbAtLatLon = function (latitude, longitude, tileRgbCache) {
   var normalizedLatitude = clamp(Number(latitude) || 0, -90, 90);
   var normalizedLongitude = normalizeLongitude(longitude);
-  var warped = getPlanetImageryWarpedLatLon(normalizedLatitude, normalizedLongitude);
+  var warped = PS.render.terrain.getImageryWarpedLatLon(normalizedLatitude, normalizedLongitude);
   var surfaceMeters = getSurfaceMeterCoordinate(warped.latitude, warped.longitude);
-  var broad = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 260000, 17);
-  var regional = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 82000, 31);
-  var local = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 26000, 47);
-  var fine = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 8200, 59);
-  var micro = getPlanetSmoothMeterNoise(surfaceMeters.eastMeters, surfaceMeters.northMeters, 2600, 67);
-  var baseColor = clampRgb(getPlanetSurfaceRgbAtLatLon(warped.latitude, warped.longitude, tileRgbCache));
-  var signals = getPlanetImageryBlendSignals(warped.latitude, warped.longitude);
+  var broad = PS.render.surfaceNoise.getLayerNoise(surfaceMeters, 260000, 17);
+  var regional = PS.render.surfaceNoise.getLayerNoise(surfaceMeters, 82000, 31);
+  var local = PS.render.surfaceNoise.getLayerNoise(surfaceMeters, 26000, 47);
+  var fine = PS.render.surfaceNoise.getLayerNoise(surfaceMeters, 8200, 59);
+  var micro = PS.render.surfaceNoise.getLayerNoise(surfaceMeters, 2600, 67);
+  var baseColor = clampRgb(PS.render.terrain.getSurfaceRgbAtLatLon(warped.latitude, warped.longitude, tileRgbCache));
+  var signals = PS.render.terrain.getImageryBlendSignals(warped.latitude, warped.longitude);
   var biomeWeights = signals.biomeWeights || {};
   var biomeNames = Object.keys(biomeWeights);
   var noise = {
@@ -283,7 +281,7 @@ PS.render.surfaceImagery.getRgbAtLatLon = function (latitude, longitude, tileRgb
   });
 
   if (totalWeight <= 0) {
-    return getPlanetPixelArtQuantizedRgb(
+    return PS.render.terrain.getPixelArtQuantizedRgb(
       PS.render.surfaceImagery.getBiomeRgb(
         baseColor,
         signals.dominantBiome || "unknown",
@@ -299,7 +297,7 @@ PS.render.surfaceImagery.getRgbAtLatLon = function (latitude, longitude, tileRgb
     );
   }
 
-  return getPlanetPixelArtQuantizedRgb({
+  return PS.render.terrain.getPixelArtQuantizedRgb({
     red: mixed.red / totalWeight,
     green: mixed.green / totalWeight,
     blue: mixed.blue / totalWeight
@@ -328,7 +326,7 @@ PS.render.surfaceImagery.getTileCompositedColor = function (tile) {
   var ridge = clamp(tile && Number.isFinite(Number(tile.ridgeStrength)) ? Number(tile.ridgeStrength) : 0, 0, 1);
   var roughness = clamp(tile && Number.isFinite(Number(tile.roughness)) ? Number(tile.roughness) : 0, 0, 1);
   var snowSignal = getPlanetSurfaceSnowSignal(tile, latitude);
-  var snowVisual = getPlanetCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
+  var snowVisual = PS.render.surfaceLandform.getCloudlessSnowVisualAmount(biome, snowSignal, polar, highland, ridge);
   var visualBiome = PS.render.surfaceImagery.getVisualBiome(biome, {
     elevation: elevationValue,
     moisture: tile && Number.isFinite(Number(tile.moisture)) ? Number(tile.moisture) : 0,
@@ -397,3 +395,7 @@ PS.render.surfaceImagery.getTileCompositedColor = function (tile) {
     clamp(0.28 + terrainHillshade * 0.40 + elevation * 0.12 + moisture * 0.05 + ridge * 0.035 - dry * 0.05, 0, 1)
   ));
 };
+
+function getPlanetTileCompositedColor(tile) {
+  return PS.render.surfaceImagery.getTileCompositedColor(tile);
+}

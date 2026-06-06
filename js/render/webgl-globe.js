@@ -32,16 +32,25 @@ PS.render.webglGlobe.getTextureSignature = function () {
 };
 
 PS.render.webglGlobe.ensureCanvas = function () {
-  if (typeof document === "undefined" || typeof canvas === "undefined") {
+  var targetCanvas = null;
+
+  if (typeof document === "undefined") {
     return false;
   }
 
-  if (!PS.render.webglGlobe.state.canvas) {
-    PS.render.webglGlobe.state.canvas = document.createElement("canvas");
+  if (PS.render.webglPresenter && typeof PS.render.webglPresenter.getCanvas === "function") {
+    targetCanvas = PS.render.webglPresenter.getCanvas();
   }
 
-  PS.render.webglGlobe.state.canvas.width = canvas.width;
-  PS.render.webglGlobe.state.canvas.height = canvas.height;
+  targetCanvas = targetCanvas || document.getElementById("game-webgl") || (typeof canvas !== "undefined" ? canvas : null);
+
+  if (!targetCanvas) {
+    return false;
+  }
+
+  PS.render.webglGlobe.state.canvas = targetCanvas;
+  PS.render.webglGlobe.state.canvas.width = typeof canvas !== "undefined" && canvas ? canvas.width : targetCanvas.width;
+  PS.render.webglGlobe.state.canvas.height = typeof canvas !== "undefined" && canvas ? canvas.height : targetCanvas.height;
   return true;
 };
 
@@ -61,11 +70,7 @@ PS.render.webglGlobe.initialize = function () {
   }
 
   if (!state.program) {
-    state.program = PS.gl.createProgram(
-      state.gl,
-      PS.render.webglGlobeShaders.vertex,
-      PS.render.webglGlobeShaders.fragment
-    );
+    state.program = PS.render.shaderManager.getProgram(state.gl, PS.render.webglGlobeShaders.name);
     state.buffer = state.gl.createBuffer();
   }
 
@@ -158,7 +163,9 @@ PS.render.webglGlobe.uploadObservationOverlayTexture = function () {
   var state = PS.render.webglGlobe.state;
   var gl = state.gl;
   var activeId = PS.render.observationOverlays ? PS.render.observationOverlays.getActiveId() : "none";
-  var overlay = PS.render.overlays.get(activeId);
+  var overlay = PS.render.overlays && typeof PS.render.overlays.get === "function"
+    ? PS.render.overlays.get(activeId)
+    : null;
   var signature = PS.render.webglGlobe.getObservationOverlaySignature();
   var startedAt = performance.now();
   var data = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT * 4);
@@ -209,14 +216,14 @@ PS.render.webglGlobe.uploadObservationOverlayTexture = function () {
   state.lastOverlayUploadMs = performance.now() - startedAt;
 };
 
-PS.render.webglGlobe.draw = function (targetCtx, projection) {
+PS.render.webglGlobe.draw = function (projection) {
   var state = PS.render.webglGlobe.state;
   var startedAt = performance.now();
 
   state.lastUsedFallback = true;
 
   try {
-    if (!targetCtx || !projection || isPlanetLocalView() || !PS.render.webglGlobe.initialize()) {
+    if (!projection || isPlanetLocalView() || !PS.render.webglGlobe.initialize()) {
       state.fallbackCount++;
       return false;
     }
@@ -226,7 +233,9 @@ PS.render.webglGlobe.draw = function (targetCtx, projection) {
 
     var gl = state.gl;
     var program = state.program;
-    var activeOverlay = PS.render.overlays.get(world.activeObservationOverlay);
+    var activeOverlay = PS.render.overlays && typeof PS.render.overlays.get === "function"
+      ? PS.render.overlays.get(world.activeObservationOverlay)
+      : null;
     var vertexData = new Float32Array([
       -1, -1, 0, 1,
       1, -1, 1, 1,
@@ -268,7 +277,6 @@ PS.render.webglGlobe.draw = function (targetCtx, projection) {
       projection.viewLongitudeDeg * Math.PI / 180
     );
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    targetCtx.drawImage(state.canvas, 0, 0);
 
     state.drawCount++;
     state.lastUsedFallback = false;

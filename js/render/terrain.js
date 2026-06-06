@@ -151,9 +151,118 @@ PS.render.terrain.shadeRgb = function (rgb, shade) {
   };
 };
 
+function getRgbFromHex(hexColor) {
+  return PS.render.terrain.getRgbFromHex(hexColor);
+}
+
+function clampRgb(rgb) {
+  return PS.render.terrain.clampRgb(rgb);
+}
+
+function shadeHexColor(hexColor, shade) {
+  return PS.render.terrain.shadeHexColor(hexColor, shade);
+}
+
+function shadeRgb(rgb, shade) {
+  return PS.render.terrain.shadeRgb(rgb, shade);
+}
+
+function blendHexColors(fromHex, toHex, amount) {
+  return PS.render.terrain.blendHexColors(fromHex, toHex, amount);
+}
+
+function blendHexColorWithRgb(fromHex, toRgb, amount) {
+  return PS.render.terrain.blendHexColorWithRgb(fromHex, toRgb, amount);
+}
+
+function blendRgbWithHex(rgb, hexColor, amount) {
+  return PS.render.terrain.blendRgbWithHex(rgb, hexColor, amount);
+}
+
+// ── Packed uint32 color operations ─────────────────────────────────
+// Colors stored as 0x00RRGGBB — zero string allocation, no parseInt/toString.
+// These are the fast-path equivalents of blendHexColors/shadeHexColor.
+
+PS.render.terrain.packRgb = function (r, g, b) {
+  return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+};
+
+PS.render.terrain.unpackR = function (c) { return (c >> 16) & 0xFF; };
+PS.render.terrain.unpackG = function (c) { return (c >> 8) & 0xFF; };
+PS.render.terrain.unpackB = function (c) { return c & 0xFF; };
+
+PS.render.terrain.blendPacked = function (from, to, t) {
+  if (t <= 0) { return from; }
+  if (t >= 1) { return to; }
+  var invT = 1 - t;
+  var r = ((from >> 16) & 0xFF) * invT + ((to >> 16) & 0xFF) * t + 0.5;
+  var g = ((from >> 8) & 0xFF) * invT + ((to >> 8) & 0xFF) * t + 0.5;
+  var b = (from & 0xFF) * invT + (to & 0xFF) * t + 0.5;
+  return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+};
+
+PS.render.terrain.shadePacked = function (color, shade) {
+  var s = shade < 0 ? 0 : (shade > 1 ? 1 : shade);
+  var target = s > 0.5 ? 0xFFFFFF : 0x000000;
+  var amount = (s > 0.5 ? s - 0.5 : 0.5 - s) * 0.52;
+  return PS.render.terrain.blendPacked(color, target, amount);
+};
+
+PS.render.terrain.hexToPacked = function (hex) {
+  // "#RRGGBB" → 0x00RRGGBB
+  var h = hex.charCodeAt(1) <= 57 ? hex.charCodeAt(1) - 48 : hex.charCodeAt(1) - 87;
+  var h2 = hex.charCodeAt(2) <= 57 ? hex.charCodeAt(2) - 48 : hex.charCodeAt(2) - 87;
+  var h3 = hex.charCodeAt(3) <= 57 ? hex.charCodeAt(3) - 48 : hex.charCodeAt(3) - 87;
+  var h4 = hex.charCodeAt(4) <= 57 ? hex.charCodeAt(4) - 48 : hex.charCodeAt(4) - 87;
+  var h5 = hex.charCodeAt(5) <= 57 ? hex.charCodeAt(5) - 48 : hex.charCodeAt(5) - 87;
+  var h6 = hex.charCodeAt(6) <= 57 ? hex.charCodeAt(6) - 48 : hex.charCodeAt(6) - 87;
+  return ((h << 4 | h2) << 16) | ((h3 << 4 | h4) << 8) | (h5 << 4 | h6);
+};
+
+PS.render.terrain.packedToHex = function (c) {
+  var HEX = "0123456789abcdef";
+  return "#" + HEX[(c >> 20) & 0xF] + HEX[(c >> 16) & 0xF]
+             + HEX[(c >> 12) & 0xF] + HEX[(c >> 8) & 0xF]
+             + HEX[(c >> 4) & 0xF] + HEX[c & 0xF];
+};
+
+// Precomputed biome color LUT — avoids switch+string per cell
+PS.render.terrain._biomePackedLUT = {
+  forest: 0x123f23, grassland: 0x23552d, desert: 0x56451f,
+  wetland: 0x1d4f43, mountain: 0x62675f, mountains: 0x62675f,
+  barren: 0x3f3d32, tundra: 0x29383a, ice: 0xa8d4e8,
+  ocean: 0x06172b
+};
+PS.render.terrain._biomePackedDefault = 0x07080f;
+
+PS.render.terrain.getBiomePackedColor = function (biome) {
+  return PS.render.terrain._biomePackedLUT[biome] || PS.render.terrain._biomePackedDefault;
+};
+
+PS.render.terrain.applyDeepTimePackedTint = function (packed) {
+  if (!PS.deepTime || typeof PS.deepTime.getTerrainTint !== "function") {
+    return packed;
+  }
+  var tint = PS.deepTime.getTerrainTint();
+  if (!tint || !tint.amount) { return packed; }
+  var tintPacked = typeof tint._packed === "number" ? tint._packed : PS.render.terrain.hexToPacked(tint.color);
+  tint._packed = tintPacked;
+  return PS.render.terrain.blendPacked(packed, tintPacked, tint.amount);
+};
+
+PS.render.terrain.getBiomePackedColorTinted = function (biome) {
+  return PS.render.terrain.applyDeepTimePackedTint(PS.render.terrain.getBiomePackedColor(biome));
+};
+
+// ── End packed color operations ────────────────────────────────────
+
 PS.render.terrain.getVisualSeedOffset = function () {
   return typeof hashSeedText === "function" ? hashSeedText(world.seedText || "") % 100000 : 0;
 };
+
+function getPlanetVisualSeedOffset() {
+  return PS.render.terrain.getVisualSeedOffset();
+}
 
 PS.render.terrain.getMeterNoise = function (eastMeters, northMeters, patchMeters, seedOffset) {
   var normalizedPatchMeters = Math.max(1, Number(patchMeters) || 1);
@@ -399,19 +508,115 @@ PS.render.terrain.getSurfaceColor = function (sample) {
 };
 
 PS.render.terrain.buildCache = function () {
-  return buildTerrainCache();
+  return null;
 };
 
 PS.render.terrain.invalidateCache = function () {
-  return invalidateTerrainCache();
+  return true;
+};
+
+PS.render.terrain.drawLocalSurface = function (alpha) {
+  if (
+    !PS.render.surfaceStreaming ||
+    !PS.render.surfaceRender ||
+    !PS.render.renderer ||
+    typeof PS.render.renderer.drawTilemap !== "function"
+  ) {
+    return false;
+  }
+
+  var startedAt = performance.now();
+  var chunkSamples = PS.render.surface.getChunkSampleCount();
+  var maxChunks = PS.render.surface.getVisibleChunkLimit();
+  var queue = PS.render.surfaceStreaming.makeQueue(chunkSamples, maxChunks);
+  var generatedBudget = PS.render.surfaceRender.getChunksPerPass();
+  var generatedThisPass = 0;
+  var drawnChunks = 0;
+  var pendingChunks = 0;
+  var placeholderChunks = 0;
+  var readyChunks = [];
+
+  localSurfaceRenderChunkCache.stats.lastVisibleChunks = queue.visibleCount || 0;
+  localSurfaceRenderChunkCache.stats.lastVisibleQueueChunks = queue.visibleCount || 0;
+  localSurfaceRenderChunkCache.stats.lastPrefetchQueueChunks = queue.prefetchCount || 0;
+  localSurfaceRenderChunkCache.stats.lastVisibleCandidateChunks = queue.totalCandidateChunks || queue.length;
+  localSurfaceRenderChunkCache.stats.lastWorkingSetLimit = queue.workingSetLimit || maxChunks;
+  localSurfaceRenderChunkCache.stats.lastCulledChunks = queue.culledChunks || 0;
+
+  for (var i = 0; i < queue.length; i++) {
+    var item = queue[i];
+    var allowGenerate = generatedThisPass < generatedBudget;
+    var chunk = PS.render.surfaceRender.getChunk(item.address, allowGenerate);
+
+    if (!chunk || chunk.readyState !== "ready" || !Array.isArray(chunk.cellCache)) {
+      pendingChunks++;
+      if (allowGenerate) {
+        generatedThisPass++;
+      }
+      continue;
+    }
+
+    if (item.queueType !== "visible") {
+      continue;
+    }
+
+    var drawAddress = Object.assign({}, item.address, {
+      renderScreenX: item.screenX,
+      renderScreenY: item.screenY,
+      renderSamplePixelSize: item.width / Math.max(1, item.address.chunkSamples)
+    });
+
+    readyChunks.push({
+      address: drawAddress,
+      cellCache: chunk.cellCache,
+      alpha: alpha
+    });
+  }
+
+  if (readyChunks.length > 0) {
+    if (PS.render.renderer.drawTilemap({
+      chunks: readyChunks,
+      alpha: alpha,
+      options: { skipPresent: false }
+    }, PS.camera && PS.camera.unified ? PS.camera.unified.getState() : null)) {
+      drawnChunks = readyChunks.length;
+    } else {
+      placeholderChunks = readyChunks.length;
+    }
+  }
+
+  localSurfaceRenderChunkCache.stats.lastPendingChunks = pendingChunks;
+  localSurfaceRenderChunkCache.stats.lastGeneratedThisPass = generatedThisPass;
+  localSurfaceRenderChunkCache.stats.lastPlaceholderChunks = placeholderChunks;
+
+  if (PS.render.surfaceTileWebgl && PS.render.surfaceTileWebgl.state) {
+    PS.render.surfaceTileWebgl.state.lastFrameMs = Math.max(
+      PS.render.surfaceTileWebgl.state.lastFrameMs || 0,
+      performance.now() - startedAt
+    );
+  }
+
+  return drawnChunks > 0;
 };
 
 PS.render.terrain.draw = function () {
-  return drawTerrain();
+  if (typeof isPlanetLocalView === "function" && isPlanetLocalView()) {
+    return PS.render.terrain.drawLocalSurface(1);
+  }
+
+  var projection = typeof getPlanetGlobeProjection === "function"
+    ? getPlanetGlobeProjection()
+    : typeof getPlanetProjection === "function"
+      ? getPlanetProjection()
+    : null;
+
+  return PS.render.webglGlobe && typeof PS.render.webglGlobe.draw === "function"
+    ? PS.render.webglGlobe.draw(projection)
+    : false;
 };
 
 PS.render.terrain.advanceSurfaceWork = function (maxChunksOverride) {
-  return PS.render.surfaceRender.work.advance(maxChunksOverride);
+  return 0;
 };
 
 PS.render.terrain.getSurfaceCacheStats = function () {

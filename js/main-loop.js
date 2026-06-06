@@ -50,16 +50,243 @@ var measuredUpdateFrames = 0;
 var measuredDrawFrames = 0;
 var maxUpdateMsSinceStatsUpdate = 0;
 var maxDrawMsSinceStatsUpdate = 0;
+var gameLoopStarted = false;
+
+function getLoadingScreen() {
+  return document.getElementById("loading-screen");
+}
+
+function updateLoadingScreen(progress, message) {
+  var screen = getLoadingScreen();
+  var fill = document.getElementById("loading-progress-fill");
+  var text = document.getElementById("loading-progress-text");
+  var total = progress && Number(progress.total) ? Number(progress.total) : 0;
+  var loaded = progress ? Number(progress.loaded) || 0 : 0;
+  var failed = progress ? Number(progress.failed) || 0 : 0;
+  var percent = progress ? Number(progress.percent) || 0 : 0;
+
+  if (screen) {
+    screen.hidden = false;
+  }
+
+  if (fill) {
+    fill.style.width = Math.max(0, Math.min(100, percent)) + "%";
+  }
+
+  if (text) {
+    text.textContent = (message || "Loading...") + " " + (loaded + failed) + "/" + total;
+  }
+}
+
+function hideLoadingScreen() {
+  var screen = getLoadingScreen();
+
+  if (screen) {
+    screen.hidden = true;
+  }
+}
+
+function loadStartupAssets() {
+  var startedAt = performance.now();
+
+  if (!PS.assets || typeof PS.assets.AssetLoader !== "function") {
+    return Promise.resolve({
+      loaded: false,
+      reason: "AssetLoader unavailable",
+      loadMs: 0
+    });
+  }
+
+  var loader = new PS.assets.AssetLoader();
+
+  PS.assets.startupLoader = loader;
+  updateLoadingScreen(loader.getProgress(), "Loading...");
+  loader.onProgress = function (progress) {
+    updateLoadingScreen(progress, "Loading...");
+  };
+
+  return loader.loadManifest("assets/manifest.json").then(function (manifest) {
+    var loadedSheets = PS.assets.loadedSheets || {};
+    var sheetIds = Object.keys(loadedSheets);
+
+    PS.assets.startupStatus = {
+      loaded: true,
+      manifest: manifest,
+      loadedSheets: sheetIds,
+      fallback: false,
+      loadMs: performance.now() - startedAt
+    };
+
+    if (PS.log && typeof PS.log.info === "function") {
+      PS.log.info("assets.loaded", "Loaded asset sheets: " + (sheetIds.join(", ") || "none"));
+    }
+
+    return PS.assets.startupStatus;
+  }).catch(function (error) {
+    PS.assets.startupStatus = {
+      loaded: false,
+      fallback: true,
+      reason: error && error.message ? error.message : String(error),
+      loadMs: performance.now() - startedAt
+    };
+
+    if (PS.runtime && typeof PS.runtime.recordError === "function") {
+      PS.runtime.recordError("asset.manifest.fallback", PS.assets.startupStatus);
+    }
+
+    updateLoadingScreen(loader.getProgress(), "Using fallback...");
+
+    return PS.assets.startupStatus;
+  });
+}
+
+function loadStartupData() {
+  if (!PS.assets || typeof PS.assets.AssetLoader !== "function") {
+    return Promise.resolve({ loaded: false, reason: "AssetLoader unavailable" });
+  }
+
+  var loader = PS.assets.startupLoader || new PS.assets.AssetLoader();
+
+  PS.assets.startupLoader = loader;
+
+  return Promise.all([
+    loader.loadJSON("data/entities.json"),
+    loader.loadJSON("data/tiles.json"),
+    loader.loadJSON("data/biomes.json"),
+    loader.loadJSON("data/transitions.json"),
+    loader.loadJSON("data/particles.json"),
+    loader.loadJSON("data/animations.json"),
+    loader.loadJSON("data/keybindings.json"),
+    loader.loadJSON("data/audio.json")
+  ]).then(function (results) {
+    var entitiesData = results[0];
+    var tilesData = results[1];
+    var biomesData = results[2];
+    var transitionsData = results[3];
+    var particlesData = results[4];
+    var animationsData = results[5];
+    var keybindingsData = results[6];
+    var audioData = results[7];
+    var tileCount = 0;
+    var biomeCount = Array.isArray(biomesData && biomesData.biomes) ? biomesData.biomes.length : 0;
+    var transitionPairs = Array.isArray(transitionsData && transitionsData.pairs) ? transitionsData.pairs.length : 0;
+    var animationGroups = animationsData && animationsData.animations ? Object.keys(animationsData.animations).length : 0;
+
+    if (PS.core && PS.core.EntityRegistry && typeof PS.core.EntityRegistry.loadFromJSON === "function") {
+      PS.core.EntityRegistry.loadFromJSON(entitiesData);
+    }
+
+    if (PS.core && PS.core.TileRegistry && typeof PS.core.TileRegistry.loadFromJSON === "function") {
+      tileCount = PS.core.TileRegistry.loadFromJSON(tilesData).length;
+    }
+
+    if (PS.assets) {
+      PS.assets.biomesData = biomesData;
+      PS.assets.transitionsData = transitionsData;
+      PS.assets.particlesData = particlesData;
+      PS.assets.animationsData = animationsData;
+    }
+
+    if (PS.animation && typeof PS.animation.loadDefinitions === "function") {
+      PS.animation.loadDefinitions(animationsData);
+    }
+
+    if (PS.audio && typeof PS.audio.loadManifest === "function") {
+      PS.audio.loadManifest(audioData);
+    }
+
+    if (PS.input && typeof PS.input.setBindings === "function") {
+      PS.input.setBindings(keybindingsData);
+    }
+
+    if (PS.render && typeof PS.render.TerrainTransitionResolver === "function") {
+      PS.render.terrainTransitions = new PS.render.TerrainTransitionResolver(
+        PS.core && PS.core.TileRegistry ? PS.core.TileRegistry : null,
+        transitionsData
+      );
+    }
+
+    PS.assets.startupDataStatus = {
+      loaded: true,
+      entities: PS.core && PS.core.EntityRegistry ? PS.core.EntityRegistry.list().length : 0,
+      tiles: tileCount,
+      biomes: biomeCount,
+      transitionPairs: transitionPairs,
+      particleEffects: particlesData && particlesData.effects ? Object.keys(particlesData.effects).length : 0,
+      animationGroups: animationGroups,
+      keybindingActions: keybindingsData && keybindingsData.bindings ? Object.keys(keybindingsData.bindings).length : 0,
+      audioTracks: audioData && audioData.music ? Object.keys(audioData.music).length : 0,
+      audioAmbient: audioData && audioData.ambient ? Object.keys(audioData.ambient).length : 0,
+      audioSfx: audioData && audioData.sfx ? Object.keys(audioData.sfx).length : 0,
+      transitionResolverReady: !!(PS.render && PS.render.terrainTransitions)
+    };
+
+    return PS.assets.startupDataStatus;
+  });
+}
+
+function loadStartupShaders() {
+  if (!PS.render || !PS.render.shaderManager || typeof PS.render.shaderManager.loadManifest !== "function") {
+    return Promise.resolve({ loaded: false, reason: "ShaderManager unavailable" });
+  }
+
+  var loader = PS.assets && PS.assets.startupLoader ? PS.assets.startupLoader : null;
+
+  return PS.render.shaderManager.loadManifest(PS.render.shaderManifest, loader).then(function (entries) {
+    var manifestStatus = PS.render.shaderManager.lastManifestStatus || {
+      total: PS.render.shaderManifest ? PS.render.shaderManifest.length : entries.length,
+      loaded: entries.length,
+      failed: 0
+    };
+
+    if (typeof PS.render.shaderManager.shouldAutoHotReload === "function" && PS.render.shaderManager.shouldAutoHotReload()) {
+      PS.render.shaderManager.enableHotReload(1500, loader);
+    }
+
+    PS.assets.startupShaderStatus = {
+      loaded: manifestStatus.loaded > 0,
+      shaders: entries.length,
+      total: manifestStatus.total,
+      failed: manifestStatus.failed,
+      fallback: manifestStatus.failed > 0,
+      failedShaders: manifestStatus.failedShaders || []
+    };
+
+    if (manifestStatus.failed > 0 && PS.runtime && typeof PS.runtime.recordError === "function") {
+      PS.runtime.recordError("shader.manifest.partial", PS.assets.startupShaderStatus);
+    }
+
+    return PS.assets.startupShaderStatus;
+  }).catch(function (error) {
+    PS.assets.startupShaderStatus = {
+      loaded: false,
+      fallback: true,
+      reason: error && error.message ? error.message : String(error)
+    };
+
+    if (PS.runtime && typeof PS.runtime.recordError === "function") {
+      PS.runtime.recordError("shader.manifest.fallback", PS.assets.startupShaderStatus);
+    }
+
+    return PS.assets.startupShaderStatus;
+  });
+}
 
 function gameLoop() {
   try {
-    var now = performance.now();
+    var frameStart = performance.now();
+    var now = frameStart;
     var frameElapsed = Math.min(250, Math.max(0, now - lastFrameTime));
+    var timeFrame = null;
+    var drawElapsed = 0;
+    var hudElapsed = 0;
+    var totalElapsed = 0;
+    var overheadElapsed = 0;
     lastFrameTime = now;
     framesSinceStatsUpdate++;
 
     if (!world.isPaused) {
-      var timeFrame = PS.time.runFrame(frameElapsed, updateWorld);
+      timeFrame = PS.time.runFrame(frameElapsed, updateWorld);
 
       if (timeFrame.ticks > 0) {
         updateMsSinceStatsUpdate += timeFrame.updateMs;
@@ -82,7 +309,7 @@ function gameLoop() {
       var drawStart = performance.now();
       drawWorld();
       world.needsRender = false;
-      var drawElapsed = performance.now() - drawStart;
+      drawElapsed = performance.now() - drawStart;
       PS.time.recordRenderFrame(drawElapsed);
       drawMsSinceStatsUpdate += drawElapsed;
       measuredDrawFrames++;
@@ -114,8 +341,32 @@ function gameLoop() {
     }
 
     if (now - hudTimer >= CONFIG.HUD_UPDATE_INTERVAL_MS) {
+      var hudStart = performance.now();
       updateHud();
+      hudElapsed = performance.now() - hudStart;
       hudTimer = now;
+    }
+
+    totalElapsed = performance.now() - frameStart;
+    overheadElapsed = Math.max(
+      0,
+      totalElapsed -
+        (timeFrame ? Number(timeFrame.updateMs) || 0 : 0) -
+        drawElapsed
+    );
+
+    if (PS.debug && PS.debug.performance && typeof PS.debug.performance.recordFrame === "function") {
+      PS.debug.performance.recordFrame({
+        simMs: timeFrame ? timeFrame.updateMs : 0,
+        renderMs: drawElapsed,
+        overheadMs: Math.max(overheadElapsed, hudElapsed),
+        totalMs: totalElapsed,
+        ticks: timeFrame ? timeFrame.ticks : 0,
+        droppedMs: timeFrame ? timeFrame.droppedMs : 0,
+        droppedTicks: timeFrame && timeFrame.droppedMs > 0 && PS.time && PS.time.catchUpStats
+          ? PS.time.catchUpStats.lastDroppedTicks
+          : 0
+      });
     }
 
     requestAnimationFrame(gameLoop);
@@ -125,17 +376,34 @@ function gameLoop() {
 }
 
 function startGame() {
-  try {
-    setupControls();
-    seedWorld();
-    PS.time.reset();
-    drawWorld();
-    updateHud();
-    syncControlStates();
-    requestAnimationFrame(gameLoop);
-  } catch (error) {
+  updateLoadingScreen({ total: 0, loaded: 0, failed: 0, percent: 0 }, "Loading...");
+
+  return loadStartupAssets().then(function () {
+    return loadStartupData();
+  }).then(function () {
+    return loadStartupShaders();
+  }).then(function () {
+    try {
+      setupControls();
+      seedWorld();
+      PS.time.reset();
+      drawWorld();
+      updateHud();
+      syncControlStates();
+      hideLoadingScreen();
+
+      if (!gameLoopStarted) {
+        gameLoopStarted = true;
+        requestAnimationFrame(gameLoop);
+      }
+    } catch (error) {
+      hideLoadingScreen();
+      reportRuntimeError(error);
+    }
+  }).catch(function (error) {
+    hideLoadingScreen();
     reportRuntimeError(error);
-  }
+  });
 }
 
 window.startGame = startGame;

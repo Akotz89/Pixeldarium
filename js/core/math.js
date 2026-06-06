@@ -31,7 +31,10 @@ PS.math.setSeed = function (seedValue) {
   }
 
   PS.math.seedText = PS.math.normalizeSeedText(seedValue);
-  PS.math.rngState = PS.math.hashSeedText(PS.math.seedText);
+  PS.math.prng = PS.core && typeof PS.core.createPRNG === "function"
+    ? PS.core.createPRNG(PS.math.seedText)
+    : null;
+  PS.math.rngState = PS.math.prng ? PS.math.prng.getState32() : PS.math.hashSeedText(PS.math.seedText);
   return PS.math.seedText;
 };
 
@@ -40,8 +43,18 @@ PS.math.random = function () {
     return randomUnit();
   }
 
-  if (typeof PS.math.rngState !== "number" || PS.math.rngState <= 0) {
+  if (!PS.math.prng && PS.core && typeof PS.core.createPRNG === "function") {
+    PS.math.prng = PS.core.createPRNG(PS.math.seedText || PS.config.constants.DEFAULT_SEED);
+  }
+
+  if (!PS.math.prng && (typeof PS.math.rngState !== "number" || PS.math.rngState <= 0)) {
     PS.math.setSeed(PS.config.constants.DEFAULT_SEED);
+  }
+
+  if (PS.math.prng) {
+    var value = PS.math.prng.next();
+    PS.math.rngState = PS.math.prng.getState32();
+    return value;
   }
 
   var state = PS.math.rngState >>> 0;
@@ -96,3 +109,4 @@ PS.math.deterministicUnitNoise = function (a, b, c) {
 
 PS.math.seedText = PS.math.seedText || "";
 PS.math.rngState = PS.math.rngState || 1;
+PS.math.prng = PS.math.prng || null;

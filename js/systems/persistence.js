@@ -10,6 +10,12 @@ PS.persistence = {
   validateSaveData: function(saveData) {
     return validateWorldSaveData(saveData);
   },
+  migrateSaveData: function(saveData) {
+    return PS.systems.saveMigration.migrate(saveData);
+  },
+  getMigrationStats: function() {
+    return PS.systems.saveMigration.getStats();
+  },
   applySaveData: function(saveData) {
     return applyWorldSaveData(saveData);
   },

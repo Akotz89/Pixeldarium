@@ -39,6 +39,24 @@ PS.render.surfaceRender.createCacheState = function () {
   };
 };
 
+var terrainCache = null;
+var localTerrainCacheSignature = null;
+var localSurfaceRenderChunkCache = PS.render.surfaceRender.createCacheState();
+
+function getLocalSurfaceRenderChunkKey(address) {
+  if (!address) {
+    return "-";
+  }
+
+  return address.chunkKey || [
+    address.zoomLevel,
+    address.sampleMeters,
+    address.chunkSamples,
+    address.chunkX,
+    address.chunkY
+  ].join(":");
+}
+
 PS.render.surfaceRender.invalidateTerrainCache = function () {
   terrainCache = null;
   localTerrainCacheSignature = null;
@@ -134,6 +152,8 @@ PS.render.surfaceRender.resetChunkCache = function () {
   for (var chunkKey in localSurfaceRenderChunkCache.chunks) {
     if (Object.prototype.hasOwnProperty.call(localSurfaceRenderChunkCache.chunks, chunkKey)) {
       PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[chunkKey]);
+      PS.render.surfaceRender.releaseGpuChunkTexture(chunkKey);
+      PS.render.surfaceRender.releaseGpuMaterialTexture(chunkKey);
     }
   }
 
@@ -208,6 +228,83 @@ PS.render.surfaceRender.releaseRenderCanvas = function (renderItem) {
   return false;
 };
 
+PS.render.surfaceRender.releaseGpuChunkTexture = function (renderKey) {
+  if (
+    !renderKey ||
+    !PS.render.webglEngine ||
+    typeof PS.render.webglEngine.releaseCanvasTexture !== "function"
+  ) {
+    return false;
+  }
+
+  return PS.render.webglEngine.releaseCanvasTexture(
+    "surface-chunks",
+    PS.render.surfaceWebgl && PS.render.surfaceWebgl.state ? PS.render.surfaceWebgl.state.gl : null,
+    renderKey,
+    false
+  );
+};
+
+PS.render.surfaceRender.releaseGpuMaterialTexture = function (renderKey) {
+  if (
+    !renderKey ||
+    !PS.render.webglEngine ||
+    typeof PS.render.webglEngine.releaseCanvasTexture !== "function"
+  ) {
+    return false;
+  }
+
+  return PS.render.webglEngine.releaseCanvasTexture(
+    "surface-materials",
+    PS.render.surfaceWebgl && PS.render.surfaceWebgl.state ? PS.render.surfaceWebgl.state.gl : null,
+    renderKey,
+    false
+  );
+};
+
+PS.render.surfaceRender.storeCompletedChunk = function (address, renderChunk) {
+  var renderKey = getLocalSurfaceRenderChunkKey(address);
+
+  if (!renderChunk) {
+    return null;
+  }
+
+  delete localSurfaceRenderChunkCache.pendingChunks[renderKey];
+  localSurfaceRenderChunkCache.stats.misses++;
+  localSurfaceRenderChunkCache.stats.generatedChunks++;
+  localSurfaceRenderChunkCache.chunks[renderKey] = renderChunk;
+  PS.render.surfaceRender.promoteChunkKey(renderKey);
+
+  while (localSurfaceRenderChunkCache.order.length > PS.render.surfaceRender.getChunkCacheLimit()) {
+    var evictedKey = localSurfaceRenderChunkCache.order.shift();
+    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[evictedKey]);
+    PS.render.surfaceRender.releaseGpuChunkTexture(evictedKey);
+    PS.render.surfaceRender.releaseGpuMaterialTexture(evictedKey);
+    delete localSurfaceRenderChunkCache.chunks[evictedKey];
+    localSurfaceRenderChunkCache.stats.evictions++;
+  }
+
+  return renderChunk;
+};
+
+PS.render.surfaceRender.makeReadyChunk = function (address, source) {
+  if (!PS.render.surfaceWorker || typeof PS.render.surfaceWorker.makeChunkPayload !== "function") {
+    return null;
+  }
+
+  var payload = PS.render.surfaceWorker.makeChunkPayload(address);
+
+  return {
+    readyState: "ready",
+    source: source || "sync",
+    address: address,
+    width: payload.width,
+    height: payload.height,
+    cellCache: payload.cellCache,
+    promotedAt: world ? world.tick : 0
+  };
+};
+
 PS.render.surfaceRender.markDirty = function (address) {
   var renderKey = typeof address === "string"
     ? address
@@ -231,12 +328,15 @@ PS.render.surfaceRender.clearDirty = function (renderKey) {
 PS.render.surfaceRender.getChunk = function (address, allowGenerate) {
   var renderKey = getLocalSurfaceRenderChunkKey(address);
   var cachedChunk = localSurfaceRenderChunkCache.chunks[renderKey];
+  var renderChunk = null;
 
   localSurfaceRenderChunkCache.stats.lastChunkKey = renderKey;
 
   if (PS.render.surfaceRender.clearDirty(renderKey)) {
     PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[renderKey]);
     PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.pendingChunks[renderKey]);
+    PS.render.surfaceRender.releaseGpuChunkTexture(renderKey);
+    PS.render.surfaceRender.releaseGpuMaterialTexture(renderKey);
     delete localSurfaceRenderChunkCache.chunks[renderKey];
     delete localSurfaceRenderChunkCache.pendingChunks[renderKey];
     cachedChunk = null;
@@ -256,38 +356,30 @@ PS.render.surfaceRender.getChunk = function (address, allowGenerate) {
   var pendingBuilder = localSurfaceRenderChunkCache.pendingChunks[renderKey];
 
   if (!pendingBuilder) {
-    pendingBuilder = makeLocalSurfaceRenderChunkBuilder(address);
-
-    if (!pendingBuilder) {
+    if (
+      CONFIG.PLANET_SURFACE_WORKER_CHUNKS !== false &&
+      PS.render.surfaceWorker &&
+      PS.render.surfaceWorker.requestChunk(address)
+    ) {
+      localSurfaceRenderChunkCache.pendingChunks[renderKey] = {
+        workerPending: true,
+        address: address
+      };
       return null;
     }
 
-    localSurfaceRenderChunkCache.pendingChunks[renderKey] = pendingBuilder;
+    renderChunk = PS.render.surfaceRender.makeReadyChunk(address, "sync");
+    if (!renderChunk) {
+      return null;
+    }
+    return PS.render.surfaceRender.storeCompletedChunk(address, renderChunk);
   }
 
-  var renderChunk = advanceLocalSurfaceRenderChunkBuilder(
-    pendingBuilder,
-    getLocalSurfaceRenderCellsPerPass()
-  );
-
-  if (!renderChunk) {
+  if (pendingBuilder.workerPending) {
     return null;
   }
 
-  delete localSurfaceRenderChunkCache.pendingChunks[renderKey];
-  localSurfaceRenderChunkCache.stats.misses++;
-  localSurfaceRenderChunkCache.stats.generatedChunks++;
-  localSurfaceRenderChunkCache.chunks[renderKey] = renderChunk;
-  PS.render.surfaceRender.promoteChunkKey(renderKey);
-
-  while (localSurfaceRenderChunkCache.order.length > PS.render.surfaceRender.getChunkCacheLimit()) {
-    var evictedKey = localSurfaceRenderChunkCache.order.shift();
-    PS.render.surfaceRender.releaseRenderCanvas(localSurfaceRenderChunkCache.chunks[evictedKey]);
-    delete localSurfaceRenderChunkCache.chunks[evictedKey];
-    localSurfaceRenderChunkCache.stats.evictions++;
-  }
-
-  return renderChunk;
+  return null;
 };
 
 PS.render.surfaceRender.getPlaceholderColorCacheLimit = function () {

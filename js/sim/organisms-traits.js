@@ -12,8 +12,20 @@ function inheritTraitValue(parentValue, minValue, maxValue, stepValue) {
   return clamp(nextValue, minValue, maxValue);
 }
 
-function makeInitialOrganismTraits() {
-  return {
+function makeInitialOrganismTraits(typeId) {
+  // Use trait registry when available (AZR-493)
+  var typeDefaults = PS.core && PS.core.EntityRegistry && typeof PS.core.EntityRegistry.getTraitDefaults === "function"
+    ? PS.core.EntityRegistry.getTraitDefaults(typeId || "herbivore_basic")
+    : {};
+  var traits;
+
+  if (PS.traitRegistry && PS.traitRegistry.definitionOrder.length > 0) {
+    traits = PS.traitRegistry.makeInitial();
+    return normalizeOrganismTraits(Object.assign(traits, typeDefaults));
+  }
+
+  // Fallback: original CONFIG-based generation
+  traits = {
     vision: varyTraitValue(
       CONFIG.TRAIT_VISION_DEFAULT,
       CONFIG.TRAIT_VISION_MIN,
@@ -52,11 +64,19 @@ function makeInitialOrganismTraits() {
     thermalTolerance: CONFIG.TRAIT_THERMAL_TOLERANCE_DEFAULT,
     waterDependency: CONFIG.TRAIT_WATER_DEPENDENCY_DEFAULT
   };
+
+  return normalizeOrganismTraits(Object.assign(traits, typeDefaults));
 }
 
 function inheritOrganismTraits(parentTraits) {
   parentTraits = normalizeOrganismTraits(parentTraits);
 
+  // Use trait registry when available (AZR-493)
+  if (PS.traitRegistry && PS.traitRegistry.definitionOrder.length > 0) {
+    return PS.traitRegistry.inherit(parentTraits);
+  }
+
+  // Fallback: original CONFIG-based inheritance
   return {
     vision: inheritTraitValue(
       parentTraits.vision,
@@ -382,11 +402,13 @@ function normalizeOrganismTraits(traits) {
   return traits;
 }
 
-function makeOrganism(x, y, lineageId) {
+function makeOrganism(x, y, lineageId, typeId) {
   var tileX = getWrappedWorldX(x);
   var tileY = getClampedWorldY(y);
   var surfacePosition = getRandomLatLonInTile(tileX, tileY);
-  var organism = PS.pools && PS.pools.ensure().organism.acquire();
+  var organism = PS.pools && PS.pools.ensure() && PS.poolManager.acquire("organisms");
+  var entityTypeId = typeId || "herbivore_basic";
+  var entityType = PS.core && PS.core.EntityRegistry ? PS.core.EntityRegistry.get(entityTypeId) : null;
 
   if (!organism) {
     return null;
@@ -400,14 +422,21 @@ function makeOrganism(x, y, lineageId) {
   organism.longitude = surfacePosition.longitude;
   organism.prevLatitude = surfacePosition.latitude;
   organism.prevLongitude = surfacePosition.longitude;
-  organism.energy = CONFIG.STARTING_ORGANISM_ENERGY;
+  organism.energy = entityType && Number.isFinite(Number(entityType.baseEnergy))
+    ? Number(entityType.baseEnergy)
+    : CONFIG.STARTING_ORGANISM_ENERGY;
   organism.age = 0;
   organism.directionX = randomInt(3) - 1;
   organism.directionY = randomInt(3) - 1;
   organism.velocityX = 0;
   organism.velocityY = 0;
   organism.travelKm = 0;
-  organism.traits = makeInitialOrganismTraits();
+  organism.typeId = entityType ? entityType.id : entityTypeId;
+  organism.entityType = organism.typeId;
+  organism.spriteSheet = entityType ? entityType.spriteSheet : "";
+  organism.diet = entityType && entityType.diet ? entityType.diet : "herbivore";
+  organism.maxAge = entityType && Number.isFinite(Number(entityType.maxAge)) ? Number(entityType.maxAge) : CONFIG.ORGANISM_MAX_AGE;
+  organism.traits = makeInitialOrganismTraits(organism.typeId);
   organism.lineageId = lineageId || allocateLineageId();
   organism.lineageParentId = 0;
   organism.generation = 0;
@@ -417,4 +446,14 @@ function makeOrganism(x, y, lineageId) {
 
   registerLineage(organism.lineageId, 0, 0, organism.traits, world.tick);
   return organism;
+}
+
+function createOrganism(typeId, position) {
+  position = position || {};
+  return makeOrganism(
+    Number(position.x) || 0,
+    Number(position.y) || 0,
+    position.lineageId,
+    typeId
+  );
 }

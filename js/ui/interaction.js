@@ -65,12 +65,9 @@ function getCanvasPointFromEvent(event) {
 }
 
 function getCanvasPointFromClient(clientX, clientY) {
-  var rect = canvas.getBoundingClientRect();
-
-  return {
-    canvasX: (Number(clientX) - rect.left) * (canvas.width / rect.width),
-    canvasY: (Number(clientY) - rect.top) * (canvas.height / rect.height)
-  };
+  return PS.camera && PS.camera.unified
+    ? PS.camera.unified.clientToScreen(clientX, clientY)
+    : { canvasX: Number(clientX) || 0, canvasY: Number(clientY) || 0 };
 }
 
 function getTileFromCanvasEvent(event) {
@@ -341,6 +338,214 @@ function restartSimulationFromControls() {
   setPersistenceStatus("SAVE: Ready", false);
 }
 
+function requestRestartSimulationFromControls() {
+  if (PS.ui && PS.ui.modal && typeof PS.ui.modal.confirm === "function") {
+    return PS.ui.modal.confirm({
+      title: "Restart simulation",
+      message: "Restart with the current tuning and seed settings?",
+      confirmLabel: "Restart",
+      cancelLabel: "Cancel"
+    }).then(function(confirmed) {
+      if (confirmed) {
+        restartSimulationFromControls();
+      }
+
+      return confirmed;
+    });
+  }
+
+  restartSimulationFromControls();
+  return Promise.resolve(true);
+}
+
+function registerSimulationInputActions() {
+  if (!PS.input) {
+    return false;
+  }
+
+  if (typeof PS.input.clearHandlers === "function") {
+    PS.input.clearHandlers();
+  }
+
+  PS.input.on("pointer_down", function(event) {
+    beginPlanetDrag(event);
+    return true;
+  });
+  PS.input.on("pointer_move", function(event) {
+    updatePlanetDrag(event);
+    return true;
+  });
+  PS.input.on("pointer_up", function(event) {
+    endPlanetDrag(event);
+    return true;
+  });
+  PS.input.on("pointer_cancel", function(event) {
+    endPlanetDrag(event);
+    return true;
+  });
+  PS.input.on("wheel_zoom", function(event) {
+    if (typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+
+    zoomPlanetView(event.deltaY < 0 ? 0.25 : -0.25, getCanvasPointFromEvent(event));
+    return true;
+  });
+  PS.input.on("close_menu", function(event) {
+    return setMenuOpen(false);
+  });
+  PS.input.on("toggle_performance", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target) || !window.PS || !PS.debug || !PS.debug.performance) {
+      return false;
+    }
+
+    PS.debug.performance.toggle();
+    return true;
+  });
+  PS.input.on("toggle_overlays", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target) || !window.PS || !PS.debug || !PS.debug.overlays) {
+      return false;
+    }
+
+    PS.debug.overlays.toggle();
+    return true;
+  });
+  PS.input.on("toggle_profiler", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target) || !window.PS || !PS.debug || !PS.debug.profiler) {
+      return false;
+    }
+
+    PS.debug.profiler.toggle();
+    return true;
+  });
+  PS.input.on("toggle_console", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target) || !window.PS || !PS.debug || !PS.debug.console) {
+      return false;
+    }
+
+    PS.debug.console.toggle();
+    return true;
+  });
+  PS.input.on("cycle_observation_overlay", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target) || !window.PS || !PS.ui || !PS.ui.observationOverlays) {
+      return false;
+    }
+
+    PS.ui.observationOverlays.cycle();
+    return true;
+  });
+  PS.input.on("toggle_menu", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    toggleMenuOpen();
+    return true;
+  });
+  PS.input.on("toggle_pause", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    toggleSimulationPaused();
+    return true;
+  });
+  PS.input.on("step_once", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    stepSimulationOnce();
+    return true;
+  });
+  PS.input.on("zoom_in_large", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    zoomPlanetView(1);
+    return true;
+  });
+  PS.input.on("zoom_out_large", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    zoomPlanetView(-1);
+    return true;
+  });
+  PS.input.on("zoom_in", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    zoomPlanetView(0.5);
+    return true;
+  });
+  PS.input.on("zoom_out", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    zoomPlanetView(-0.5);
+    return true;
+  });
+  PS.input.on("pan_up", function(event) {
+    return shouldIgnoreSimulationShortcut(event.target) ? false : panPlanetViewFromKeyboard(0, 24);
+  });
+  PS.input.on("pan_down", function(event) {
+    return shouldIgnoreSimulationShortcut(event.target) ? false : panPlanetViewFromKeyboard(0, -24);
+  });
+  PS.input.on("pan_left", function(event) {
+    return shouldIgnoreSimulationShortcut(event.target) ? false : panPlanetViewFromKeyboard(-24, 0);
+  });
+  PS.input.on("pan_right", function(event) {
+    return shouldIgnoreSimulationShortcut(event.target) ? false : panPlanetViewFromKeyboard(24, 0);
+  });
+  PS.input.on("restart", function(event) {
+    if (shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    requestRestartSimulationFromControls();
+    return true;
+  });
+  PS.input.on("menu_page_controls", function(event) {
+    if (!world.isMenuOpen || shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    setMenuPage("controls");
+    return true;
+  });
+  PS.input.on("menu_page_status", function(event) {
+    if (!world.isMenuOpen || shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    setMenuPage("status");
+    return true;
+  });
+  PS.input.on("menu_page_ecosystem", function(event) {
+    if (!world.isMenuOpen || shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    setMenuPage("ecosystem");
+    return true;
+  });
+  PS.input.on("menu_page_log", function(event) {
+    if (!world.isMenuOpen || shouldIgnoreSimulationShortcut(event.target)) {
+      return false;
+    }
+
+    setMenuPage("log");
+    return true;
+  });
+
+  return true;
+}
+
 function shouldIgnoreSimulationShortcut(target) {
   if (!target) {
     return false;
@@ -358,76 +563,13 @@ function shouldIgnoreSimulationShortcut(target) {
 }
 
 function handleSimulationShortcut(event) {
-  var key = String(event.key || "");
-  var code = String(event.code || "");
-  var handled = false;
-
-  if (code === "Escape" || key === "Escape") {
-    handled = setMenuOpen(false);
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && code === "F3" && window.PS && PS.debug && PS.debug.performance) {
-    handled = true;
-    PS.debug.performance.toggle();
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && code === "F4" && window.PS && PS.debug && PS.debug.overlays) {
-    handled = true;
-    PS.debug.overlays.toggle();
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && code === "F5" && window.PS && PS.debug && PS.debug.profiler) {
-    handled = true;
-    PS.debug.profiler.toggle();
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "Backquote" || key === "`") && window.PS && PS.debug && PS.debug.console) {
-    handled = true;
-    PS.debug.console.toggle();
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "KeyO" || key.toLowerCase() === "o") && window.PS && PS.ui && PS.ui.observationOverlays) {
-    handled = true;
-    PS.ui.observationOverlays.cycle();
-  } else if (!shouldIgnoreSimulationShortcut(event.target) && (code === "KeyM" || key.toLowerCase() === "m")) {
-    handled = true;
-    toggleMenuOpen();
-  } else if (shouldIgnoreSimulationShortcut(event.target)) {
-    return;
-  } else if (code === "Space" || key === " ") {
-    handled = true;
-    toggleSimulationPaused();
-  } else if (code === "KeyN" || key.toLowerCase() === "n") {
-    handled = true;
-    stepSimulationOnce();
-  } else if (code === "BracketRight" || key === "]") {
-    handled = true;
-    zoomPlanetView(1);
-  } else if (code === "BracketLeft" || key === "[") {
-    handled = true;
-    zoomPlanetView(-1);
-  } else if (code === "ArrowUp") {
-    handled = panPlanetViewFromKeyboard(0, 24);
-  } else if (code === "ArrowDown") {
-    handled = panPlanetViewFromKeyboard(0, -24);
-  } else if (code === "ArrowLeft") {
-    handled = panPlanetViewFromKeyboard(-24, 0);
-  } else if (code === "ArrowRight") {
-    handled = panPlanetViewFromKeyboard(24, 0);
-  } else if (code === "Equal" || code === "NumpadAdd" || key === "+" || key === "=") {
-    handled = true;
-    zoomPlanetView(0.5);
-  } else if (code === "Minus" || code === "NumpadSubtract" || key === "-" || key === "_") {
-    handled = true;
-    zoomPlanetView(-0.5);
-  } else if (code === "KeyR" || key.toLowerCase() === "r") {
-    handled = true;
-    restartSimulationFromControls();
-  } else if (world.isMenuOpen && code === "Digit1") {
-    handled = true;
-    setMenuPage("controls");
-  } else if (world.isMenuOpen && code === "Digit2") {
-    handled = true;
-    setMenuPage("status");
-  } else if (world.isMenuOpen && code === "Digit3") {
-    handled = true;
-    setMenuPage("ecosystem");
-  } else if (world.isMenuOpen && code === "Digit4") {
-    handled = true;
-    setMenuPage("log");
-  }
+  var handled = PS.input && typeof PS.input.handleKeyDown === "function"
+    ? PS.input.handleKeyDown(event)
+    : false;
 
   if (handled && typeof event.preventDefault === "function") {
     event.preventDefault();
   }
+
+  return handled;
 }

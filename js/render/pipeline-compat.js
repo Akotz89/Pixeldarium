@@ -1,33 +1,3 @@
-function drawSurfaceMarker(tctx, sample, screenX, screenY) {
-  PS.render.surfaceDraw.drawMarker(tctx, sample, screenX, screenY);
-}
-
-function drawSurfaceSwatch(tctx, swatch, screenX, screenY) {
-  PS.render.surfaceDraw.drawSwatch(tctx, swatch, screenX, screenY);
-}
-
-function getPlanetSurfaceSubcellBasePatchSize(sample) {
-  return PS.render.surfaceDraw.getSubcellBasePatchSize(sample);
-}
-
-function getPlanetSurfaceSubcellBasePatchColor(sample, baseColor, localX, localY) {
-  return PS.render.surfaceDraw.getSubcellBasePatchColor(sample, baseColor, localX, localY);
-}
-
-function getPlanetSurfaceSubcellBasePatches(sample, baseColor) {
-  return PS.render.surfaceDraw.getSubcellBasePatches(sample, baseColor);
-}
-
-function drawSurfaceBaseCell(tctx, sample, baseColor, screenX, screenY) {
-  PS.render.surfaceDraw.drawBaseCell(tctx, sample, baseColor, screenX, screenY);
-}
-
-function drawSurfaceMicrotexture(tctx, sample, baseColor, screenX, screenY) {
-  PS.render.surfaceDraw.drawMicrotexture(tctx, sample, baseColor, screenX, screenY);
-}
-
-
-
 function getPlanetLocalReferenceGridInfo(targetPixels) {
   return PS.render.reference.getLocalGridInfo(targetPixels);
 }
@@ -48,8 +18,25 @@ function drawPlanetReferenceGrid() {
   return PS.render.reference.draw();
 }
 
-window.buildTerrainCache = buildTerrainCache;
-window.invalidateTerrainCache = invalidateTerrainCache;
+window.buildTerrainCache = function () {
+  return PS.render && PS.render.terrain && typeof PS.render.terrain.buildCache === "function"
+    ? PS.render.terrain.buildCache()
+    : null;
+};
+window.invalidateTerrainCache = function () {
+  return PS.render && PS.render.terrain && typeof PS.render.terrain.invalidateCache === "function"
+    ? PS.render.terrain.invalidateCache()
+    : true;
+};
+window.getLocalSurfaceRenderCacheStats = function () {
+  return {
+    chunks: 0,
+    lastVisibleChunks: 0,
+    lastPendingChunks: 0,
+    lastGeneratedThisPass: 0,
+    lastFallbackChunks: 0
+  };
+};
 
 window.drawWorld = function() {
   if (window.PS && PS.render && PS.render.pipeline && typeof PS.render.pipeline.drawWorld === "function") {
@@ -57,8 +44,9 @@ window.drawWorld = function() {
     return;
   }
 
-  drawTerrain();
-  drawPlanetReferenceGrid();
+  if (PS.render && PS.render.terrain && typeof PS.render.terrain.draw === "function") {
+    PS.render.terrain.draw();
+  }
 
   if (window.PS && PS.render && PS.render.overlays) {
     PS.render.overlays.drawOrbitalAssets();

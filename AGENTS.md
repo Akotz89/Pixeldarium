@@ -39,6 +39,12 @@ register via `PS.epochs.register()`. No hardcoded era if/else chains.
 Spatial index chunks must align with render tile boundaries. Queries return
 chunk-local results.
 
+### Optimization Operating Model
+Follow `docs/optimization-operating-model.md` for scale-sensitive work. Every
+performance, rendering, streaming, or mass-simulation change must identify the
+bottleneck, representation change, chunk/batch/aggregate boundary, readiness
+state, perception contract, new constraint, and verification metric.
+
 ## File Structure
 
 ```
@@ -89,112 +95,37 @@ before WSL receives them. Put multi-step bash bodies in a checked-in or scratch
 - No external CDN dependencies
 - GitHub Pages deploys from main branch root
 
-## AI Game Studio (`tools/agent-studio/`)
+## Agent Studio Handoff
 
-The agent studio is the AI-controlled asset production pipeline. It lives
-entirely outside the game runtime. **Runtime is zero-dependency; tooling can
-use anything.**
+Pixeldarium Agent Studio is now a separate private tooling project:
 
-### Architecture Boundary
+- Local root: `/mnt/c/Users/Aaron/Azyrra/projects/pixeldarium-agent-studio`
+- GitHub: `Akotz89/Pixeldarium-Agent-Studio`
+- Linear project: `Pixeldarium Agent Studio`
 
-```
-tools/agent-studio/           ← Tooling (Node, Python, external APIs)
-  ├── scripts/                ← Python post-processing pipeline
-  ├── source/                 ← Art bible palette, style references
-  ├── templates/              ← Prompt templates for AI generation
-  ├── exports/                ← Raw AI output (NOT runtime)
-  ├── work-orders/            ← Structured generation requests
-  ├── reports/                ← QA evidence, dashboards
-  ├── pipeline.manifest.json  ← Tool/lane discovery for agents
-  └── *.js                    ← Adapter scripts (Node.js)
+This game repo remains the zero-dependency runtime. Do not add Node, Python,
+DCC, AI-generation, media-processing, or external API requirements to the
+runtime path.
 
-js/                           ← Runtime (zero-dependency, PS.* namespace)
-assets/                       ← Runtime-integrated sprites/audio
-```
+The only valid handoff from Agent Studio into this repo is a reviewed runtime
+integration change that lands accepted assets and updates runtime manifests or
+script tags as needed. Raw outputs, work orders, reports, adapter jobs,
+provider credentials, generated evidence, and production-lane tooling stay in
+the private studio repo.
 
-**NEVER** import tooling scripts, Node modules, or Python into the game
-runtime. The runtime boundary is enforced by `validate-pipeline.js`.
+When a runtime change needs image-generation source material, route the studio
+job through an approved private tooling adapter such as `run-openai-image-job.js`
+and import only reviewed runtime assets through a separate integration patch.
 
-### Post-Processing Pipeline (Python)
+Runtime boundary checks:
 
-All AI-generated sprites MUST pass through the post-processing pipeline
-before runtime integration. The pipeline is at `tools/agent-studio/scripts/`:
-
-| Step | Script | Purpose |
-|---|---|---|
-| 1 | `normalize_sprite.py` | Strip metadata, force RGBA PNG |
-| 2 | `grid_snap.py` | Nearest-neighbor snap to pixel grid |
-| 3 | `palette_snap.py` | Quantize to art bible palette via CIELAB ΔE |
-| 4 | `alpha_clean.py` | Threshold alpha, remove fringes |
-| 5 | `atlas_pack.py` | Pack frames → sprite sheet + JSON atlas |
-
-Run the full pipeline:
 ```bash
-python3 tools/agent-studio/scripts/pipeline_runner.py \
-  --input exports/raw-sprite.png \
-  --palette source/pixeldarium-palette.json \
-  --output exports/processed/ \
-  --tile-size 16
+bash .codex/setup.sh
+rg -n "agent-studio|tools/agent-studio" index.html js
 ```
 
-Validate output:
-```bash
-node tools/agent-studio/verify-sprite-sheet.js exports/processed/sprite-sheet.png
-```
-
-**Dependencies:** Python 3.10+, Pillow, NumPy (tooling only, not runtime).
-
-### Art Bible & Palette
-
-- Palette: `tools/agent-studio/source/pixeldarium-palette.json` (24 colors)
-- All generated sprites MUST use only these 24 colors after post-processing
-- Tile sizes: 16×16 (terrain), 16×32 (entities), 32×32 (buildings)
-- Style: Songs of Syx-inspired, low-res pixel art, limited palette
-
-### Prompt Templates
-
-When generating sprites with `gpt-image-2` or PixelLab, use the prompt
-templates at `tools/agent-studio/templates/` for consistent output.
-Templates encode: canvas size, background transparency, palette constraints,
-animation frame layout, and art direction.
-
-### Generation Workflow
-
-1. Create work order (`create-work-order.js`) or use prompt template
-2. Generate raw sprite (gpt-image-2 / PixelLab / Aseprite)
-3. Post-process (`pipeline_runner.py` — normalize → grid → palette → alpha → pack)
-4. Validate (`verify-sprite-sheet.js` — format, bounds, color count)
-5. Score acceptance (`score-asset-acceptance.js` — palette compliance, readability)
-6. Integrate into runtime (manual gate — update `PS.assets`, add to `index.html`)
-
-### MCP Tools Available
-
-#### Sprite & Asset Generation
-- **PixelLab** (`pixellab`) — 4/8-direction characters, tilesets, animations,
-  map objects, rotations, inpaint. See `tools/agent-studio/docs/pixellab-api-reference.md`.
-  Env: `PIXELLAB_API_KEY`
-- **SpriteCook** (`spritecook`) — Agent-driven sprite generation, smart cropping,
-  animation, style consistency. Env: `SPRITECOOK_API_KEY`
-- **pixel-mcp** (`pixel-mcp`) — Aseprite integration for pixel-perfect editing,
-  palette management, animation via natural language. Needs Aseprite installed.
-- **gpt-image-2** — Built-in Codex image generation (when available)
-
-#### Audio & Music
-- **ElevenLabs** (`elevenlabs`) — Voice synthesis, music generation, sound
-  effects. Studio quality. Env: `ELEVENLABS_API_KEY`
-
-#### Project Management
-- **Hindsight** (`local-hindsight`) — Recall prior art decisions, style notes
-- **Linear** — Track generation issues under AZR epic structure
-- **GitHub** — Push commits, create PRs
-
-#### API Key Setup
-Set environment variables at User level (persist across sessions):
-```powershell
-[System.Environment]::SetEnvironmentVariable("PIXELLAB_API_KEY", "your-key", "User")
-[System.Environment]::SetEnvironmentVariable("SPRITECOOK_API_KEY", "your-key", "User")
-[System.Environment]::SetEnvironmentVariable("ELEVENLABS_API_KEY", "your-key", "User")
-```
+The `rg` command must return no matches before runtime changes are considered
+clean. See `docs/agent-studio-handoff.md` for the full handoff contract.
 
 ## Planning Artifacts
 
