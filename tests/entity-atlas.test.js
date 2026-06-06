@@ -240,6 +240,9 @@ for (let y = 10000; y < 10016; y++) {
 }
 const sparseFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3 });
 const richFoodCell = context.PS.atlas.getFoodCell(0, { x: 2, y: 3, amount: 140 });
+const grainFoodCell = context.PS.atlas.getFoodCell(0, { x: 4, y: 5, amount: 140, category: "grain" });
+const fruitFoodCell = context.PS.atlas.getFoodCell(0, { x: 4, y: 5, amount: 140, category: "fruit" });
+const oreFoodCell = context.PS.atlas.getFoodCell(0, { x: 4, y: 5, amount: 140, category: "ore" });
 const campCell = context.PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
 const colonyCell = context.PS.atlas.getSettlementCell({ lineageId: 2, level: 6, isColony: true });
 const outpostCell = context.PS.atlas.getSettlementCell({ lineageId: 3, level: 2, isOutpost: true });
@@ -334,6 +337,13 @@ assert.ok(richFoodCell.name.indexOf("entity.food.0.3") === 0, "rich food cells s
 assert.notStrictEqual(sparseFoodCell.name, richFoodCell.name, "resource richness should not overwrite sparse food atlas cells");
 assert.ok(uniqueColorCount(richFoodCell) >= uniqueColorCount(sparseFoodCell), "rich food cells should carry denser resource detail");
 assert.notDeepStrictEqual(pixelAt(sparseFoodCell, 7, 7), pixelAt(richFoodCell, 7, 7), "resource richness should change visible atlas pixels");
+assert.ok(grainFoodCell.name.indexOf("entity.food.0.3.1") === 0, "grain resources should use the storage/sack family bucket");
+assert.ok(fruitFoodCell.name.indexOf("entity.food.0.3.2") === 0, "fruit resources should use the produce/fungus family bucket");
+assert.ok(oreFoodCell.name.indexOf("entity.food.0.3.3") === 0, "ore resources should use the raw-material family bucket");
+assert.notStrictEqual(grainFoodCell.name, fruitFoodCell.name, "resource family should be part of food atlas identity");
+assert.notStrictEqual(fruitFoodCell.name, oreFoodCell.name, "raw materials should not overwrite produce atlas cells");
+assert.notDeepStrictEqual(pixelAt(grainFoodCell, 7, 7), pixelAt(fruitFoodCell, 7, 7), "grain and produce resources should render distinct pixels");
+assert.notDeepStrictEqual(pixelAt(fruitFoodCell, 7, 7), pixelAt(oreFoodCell, 7, 7), "produce and ore resources should render distinct pixels");
 assert.ok(campCell.name.indexOf("entity.settlement.camp.0.1") === 0, "root camps should use bounded settlement atlas keys");
 assert.ok(colonyCell.name.indexOf("entity.settlement.colony.2.2") === 0, "colonies should encode archetype, level bucket, and lineage bucket");
 assert.ok(outpostCell.name.indexOf("entity.settlement.outpost.0.3") === 0, "outposts should encode their own bounded archetype");

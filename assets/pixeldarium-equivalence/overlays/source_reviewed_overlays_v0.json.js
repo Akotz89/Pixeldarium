@@ -1,0 +1,255 @@
+PS.assets.registerJSON("assets/pixeldarium-equivalence/overlays/source_reviewed_overlays_v0.json", {
+  "schemaVersion": 1,
+  "type": "texturepacker",
+  "image": "source_reviewed_overlays_v0.png",
+  "tileSize": 32,
+  "frames": {
+    "citizen-social": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "citizen-social",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 8,
+      "camera": "straight-down"
+    },
+    "event-framework": {
+      "frame": {
+        "x": 32,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "event-framework",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 23,
+      "camera": "straight-down"
+    },
+    "incident-disaster": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "incident-disaster",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 3,
+      "camera": "straight-down"
+    },
+    "incident-health": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "incident-health",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 1,
+      "camera": "straight-down"
+    },
+    "incident-security": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "incident-security",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 11,
+      "camera": "straight-down"
+    },
+    "map-event-control": {
+      "frame": {
+        "x": 160,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-event-overlay",
+      "sourceRequirement": "map-event-control",
+      "sourceLane": "event-simulation-source",
+      "sourceCount": 4,
+      "camera": "straight-down"
+    },
+    "path-component-debug": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-path-debug-overlay",
+      "sourceRequirement": "path-component-debug",
+      "sourceLane": "pathfinding-source",
+      "sourceCount": 16,
+      "camera": "straight-down"
+    },
+    "path-logistics": {
+      "frame": {
+        "x": 224,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-path-debug-overlay",
+      "sourceRequirement": "path-logistics",
+      "sourceLane": "pathfinding-source",
+      "sourceCount": 2,
+      "camera": "straight-down"
+    },
+    "path-request-debug": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-path-debug-overlay",
+      "sourceRequirement": "path-request-debug",
+      "sourceLane": "pathfinding-source",
+      "sourceCount": 15,
+      "camera": "straight-down"
+    },
+    "path-target": {
+      "frame": {
+        "x": 288,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-path-debug-overlay",
+      "sourceRequirement": "path-target",
+      "sourceLane": "pathfinding-source",
+      "sourceCount": 10,
+      "camera": "straight-down"
+    },
+    "path-validity": {
+      "frame": {
+        "x": 320,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-path-debug-overlay",
+      "sourceRequirement": "path-validity",
+      "sourceLane": "pathfinding-source",
+      "sourceCount": 4,
+      "camera": "straight-down"
+    },
+    "placement-landing": {
+      "frame": {
+        "x": 352,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-placement-overlay",
+      "sourceRequirement": "placement-landing",
+      "sourceLane": "placement-source",
+      "sourceCount": 1,
+      "camera": "straight-down"
+    },
+    "placement-tile-grid": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-placement-overlay",
+      "sourceRequirement": "placement-tile-grid",
+      "sourceLane": "placement-source",
+      "sourceCount": 3,
+      "camera": "straight-down"
+    },
+    "placement-validity": {
+      "frame": {
+        "x": 416,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "_OVERLAY",
+      "category": "source-derived-placement-overlay",
+      "sourceRequirement": "placement-validity",
+      "sourceLane": "placement-source",
+      "sourceCount": 2,
+      "camera": "straight-down"
+    },
+    "ambient-state": {
+      "frame": {
+        "x": 448,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-time-ambient-overlay",
+      "sourceRequirement": "ambient-state",
+      "sourceLane": "time-ambient-source",
+      "sourceCount": 1,
+      "camera": "straight-down"
+    },
+    "time-cycle": {
+      "frame": {
+        "x": 480,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-time-ambient-overlay",
+      "sourceRequirement": "time-cycle",
+      "sourceLane": "time-ambient-source",
+      "sourceCount": 2,
+      "camera": "straight-down"
+    },
+    "time-interval": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "sheet": "SPECIAL",
+      "category": "source-derived-time-ambient-overlay",
+      "sourceRequirement": "time-interval",
+      "sourceLane": "time-ambient-source",
+      "sourceCount": 1,
+      "camera": "straight-down"
+    }
+  },
+  "meta": {
+    "app": "Pixeldarium",
+    "originalArt": true,
+    "runtimeUse": true,
+    "source": "pixeldarium-owned-generated-candidate",
+    "handoffIssue": "AZR-797",
+    "reviewIssue": "AZR-795",
+    "family": "overlays"
+  }
+});
