@@ -124,6 +124,13 @@ from aggregate civilization state.
   need for multiple packed atlas pages; the atlas now allocates additional
   256x256 RGBA pages instead of throwing when visual-density cells exceed one
   page.
+- Direct `file://` settlement-readiness contrast probe after neutralizing the
+  instance tint for authored-color readiness atlas cells: the same seeded
+  aggregate lineage marker reported `drew=true`, `readinessDrawCount=2`,
+  `frameInstanceDrawCount=11`, `lastError=""`, no page errors, and no failed
+  requests. Pixel sampling around the marker moved from the previous dark
+  double-tinted samples such as `[3,6,9,255]` to a visible warm marker sample of
+  `[206,173,85,255]`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -154,9 +161,10 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   per WebGL submission; terrain atlas upload pages now use typed buffers instead
   of boxed JS arrays at the submission lifecycle boundary; pre-settlement
   lineage pressure now becomes capped watcher-facing readiness facades instead
-  of remaining inspector/history-only aggregate state; the packed atlas now
-  grows by page instead of treating the first 256x256 page as a hard visual
-  density ceiling.
+  of remaining inspector/history-only aggregate state; readiness facade atlas
+  cells now own their authored color and use neutral instance tint instead of
+  multiplying the lineage palette twice; the packed atlas now grows by page
+  instead of treating the first 256x256 page as a hard visual density ceiling.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -205,7 +213,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   `8192` instances; terrain atlas page buffers use the existing 10-float
   instance encoding and allocate transient typed capacity per atlas page;
   settlement readiness markers are capped at `6`, use progress buckets `0..3`,
-  and packed atlas pages grow in 256x256 RGBA increments.
+  use neutral `#ffffff` sprite tint so authored atlas color is not double
+  tinted, and packed atlas pages grow in 256x256 RGBA increments.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
@@ -214,8 +223,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   active ecology microstructure unique-color and `ecoform` key evidence, and
   close-band terrain draw reduction, upload-segment evidence, typed page-builder
   terrain frame evidence, settlement-readiness facade draw evidence, atlas
-  multi-page allocation coverage, and high-coordinate terrain variant regression
-  coverage.
+  multi-page allocation coverage, settlement-readiness contrast pixel evidence
+  from `[3,6,9,255]` to `[206,173,85,255]`, and high-coordinate terrain variant
+  regression coverage.
 
 ## Current Visual Gap
 

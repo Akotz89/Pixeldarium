@@ -170,7 +170,7 @@ PS.render.entityWebgl.buildSettlementReadinessBatches = function () {
     }, 1);
     var scale = point && Number.isFinite(Number(point.scale)) ? Number(point.scale) : 1;
     var size = Math.max(72, (48 + marker.progressBucket * 16) * scale);
-    var tint = PS.render.entityWebgl.parseColor(PS.render.entities.getLineageColorById(marker.lineageId), 0.92);
+    var tint = PS.render.entityWebgl.parseColor("#ffffff", 1);
 
     if (point) {
       point = {

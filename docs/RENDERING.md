@@ -184,7 +184,9 @@ pixel throughput while the data-texture shader work is prepared.
 Settlement readiness facades are pre-settlement watcher markers. They are
 derived from aggregate lineage active/peak population progress, capped by
 `CONFIG.PLANET_SETTLEMENT_READINESS_MAX_MARKERS`, and stop once authoritative
-settlement aggregates exist. They do not create or persist settlements.
+settlement aggregates exist. Readiness atlas cells own their authored color and
+use neutral sprite tint, so the entity shader does not multiply lineage color
+twice. They do not create or persist settlements.
 
 ## Shader Reference
 
