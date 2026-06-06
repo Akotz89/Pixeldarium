@@ -125,6 +125,45 @@ const cliffCell = context.PS.atlas.getTerrainCell("mountain", 14, 5, {
     materialSignals: { surfaceRoughness: 0.92 }
   }
 });
+const riverCell = context.PS.atlas.getTerrainCell("grassland", 16, 6, {
+  detail: {
+    surface: "river channel",
+    elevation: -0.12,
+    roughness: 0.2,
+    materialSignals: { waterDepth: 0.42, wetness: 0.9, flow: 0.82 }
+  }
+});
+const tidalMudCell = context.PS.atlas.getTerrainCell("grassland", 17, 6, {
+  detail: {
+    surface: "tidal shore",
+    elevation: -0.04,
+    materialSignals: { wetness: 0.78 }
+  }
+});
+const lavaFlowCell = context.PS.atlas.getTerrainCell("mountain", 18, 6, {
+  detail: {
+    surface: "lava flow",
+    elevation: 0.72,
+    roughness: 0.54,
+    materialSignals: { lava: 0.94, heat: 1 }
+  }
+});
+const lichenTundraCell = context.PS.atlas.getTerrainCell("tundra", 19, 6, {
+  detail: {
+    surface: "lichen frost",
+    elevation: 0.32,
+    roughness: 0.22,
+    materialSignals: { lichen: 0.86, snow: 0.18 }
+  }
+});
+const reedMatCell = context.PS.atlas.getTerrainCell("wetland", 20, 6, {
+  detail: {
+    surface: "reed mat",
+    elevation: 0.08,
+    roughness: 0.12,
+    materialSignals: { wetness: 0.86, reedDensity: 0.92 }
+  }
+});
 const plainGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
   detail: {
     surface: "grass",
@@ -371,6 +410,17 @@ assert.ok(forestCell.name.indexOf("terrain.forest_floor.") === 0 || forestCell.n
 assert.ok(deepWaterCell.name.indexOf("terrain.water_deep.") === 0, "deep water samples should select the deep water tile");
 assert.ok(marshCell.name.indexOf("terrain.marsh.") === 0 || marshCell.name.indexOf("terrain.wetland.") === 0 || marshCell.name.indexOf("terrain.mud.") === 0, "wet samples should select wetland material tiles");
 assert.ok(cliffCell.name.indexOf("terrain.rock_cliff.") === 0 || cliffCell.name.indexOf("terrain.rock.") === 0, "rough mountain samples should select rock material tiles");
+assert.ok(riverCell.name.indexOf("terrain.river_shallow.") === 0, "river samples should select the registered shallow river material");
+assert.ok(tidalMudCell.name.indexOf("terrain.tidal_mud.") === 0, "shore samples should select the registered tidal mud material");
+assert.ok(lavaFlowCell.name.indexOf("terrain.lava_flow.") === 0, "lava samples should select the registered lava flow material");
+assert.ok(lichenTundraCell.name.indexOf("terrain.lichen_tundra.") === 0, "lichen/cold samples should select the registered lichen tundra material");
+assert.ok(reedMatCell.name.indexOf("terrain.reed_mat.") === 0, "reed mat samples should select the registered reed mat material");
+assert.notDeepStrictEqual(pixelAt(riverCell, 7, 7), pixelAt(deepWaterCell, 7, 7), "river material should render distinct pixels from open water");
+assert.notDeepStrictEqual(pixelAt(tidalMudCell, 7, 7), pixelAt(plainGrassCell, 7, 7), "tidal mud should render distinct pixels from plain grass");
+assert.notDeepStrictEqual(pixelAt(lavaFlowCell, 7, 7), pixelAt(volcanicCell, 7, 7), "lava flow should render distinct pixels from generic volcanic ground");
+assert.notDeepStrictEqual(pixelAt(lichenTundraCell, 7, 7), pixelAt(forestCell, 7, 7), "lichen tundra should render distinct pixels from forest material");
+assert.notDeepStrictEqual(pixelAt(reedMatCell, 7, 7), pixelAt(marshCell, 7, 7), "reed mats should render distinct pixels from generic marsh");
+assert.ok([riverCell, lavaFlowCell, lichenTundraCell].every((cell) => uniqueColorCount(cell) >= 5), "new material cells should preserve authored terrain detail");
 assert.ok(plainGrassCell.name.indexOf(".plain") > 0, "plain terrain cells should keep an explicit plain transition key");
 assert.ok(noFeatureCell.name.indexOf(".feature0.") > 0, "no-signal fallback terrain should keep an explicit no-feature key");
 assert.ok(forestCell.name.indexOf(".feature.canopy.") > 0, "forest terrain should encode bounded canopy feature marks");

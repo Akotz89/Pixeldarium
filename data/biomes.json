@@ -35,7 +35,7 @@
       "id": "tundra",
       "name": "Tundra",
       "primaryTiles": ["snow", "ice"],
-      "edgeTiles": ["grass_dead", "rock"],
+      "edgeTiles": ["lichen_tundra", "grass_dead", "rock"],
       "vegetationDensity": 0.18,
       "treeTypes": ["dwarf_pine", "lichen"],
       "temperature": { "min": -32, "max": 6 },
@@ -54,8 +54,8 @@
     {
       "id": "coastal",
       "name": "Coastal",
-      "primaryTiles": ["sand", "water_shallow"],
-      "edgeTiles": ["dirt", "wetland"],
+      "primaryTiles": ["sand", "water_shallow", "river_shallow"],
+      "edgeTiles": ["tidal_mud", "dirt", "wetland"],
       "vegetationDensity": 0.46,
       "treeTypes": ["palm", "coastal_grass"],
       "temperature": { "min": 8, "max": 32 },
@@ -64,7 +64,7 @@
     {
       "id": "volcanic",
       "name": "Volcanic",
-      "primaryTiles": ["volcanic", "rock"],
+      "primaryTiles": ["volcanic", "lava_flow", "rock"],
       "edgeTiles": ["rock_cliff", "grass_dead"],
       "vegetationDensity": 0.05,
       "treeTypes": ["ash_scrub"],
@@ -74,7 +74,7 @@
     {
       "id": "wetland",
       "name": "Wetland",
-      "primaryTiles": ["marsh", "water_shallow"],
+      "primaryTiles": ["marsh", "reed_mat", "water_shallow"],
       "edgeTiles": ["mud", "wetland"],
       "vegetationDensity": 0.86,
       "treeTypes": ["willow", "reed", "cypress"],

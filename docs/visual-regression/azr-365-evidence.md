@@ -165,6 +165,22 @@ from aggregate civilization state.
   cell reported `6` unique colors. A direct interaction smoke changed
   latitude/longitude at zoom `7`, reported no page errors or failed requests,
   and kept `debugText=""`.
+- Direct `file://` authored terrain material-family probe after registering
+  bounded river, tidal, lava, lichen, and reed material IDs: no page errors, no
+  failed requests, `debugText=""`, `renderer=webgl2`, and
+  `singleVisibleCanvas=true`. Runtime tile registry exposed
+  `river_shallow`, `tidal_mud`, `lava_flow`, `lichen_tundra`, and `reed_mat`.
+  Browser atlas cells included
+  `terrain.river_shallow.0.plain.feature.foam.3.bio0.civ0`,
+  `terrain.tidal_mud.1.plain.feature.foam.3.bio0.civ0`,
+  `terrain.lava_flow.2.plain.feature.ember.3.bio0.civ0`,
+  `terrain.lichen_tundra.2.plain.feature.frost.1.bio0.civ0`, and
+  `terrain.reed_mat.3.plain.feature.reed.3.bio0.civ0`, with `5..6` unique
+  colors per cell. Center samples were river `[36,107,133,255]`, tidal
+  `[50,37,8,255]`, lava `[182,111,90,255]`, lichen `[159,176,142,255]`, and
+  reed `[177,200,124,255]`. A direct interaction smoke changed zoom
+  `0 -> 0.25`, changed latitude/longitude, and kept atlas page bytes at
+  `262144`.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -219,7 +235,10 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain instance upload segment as its GPU submission boundary; terrain atlas
   upload pages now use typed page buffers as the atlas-page batch boundary;
   terrain feature marks use the existing 16x16 terrain atlas cell and WebGL
-  atlas-page batch boundary; civilization terrain footprints use the ready
+  atlas-page batch boundary; authored river, tidal, lava, lichen, and reed
+  materials use registered tile IDs selected from ready sample material signals
+  before feature/biology/resource/civilization suffixes; civilization terrain
+  footprints use the ready
   render sample/chunk cell and existing WebGL terrain atlas page batch;
   food/resource entity facades use the existing entity atlas page batch and
   food-node aggregate/index surfaces; settlement readiness uses aggregate
@@ -274,6 +293,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   terrain feature marks are limited to `feature0` or
   `feature.<type>.<bucket>` with feature types
   `foam|canopy|ridge|scrub|frost|ember|reed|field` and buckets `1..3`;
+  authored terrain material families added by this pass are limited to five
+  finite registered IDs: `river_shallow`, `tidal_mud`, `lava_flow`,
+  `lichen_tundra`, and `reed_mat`;
   civilization terrain footprints are limited to `civ0` or
   `civ.<settlement|route|border>.<1..3>` and are enabled at zoom `>=4` with a
   route radius of `3` tiles;
@@ -295,8 +317,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   from `[3,6,9,255]` to `[206,173,85,255]`, food/resource family atlas identity
   and pixel evidence, direct-file sidecar-load evidence with zero failed
   requests, terrain feature-mark identity/unique-color evidence, civilization
-  terrain-footprint identity/cache/pixel evidence, and high-coordinate terrain
-  variant regression coverage.
+  terrain-footprint identity/cache/pixel evidence, authored material-family
+  registry/identity/pixel evidence, and high-coordinate terrain variant
+  regression coverage.
 
 ## Current Visual Gap
 
@@ -315,7 +338,9 @@ capture can still become broad at single-tile zoom. This pass adds bounded
 sub-tile ecological structure and reduces single-cell repetition, but the
 current screenshot still needs stronger authored biome/feature contrast and
 broader material families before the placeholder/debug-map feel is gone. The
-close-band working
+authored material-family pass adds registered river, tidal, lava, lichen, and
+reed cells, but it does not finish the complete art pass for every biome or all
+entity families. The close-band working
 set and typed terrain page builder now move submission metrics, but headless
 evidence still reports over-budget frames, so further batching/data-texture work
 remains necessary. The settlement-readiness facade starts making civilization

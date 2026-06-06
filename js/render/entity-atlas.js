@@ -615,14 +615,17 @@ PS.atlas.getTerrainPatternForTile = function (tileDefinition, fallbackPattern) {
   var id = String(tileDefinition && tileDefinition.id || "");
   var sheet = String(tileDefinition && tileDefinition.spriteSheet || "");
 
+  if (id.indexOf("river") >= 0) { return "stream"; }
+  if (id.indexOf("tidal") >= 0) { return "shore"; }
   if (id.indexOf("water") >= 0) { return "wave"; }
-  if (id.indexOf("marsh") >= 0 || id.indexOf("wetland") >= 0 || id.indexOf("mud") >= 0) { return "reed"; }
+  if (id.indexOf("marsh") >= 0 || id.indexOf("wetland") >= 0 || id.indexOf("mud") >= 0 || id.indexOf("reed") >= 0) { return "reed"; }
   if (id.indexOf("forest") >= 0 || id.indexOf("moss") >= 0 || sheet.indexOf("forest") >= 0) { return "canopy"; }
   if (id.indexOf("dune") >= 0 || id.indexOf("sand") >= 0) { return "dune"; }
   if (id.indexOf("cliff") >= 0 || id.indexOf("rock") >= 0) { return "ridge"; }
+  if (id.indexOf("lichen") >= 0) { return "lichen"; }
   if (id.indexOf("snow") >= 0) { return "frost"; }
   if (id.indexOf("ice") >= 0) { return "crack"; }
-  if (id.indexOf("volcanic") >= 0) { return "lava"; }
+  if (id.indexOf("volcanic") >= 0 || id.indexOf("lava") >= 0) { return "lava"; }
   if (id.indexOf("grass") >= 0) { return "grass"; }
 
   return fallbackPattern || "grit";
@@ -631,7 +634,7 @@ PS.atlas.getTerrainPatternForTile = function (tileDefinition, fallbackPattern) {
 PS.atlas.getTerrainMaterialScore = function (tileDefinition, sample, biome, tileX, tileY) {
   var detail = sample && sample.detail ? sample.detail : {};
   var signals = detail.materialSignals || {};
-  var surface = String(detail.surface || "");
+  var surface = String(detail.surface || "").toLowerCase();
   var id = String(tileDefinition && tileDefinition.id || "");
   var score = 0;
   var elevationMin = Number(tileDefinition && tileDefinition.elevation && tileDefinition.elevation.min);
@@ -648,6 +651,12 @@ PS.atlas.getTerrainMaterialScore = function (tileDefinition, sample, biome, tile
   );
 
   if (tileDefinition.biome === biome) { score += 20; }
+  if ((surface.indexOf("river") >= 0 || surface.indexOf("stream") >= 0 || surface.indexOf("channel") >= 0 || Number(signals.flow) > 0.35) && id.indexOf("river") >= 0) { score += 48 + waterDepth * 8; }
+  if ((surface.indexOf("shore") >= 0 || surface.indexOf("tidal") >= 0 || surface.indexOf("estuary") >= 0 || surface.indexOf("coast") >= 0) && id.indexOf("tidal") >= 0) { score += 44 + wetness * 8; }
+  if ((surface.indexOf("lava") >= 0 || surface.indexOf("magma") >= 0 || Number(signals.lava) > 0.35 || Number(signals.heat) > 0.75) && id.indexOf("lava") >= 0) { score += 52; }
+  if ((surface.indexOf("ash") >= 0 || Number(signals.ash) > 0.45) && id.indexOf("volcanic") >= 0) { score += 30; }
+  if ((surface.indexOf("lichen") >= 0 || Number(signals.lichen) > 0.35) && id.indexOf("lichen") >= 0) { score += 46; }
+  if ((surface.indexOf("reed") >= 0 || surface.indexOf("mat") >= 0 || Number(signals.reedDensity) > 0.35) && id.indexOf("reed") >= 0) { score += 42 + wetness * 8; }
   if (surface.indexOf("water") >= 0 && id.indexOf("water") >= 0) { score += 28 + waterDepth * 12; }
   if (surface === "deep water" && id.indexOf("deep") >= 0) { score += 30; }
   if ((surface === "open water" || surface === "whitecap") && id.indexOf("shallow") >= 0 && waterDepth < 0.70) { score += 22; }
@@ -696,7 +705,8 @@ PS.atlas.getTerrainMaterialTile = function (biome, tileX, tileY, sample) {
     : null;
   var candidates = registry ? registry.getByBiome(biome) : [];
   var detail = sample && sample.detail ? sample.detail : {};
-  var surface = String(detail.surface || "");
+  var signals = detail.materialSignals || {};
+  var surface = String(detail.surface || "").toLowerCase();
   var best = null;
   var bestScore = -Infinity;
   var i;
@@ -707,6 +717,22 @@ PS.atlas.getTerrainMaterialTile = function (biome, tileX, tileY, sample) {
     candidates = candidates.concat(registry.getByBiome("temperate"));
   } else if (registry && (surface === "open water" || surface === "deep water" || surface === "whitecap")) {
     candidates = candidates.concat(registry.getByBiome("ocean"));
+  }
+
+  if (registry && (surface.indexOf("river") >= 0 || surface.indexOf("stream") >= 0 || surface.indexOf("channel") >= 0 || Number(signals.flow) > 0.35)) {
+    candidates = candidates.concat(registry.getByBiome("coastal"), registry.getByBiome("wetland"), registry.getByBiome("ocean"));
+  }
+  if (registry && (surface.indexOf("shore") >= 0 || surface.indexOf("tidal") >= 0 || surface.indexOf("estuary") >= 0 || surface.indexOf("coast") >= 0)) {
+    candidates = candidates.concat(registry.getByBiome("coastal"));
+  }
+  if (registry && (surface.indexOf("lava") >= 0 || surface.indexOf("magma") >= 0 || surface.indexOf("ash") >= 0 || Number(signals.lava) > 0.35 || Number(signals.heat) > 0.75 || Number(signals.ash) > 0.45)) {
+    candidates = candidates.concat(registry.getByBiome("volcanic"));
+  }
+  if (registry && (surface.indexOf("lichen") >= 0 || Number(signals.lichen) > 0.35)) {
+    candidates = candidates.concat(registry.getByBiome("tundra"));
+  }
+  if (registry && (surface.indexOf("reed") >= 0 || surface.indexOf("mat") >= 0 || Number(signals.reedDensity) > 0.35)) {
+    candidates = candidates.concat(registry.getByBiome("wetland"));
   }
 
   for (i = 0; i < candidates.length; i++) {
@@ -740,6 +766,9 @@ PS.atlas.getTerrainPatternAmount = function (pattern, x, y, variant) {
   if (pattern === "wave") {
     return ((x + variant * 3 + Math.floor(y / 2)) % 7 === 0) ? 0.45 : (hash < 2 ? -0.22 : 0);
   }
+  if (pattern === "stream") {
+    return Math.abs(x - 7 + Math.floor((y + variant) / 3)) <= 1 ? 0.50 : (hash < 3 ? -0.24 : 0);
+  }
   if (pattern === "shore") {
     return ((x + y + variant) % 6 < 2) ? 0.42 : (hash < 3 ? -0.18 : 0);
   }
@@ -751,6 +780,9 @@ PS.atlas.getTerrainPatternAmount = function (pattern, x, y, variant) {
   }
   if (pattern === "frost") {
     return (x + y + variant) % 5 === 0 ? 0.45 : (hash < 3 ? -0.18 : 0);
+  }
+  if (pattern === "lichen") {
+    return hash < 6 || (x + y + variant) % 7 === 0 ? 0.34 : (hash > 12 ? -0.20 : 0);
   }
   if (pattern === "crack") {
     return Math.abs(x - y + variant * 2) % 9 === 0 ? -0.42 : (hash < 2 ? 0.34 : 0);
