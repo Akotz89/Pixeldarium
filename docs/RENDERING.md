@@ -218,12 +218,14 @@ Relevant current limits:
 - Frame budget history: `CONFIG.FRAME_BUDGET_HISTORY_LIMIT = 120`.
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 4096`.
 - Entity instances: `CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES = 8192`.
+- Watched representative intent markers: `CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS = 128`.
 - Active particle cap: `CONFIG.PARTICLE_MAX_ACTIVE = 10000`.
 
 Renderer stats are available through `PS.render.renderer.getStats()`. Key fields
 include `drawCalls`, `tilemapDraws`, `tilemapWebglDraws`, `tilemapFallbacks`,
-`terrainDraws`, `terrainPageDraws`, `entityDraws`, `rendererGpuFrameMs`,
-`overBudget`, `singleVisibleCanvas`, and `directPresentsThisFrame`.
+`terrainDraws`, `terrainPageDraws`, `entityDraws`, `intentEntityDraws`,
+`rendererGpuFrameMs`, `overBudget`, `singleVisibleCanvas`, and
+`directPresentsThisFrame`.
 Frame budget stats are available through
 `PS.debug.performance.getFrameStats()`, including sim, render, overhead, total,
 over-budget, and dropped catch-up frame counts.

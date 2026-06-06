@@ -12,11 +12,14 @@ function read(file) {
 const namespaceSource = read("js/core/namespace.js");
 const tileRegistrySource = read("js/core/tile-registry.js");
 const atlasSource = read("js/render/entity-atlas.js");
+const atlasIntentSource = read("js/render/entity-atlas-intents.js");
 const terrainAtlasDetailSource = read("js/render/terrain-atlas-detail.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
 const tilesData = JSON.parse(read("data/tiles.json"));
 
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas.js") >= 0, "entity atlas should load before entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "intent atlas sidecar should load after atlas core");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "intent atlas sidecar should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-detail.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "terrain atlas detail should load after atlas core");
 assert.ok(entityWebglSource.indexOf("getTraitOrganismCell") >= 0, "entity WebGL should request trait-specific organism cells");
 assert.ok(entityWebglSource.indexOf("getRgbaTexture") >= 0, "entity WebGL should upload atlas pages as RGBA buffers");
@@ -54,6 +57,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(tileRegistrySource, context, { filename: "js/core/tile-registry.js" });
 vm.runInContext(atlasSource, context, { filename: "js/render/entity-atlas.js" });
+vm.runInContext(atlasIntentSource, context, { filename: "js/render/entity-atlas-intents.js" });
 vm.runInContext(terrainAtlasDetailSource, context, { filename: "js/render/terrain-atlas-detail.js" });
 
 context.PS.core.TileRegistry.loadFromJSON(tilesData);
@@ -217,6 +221,18 @@ const activeRouteCell = context.PS.atlas.getRouteCell({ lineageId: 1, isActive: 
 const busyRouteCell = context.PS.atlas.getRouteCell({ lineageId: 2, isActive: true, foodTransferred: 120 }, "diag");
 const weakInfluenceCell = context.PS.atlas.getSettlementInfluenceCell({ lineageId: 1, level: 1, claimedTiles: 10 });
 const strongInfluenceCell = context.PS.atlas.getSettlementInfluenceCell({ lineageId: 2, level: 5, claimedTiles: 240 });
+const selectedFoodIntentCell = context.PS.atlas.getRepresentativeIntentCell({
+  lineageId: 1,
+  behavior: "feeding",
+  target: { type: "food", x: 12, y: 8 },
+  selected: true
+});
+const pinnedBreedingIntentCell = context.PS.atlas.getRepresentativeIntentCell({
+  lineageId: 2,
+  behavior: "breeding",
+  target: null,
+  pinned: true
+});
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
@@ -288,12 +304,17 @@ assert.notDeepStrictEqual(pixelAt(activeRouteCell, 8, 7), pixelAt(busyRouteCell,
 assert.ok(weakInfluenceCell.name.indexOf("entity.influence.0.1") === 0, "weak claimed land should encode bounded influence strength");
 assert.ok(strongInfluenceCell.name.indexOf("entity.influence.2.2") === 0, "strong claimed land should encode bounded influence strength and lineage");
 assert.notDeepStrictEqual(pixelAt(weakInfluenceCell, 8, 7), pixelAt(strongInfluenceCell, 8, 7), "influence strength should change visible border pixels");
+assert.ok(selectedFoodIntentCell.name.indexOf("entity.intent.1.1.2.1") === 0, "selected feeding representatives should encode behavior, target, watch state, and lineage");
+assert.ok(pinnedBreedingIntentCell.name.indexOf("entity.intent.2.0.1.2") === 0, "pinned breeding representatives should encode bounded intent keys");
+assert.notDeepStrictEqual(pixelAt(selectedFoodIntentCell, 8, 8), pixelAt(pinnedBreedingIntentCell, 8, 8), "representative intent state should change visible marker pixels");
+assert.ok(uniqueColorCount(selectedFoodIntentCell) >= 5, "intent cells should include readable authored marker detail");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
 assert.ok(stats.foodCells >= 2, "atlas stats should count generated food resource cells");
 assert.ok(stats.settlementCells >= 3, "atlas stats should count generated settlement cells");
 assert.ok(stats.routeCells >= 3, "atlas stats should count generated route traffic cells");
 assert.ok(stats.influenceCells >= 2, "atlas stats should count generated influence border cells");
+assert.ok(stats.intentCells >= 2, "atlas stats should count generated representative intent cells");
 assert.ok(stats.pageBytes > 0, "atlas stats should expose packed atlas bytes");
 
 console.log("entity atlas checks passed");

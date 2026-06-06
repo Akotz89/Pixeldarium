@@ -174,22 +174,17 @@ PS.render.entities.getOrganismColor = function (organism) {
 };
 
 PS.render.entities.drawRepresentativeMarker = function (organism, interpolation) {
-  if (!PS.sim || !PS.sim.representatives || !PS.sim.representatives.getRepresentative) {
+  return false;
+};
+
+PS.render.entities.drawRepresentativeIntents = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;
   }
 
-  var representative = PS.sim.representatives.getRepresentative(organism.representativeId);
-
-  if (!representative || (!representative.selected && !representative.pinned && representative.bookmarkScore <= 0)) {
+  if (PS.render.entityWebgl && PS.render.entityWebgl.drawRepresentativeIntents(world.interpolation)) {
     return;
   }
-
-  var point = PS.render.entities.getRenderPosition(organism, interpolation);
-
-  if (!point) {
-    return;
-  }
-
 };
 
 PS.render.entities.drawOrganisms = function () {
@@ -207,14 +202,7 @@ PS.render.entities.drawOrganisms = function () {
     interpolation = 1;
   }
 
-  var usedInstancedEntities = PS.render.entityWebgl && PS.render.entityWebgl.drawOrganisms(interpolation);
-
-  for (var i = 0; i < world.organisms.length; i++) {
-    var organism = world.organisms[i];
-    if (usedInstancedEntities) {
-      PS.render.entities.drawRepresentativeMarker(organism, interpolation);
-    }
-  }
+  PS.render.entityWebgl && PS.render.entityWebgl.drawOrganisms(interpolation);
 };
 
 PS.render.entities.getSettlementDrawSize = function (settlement) {

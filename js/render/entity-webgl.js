@@ -23,6 +23,7 @@ PS.render.entityWebgl.state = {
   settlementDrawCount: 0,
   routeDrawCount: 0,
   influenceDrawCount: 0,
+  intentDrawCount: 0,
   pageDrawCount: 0,
   textureUploadCount: 0,
   traitSpriteCount: 0,
@@ -49,6 +50,7 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.settlementDrawCount = 0;
   state.routeDrawCount = 0;
   state.influenceDrawCount = 0;
+  state.intentDrawCount = 0;
   state.pageDrawCount = 0;
   state.culledCount = 0;
   state.cappedCount = 0;
@@ -219,6 +221,18 @@ PS.render.entityWebgl.getSettlementInfluenceCell = function (settlement) {
   return null;
 };
 
+PS.render.entityWebgl.getRepresentativeIntentCell = function (representative) {
+  if (PS.atlas && typeof PS.atlas.getRepresentativeIntentCell === "function") {
+    return PS.atlas.getRepresentativeIntentCell(representative);
+  }
+
+  return null;
+};
+
+PS.render.entityWebgl.getRepresentativeIntentMarkerCap = function () {
+  return Math.max(0, Math.floor(Number(CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS) || 128));
+};
+
 PS.render.entityWebgl.getTexture = function (pageIndex) {
   var state = PS.render.entityWebgl.state;
   var gl = state.gl;
@@ -260,6 +274,7 @@ PS.render.entityWebgl.createBatches = function () {
     settlements: 0,
     routes: 0,
     influences: 0,
+    intents: 0,
     capped: 0,
     culled: 0
   };
@@ -321,6 +336,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.routes++;
   } else if (kind === "influence") {
     batches.influences++;
+  } else if (kind === "intent") {
+    batches.intents++;
   } else {
     batches.organisms++;
   }
@@ -418,6 +435,65 @@ PS.render.entityWebgl.buildFoodBatches = function () {
       flipH,
       "food"
     );
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.buildRepresentativeIntentBatches = function (interpolation) {
+  var batches = PS.render.entityWebgl.createBatches();
+  var amount = PS.render.entities.getInterpolationAmount(interpolation);
+  var markerCap = PS.render.entityWebgl.getRepresentativeIntentMarkerCap();
+  var markerCount = 0;
+
+  if (
+    markerCap <= 0 ||
+    !PS.sim ||
+    !PS.sim.representatives ||
+    !PS.sim.representatives.getRepresentative ||
+    !Array.isArray(world.organisms)
+  ) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.organisms.length; i++) {
+    var organism = world.organisms[i];
+    var representative = PS.sim.representatives.getRepresentative(organism.representativeId);
+
+    if (!representative || (!representative.selected && !representative.pinned && Number(representative.bookmarkScore) <= 0)) {
+      continue;
+    }
+
+    if (markerCount >= markerCap) {
+      batches.capped++;
+      continue;
+    }
+
+    var point = PS.render.entities.getRenderPosition(organism, amount);
+    var scale = point && Number.isFinite(Number(point.scale)) ? Number(point.scale) : 1;
+    var size = Math.max(18, CONFIG.ORGANISM_DRAW_SIZE * 4.2 * scale);
+    var tint = PS.render.entityWebgl.parseColor("#ffffff", 1);
+
+    if (point) {
+      point = {
+        x: point.x,
+        y: point.y - Math.max(3, size * 0.70),
+        scale: point.scale || 1,
+        visibility: point.visibility || 1,
+        visible: point.visible
+      };
+    }
+
+    PS.render.entityWebgl.submit(
+      batches,
+      PS.render.entityWebgl.getRepresentativeIntentCell(representative),
+      point,
+      size,
+      tint,
+      false,
+      "intent"
+    );
+    markerCount++;
   }
 
   return batches;
@@ -797,6 +873,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.settlementDrawCount += batches.settlements;
     state.routeDrawCount += batches.routes;
     state.influenceDrawCount += batches.influences;
+    state.intentDrawCount += batches.intents;
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;
@@ -835,6 +912,19 @@ PS.render.entityWebgl.drawFood = function () {
   }
 
   return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildFoodBatches());
+};
+
+PS.render.entityWebgl.drawRepresentativeIntents = function (interpolation) {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildRepresentativeIntentBatches(interpolation));
 };
 
 PS.render.entityWebgl.drawSettlements = function () {

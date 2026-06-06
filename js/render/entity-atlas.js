@@ -18,6 +18,7 @@ PS.atlas = PS.atlas || {
     settlementCells: 0,
     routeCells: 0,
     influenceCells: 0,
+    intentCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
   }
@@ -37,6 +38,7 @@ PS.atlas.reset = function () {
   PS.atlas.stats.settlementCells = 0;
   PS.atlas.stats.routeCells = 0;
   PS.atlas.stats.influenceCells = 0;
+  PS.atlas.stats.intentCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
 };
@@ -977,6 +979,7 @@ PS.atlas.init = function () {
   PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
   PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 0 }, "horizontal");
   PS.atlas.getSettlementInfluenceCell({ lineageId: 1, level: 1, claimedTiles: 0 });
+  PS.atlas.getRepresentativeIntentCell({ lineageId: 1, behavior: "watching", target: null, selected: true });
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
   return true;
@@ -993,6 +996,7 @@ PS.atlas.getStats = function () {
     settlementCells: PS.atlas.stats.settlementCells,
     routeCells: PS.atlas.stats.routeCells,
     influenceCells: PS.atlas.stats.influenceCells,
+    intentCells: PS.atlas.stats.intentCells,
     generatedCells: PS.atlas.stats.generatedCells,
     pageBytes: PS.atlas.stats.pageBytes,
     lastGenerationMs: PS.atlas.stats.lastGenerationMs

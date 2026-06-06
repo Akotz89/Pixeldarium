@@ -24,6 +24,7 @@ assert.ok(pipelineSource.indexOf("getLayerLodAlpha") >= 0, "pipeline should gate
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementInfluence()") >= 0, "settlement influence layer should call the border renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementRoutes()") >= 0, "settlement route layer should call the route renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlements()") >= 0, "settlement structure layer should call the structure renderer");
+assert.ok(pipelineSource.indexOf("PS.render.entities.drawRepresentativeIntents()") >= 0, "presence layer should call the representative intent renderer");
 assert.ok(debugOverlaySource.indexOf("getDebugSnapshot") >= 0, "F4 overlay should expose draw-order layer stats");
 
 const events = [];
@@ -82,6 +83,9 @@ const context = {
         },
         drawLocalPresenceField() {
           events.push("presence");
+        },
+        drawRepresentativeIntents() {
+          events.push("intents");
         },
         drawSettlements() {
           events.push("structures");
@@ -232,6 +236,7 @@ assert.deepStrictEqual(
     "begin:7",
     "terrain",
     "food",
+    "intents",
     "organisms",
     "structures",
     "influence",

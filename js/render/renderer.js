@@ -31,6 +31,7 @@ PS.render.Renderer = function (name) {
     settlementEntityDraws: 0,
     routeEntityDraws: 0,
     influenceEntityDraws: 0,
+    intentEntityDraws: 0,
     foodEntityDraws: 0,
     organismEntityDraws: 0,
     lastError: ""

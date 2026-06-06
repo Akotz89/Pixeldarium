@@ -62,6 +62,7 @@ const context = {
           settlementDrawCount: 2,
           routeDrawCount: 3,
           influenceDrawCount: 4,
+          intentDrawCount: 8,
           foodDrawCount: 5,
           organismDrawCount: 6,
           lastFrameMs: 5
@@ -132,6 +133,7 @@ assert.strictEqual(stats.entityDraws, 7, "renderer stats should include entity W
 assert.strictEqual(stats.settlementEntityDraws, 2, "renderer stats should include settlement entity draws");
 assert.strictEqual(stats.routeEntityDraws, 3, "renderer stats should include route entity draws");
 assert.strictEqual(stats.influenceEntityDraws, 4, "renderer stats should include influence entity draws");
+assert.strictEqual(stats.intentEntityDraws, 8, "renderer stats should include representative intent entity draws");
 assert.strictEqual(stats.foodEntityDraws, 5, "renderer stats should include food entity draws");
 assert.strictEqual(stats.organismEntityDraws, 6, "renderer stats should include organism entity draws");
 assert.strictEqual(stats.terrainDraws, 12, "renderer stats should include terrain WebGL draws");

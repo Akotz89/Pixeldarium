@@ -400,7 +400,7 @@ PS.render.pipeline.registerLayer("entities.presence", {
   maxBand: "settlement",
   minTier: "region",
   maxTier: "local",
-  draw: function () {}
+  draw: function () { PS.render.entities.drawRepresentativeIntents(); }
 });
 
 PS.render.pipeline.registerLayer("settlement.structures", {

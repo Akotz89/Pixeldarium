@@ -51,6 +51,10 @@ assert.ok(entityWebglSource.indexOf("getSettlementInfluenceCell") >= 0, "entity 
 assert.ok(entityWebglSource.indexOf("buildSettlementInfluenceBatches") >= 0, "entity compositor should batch settlement influence markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementInfluence") >= 0, "entity compositor should expose influence rendering");
 assert.ok(entityWebglSource.indexOf("influenceDrawCount") >= 0, "entity compositor should report influence draw counts");
+assert.ok(entityWebglSource.indexOf("getRepresentativeIntentCell") >= 0, "entity compositor should request representative intent atlas cells");
+assert.ok(entityWebglSource.indexOf("buildRepresentativeIntentBatches") >= 0, "entity compositor should batch watched representative intent markers");
+assert.ok(entityWebglSource.indexOf("drawRepresentativeIntents") >= 0, "entity compositor should expose representative intent rendering");
+assert.ok(entityWebglSource.indexOf("intentDrawCount") >= 0, "entity compositor should report representative intent draw counts");
 assert.ok(entityWebglSource.indexOf("resetFrameStats") >= 0, "entity compositor should reset frame aggregate counters");
 assert.ok(entityWebglSource.indexOf("frameInstanceDrawCount") >= 0, "entity compositor should accumulate per-frame instance counts");
 
@@ -59,6 +63,7 @@ assert.ok(entitiesSource.indexOf("entityWebgl.drawFood()") >= 0, "food rendering
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlements()") >= 0, "settlement rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "settlement route rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("entityWebgl.drawRepresentativeIntents(world.interpolation)") >= 0, "representative intent rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("String(world.settlements[i].id) === String(settlementId)") >= 0, "settlement route facades should fall back to current aggregate settlement arrays");
 assert.strictEqual(entitiesSource.indexOf("ctx"), -1, "entity facade should not reference Canvas2D context");
 
@@ -130,5 +135,70 @@ routeContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
 const routeBatches = routeContext.PS.render.entityWebgl.buildSettlementRouteBatches();
 assert.ok(routeBatches.routes > 0, "route compositor should keep visible clipped route markers when a settlement endpoint is offscreen");
 assert.strictEqual(routeBatches.capped, 0, "clipped route markers should stay inside the configured batch cap");
+
+const intentContext = {
+  CONFIG: {
+    PLANET_ENTITY_WEBGL_MAX_INSTANCES: 8192,
+    PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS: 1,
+    ORGANISM_DRAW_SIZE: 5,
+    LINEAGE_COLORS: ["#72d7ff"]
+  },
+  PS: {
+    sim: {
+      representatives: {
+        getRepresentative(id) {
+          return intentContext.world.biologyRepresentativeById[String(id)] || null;
+        }
+      }
+    },
+    render: {
+      entities: {
+        getInterpolationAmount(value) {
+          return value;
+        },
+        getRenderPosition(organism) {
+          return { x: organism.x, y: organism.y, scale: 1, visibility: 1, visible: true };
+        },
+        getLineageColorById() {
+          return "#72d7ff";
+        },
+        shouldDrawGlobeScaleEntities() {
+          return true;
+        }
+      },
+      webglEngine: {},
+      shaderManager: {}
+    },
+    atlas: {
+      getRepresentativeIntentCell() {
+        return { pageIndex: 0, u0: 0, v0: 0, u1: 0.0625, v1: 0.0625 };
+      }
+    }
+  },
+  world: {
+    organisms: [
+      { representativeId: 10, x: 20, y: 20, lineageId: 1 },
+      { representativeId: 11, x: 25, y: 20, lineageId: 1 }
+    ],
+    biologyRepresentativeById: {
+      "10": { id: 10, lineageId: 1, behavior: "feeding", target: { type: "food" }, selected: true },
+      "11": { id: 11, lineageId: 1, behavior: "breeding", pinned: true }
+    }
+  },
+  canvas: { width: 100, height: 100 },
+  performance: { now() { return 0; } },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+};
+
+intentContext.PS.render.entityWebgl = {};
+vm.createContext(intentContext);
+vm.runInContext(entityWebglSource, intentContext, { filename: "js/render/entity-webgl.js" });
+intentContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
+
+const intentBatches = intentContext.PS.render.entityWebgl.buildRepresentativeIntentBatches(1);
+assert.strictEqual(intentBatches.intents, 1, "representative intent batch should draw watched representatives through WebGL");
+assert.strictEqual(intentBatches.capped, 1, "representative intent batch should enforce its marker cap");
 
 console.log("entity webgl checks passed");
