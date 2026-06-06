@@ -187,6 +187,14 @@ PS.render.entities.drawRepresentativeIntents = function () {
   }
 };
 
+PS.render.entities.drawSettlementReadiness = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementReadiness());
+};
+
 PS.render.entities.drawOrganisms = function () {
   if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;

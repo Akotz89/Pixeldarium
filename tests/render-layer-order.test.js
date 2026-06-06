@@ -25,6 +25,7 @@ assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementInfluence()")
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementRoutes()") >= 0, "settlement route layer should call the route renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlements()") >= 0, "settlement structure layer should call the structure renderer");
 assert.ok(pipelineSource.indexOf("PS.render.entities.drawRepresentativeIntents()") >= 0, "presence layer should call the representative intent renderer");
+assert.ok(pipelineSource.indexOf("PS.render.entities.drawSettlementReadiness()") >= 0, "readiness layer should call the pre-settlement facade renderer");
 assert.ok(debugOverlaySource.indexOf("getDebugSnapshot") >= 0, "F4 overlay should expose draw-order layer stats");
 
 const events = [];
@@ -86,6 +87,9 @@ const context = {
         },
         drawRepresentativeIntents() {
           events.push("intents");
+        },
+        drawSettlementReadiness() {
+          events.push("readiness");
         },
         drawSettlements() {
           events.push("structures");
@@ -218,6 +222,7 @@ function layer(id) {
 
 assert.strictEqual(layer("terrain.base").drawLayer, context.PS.render.DrawLayer.TERRAIN_BASE, "terrain should map to base layer");
 assert.strictEqual(layer("resources.food").drawLayer, context.PS.render.DrawLayer.ENTITY_GROUND, "food should draw on ground entity layer");
+assert.strictEqual(layer("settlement.readiness").drawLayer, context.PS.render.DrawLayer.ENTITY_GROUND, "settlement readiness should draw as a ground facade before structures");
 assert.strictEqual(layer("entities.organisms").drawLayer, context.PS.render.DrawLayer.ENTITY_SORTED, "organisms should draw in Y-sorted entity layer");
 assert.strictEqual(layer("settlement.structures").drawLayer, context.PS.render.DrawLayer.BUILDING_WALL, "settlements should draw before roof/canopy overlays");
 assert.strictEqual(layer("weather.particles").drawLayer, context.PS.render.DrawLayer.WEATHER, "weather should draw above world entities");
@@ -237,6 +242,7 @@ assert.deepStrictEqual(
     "terrain",
     "food",
     "intents",
+    "readiness",
     "organisms",
     "structures",
     "influence",

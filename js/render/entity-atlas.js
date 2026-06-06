@@ -45,17 +45,27 @@ PS.atlas.reset = function () {
 
 PS.atlas.ensurePage = function () {
   if (PS.atlas.pages.length <= 0) {
-    PS.atlas.pages.push({
-      pageIndex: 0,
-      width: PS.atlas.pageWidth,
-      height: PS.atlas.pageHeight,
-      data: new Uint8Array(PS.atlas.pageWidth * PS.atlas.pageHeight * 4),
-      version: 1
-    });
-    PS.atlas.stats.pageBytes = PS.atlas.pages[0].data.byteLength;
+    return PS.atlas.createPage();
   }
 
-  return PS.atlas.pages[0];
+  return PS.atlas.pages[PS.atlas.pages.length - 1];
+};
+
+PS.atlas.createPage = function () {
+  var page = {
+    pageIndex: PS.atlas.pages.length,
+    width: PS.atlas.pageWidth,
+    height: PS.atlas.pageHeight,
+    data: new Uint8Array(PS.atlas.pageWidth * PS.atlas.pageHeight * 4),
+    version: 1
+  };
+
+  PS.atlas.pages.push(page);
+  PS.atlas.cursorX = 0;
+  PS.atlas.cursorY = 0;
+  PS.atlas.rowHeight = 0;
+  PS.atlas.stats.pageBytes += page.data.byteLength;
+  return page;
 };
 
 PS.atlas.allocateCell = function (name, width, height) {
@@ -69,6 +79,10 @@ PS.atlas.allocateCell = function (name, width, height) {
     return PS.atlas.cells[name];
   }
 
+  if (cellWidth > page.width || cellHeight > page.height) {
+    throw new Error("Entity atlas cell is larger than an atlas page");
+  }
+
   if (PS.atlas.cursorX + cellWidth > page.width) {
     PS.atlas.cursorX = 0;
     PS.atlas.cursorY += PS.atlas.rowHeight;
@@ -76,7 +90,7 @@ PS.atlas.allocateCell = function (name, width, height) {
   }
 
   if (PS.atlas.cursorY + cellHeight > page.height) {
-    throw new Error("Entity atlas page is full; increase pageWidth/pageHeight");
+    page = PS.atlas.createPage();
   }
 
   x = PS.atlas.cursorX;

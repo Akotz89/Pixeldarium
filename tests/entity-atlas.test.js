@@ -13,6 +13,7 @@ const namespaceSource = read("js/core/namespace.js");
 const tileRegistrySource = read("js/core/tile-registry.js");
 const atlasSource = read("js/render/entity-atlas.js");
 const atlasIntentSource = read("js/render/entity-atlas-intents.js");
+const atlasCivilizationSource = read("js/render/entity-atlas-civilization.js");
 const terrainAtlasDetailSource = read("js/render/terrain-atlas-detail.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
 const tilesData = JSON.parse(read("data/tiles.json"));
@@ -20,6 +21,8 @@ const tilesData = JSON.parse(read("data/tiles.json"));
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas.js") >= 0, "entity atlas should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "intent atlas sidecar should load after atlas core");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "intent atlas sidecar should load before entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") > namespaceSource.indexOf("js/render/entity-atlas-intents.js"), "civilization atlas sidecar should load after intent atlas helpers");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "civilization atlas sidecar should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-detail.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "terrain atlas detail should load after atlas core");
 assert.ok(entityWebglSource.indexOf("getTraitOrganismCell") >= 0, "entity WebGL should request trait-specific organism cells");
 assert.ok(entityWebglSource.indexOf("getRgbaTexture") >= 0, "entity WebGL should upload atlas pages as RGBA buffers");
@@ -58,6 +61,7 @@ vm.createContext(context);
 vm.runInContext(tileRegistrySource, context, { filename: "js/core/tile-registry.js" });
 vm.runInContext(atlasSource, context, { filename: "js/render/entity-atlas.js" });
 vm.runInContext(atlasIntentSource, context, { filename: "js/render/entity-atlas-intents.js" });
+vm.runInContext(atlasCivilizationSource, context, { filename: "js/render/entity-atlas-civilization.js" });
 vm.runInContext(terrainAtlasDetailSource, context, { filename: "js/render/terrain-atlas-detail.js" });
 
 context.PS.core.TileRegistry.loadFromJSON(tilesData);
@@ -256,12 +260,21 @@ const pinnedBreedingIntentCell = context.PS.atlas.getRepresentativeIntentCell({
   target: null,
   pinned: true
 });
+const earlyReadinessCell = context.PS.atlas.getSettlementReadinessCell({
+  lineageId: 1,
+  progressBucket: 1
+});
+const readyReadinessCell = context.PS.atlas.getSettlementReadinessCell({
+  lineageId: 2,
+  progressBucket: 3
+});
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
 function pixelAt(cell, x, y) {
-  const index = ((cell.y + y) * page.width + cell.x + x) * 4;
-  return Array.from(page.data.slice(index, index + 4));
+  const cellPage = context.PS.atlas.pages[cell.pageIndex];
+  const index = ((cell.y + y) * cellPage.width + cell.x + x) * 4;
+  return Array.from(cellPage.data.slice(index, index + 4));
 }
 
 function uniqueColorCount(cell) {
@@ -279,6 +292,7 @@ function uniqueColorCount(cell) {
 assert.ok(page.data instanceof Uint8Array, "atlas page should be a packed RGBA buffer");
 assert.strictEqual(page.width, 256, "atlas page should use stable packed width");
 assert.strictEqual(page.height, 256, "atlas page should use stable packed height");
+assert.ok(context.PS.atlas.pages.length >= 1, "atlas should expose one or more packed pages");
 assert.notStrictEqual(roundCell.name, angularCell.name, "different traits should produce different cell keys");
 assert.strictEqual(roundCell.w, 32, "organism cell should reserve diffuse plus normal halves");
 assert.strictEqual(roundCell.h, 16, "organism cell should use a 16px pixel sprite height");
@@ -337,10 +351,14 @@ assert.ok(selectedFoodIntentCell.name.indexOf("entity.intent.1.1.2.1") === 0, "s
 assert.ok(pinnedBreedingIntentCell.name.indexOf("entity.intent.2.0.1.2") === 0, "pinned breeding representatives should encode bounded intent keys");
 assert.notDeepStrictEqual(pixelAt(selectedFoodIntentCell, 8, 8), pixelAt(pinnedBreedingIntentCell, 8, 8), "representative intent state should change visible marker pixels");
 assert.ok(uniqueColorCount(selectedFoodIntentCell) >= 5, "intent cells should include readable authored marker detail");
+assert.ok(earlyReadinessCell.name.indexOf("entity.settlement_readiness.1.1") === 0, "settlement readiness should encode lineage and progress buckets");
+assert.ok(readyReadinessCell.name.indexOf("entity.settlement_readiness.2.3") === 0, "ready settlement pressure should use the highest bounded progress bucket");
+assert.notDeepStrictEqual(pixelAt(earlyReadinessCell, 7, 2), pixelAt(readyReadinessCell, 7, 2), "settlement readiness progress should change visible marker pixels");
+assert.ok(uniqueColorCount(readyReadinessCell) >= uniqueColorCount(earlyReadinessCell), "ready settlement pressure should preserve authored marker detail");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
 assert.ok(stats.foodCells >= 2, "atlas stats should count generated food resource cells");
-assert.ok(stats.settlementCells >= 3, "atlas stats should count generated settlement cells");
+assert.ok(stats.settlementCells >= 5, "atlas stats should count generated settlement and readiness cells");
 assert.ok(stats.routeCells >= 3, "atlas stats should count generated route traffic cells");
 assert.ok(stats.influenceCells >= 2, "atlas stats should count generated influence border cells");
 assert.ok(stats.intentCells >= 2, "atlas stats should count generated representative intent cells");

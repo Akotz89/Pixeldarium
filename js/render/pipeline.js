@@ -403,6 +403,18 @@ PS.render.pipeline.registerLayer("entities.presence", {
   draw: function () { PS.render.entities.drawRepresentativeIntents(); }
 });
 
+PS.render.pipeline.registerLayer("settlement.readiness", {
+  order: 76,
+  drawLayer: PS.render.DrawLayer.ENTITY_GROUND,
+  family: "settlement",
+  semantic: "pre-settlement lineage pressure and founding readiness facades",
+  minBand: "region",
+  maxBand: "settlement",
+  minTier: "region",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementReadiness(); }
+});
+
 PS.render.pipeline.registerLayer("settlement.structures", {
   order: 80,
   drawLayer: PS.render.DrawLayer.BUILDING_WALL,

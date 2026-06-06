@@ -24,6 +24,7 @@ PS.render.entityWebgl.state = {
   routeDrawCount: 0,
   influenceDrawCount: 0,
   intentDrawCount: 0,
+  readinessDrawCount: 0,
   pageDrawCount: 0,
   textureUploadCount: 0,
   traitSpriteCount: 0,
@@ -51,6 +52,7 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.routeDrawCount = 0;
   state.influenceDrawCount = 0;
   state.intentDrawCount = 0;
+  state.readinessDrawCount = 0;
   state.pageDrawCount = 0;
   state.culledCount = 0;
   state.cappedCount = 0;
@@ -275,6 +277,7 @@ PS.render.entityWebgl.createBatches = function () {
     routes: 0,
     influences: 0,
     intents: 0,
+    readiness: 0,
     capped: 0,
     culled: 0
   };
@@ -338,6 +341,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.influences++;
   } else if (kind === "intent") {
     batches.intents++;
+  } else if (kind === "readiness") {
+    batches.readiness++;
   } else {
     batches.organisms++;
   }
@@ -874,6 +879,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.routeDrawCount += batches.routes;
     state.influenceDrawCount += batches.influences;
     state.intentDrawCount += batches.intents;
+    state.readinessDrawCount += batches.readiness || 0;
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;

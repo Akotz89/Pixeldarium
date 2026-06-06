@@ -15,11 +15,15 @@ const pipelineSource = read("js/render/pipeline.js");
 const entitiesSource = read("js/render/entities.js");
 const engineSource = read("js/render/webgl-engine.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
+const readinessSource = read("js/render/entity-webgl-readiness.js");
 
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "entity atlas should load before entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-webgl-readiness.js") > namespaceSource.indexOf("js/render/entity-webgl.js"), "settlement readiness sidecar should load after entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-webgl-readiness.js") < namespaceSource.indexOf("js/render/entities.js"), "settlement readiness sidecar should load before entity facade calls it");
 assert.ok(namespaceSource.indexOf("js/render/entity-webgl.js") >= 0, "entity WebGL compositor should load in the runtime");
 assert.ok(/PLANET_ENTITY_WEBGL_INSTANCING:\s*true/.test(configSource), "entity WebGL instancing should be enabled by default");
 assert.ok(/PLANET_ENTITY_WEBGL_MAX_INSTANCES:\s*8192/.test(configSource), "entity WebGL instancing should have a capped batch size");
+assert.ok(/PLANET_SETTLEMENT_READINESS_MAX_MARKERS:\s*6/.test(configSource), "settlement readiness facades should have a capped batch size");
 assert.ok(pipelineSource.indexOf("PS.render.entityWebgl") >= 0, "render rebuilds should include the entity WebGL subsystem");
 
 assert.ok(engineSource.indexOf('getContext("webgl2"') >= 0, "shared WebGL engine should create raw WebGL2 contexts");
@@ -55,6 +59,11 @@ assert.ok(entityWebglSource.indexOf("getRepresentativeIntentCell") >= 0, "entity
 assert.ok(entityWebglSource.indexOf("buildRepresentativeIntentBatches") >= 0, "entity compositor should batch watched representative intent markers");
 assert.ok(entityWebglSource.indexOf("drawRepresentativeIntents") >= 0, "entity compositor should expose representative intent rendering");
 assert.ok(entityWebglSource.indexOf("intentDrawCount") >= 0, "entity compositor should report representative intent draw counts");
+assert.ok(entityWebglSource.indexOf("readinessDrawCount") >= 0, "entity compositor should report settlement readiness draw counts");
+assert.ok(readinessSource.indexOf("getSettlementReadinessCandidates") >= 0, "settlement readiness sidecar should derive bounded lineage candidates");
+assert.ok(readinessSource.indexOf("world.lineages") >= 0, "settlement readiness sidecar should consume aggregate lineage state");
+assert.ok(readinessSource.indexOf("world.settlements.length > 0") >= 0, "settlement readiness sidecar should stop when real settlements exist");
+assert.ok(readinessSource.indexOf("getSettlementReadinessMarkerCap") >= 0, "settlement readiness sidecar should use an explicit marker cap");
 assert.ok(entityWebglSource.indexOf("resetFrameStats") >= 0, "entity compositor should reset frame aggregate counters");
 assert.ok(entityWebglSource.indexOf("frameInstanceDrawCount") >= 0, "entity compositor should accumulate per-frame instance counts");
 
@@ -64,6 +73,7 @@ assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlements()") >= 0, "settlem
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "settlement route rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawRepresentativeIntents(world.interpolation)") >= 0, "representative intent rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementReadiness()") >= 0, "settlement readiness rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("String(world.settlements[i].id) === String(settlementId)") >= 0, "settlement route facades should fall back to current aggregate settlement arrays");
 assert.strictEqual(entitiesSource.indexOf("ctx"), -1, "entity facade should not reference Canvas2D context");
 
@@ -130,6 +140,7 @@ const routeContext = {
 routeContext.PS.render.entityWebgl = {};
 vm.createContext(routeContext);
 vm.runInContext(entityWebglSource, routeContext, { filename: "js/render/entity-webgl.js" });
+vm.runInContext(readinessSource, routeContext, { filename: "js/render/entity-webgl-readiness.js" });
 routeContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
 
 const routeBatches = routeContext.PS.render.entityWebgl.buildSettlementRouteBatches();
@@ -195,10 +206,96 @@ const intentContext = {
 intentContext.PS.render.entityWebgl = {};
 vm.createContext(intentContext);
 vm.runInContext(entityWebglSource, intentContext, { filename: "js/render/entity-webgl.js" });
+vm.runInContext(readinessSource, intentContext, { filename: "js/render/entity-webgl-readiness.js" });
 intentContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
 
 const intentBatches = intentContext.PS.render.entityWebgl.buildRepresentativeIntentBatches(1);
 assert.strictEqual(intentBatches.intents, 1, "representative intent batch should draw watched representatives through WebGL");
 assert.strictEqual(intentBatches.capped, 1, "representative intent batch should enforce its marker cap");
+
+const readinessContext = {
+  CONFIG: {
+    PLANET_ENTITY_WEBGL_MAX_INSTANCES: 8192,
+    PLANET_SETTLEMENT_READINESS_MAX_MARKERS: 1,
+    SETTLEMENT_MIN_LINEAGE_POPULATION: 10,
+    SETTLEMENT_MIN_LINEAGE_PEAK_POPULATION: 16,
+    LINEAGE_COLORS: ["#72d7ff", "#58f06c"]
+  },
+  PS: {
+    sim: {
+      organisms: {
+        byLineage(id) {
+          return readinessContext.world.organisms.filter((organism) => organism.lineageId === id);
+        }
+      }
+    },
+    render: {
+      entities: {
+        getRenderPosition(entity) {
+          return { x: entity.x * 4, y: entity.y * 4, scale: 1, visibility: 1, visible: true };
+        },
+        getLineageColorById() {
+          return "#72d7ff";
+        },
+        shouldDrawGlobeScaleEntities() {
+          return true;
+        }
+      },
+      webglEngine: {},
+      shaderManager: {}
+    },
+    atlas: {
+      getSettlementReadinessCell() {
+        return { pageIndex: 0, u0: 0, v0: 0, u1: 0.0625, v1: 0.0625 };
+      }
+    }
+  },
+  world: {
+    isExtinct: false,
+    settlements: [],
+    settlementByLineage: {},
+    lineages: {
+      "1": { id: 1, activeCount: 9, peakPopulation: 15, isExtinct: false },
+      "2": { id: 2, activeCount: 6, peakPopulation: 8, isExtinct: false }
+    },
+    organisms: [
+      { lineageId: 1, x: 10, y: 10 },
+      { lineageId: 1, x: 12, y: 10 },
+      { lineageId: 2, x: 80, y: 10 }
+    ]
+  },
+  WORLD_WIDTH: 100,
+  WORLD_HEIGHT: 100,
+  canvas: { width: 400, height: 300 },
+  performance: { now() { return 0; } },
+  Float32Array,
+  Object,
+  String,
+  Number,
+  Boolean,
+  Array,
+  Math,
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+};
+
+readinessContext.PS.render.entityWebgl = {};
+vm.createContext(readinessContext);
+vm.runInContext(entityWebglSource, readinessContext, { filename: "js/render/entity-webgl.js" });
+vm.runInContext(readinessSource, readinessContext, { filename: "js/render/entity-webgl-readiness.js" });
+readinessContext.PS.render.entityWebgl.state.target = { width: 400, height: 300 };
+
+const readinessCandidates = readinessContext.PS.render.entityWebgl.getSettlementReadinessCandidates();
+assert.strictEqual(readinessCandidates.length, 1, "settlement readiness should cap candidate lineage facades");
+assert.strictEqual(readinessCandidates[0].lineageId, 1, "settlement readiness should pick the strongest aggregate lineage");
+assert.strictEqual(readinessCandidates[0].progressBucket, 3, "near-founding lineage should use the highest readiness bucket");
+
+const readinessBatches = readinessContext.PS.render.entityWebgl.buildSettlementReadinessBatches();
+assert.strictEqual(readinessBatches.readiness, 1, "settlement readiness batch should draw capped lineage facades");
+assert.strictEqual(readinessBatches.organisms, 0, "settlement readiness should not count as authoritative organisms");
+
+readinessContext.world.settlements.push({ id: 1, lineageId: 1 });
+assert.strictEqual(readinessContext.PS.render.entityWebgl.getSettlementReadinessCandidates().length, 0, "settlement readiness should stop once real settlement aggregates exist");
 
 console.log("entity webgl checks passed");

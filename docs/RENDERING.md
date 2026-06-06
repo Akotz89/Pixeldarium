@@ -151,7 +151,9 @@ name, pageIndex, x, y, w, h, u0, v0, u1, v1
 ```
 
 Organism trait cells are allocated as 32x16 records: the left half is diffuse
-color and the right half stores normal/height placeholder data. Terrain
+color and the right half stores normal/height placeholder data. The atlas can
+allocate additional 256x256 RGBA pages when authored terrain/entity cells exceed
+the current page capacity; renderers already batch by page index. Terrain
 material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
 
@@ -178,6 +180,11 @@ worldX, worldY, u0, v0, u1, v1, tintR, tintG, tintB, tintA, scale, flipH
 This is not the final AZR-383 single data-texture tilemap. The current terrain
 path is a transitional instanced atlas renderer that keeps WebGL2 ownership of
 pixel throughput while the data-texture shader work is prepared.
+
+Settlement readiness facades are pre-settlement watcher markers. They are
+derived from aggregate lineage active/peak population progress, capped by
+`CONFIG.PLANET_SETTLEMENT_READINESS_MAX_MARKERS`, and stop once authoritative
+settlement aggregates exist. They do not create or persist settlements.
 
 ## Shader Reference
 

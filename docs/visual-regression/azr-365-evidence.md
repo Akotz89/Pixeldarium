@@ -19,6 +19,8 @@ Updated screenshots:
   intent smoke at runtime zoom `7`.
 - `azr-365-ecology-local.png`: direct `file://` local active ecology material
   smoke at runtime zoom `7`, now with bounded ecology microstructure variants.
+- `azr-365-readiness-local.png`: direct `file://` local seeded aggregate
+  lineage readiness facade smoke at runtime zoom `6`.
 
 The settlement/route/border captures use deterministic seeded aggregate facade
 state inside the browser session only. Runtime files are unchanged by that
@@ -111,6 +113,17 @@ from aggregate civilization state.
   `6` confirmed wheel zoom `6 -> 6.25`, drag changed latitude/longitude, no
   page errors or failed requests, and `debugText=""`, while still reporting
   over-budget close-band frames.
+- Direct `file://` settlement-readiness facade probe after adding bounded
+  pre-settlement lineage markers: browser-only seeded aggregate lineage state
+  used `activeCount=9`, `peakPopulation=16`, `settlementCount=0`, and produced
+  one candidate with `progress=0.9`, `progressBucket=3`. The WebGL readiness
+  batch reported `count=1`, `readiness=1`, `culled=0`, `drew=true`,
+  `readinessDrawCount=2`, `frameInstanceDrawCount=11`, `lastError=""`, atlas
+  key `entity.settlement_readiness.1.3`, `debugText=""`, no page errors, and no
+  failed requests. A direct `file://` atlas pressure probe also exposed the
+  need for multiple packed atlas pages; the atlas now allocates additional
+  256x256 RGBA pages instead of throwing when visual-density cells exceed one
+  page.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -139,7 +152,11 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   now uses a bounded ready-chunk working set instead of submitting every visible
   candidate chunk; terrain upload segmentation now batches more ready instances
   per WebGL submission; terrain atlas upload pages now use typed buffers instead
-  of boxed JS arrays at the submission lifecycle boundary.
+  of boxed JS arrays at the submission lifecycle boundary; pre-settlement
+  lineage pressure now becomes capped watcher-facing readiness facades instead
+  of remaining inspector/history-only aggregate state; the packed atlas now
+  grows by page instead of treating the first 256x256 page as a hard visual
+  density ceiling.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -150,13 +167,18 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   radius queries as the aggregate boundary; close-band terrain submission uses
   the prioritized visible chunk list as its working-set boundary and the
   terrain instance upload segment as its GPU submission boundary; terrain atlas
-  upload pages now use typed page buffers as the atlas-page batch boundary.
+  upload pages now use typed page buffers as the atlas-page batch boundary;
+  settlement readiness uses aggregate lineage records plus the current
+  representative-organism center as its facade boundary, with at most
+  `6` readiness markers.
 - Readiness state: screenshots consume only loaded WebGL frames with hidden
   loading UI and nonzero sampled pixels; representative intent cells are
   consumed only after atlas generation/versioning and a selected, pinned, or
   bookmarked representative record are ready; active ecology material cells are
   consumed from current ready chunk samples after the ecology facade derives
-  bounded pressure from current organism/food buckets.
+  bounded pressure from current organism/food buckets; settlement readiness
+  markers consume only current non-extinct lineage counts plus current
+  representative positions and stop once real settlement aggregates exist.
 - Player-perception contract: each reachable camera stop maps to the intended
   orbit, continent, region, local, or settlement visual contract; close desert
   terrain should read as granular material, not full-height repeated columns;
@@ -165,7 +187,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   pressure should be readable in the terrain itself when entity overlays are
   visually subtle or temporarily overwritten by surface streaming; close-band
   center-footprint detail should remain readable while lower-priority edge
-  chunks are deferred to keep zoom/pan smoother.
+  chunks are deferred to keep zoom/pan smoother; near-founding lineage pressure
+  should be visible as a map signal without creating a settlement early.
 - New constraint or encoding limit: architecture zoom is clamped to the `1..20`
   perception scale derived from the configured camera anchors; terrain variant
   hashing is deterministic but no longer uses bounded RANMAP tile coordinates;
@@ -180,7 +203,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   only `ecoform.0..3` bounded atlas phases; local/settlement ready terrain
   chunks are capped at `192` per frame; terrain upload segments are capped at
   `8192` instances; terrain atlas page buffers use the existing 10-float
-  instance encoding and allocate transient typed capacity per atlas page.
+  instance encoding and allocate transient typed capacity per atlas page;
+  settlement readiness markers are capped at `6`, use progress buckets `0..3`,
+  and packed atlas pages grow in 256x256 RGBA increments.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
@@ -188,7 +213,8 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   representative intent draw evidence, active ecology terrain atlas evidence,
   active ecology microstructure unique-color and `ecoform` key evidence, and
   close-band terrain draw reduction, upload-segment evidence, typed page-builder
-  terrain frame evidence, and high-coordinate terrain variant regression
+  terrain frame evidence, settlement-readiness facade draw evidence, atlas
+  multi-page allocation coverage, and high-coordinate terrain variant regression
   coverage.
 
 ## Current Visual Gap
@@ -211,4 +237,6 @@ settlement/route visibility in organic simulation state, and broader material
 families before the placeholder/debug-map feel is gone. The close-band working
 set and typed terrain page builder now move submission metrics, but headless
 evidence still reports over-budget frames, so further batching/data-texture work
-remains necessary.
+remains necessary. The settlement-readiness facade starts making civilization
+pressure visible before real settlements exist, but the captured marker is still
+a first readability pass rather than the final settlement/route visual language.
