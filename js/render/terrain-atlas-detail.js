@@ -262,6 +262,119 @@ PS.atlas.drawTerrainEcologyMicrostructure = function (cell, palette, variant, sa
   }
 };
 
+PS.atlas.getTerrainFeatureInfo = function (sample, biome, tileDefinition) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var signals = detail.materialSignals || {};
+  var surface = String(detail.surface || "").toLowerCase();
+  var pattern = PS.atlas.getTerrainPatternForTile
+    ? PS.atlas.getTerrainPatternForTile(tileDefinition, PS.atlas.getTerrainPalette(biome).pattern)
+    : String(PS.atlas.getTerrainPalette(biome).pattern || "grit");
+  var pressure = Math.max(
+    Number(signals.surfaceRoughness) || 0,
+    Number(signals.wetness) || 0,
+    Number(signals.waterDepth) || 0,
+    Number(signals.snow) || 0,
+    Number(signals.organicMatter) || 0,
+    Number(detail.roughness) || 0,
+    Number(detail.elevation) || 0,
+    Number(tileDefinition && tileDefinition.baseFertility) || 0
+  );
+  var type = "field";
+
+  if (pattern === "wave" || pattern === "shore" || surface.indexOf("water") >= 0) {
+    type = "foam";
+    pressure = Math.max(pressure, Number(signals.waterDepth) || Number(tileDefinition && tileDefinition.waterDepth) || 0.4);
+  } else if (pattern === "canopy" || surface.indexOf("wood") >= 0 || surface.indexOf("canopy") >= 0) {
+    type = "canopy";
+    pressure = Math.max(pressure, Number(tileDefinition && tileDefinition.baseFertility) || 0.55);
+  } else if (pattern === "ridge" || surface.indexOf("rock") >= 0 || surface.indexOf("stone") >= 0) {
+    type = "ridge";
+    pressure = Math.max(pressure, Number(detail.roughness) || 0.62);
+  } else if (pattern === "dune" || surface.indexOf("sand") >= 0 || surface.indexOf("dune") >= 0) {
+    type = "scrub";
+    pressure = Math.max(pressure, 0.46);
+  } else if (pattern === "frost" || pattern === "crack" || surface.indexOf("snow") >= 0 || surface.indexOf("ice") >= 0) {
+    type = "frost";
+    pressure = Math.max(pressure, Number(signals.snow) || 0.52);
+  } else if (pattern === "lava") {
+    type = "ember";
+    pressure = 1;
+  } else if (pattern === "reed") {
+    type = "reed";
+    pressure = Math.max(pressure, Number(signals.wetness) || 0.58);
+  }
+
+  pressure = clamp(pressure, 0, 1);
+
+  if (pressure < 0.22) {
+    return null;
+  }
+
+  return {
+    type: type,
+    bucket: clamp(Math.floor(pressure * 4), 1, 3),
+    pressure: pressure
+  };
+};
+
+PS.atlas.getTerrainFeatureKey = function (sample, biome, tileDefinition) {
+  var feature = PS.atlas.getTerrainFeatureInfo(sample, biome, tileDefinition);
+
+  if (!feature) {
+    return "feature0";
+  }
+
+  return "feature." + feature.type + "." + feature.bucket;
+};
+
+PS.atlas.drawTerrainFeatureMarks = function (cell, palette, variant, sample, biome, tileDefinition) {
+  var feature = PS.atlas.getTerrainFeatureInfo(sample, biome, tileDefinition);
+  var light = feature ? PS.atlas.getTerrainDetailColor(palette, "light") : null;
+  var warm = feature ? PS.atlas.getTerrainDetailColor(palette, "warm") : null;
+  var shadow = feature ? PS.atlas.getTerrainDetailColor(palette, "shadow") : null;
+  var phase = clamp(Math.round(Number(variant) || 0), 0, 15);
+  var i;
+  var x;
+  var y;
+
+  if (!feature) {
+    return;
+  }
+
+  for (i = 0; i < 2 + feature.bucket; i++) {
+    x = 2 + ((phase * 5 + i * 4) % 12);
+    y = 2 + ((phase * 7 + i * 3) % 12);
+
+    if (feature.type === "foam") {
+      PS.atlas.writeTerrainDash(cell, Math.max(0, x - 1), y, 3, true, light);
+      PS.atlas.writePixel(cell, x, Math.min(15, y + 1), shadow);
+    } else if (feature.type === "canopy") {
+      PS.atlas.writeDot(cell, x, y, feature.bucket >= 2 ? 2 : 1, shadow);
+      PS.atlas.writePixel(cell, x, Math.max(0, y - 1), light);
+    } else if (feature.type === "ridge") {
+      PS.atlas.writeTerrainDash(cell, x, Math.max(0, y - 1), 3 + feature.bucket, false, shadow);
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), y, light);
+    } else if (feature.type === "scrub") {
+      PS.atlas.writePixel(cell, x, y, warm);
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), Math.max(0, y - 1), light);
+      PS.atlas.writePixel(cell, Math.max(0, x - 1), Math.min(15, y + 1), shadow);
+    } else if (feature.type === "frost") {
+      PS.atlas.writePixel(cell, x, y, light);
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), y, light);
+      PS.atlas.writePixel(cell, x, Math.min(15, y + 1), shadow);
+    } else if (feature.type === "ember") {
+      PS.atlas.writeDot(cell, x, y, feature.bucket >= 3 ? 1 : 0, warm);
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), y, light);
+    } else if (feature.type === "reed") {
+      PS.atlas.writeTerrainDash(cell, x, y, 3 + feature.bucket, false, light);
+      PS.atlas.writePixel(cell, Math.max(0, x - 1), Math.min(15, y + 2), shadow);
+    } else {
+      PS.atlas.writePixel(cell, x, y, light);
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), Math.min(15, y + 1), shadow);
+    }
+  }
+};
+
 PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefinition, biome, sample) {
   var pattern = String(palette && palette.pattern || "grit");
   var light = PS.atlas.getTerrainDetailColor(palette, "light");
@@ -271,6 +384,7 @@ PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefini
   var transition = PS.atlas.getTerrainTransitionInfo(sample, biome);
 
   function finish() {
+    PS.atlas.drawTerrainFeatureMarks(cell, palette, variant, sample, biome, tileDefinition);
     PS.atlas.drawTerrainEcologyMicrostructure(cell, palette, variant, sample);
     if (transition) {
       PS.atlas.drawTerrainTransitionEdge(cell, palette, variant, transition);

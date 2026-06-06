@@ -135,6 +135,14 @@ const plainGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
     yAmount: 0.5
   }
 });
+const noFeatureCell = context.PS.atlas.getTerrainCell("unknown", 41, 18, {
+  detail: {
+    surface: "",
+    elevation: 0,
+    roughness: 0,
+    materialSignals: {}
+  }
+});
 const coastEdgeGrassCell = context.PS.atlas.getTerrainCell("grassland", 22, 9, {
   detail: {
     surface: "grass",
@@ -312,11 +320,17 @@ assert.ok(deepWaterCell.name.indexOf("terrain.water_deep.") === 0, "deep water s
 assert.ok(marshCell.name.indexOf("terrain.marsh.") === 0 || marshCell.name.indexOf("terrain.wetland.") === 0 || marshCell.name.indexOf("terrain.mud.") === 0, "wet samples should select wetland material tiles");
 assert.ok(cliffCell.name.indexOf("terrain.rock_cliff.") === 0 || cliffCell.name.indexOf("terrain.rock.") === 0, "rough mountain samples should select rock material tiles");
 assert.ok(plainGrassCell.name.indexOf(".plain") > 0, "plain terrain cells should keep an explicit plain transition key");
+assert.ok(noFeatureCell.name.indexOf(".feature0.") > 0, "no-signal fallback terrain should keep an explicit no-feature key");
+assert.ok(forestCell.name.indexOf(".feature.canopy.") > 0, "forest terrain should encode bounded canopy feature marks");
+assert.ok(deepWaterCell.name.indexOf(".feature.foam.") > 0, "deep water should encode bounded foam feature marks");
+assert.ok(cliffCell.name.indexOf(".feature.ridge.") > 0, "rough mountain terrain should encode bounded ridge feature marks");
+assert.ok(desertCell.name.indexOf(".feature.scrub.") > 0, "desert terrain should encode bounded dry scrub feature marks");
 assert.ok(coastEdgeGrassCell.name.indexOf(".coast.") > 0, "biome blend samples should encode bounded coast transition cells");
 assert.notStrictEqual(coastEdgeGrassCell.name, plainGrassCell.name, "transition edges should not overwrite plain material atlas cells");
 assert.notDeepStrictEqual(pixelAt(coastEdgeGrassCell, 15, 2), pixelAt(plainGrassCell, 15, 2), "east coast edge should add readable transition pixels");
 assert.ok(uniqueColorCount(coastEdgeGrassCell) >= uniqueColorCount(plainGrassCell), "transition edge cells should preserve material detail density");
 assert.ok(plainGrassCell.name.endsWith(".bio0"), "plain terrain cells should keep an explicit no-biology key");
+assert.notDeepStrictEqual(pixelAt(forestCell, 4, 4), pixelAt(noFeatureCell, 4, 4), "feature marks should change stable atlas pixels");
 assert.ok(microbialMatCell.name.indexOf(".microbial.3") > 0, "microbial mat samples should encode a bounded biological material key");
 assert.notStrictEqual(microbialMatCell.name, ordinaryWetlandCell.name, "microbial mat cells should not overwrite ordinary wetland material cells");
 assert.notDeepStrictEqual(pixelAt(microbialMatCell, 7, 7), pixelAt(ordinaryWetlandCell, 7, 7), "microbial mat pressure should change visible terrain pixels");
