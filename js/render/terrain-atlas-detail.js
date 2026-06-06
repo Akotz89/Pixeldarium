@@ -190,6 +190,78 @@ PS.atlas.drawTerrainTransitionEdge = function (cell, palette, variant, transitio
   }
 };
 
+PS.atlas.getTerrainEcologyDetailInfo = function (sample) {
+  var ecology = sample && sample.ecology ? sample.ecology : null;
+  var foodPressure = clamp(Number(ecology && ecology.foodPressure) || 0, 0, 1);
+  var organismPressure = clamp(Number(ecology && ecology.organismPressure) || 0, 0, 1);
+  var organicMatter = clamp(Number(ecology && ecology.organicMatter) || 0, 0, 1);
+  var pressure = Math.max(foodPressure, organismPressure, organicMatter);
+
+  if (!ecology || pressure < 0.18) {
+    return null;
+  }
+
+  return {
+    foodBucket: Math.min(3, Math.floor(foodPressure * 4)),
+    organismBucket: Math.min(3, Math.floor(Math.max(organismPressure, organicMatter) * 4)),
+    pressure: pressure
+  };
+};
+
+PS.atlas.drawTerrainEcologyMicrostructure = function (cell, palette, variant, sample) {
+  var ecology = PS.atlas.getTerrainEcologyDetailInfo(sample);
+  var light = ecology ? PS.atlas.getTerrainDetailColor(palette, "light") : null;
+  var warm = ecology ? PS.atlas.getTerrainDetailColor(palette, "warm") : null;
+  var shadow = ecology ? PS.atlas.getTerrainDetailColor(palette, "shadow") : null;
+  var sprout = light ? [
+    clamp(Math.round(light[0] + 10), 0, 255),
+    clamp(Math.round(light[1] + 28), 0, 255),
+    clamp(Math.round(light[2] - 18), 0, 255),
+    255
+  ] : null;
+  var track = warm ? [
+    clamp(Math.round(warm[0] + 18), 0, 255),
+    clamp(Math.round(warm[1] + 18), 0, 255),
+    clamp(Math.round(warm[2] - 30), 0, 255),
+    255
+  ] : null;
+  var microPhase = Number.isFinite(Number(sample && sample.terrainEcologyMicroPhase))
+    ? Number(sample.terrainEcologyMicroPhase)
+    : 0;
+  var phase = clamp(Math.round((Number(variant) || 0) + microPhase * 3), 0, 15);
+  var foodMarks;
+  var organismMarks;
+  var i;
+  var x;
+  var y;
+
+  if (!ecology) {
+    return;
+  }
+
+  foodMarks = 2 + ecology.foodBucket * 2;
+  organismMarks = 1 + ecology.organismBucket * 2;
+
+  for (i = 0; i < foodMarks; i++) {
+    x = 2 + ((phase * 3 + i * 5) % 12);
+    y = 2 + ((phase * 7 + i * 3) % 12);
+    PS.atlas.writePixel(cell, x, y, shadow);
+    PS.atlas.writeDot(cell, x, Math.max(1, y - 1), ecology.foodBucket >= 2 && i % 3 === 0 ? 1 : 0, sprout);
+  }
+
+  for (i = 0; i < organismMarks; i++) {
+    x = 1 + ((phase * 5 + i * 4) % 14);
+    y = 3 + ((phase * 2 + i * 5) % 10);
+    PS.atlas.writePixel(cell, x, y, track);
+    if (ecology.organismBucket >= 2) {
+      PS.atlas.writePixel(cell, Math.min(15, x + 1), y, track);
+    }
+    if (ecology.organismBucket >= 3 && i % 2 === 0) {
+      PS.atlas.writePixel(cell, x, Math.min(15, y + 1), shadow);
+    }
+  }
+};
+
 PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefinition, biome, sample) {
   var pattern = String(palette && palette.pattern || "grit");
   var light = PS.atlas.getTerrainDetailColor(palette, "light");
@@ -199,6 +271,7 @@ PS.atlas.drawTerrainDetailOverlay = function (cell, palette, variant, tileDefini
   var transition = PS.atlas.getTerrainTransitionInfo(sample, biome);
 
   function finish() {
+    PS.atlas.drawTerrainEcologyMicrostructure(cell, palette, variant, sample);
     if (transition) {
       PS.atlas.drawTerrainTransitionEdge(cell, palette, variant, transition);
     }

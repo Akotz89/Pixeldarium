@@ -161,6 +161,9 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     var tileX = baseWorldX + ax;
     var tileY = baseWorldY + ay;
     var ecologyKey = sample && sample.ecology ? sample.ecology.key : "eco.0.0";
+    if (sample && PS.atlas && typeof PS.atlas.getTerrainEcologyMicroKey === "function") {
+      ecologyKey += PS.atlas.getTerrainEcologyMicroKey(sample, tileX, tileY);
+    }
     var cell = cellData.terrainAtlasEcologyKey === ecologyKey ? cellData.terrainAtlasCell || null : null;
 
     if (!cell) {

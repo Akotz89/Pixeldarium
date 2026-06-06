@@ -53,9 +53,14 @@ const context = {
       }
     },
     atlas: {
+      getTerrainEcologyMicroKey(sample, tileX, tileY) {
+        return sample && sample.ecology ? ".ecoform." + ((tileX + tileY) % 4) : "";
+      },
       getTerrainCell(biome, tileX, tileY, sample) {
+        const microKey = context.PS.atlas.getTerrainEcologyMicroKey(sample, tileX, tileY);
+
         return {
-          name: "test.grass." + (sample && sample.ecology ? sample.ecology.key : "eco.0.0"),
+          name: "test.grass." + (sample && sample.ecology ? sample.ecology.key : "eco.0.0") + microKey,
           pageIndex: 0,
           u0: 0,
           v0: 0,
@@ -128,9 +133,12 @@ const ecologyAddress = {
   chunkSamples: 1
 };
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
-assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2", "terrain cell cache should include the active ecology key");
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.0", "terrain cell cache should include the active ecology key and bounded micro phase");
+ecologyAddress.sampleEast = 1;
+context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.1", "terrain cell cache should invalidate when ecology micro phase changes");
 ecologyCell.sample.ecologyKey = "eco.0.0";
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
-assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0", "terrain cell cache should invalidate when ecology key changes");
+assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1", "terrain cell cache should invalidate when ecology key changes");
 
 console.log("surface tile webgl checks passed");

@@ -18,7 +18,7 @@ Updated screenshots:
 - `azr-365-intent-local.png`: direct `file://` seeded local representative
   intent smoke at runtime zoom `7`.
 - `azr-365-ecology-local.png`: direct `file://` local active ecology material
-  smoke at runtime zoom `7`.
+  smoke at runtime zoom `7`, now with bounded ecology microstructure variants.
 
 The settlement/route/border captures use deterministic seeded aggregate facade
 state inside the browser session only. Runtime files are unchanged by that
@@ -70,6 +70,17 @@ from aggregate civilization state.
   `organismPressureCells=1`; generated atlas keys included
   `terrain.water_deep.3.plain.organic.1.nutrient.2`; atlas page bytes stayed
   `262144`.
+- Direct `file://` active ecology microstructure probe after adding bounded
+  sub-tile phases: settlement-band view at zoom `7`, no page errors or failed
+  requests, `singleVisibleCanvas=true`, `terrainDraws=16384`,
+  `terrainPageDraws=4`, `activeCells=1`, `foodPressureCells=1`,
+  `organismPressureCells=1`, atlas keys included
+  `terrain.water_deep.3.plain.organic.1.nutrient.2.ecoform.1`, the active
+  ecology atlas cell had `8` unique colors, `ecoformCount=10` among sampled
+  active ecology atlas cells, and atlas page bytes stayed `262144`. The same
+  smoke confirmed wheel zoom `7 -> 6.75` and drag changed latitude/longitude.
+  The headless capture frame reported `gpuFrameMs=108.8`, so this slice is
+  treated as a visual-density movement, not a proven frame-time improvement.
 - Close desert material cells now vary across high surface sample Y coordinates
   instead of collapsing to RANMAP's clamped final tile row.
 
@@ -92,7 +103,9 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   selected/pinned/bookmarked representative behavior and target state now
   becomes watcher-facing intent atlas facades instead of inspector-only data;
   local active organism/food pressure now becomes terrain-facing ecology
-  material encoding instead of relying only on entity overlays.
+  material encoding instead of relying only on entity overlays; active ecology
+  terrain atlas cells now add bounded sub-tile microstructure phases to reduce
+  the single repeated material language at close zoom.
 - Chunk, batch, or aggregate boundary: formal render layers stay the batch
   boundary; WebGL terrain atlas instances stay chunk/page batched; entity atlas
   facade metrics now aggregate across settlement, influence, route, organism,
@@ -124,13 +137,15 @@ Warnings were limited to a startup catch-up backlog message and Playwright
   buckets `0..3`, lineage buckets `1..16`, and `128` watched markers per frame;
   terrain ecology encoding is enabled at zoom `>=4`, samples a `16` tile radius,
   and maps food/organism pressure into existing `organic.0..3` and
-  `nutrient.0..3` terrain atlas suffixes.
+  `nutrient.0..3` terrain atlas suffixes; active ecology microstructure adds
+  only `ecoform.0..3` bounded atlas phases.
 - Metric proving movement: pipeline stats now report reachable local and
   settlement bands, with WebGL terrain/entity draw counts, semantic facade draw
   counters, direct file-runtime interaction evidence, biological terrain atlas
   identity/pixel evidence, resource terrain atlas identity/pixel evidence,
   representative intent draw evidence, active ecology terrain atlas evidence,
-  and high-coordinate terrain variant regression coverage.
+  active ecology microstructure unique-color and `ecoform` key evidence, and
+  high-coordinate terrain variant regression coverage.
 
 ## Current Visual Gap
 
@@ -145,6 +160,8 @@ state now reaches the WebGL entity path, but the latest intent screenshot still
 reads mostly as terrain at full-frame scale, so the next visual pass should make
 local ecological cues more legible in ordinary captures. The active ecology
 material pass makes those cues visible in the terrain, but the current local
-capture can still become broad at single-tile zoom; later passes should add
-more varied sub-tile ecological structure instead of a single repeated material
-language.
+capture can still become broad at single-tile zoom. This pass adds bounded
+sub-tile ecological structure and reduces single-cell repetition, but the
+current screenshot still needs stronger authored biome/feature contrast,
+settlement/route visibility in organic simulation state, and broader material
+families before the placeholder/debug-map feel is gone.

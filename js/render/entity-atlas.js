@@ -786,6 +786,31 @@ PS.atlas.getTerrainResourceKey = function (sample) {
   return "." + resource.type + "." + resource.bucket;
 };
 
+PS.atlas.getTerrainEcologyMicroPhase = function (sample, tileX, tileY) {
+  var ecology = sample && sample.ecology ? sample.ecology : null;
+  var pressure = Math.max(
+    Number(ecology && ecology.foodPressure) || 0,
+    Number(ecology && ecology.organismPressure) || 0,
+    Number(ecology && ecology.organicMatter) || 0
+  );
+  var sampleX = Number.isFinite(Number(tileX)) ? Number(tileX) : Number(sample && sample.x) || 0;
+  var sampleY = Number.isFinite(Number(tileY)) ? Number(tileY) : Number(sample && sample.y) || 0;
+  var noise;
+
+  if (!ecology || pressure < 0.18) {
+    return -1;
+  }
+
+  noise = PS.atlas.getTerrainSurfaceNoise(sampleX, sampleY, 91);
+  return clamp(Math.floor(noise * 4), 0, 3);
+};
+
+PS.atlas.getTerrainEcologyMicroKey = function (sample, tileX, tileY) {
+  var phase = PS.atlas.getTerrainEcologyMicroPhase(sample, tileX, tileY);
+
+  return phase >= 0 ? ".ecoform." + phase : "";
+};
+
 PS.atlas.applyTerrainResourcePalette = function (palette, resource, biology) {
   if (!resource) {
     return palette;
@@ -950,15 +975,20 @@ PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var materialId = tileDefinition ? tileDefinition.id : String(biome || "grass");
   var biologyKey = PS.atlas.getTerrainBiologyKey(sample);
   var resourceKey = PS.atlas.getTerrainResourceKey(sample);
+  var ecologyMicroPhase = PS.atlas.getTerrainEcologyMicroPhase(sample, tileX, tileY);
+  var ecologyMicroKey = ecologyMicroPhase >= 0 ? ".ecoform." + ecologyMicroPhase : "";
   var transitionKey = typeof PS.atlas.getTerrainTransitionKey === "function"
     ? PS.atlas.getTerrainTransitionKey(sample, biome)
     : "plain";
-  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + biologyKey + resourceKey;
+  var drawSample = ecologyMicroPhase >= 0
+    ? Object.assign({}, sample, { terrainEcologyMicroPhase: ecologyMicroPhase })
+    : sample;
+  var name = "terrain." + materialId + "." + variant + "." + transitionKey + "." + biologyKey + resourceKey + ecologyMicroKey;
   var cell = PS.atlas.cells[name];
 
   if (!cell) {
     cell = PS.atlas.allocateCell(name, 16, 16);
-    PS.atlas.drawTerrainCell(cell, biome, variant, tileDefinition, sample);
+    PS.atlas.drawTerrainCell(cell, biome, variant, tileDefinition, drawSample);
     PS.atlas.stats.terrainCells++;
     PS.atlas.pages[cell.pageIndex].version++;
   }

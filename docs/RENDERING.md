@@ -221,6 +221,10 @@ Relevant current limits:
   `CONFIG.PLANET_SURFACE_ECOLOGY_ENABLED`, starts at
   `CONFIG.PLANET_SURFACE_ECOLOGY_MIN_ZOOM = 4`, and samples a bounded
   `CONFIG.PLANET_SURFACE_ECOLOGY_RADIUS_TILES = 16`.
+- Active ecology microstructure: generated inside the existing 16x16 terrain
+  atlas cell after organic/nutrient pressure is known. It adds no new draw-call
+  family and uses only the existing food/organism pressure buckets plus a
+  bounded `ecoform.0..3` sub-tile phase.
 - Entity instances: `CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES = 8192`.
 - Watched representative intent markers: `CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS = 128`.
 - Active particle cap: `CONFIG.PARTICLE_MAX_ACTIVE = 10000`.
@@ -243,7 +247,11 @@ the worker/cache lifecycle and must not block the frame.
 Local ecology material encoding is a render facade over current organism and
 food buckets. It does not make visible organisms or food particles
 authoritative; it derives bounded `organic.0..3` and `nutrient.0..3` terrain
-atlas suffixes from current ready samples and current bucket pressure.
+atlas suffixes from current ready samples and current bucket pressure. Active
+ecology microstructure is drawn inside those ready atlas cells so close zoom
+reads as living terrain instead of one broad material wash. The microstructure
+phase is bounded to `ecoform.0..3`; it is deterministic by sample coordinate
+and is part of the terrain atlas cache key.
 
 At orbit zoom, the renderer preserves global comprehension: globe shape,
 terrain fields, overlays, and event markers. At local zoom, it spends detail on
