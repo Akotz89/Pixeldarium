@@ -63,6 +63,7 @@ const context = {
           routeDrawCount: 3,
           influenceDrawCount: 4,
           shadowDrawCount: 10,
+          citizenDrawCount: 11,
           intentDrawCount: 8,
           readinessDrawCount: 9,
           foodDrawCount: 5,
@@ -136,6 +137,7 @@ assert.strictEqual(stats.settlementEntityDraws, 2, "renderer stats should includ
 assert.strictEqual(stats.routeEntityDraws, 3, "renderer stats should include route entity draws");
 assert.strictEqual(stats.influenceEntityDraws, 4, "renderer stats should include influence entity draws");
 assert.strictEqual(stats.shadowEntityDraws, 10, "renderer stats should include settlement shadow entity draws");
+assert.strictEqual(stats.citizenEntityDraws, 11, "renderer stats should include settlement citizen entity draws");
 assert.strictEqual(stats.intentEntityDraws, 8, "renderer stats should include representative intent entity draws");
 assert.strictEqual(stats.settlementReadinessEntityDraws, 9, "renderer stats should include settlement readiness facade draws");
 assert.strictEqual(stats.foodEntityDraws, 5, "renderer stats should include food entity draws");

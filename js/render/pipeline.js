@@ -438,6 +438,18 @@ PS.render.pipeline.registerLayer("settlement.structures", {
   draw: function () { PS.render.entities.drawSettlements(); }
 });
 
+PS.render.pipeline.registerLayer("settlement.citizens", {
+  order: 86,
+  drawLayer: PS.render.DrawLayer.ENTITY_SORTED,
+  family: "settlement",
+  semantic: "bounded citizen facades around active settlements",
+  minBand: "settlement",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementCitizens(); }
+});
+
 PS.render.pipeline.registerLayer("entities.organisms", {
   order: 90,
   drawLayer: PS.render.DrawLayer.ENTITY_SORTED,
