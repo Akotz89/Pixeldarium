@@ -27,6 +27,7 @@ PS.core.manifest = [
   "js/assets/registry.js",
   "js/assets/loader.js",
   "js/assets/sprite-sheet.js",
+  "js/assets/equivalence.js",
   "js/systems/state.js",
   "js/systems/world.js",
   "js/core/utils.js",

@@ -1,0 +1,194 @@
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const root = path.resolve(__dirname, "..");
+
+function read(file) {
+  return fs.readFileSync(path.join(root, file), "utf8");
+}
+
+const namespaceSource = read("js/core/namespace.js");
+const equivalenceSource = read("js/assets/equivalence.js");
+const entityWebglSource = read("js/render/entity-webgl.js");
+const webgl2RendererSource = read("js/render/webgl2-renderer.js");
+
+assert.ok(
+  namespaceSource.indexOf("js/assets/equivalence.js") > namespaceSource.indexOf("js/assets/sprite-sheet.js"),
+  "equivalence selector should load after sprite sheet support"
+);
+assert.ok(
+  namespaceSource.indexOf("js/assets/equivalence.js") < namespaceSource.indexOf("js/render/entity-webgl.js"),
+  "equivalence selector should load before entity WebGL selection"
+);
+assert.ok(
+  entityWebglSource.indexOf("selectEquivalenceCell") >= 0,
+  "entity WebGL should select accepted equivalence cells before submitting fallback atlas cells"
+);
+assert.ok(
+  webgl2RendererSource.indexOf("equivalenceAssetSelections") >= 0,
+  "renderer stats should expose accepted equivalence asset selection counts"
+);
+
+function makeLoadedSheet(cellIds) {
+  return {
+    id: "equivalence_creature_npc_refined_v1",
+    image: { width: 512, height: 64, naturalWidth: 512, naturalHeight: 64 },
+    pixelData: {
+      type: "rgba-base64",
+      width: 512,
+      height: 64,
+      byteLength: 512 * 64 * 4,
+      data: Buffer.alloc(512 * 64 * 4, 255).toString("base64")
+    },
+    sheet: {
+      getCell(name) {
+        if (cellIds.indexOf(name) < 0) {
+          return null;
+        }
+        return { name, x: 0, y: 0, w: 32, h: 32, image: { width: 32, height: 32 } };
+      }
+    }
+  };
+}
+
+function makeLoadedSheetWithoutPixelData(cellIds) {
+  var loaded = makeLoadedSheet(cellIds);
+  delete loaded.pixelData;
+  return loaded;
+}
+
+function makeBrokenPixelLoadedSheet(cellIds) {
+  var loaded = makeLoadedSheet(cellIds);
+  loaded.pixelData = {
+    type: "rgba-base64",
+    width: 32,
+    height: 32,
+    byteLength: 4096,
+    data: "not-valid"
+  };
+  return loaded;
+}
+
+const context = {
+  CONFIG: {
+    PLANET_ENTITY_WEBGL_MAX_INSTANCES: 8192,
+    LINEAGE_COLORS: ["#72d7ff"]
+  },
+  PS: {
+    assets: {
+      loadedSheets: {
+        equivalence_creature_npc_refined_v1: makeLoadedSheet([
+          "rabbit.n",
+          "rabbit.s"
+        ]),
+        equivalence_settlement_structures_v0: makeLoadedSheet([
+          "housing-room"
+        ]),
+        equivalence_resource_stockpiles_v0: makeLoadedSheet([
+          "grain"
+        ]),
+        equivalence_vegetation_scatter_v0: makeLoadedSheet([
+          "oak.0"
+        ]),
+        equivalence_ui_status_icons_v0: makeLoadedSheet([
+          "stat-population"
+        ]),
+        equivalence_work_status_overlays_v0: makeLoadedSheet([
+          "work-hammer"
+        ])
+      }
+    },
+    render: {},
+    atlas: {
+      pages: [],
+      getTraitOrganismCell() {
+        return { name: "entity.organism.trait.1.1.1.0.0.0.0", pageIndex: 0, u0: 0, v0: 0, u1: 1, v1: 1 };
+      },
+      getFoodCell() {
+        return { name: "entity.food.0", pageIndex: 0, u0: 0, v0: 0, u1: 1, v1: 1 };
+      },
+      getSettlementCell() {
+        return { name: "entity.settlement.0", pageIndex: 0, u0: 0, v0: 0, u1: 1, v1: 1 };
+      },
+      getSettlementWorldUiCell() {
+        return { name: "entity.settlement.world-ui.population", pageIndex: 0, u0: 0, v0: 0, u1: 1, v1: 1 };
+      },
+      getRepresentativeIntentCell() {
+        return { name: "entity.intent.work", pageIndex: 0, u0: 0, v0: 0, u1: 1, v1: 1 };
+      }
+    }
+  },
+  Number,
+  String,
+  Object,
+  Array,
+  Math,
+  Buffer,
+  Uint8Array,
+  Float32Array,
+  performance: {
+    now() {
+      return 0;
+    }
+  },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+};
+
+context.PS.render.entityWebgl = {};
+vm.createContext(context);
+vm.runInContext(equivalenceSource, context, { filename: "js/assets/equivalence.js" });
+vm.runInContext(entityWebglSource, context, { filename: "js/render/entity-webgl.js" });
+
+context.PS.render.entityWebgl.resetFrameStats();
+context.PS.render.entityWebgl.getOrganismCell({ x: 1, y: 1, traits: { bodySize: 1 }, lineageId: 1 }, "citizen");
+context.PS.render.entityWebgl.getFoodCell({ x: 1, y: 1 }, "stockpile");
+context.PS.render.entityWebgl.getFoodCell({ x: 1, y: 1 }, "vegetation");
+context.PS.render.entityWebgl.getSettlementCell({ id: 1 }, "settlement");
+context.PS.render.entityWebgl.getSettlementWorldUiCell({ id: 1 }, "population");
+context.PS.assets.equivalence.select("workStatus", "entity.intent.work");
+
+const selectedCitizen = context.PS.assets.equivalence.select("citizen", "entity.fallback");
+const stats = context.PS.assets.equivalence.getStats();
+
+assert.strictEqual(stats.selected, 7, "accepted equivalence selector should record each render category selection");
+assert.strictEqual(stats.rendered, 7, "accepted equivalence selector should create renderable atlas cells");
+assert.strictEqual(stats.missing, 0, "all test equivalence sheets/cells should resolve");
+assert.strictEqual(stats.byUse.citizen, 2, "citizen render category should select accepted creature sheet cells");
+assert.strictEqual(stats.byUse.stockpile, 1, "stockpile render category should select accepted resource sheet cells");
+assert.strictEqual(stats.byUse.vegetation, 1, "vegetation render category should select accepted vegetation sheet cells");
+assert.strictEqual(stats.byUse.settlement, 1, "settlement render category should select accepted structure sheet cells");
+assert.strictEqual(stats.byUse.worldUi, 1, "world UI render category should select accepted UI sheet cells");
+assert.strictEqual(stats.byUse.workStatus, 1, "intent/status render category should select accepted overlay sheet cells");
+assert.strictEqual(stats.bySheet.equivalence_creature_npc_refined_v1, 2, "creature/citizen usage should name the accepted creature sheet");
+assert.strictEqual(stats.bySheet.equivalence_settlement_structures_v0, 1, "settlement usage should name the accepted structure sheet");
+assert.strictEqual(stats.bySheet.equivalence_resource_stockpiles_v0, 1, "stockpile usage should name the accepted resource sheet");
+assert.ok(selectedCitizen.renderCell, "accepted equivalence selection should expose an atlas-compatible render cell");
+assert.strictEqual(selectedCitizen.renderCell.equivalenceSheetId, "equivalence_creature_npc_refined_v1", "render cell should retain accepted sheet identity");
+assert.ok(selectedCitizen.renderCell.pageIndex >= 0, "render cell should target an external accepted sheet page");
+assert.ok(context.PS.atlas.pages[selectedCitizen.renderCell.pageIndex].equivalencePixelData, "accepted sheet page should use file-safe decoded RGBA sidecar data");
+assert.ok(context.PS.atlas.pages[selectedCitizen.renderCell.pageIndex].data instanceof Uint8Array, "accepted sheet page should expose RGBA bytes for WebGL upload");
+
+context.PS.assets.loadedSheets.equivalence_creature_npc_refined_v1 = makeLoadedSheetWithoutPixelData(["rabbit.s"]);
+context.PS.assets.equivalence.resetFrameStats();
+context.PS.atlas.pages = [];
+const imageFallback = context.PS.assets.equivalence.select("citizen", "entity.fallback");
+assert.ok(imageFallback.renderCell, "HTTP-capable runtimes should still be able to fall back to image-backed accepted pages");
+assert.ok(context.PS.atlas.pages[imageFallback.renderCell.pageIndex].externalImage, "image fallback should mark an external image page");
+
+context.PS.assets.loadedSheets.equivalence_creature_npc_refined_v1 = makeBrokenPixelLoadedSheet(["rabbit.s"]);
+context.PS.assets.equivalence.resetFrameStats();
+context.PS.atlas.pages = [];
+const brokenPixel = context.PS.assets.equivalence.select("citizen", "entity.fallback");
+const brokenStats = context.PS.assets.equivalence.getStats();
+assert.strictEqual(brokenPixel.renderCell, null, "broken accepted pixel sidecar should not produce a render cell");
+assert.ok(
+  brokenStats.missingKeys["pixel-data:equivalence_creature_npc_refined_v1"] > 0 ||
+    brokenStats.missingKeys["pixel-data:unknown"] > 0,
+  "broken pixel sidecar should be diagnostic"
+);
+
+console.log("equivalence asset selection checks passed");

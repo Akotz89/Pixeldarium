@@ -618,6 +618,13 @@ async function run() {
       assert.ok(caseStats.rendererStats.worldUiEntityDraws > 0, testCase.name + " should draw settlement world UI facades through WebGL");
       assert.ok(caseStats.rendererStats.settlementEntityDraws > 0, testCase.name + " should draw settlement structures through WebGL");
       assert.ok(caseStats.rendererStats.routeEntityDraws > 0, testCase.name + " should draw settlement routes through WebGL");
+      assert.ok(caseStats.rendererStats.equivalenceAssetSelections > 0, testCase.name + " should select accepted equivalence assets during runtime rendering");
+      assert.ok(caseStats.rendererStats.equivalenceAssetRendered > 0, testCase.name + " should render through accepted equivalence texture pages");
+      assert.strictEqual(caseStats.rendererStats.equivalenceAssetMissing, 0, testCase.name + " should resolve accepted equivalence sheets without missing cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.settlement > 0, testCase.name + " should select accepted settlement structure cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.vegetation > 0, testCase.name + " should select accepted vegetation cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.citizen > 0, testCase.name + " should select accepted creature/citizen cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.worldUi > 0, testCase.name + " should select accepted UI/status cells");
       assert.ok(caseStats.particleStats.ready === true, testCase.name + " should have ready particle definitions");
       assert.ok(caseStats.particleStats.visible > 0, testCase.name + " should draw settlement activity particles through WebGL");
       assert.ok(caseStats.particleStats.drawCalls > 0, testCase.name + " should submit a WebGL particle draw");
