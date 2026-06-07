@@ -18,6 +18,7 @@ PS.atlas = PS.atlas || {
     settlementCells: 0,
     routeCells: 0,
     influenceCells: 0,
+    worldUiCells: 0,
     intentCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
@@ -38,6 +39,7 @@ PS.atlas.reset = function () {
   PS.atlas.stats.settlementCells = 0;
   PS.atlas.stats.routeCells = 0;
   PS.atlas.stats.influenceCells = 0;
+  PS.atlas.stats.worldUiCells = 0;
   PS.atlas.stats.intentCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
@@ -571,6 +573,62 @@ PS.atlas.drawInfluenceCell = function (cell, strengthBucket, lineageId) {
   if (strengthBucket >= 2) {
     PS.atlas.writePixel(cell, 7, 5, glow);
     PS.atlas.writePixel(cell, 8, 5, glow);
+  }
+};
+
+PS.atlas.drawSettlementWorldUiCell = function (cell, metricType, bucket, lineageId) {
+  var colors = CONFIG && CONFIG.LINEAGE_COLORS ? CONFIG.LINEAGE_COLORS : ["#72d7ff"];
+  var baseRgb = PS.atlas.hexToRgb(colors[(Math.max(1, lineageId) - 1) % colors.length]);
+  var safeBucket = clamp(Math.round(Number(bucket) || 0), 0, 3);
+  var metric = String(metricType || "population");
+  var bg = [16, 24, 30, 220];
+  var border = [Math.min(255, baseRgb[0] + 42), Math.min(255, baseRgb[1] + 42), Math.min(255, baseRgb[2] + 42), 245];
+  var fill = metric === "food"
+    ? [118, 224, 92, 245]
+    : (metric === "development" ? [238, 188, 86, 245] : [132, 206, 244, 245]);
+  var shadow = [4, 8, 14, 175];
+  var x;
+  var y;
+  var segmentCount = 1 + safeBucket;
+
+  PS.atlas.fillNormalHalf(cell);
+
+  for (x = 3; x <= 13; x++) {
+    PS.atlas.writePixel(cell, x, 12, shadow);
+  }
+
+  for (x = 2; x <= 13; x++) {
+    PS.atlas.writePixel(cell, x, 4, border);
+    PS.atlas.writePixel(cell, x, 11, border);
+  }
+
+  for (y = 5; y <= 10; y++) {
+    PS.atlas.writePixel(cell, 2, y, border);
+    PS.atlas.writePixel(cell, 13, y, border);
+    for (x = 3; x <= 12; x++) {
+      PS.atlas.writePixel(cell, x, y, bg);
+    }
+  }
+
+  if (metric === "food") {
+    PS.atlas.writeDot(cell, 5, 8, 1, fill);
+    PS.atlas.writePixel(cell, 6, 7, [Math.min(255, fill[0] + 34), Math.min(255, fill[1] + 24), Math.min(255, fill[2] + 28), 255]);
+  } else if (metric === "development") {
+    PS.atlas.writePixel(cell, 5, 9, fill);
+    PS.atlas.writePixel(cell, 6, 8, fill);
+    PS.atlas.writePixel(cell, 7, 7, fill);
+    PS.atlas.writePixel(cell, 8, 6, fill);
+  } else {
+    PS.atlas.writePixel(cell, 5, 7, fill);
+    PS.atlas.writePixel(cell, 4, 8, fill);
+    PS.atlas.writePixel(cell, 5, 8, fill);
+    PS.atlas.writePixel(cell, 6, 8, fill);
+    PS.atlas.writePixel(cell, 5, 9, fill);
+  }
+
+  for (x = 0; x < segmentCount; x++) {
+    PS.atlas.writePixel(cell, 8 + x, 9, fill);
+    PS.atlas.writePixel(cell, 8 + x, 10, fill);
   }
 };
 
@@ -1138,6 +1196,56 @@ PS.atlas.getSettlementInfluenceCell = function (settlement) {
   return cell;
 };
 
+PS.atlas.getSettlementWorldUiBucket = function (settlement, metricType) {
+  var metric = String(metricType || "population");
+
+  if (metric === "food") {
+    var food = Math.max(
+      Number(settlement && settlement.foodStock) || 0,
+      Number(settlement && settlement.storedFood) || 0,
+      Number(settlement && settlement.claimedFood) || 0
+    );
+
+    if (food >= 160) { return 3; }
+    if (food >= 80) { return 2; }
+    if (food > 0) { return 1; }
+    return 0;
+  }
+
+  if (metric === "development") {
+    var development = clamp(Number(settlement && settlement.development) || 0, 0, 1);
+
+    if (development >= 0.75) { return 3; }
+    if (development >= 0.45) { return 2; }
+    if (development > 0) { return 1; }
+    return 0;
+  }
+
+  var population = Math.max(0, Number(settlement && settlement.population) || 0);
+
+  if (population >= 160) { return 3; }
+  if (population >= 80) { return 2; }
+  if (population > 0) { return 1; }
+  return 0;
+};
+
+PS.atlas.getSettlementWorldUiCell = function (settlement, metricType) {
+  var metric = String(metricType || "population");
+  var bucket = PS.atlas.getSettlementWorldUiBucket(settlement, metric);
+  var lineageBucket = ((Math.max(1, Math.round(Number(settlement && settlement.lineageId) || 1)) - 1) % 16) + 1;
+  var name = "entity.settlement_world_ui." + metric + "." + bucket + "." + lineageBucket;
+  var cell = PS.atlas.cells[name];
+
+  if (!cell) {
+    cell = PS.atlas.allocateCell(name, 32, 16);
+    PS.atlas.drawSettlementWorldUiCell(cell, metric, bucket, lineageBucket);
+    PS.atlas.stats.worldUiCells++;
+    PS.atlas.pages[cell.pageIndex].version++;
+  }
+
+  return cell;
+};
+
 PS.atlas.getTerrainCell = function (biome, tileX, tileY, sample) {
   var tileDefinition = PS.atlas.getTerrainMaterialTile(biome, tileX, tileY, sample);
   var variantCount = Math.max(1, Number(tileDefinition && tileDefinition.variants) || 4);
@@ -1188,6 +1296,7 @@ PS.atlas.init = function () {
   PS.atlas.getSettlementCell({ lineageId: 1, level: 1 });
   PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 0 }, "horizontal");
   PS.atlas.getSettlementInfluenceCell({ lineageId: 1, level: 1, claimedTiles: 0 });
+  PS.atlas.getSettlementWorldUiCell({ lineageId: 1, population: 1, foodStock: 1, development: 0.25 }, "population");
   PS.atlas.getRepresentativeIntentCell({ lineageId: 1, behavior: "watching", target: null, selected: true });
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;

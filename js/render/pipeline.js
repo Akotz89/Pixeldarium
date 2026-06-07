@@ -519,6 +519,18 @@ PS.render.pipeline.registerLayer("status.selection", {
   draw: function () {}
 });
 
+PS.render.pipeline.registerLayer("settlement.worldUi", {
+  order: 124,
+  drawLayer: PS.render.DrawLayer.UI_WORLD,
+  family: "settlement",
+  semantic: "world-space settlement status badges",
+  minBand: "settlement",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementWorldUi(); }
+});
+
 PS.render.pipeline.registerLayer("ui.minimap", {
   order: 130,
   drawLayer: PS.render.DrawLayer.UI_SCREEN,

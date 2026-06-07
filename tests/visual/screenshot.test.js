@@ -400,6 +400,7 @@ async function run() {
       assert.ok(caseStats.rendererStats.shadowEntityDraws > 0, testCase.name + " should draw settlement shadows through WebGL");
       assert.ok(caseStats.rendererStats.vegetationEntityDraws > 0, testCase.name + " should draw settlement vegetation facades through WebGL");
       assert.ok(caseStats.rendererStats.citizenEntityDraws > 0, testCase.name + " should draw settlement citizen facades through WebGL");
+      assert.ok(caseStats.rendererStats.worldUiEntityDraws > 0, testCase.name + " should draw settlement world UI facades through WebGL");
       assert.ok(caseStats.rendererStats.settlementEntityDraws > 0, testCase.name + " should draw settlement structures through WebGL");
       assert.ok(caseStats.rendererStats.routeEntityDraws > 0, testCase.name + " should draw settlement routes through WebGL");
       assert.ok(caseStats.particleStats.ready === true, testCase.name + " should have ready particle definitions");
