@@ -27,6 +27,9 @@ PS.render.entityWebgl.state = {
   vegetationDrawCount: 0,
   citizenDrawCount: 0,
   worldUiDrawCount: 0,
+  stockpileDrawCount: 0,
+  workStatusDrawCount: 0,
+  effectDrawCount: 0,
   eventMarkerDrawCount: 0,
   intentDrawCount: 0,
   readinessDrawCount: 0,
@@ -65,6 +68,9 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.vegetationDrawCount = 0;
   state.citizenDrawCount = 0;
   state.worldUiDrawCount = 0;
+  state.stockpileDrawCount = 0;
+  state.workStatusDrawCount = 0;
+  state.effectDrawCount = 0;
   state.eventMarkerDrawCount = 0;
   state.intentDrawCount = 0;
   state.readinessDrawCount = 0;
@@ -361,6 +367,9 @@ PS.render.entityWebgl.createBatches = function () {
     vegetation: 0,
     citizens: 0,
     worldUi: 0,
+    stockpiles: 0,
+    workStatus: 0,
+    effects: 0,
     eventMarkers: 0,
     intents: 0,
     readiness: 0,
@@ -433,6 +442,12 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.citizens++;
   } else if (kind === "worldUi") {
     batches.worldUi++;
+  } else if (kind === "stockpile") {
+    batches.stockpiles++;
+  } else if (kind === "workStatus") {
+    batches.workStatus++;
+  } else if (kind === "effect") {
+    batches.effects++;
   } else if (kind === "eventMarker") {
     batches.eventMarkers++;
   } else if (kind === "intent") {
@@ -781,6 +796,180 @@ PS.render.entityWebgl.buildSettlementWorldUiBatches = function () {
         PS.render.entityWebgl.parseColor("#ffffff", 1),
         false,
         "worldUi"
+      );
+    }
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.getSettlementStockpileCap = function (settlement) {
+  var storedFood = Math.max(0, Number(settlement && (settlement.storedFood || settlement.foodStock)) || 0);
+  var claimedFood = Math.max(0, Number(settlement && settlement.claimedFood) || 0);
+  var development = clamp(Number(settlement && settlement.development) || 0, 0, 1);
+  var pressure = storedFood * 0.018 + claimedFood * 0.04 + development * 5;
+
+  if (pressure <= 0) {
+    return 0;
+  }
+
+  return Math.max(3, Math.min(18, Math.round(4 + pressure)));
+};
+
+PS.render.entityWebgl.buildSettlementStockpileBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlements)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var centerPoint = PS.render.entities.getSettlementRenderPosition(settlement);
+    var stockpileCount = PS.render.entityWebgl.getSettlementStockpileCap(settlement);
+    var detailScale = PS.render.entities.getSettlementGroundDetailScale();
+    var baseSize = Math.max(3, CONFIG.FOOD_DRAW_SIZE * 1.35 * detailScale);
+
+    if (!centerPoint || stockpileCount <= 0) {
+      batches.culled++;
+      continue;
+    }
+
+    for (var pile = 0; pile < stockpileCount; pile++) {
+      var row = Math.floor(pile / 3);
+      var col = pile % 3;
+      var side = pile % 2 === 0 ? -1 : 1;
+      var point = {
+        x: centerPoint.x + side * (baseSize * (1.05 + col * 0.36)),
+        y: centerPoint.y + baseSize * (0.48 + row * 0.34),
+        scale: centerPoint.scale || 1,
+        visibility: (centerPoint.visibility || 1) * 0.9,
+        visible: centerPoint.visible
+      };
+      var resourceFacade = {
+        x: settlement.x + pile,
+        y: settlement.y - pile,
+        amount: Math.max(20, Number(settlement.storedFood || settlement.foodStock) || 20),
+        category: pile % 4 === 0 ? "grain" : "raw-material",
+        resourceFamilyBucket: pile % 4
+      };
+
+      PS.render.entityWebgl.submit(
+        batches,
+        PS.render.entityWebgl.getFoodCell(resourceFacade, "stockpile"),
+        point,
+        baseSize * (pile % 3 === 0 ? 1.08 : 0.94),
+        PS.render.entityWebgl.parseColor("#ffffff", 0.96),
+        pile % 2 === 1,
+        "stockpile"
+      );
+    }
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.getSettlementActivityCap = function (settlement) {
+  var population = Math.max(0, Math.round(Number(settlement && settlement.population) || 0));
+  var level = Math.max(1, Math.round(Number(settlement && settlement.level) || 1));
+  var development = clamp(Number(settlement && settlement.development) || 0, 0, 1);
+
+  if (population <= 0) {
+    return 0;
+  }
+
+  return Math.max(2, Math.min(10, Math.ceil(population / 55) + level + Math.round(development * 2)));
+};
+
+PS.render.entityWebgl.buildSettlementWorkStatusBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlements)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var centerPoint = PS.render.entities.getSettlementRenderPosition(settlement);
+    var statusCount = PS.render.entityWebgl.getSettlementActivityCap(settlement);
+    var detailScale = PS.render.entities.getSettlementGroundDetailScale();
+    var baseSize = Math.max(6, CONFIG.FOOD_DRAW_SIZE * 1.72 * detailScale);
+    var fallback = PS.atlas && typeof PS.atlas.getSettlementWorldUiCell === "function"
+      ? PS.atlas.getSettlementWorldUiCell(settlement, "development")
+      : null;
+
+    if (!centerPoint || statusCount <= 0) {
+      batches.culled++;
+      continue;
+    }
+
+    for (var marker = 0; marker < statusCount; marker++) {
+      var angle = (marker / Math.max(1, statusCount)) * Math.PI * 2 + 0.28;
+      var ring = Math.max(8, baseSize * (1.05 + (marker % 3) * 0.22));
+      var point = {
+        x: centerPoint.x + Math.cos(angle) * ring,
+        y: centerPoint.y + Math.sin(angle) * ring * 0.55 - baseSize * 0.35,
+        scale: centerPoint.scale || 1,
+        visibility: (centerPoint.visibility || 1) * 0.82,
+        visible: centerPoint.visible
+      };
+
+      PS.render.entityWebgl.submit(
+        batches,
+        PS.render.entityWebgl.selectEquivalenceCell("workStatus", fallback),
+        point,
+        baseSize,
+        PS.render.entityWebgl.parseColor("#ffffff", 0.94),
+        false,
+        "workStatus"
+      );
+    }
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.buildSettlementEffectBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlements)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var centerPoint = PS.render.entities.getSettlementRenderPosition(settlement);
+    var effectCount = Math.min(8, Math.max(2, Math.round((Number(settlement.level) || 1) + (Number(settlement.development) || 0) * 4)));
+    var detailScale = PS.render.entities.getSettlementGroundDetailScale();
+    var baseSize = Math.max(7, CONFIG.FOOD_DRAW_SIZE * 1.9 * detailScale);
+    var fallback = PS.atlas && typeof PS.atlas.getSettlementWorldUiCell === "function"
+      ? PS.atlas.getSettlementWorldUiCell(settlement, "food")
+      : null;
+
+    if (!centerPoint || effectCount <= 0) {
+      batches.culled++;
+      continue;
+    }
+
+    for (var effect = 0; effect < effectCount; effect++) {
+      var angle = (effect / Math.max(1, effectCount)) * Math.PI * 2 + 0.62;
+      var ring = Math.max(6, baseSize * (0.55 + (effect % 2) * 0.24));
+      var point = {
+        x: centerPoint.x + Math.cos(angle) * ring,
+        y: centerPoint.y + Math.sin(angle) * ring * 0.5,
+        scale: centerPoint.scale || 1,
+        visibility: (centerPoint.visibility || 1) * 0.66,
+        visible: centerPoint.visible
+      };
+
+      PS.render.entityWebgl.submit(
+        batches,
+        PS.render.entityWebgl.selectEquivalenceCell("effect", fallback),
+        point,
+        baseSize * (effect % 2 === 0 ? 0.82 : 1),
+        PS.render.entityWebgl.parseColor("#ffffff", 0.76),
+        effect % 2 === 1,
+        "effect"
       );
     }
   }
@@ -1199,6 +1388,9 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.vegetationDrawCount += batches.vegetation;
     state.citizenDrawCount += batches.citizens;
     state.worldUiDrawCount += batches.worldUi;
+    state.stockpileDrawCount += batches.stockpiles || 0;
+    state.workStatusDrawCount += batches.workStatus || 0;
+    state.effectDrawCount += batches.effects || 0;
     state.eventMarkerDrawCount += batches.eventMarkers || 0;
     state.intentDrawCount += batches.intents;
     state.readinessDrawCount += batches.readiness || 0;
@@ -1326,6 +1518,45 @@ PS.render.entityWebgl.drawSettlementWorldUi = function () {
   }
 
   return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementWorldUiBatches());
+};
+
+PS.render.entityWebgl.drawSettlementStockpiles = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementStockpileBatches());
+};
+
+PS.render.entityWebgl.drawSettlementWorkStatus = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementWorkStatusBatches());
+};
+
+PS.render.entityWebgl.drawSettlementEffects = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementEffectBatches());
 };
 
 PS.render.entityWebgl.drawSettlementRoutes = function () {
