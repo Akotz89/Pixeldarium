@@ -227,6 +227,12 @@ assertNear(getPlanetView().zoomLevel, initialZoom + 0.25, 1e-12, "fractional zoo
 var localAfter = getPlanetLatLonFromCanvasPoint(cursorX, cursorY);
 assertNear(localAfter.latitude, localBefore.latitude, 1e-9, "anchored local latitude");
 assertNear(localAfter.longitude, localBefore.longitude, 1e-9, "anchored local longitude");
+var zoomTransitionStats = PS.camera.getZoomTransitionStats();
+assert.strictEqual(zoomTransitionStats.lastZoomDirection, 1, "anchored zoom should record forward zoom direction");
+assertNear(zoomTransitionStats.lastZoomFrom, initialZoom, 1e-12, "anchored zoom should record source zoom");
+assertNear(zoomTransitionStats.lastZoomTo, initialZoom + 0.25, 1e-12, "anchored zoom should record target zoom");
+assert.ok(zoomTransitionStats.lastZoomAnchorErrorDeg <= 1e-8, "anchored zoom should record negligible cursor drift");
+assert.ok(zoomTransitionStats.lastZoomPreloadSurfaceLodIndex >= getPlanetSurfaceLodZoomIndex(initialZoom), "anchored zoom should record a forward preload LOD target");
 
 world.planetView = {
   zoomLevel: finalGroundZoomIndex,
