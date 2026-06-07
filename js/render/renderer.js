@@ -38,6 +38,11 @@ PS.render.Renderer = function (name) {
     orbitEventMarkerDraws: 0,
     intentEntityDraws: 0,
     settlementReadinessEntityDraws: 0,
+    observationOverlayActive: "none",
+    observationOverlayUploads: 0,
+    observationOverlaySamples: 0,
+    observationOverlayFrameMs: 0,
+    observationOverlayCompositor: "",
     foodEntityDraws: 0,
     organismEntityDraws: 0,
     lastError: ""

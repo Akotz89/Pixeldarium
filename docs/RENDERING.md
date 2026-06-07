@@ -303,7 +303,8 @@ Relevant current limits:
 Renderer stats are available through `PS.render.renderer.getStats()`. Key fields
 include `drawCalls`, `tilemapDraws`, `tilemapWebglDraws`, `tilemapFallbacks`,
 `terrainDraws`, `terrainPageDraws`, `entityDraws`, `orbitEventMarkerDraws`,
-`intentEntityDraws`,
+`intentEntityDraws`, `observationOverlayActive`,
+`observationOverlayUploads`, `observationOverlaySamples`,
 `rendererGpuFrameMs`, `overBudget`, `singleVisibleCanvas`, and
 `directPresentsThisFrame`.
 Frame budget stats are available through
