@@ -122,12 +122,24 @@ function createContext() {
   const loadedManifest = await loader.loadManifest("assets/manifest.json");
   const loadedGrass = context.PS.assets.loadedSheets.terrain_grass;
   const grassCell = loadedGrass.sheet.getCell("terrain.grass.7");
-  const expectedMetaLoads = Object.values(manifest.sheets).map((sheet) => sheet.meta).filter(Boolean);
+  const expectedSheetFetches = [];
+  Object.values(manifest.sheets).forEach((sheet) => {
+    if (sheet.meta) {
+      expectedSheetFetches.push(sheet.meta);
+    }
+    if (sheet.pixelData) {
+      expectedSheetFetches.push(sheet.pixelData);
+      return;
+    }
+    if (String(sheet.path || "").startsWith("assets/pixeldarium-equivalence/")) {
+      expectedSheetFetches.push(String(sheet.path).replace(/\.png$/, ".rgba.json"));
+    }
+  });
   const expectedImageLoads = Object.values(manifest.sheets).map((sheet) => sheet.path).filter(Boolean);
   const handoffSheet = context.PS.assets.loadedSheets.equivalence_creature_npc_refined_v1;
 
   assert.strictEqual(loadedManifest, manifest, "loadManifest should resolve the parsed manifest");
-  assert.deepStrictEqual(context.fetchCalls, ["assets/manifest.json"].concat(expectedMetaLoads), "loadManifest should fetch manifest and all sheet metadata");
+  assert.deepStrictEqual(context.fetchCalls, ["assets/manifest.json"].concat(expectedSheetFetches), "loadManifest should fetch manifest, sheet metadata, and equivalence pixel sidecars");
   assert.deepStrictEqual(context.imageLoads, expectedImageLoads, "loadManifest should load every manifest PNG");
   assert.ok(loadedGrass.sheet, "loadManifest should populate loaded sprite sheet dictionary");
   assert.ok(handoffSheet && handoffSheet.sheet, "loadManifest should populate accepted visual handoff sheets");

@@ -59,6 +59,24 @@ PS.assets.AssetLoader.prototype._trackFailure = function (url, error) {
   throw error;
 };
 
+PS.assets.AssetLoader.prototype._loadImageElement = function (url) {
+  return new Promise(function (resolve, reject) {
+    var image = new Image();
+
+    image.onload = function () {
+      resolve(image);
+    };
+    image.onerror = function (event) {
+      reject(event && event.error ? event.error : new Error("Failed to load image: " + url));
+    };
+    image.src = url;
+  });
+};
+
+PS.assets.AssetLoader.prototype._loadImageSource = function (url) {
+  return this._loadImageElement(url);
+};
+
 PS.assets.AssetLoader.prototype.loadImage = function (url) {
   var self = this;
 
@@ -70,17 +88,7 @@ PS.assets.AssetLoader.prototype.loadImage = function (url) {
     return this.pending.get(url);
   }
 
-  return this._trackStart(url, new Promise(function (resolve, reject) {
-    var image = new Image();
-
-    image.onload = function () {
-      resolve(image);
-    };
-    image.onerror = function (event) {
-      reject(event && event.error ? event.error : new Error("Failed to load image: " + url));
-    };
-    image.src = url;
-  }).then(function (image) {
+  return this._trackStart(url, this._loadImageSource(url).then(function (image) {
     return self._trackSuccess(url, image);
   }).catch(function (error) {
     return self._trackFailure(url, error);
@@ -410,12 +418,20 @@ PS.assets.AssetLoader.prototype.loadSpriteSheetManifest = function (manifest) {
       return Promise.resolve(null);
     }
 
+    var pixelDataUrl = sheet.pixelData || (
+      String(sheet.path || "").indexOf("assets/pixeldarium-equivalence/") === 0
+        ? String(sheet.path).replace(/\.png$/, ".rgba.json")
+        : ""
+    );
+
     return Promise.all([
       self.loadImage(sheet.path),
-      sheet.meta ? self.loadJSON(sheet.meta) : Promise.resolve(self.createSpriteSheetMeta(sheet))
+      sheet.meta ? self.loadJSON(sheet.meta) : Promise.resolve(self.createSpriteSheetMeta(sheet)),
+      pixelDataUrl ? self.loadJSON(pixelDataUrl).catch(function () { return null; }) : Promise.resolve(null)
     ]).then(function (parts) {
       var image = parts[0];
       var meta = parts[1];
+      var pixelData = parts[2];
       var spriteSheet = PS.assets.SpriteSheet && typeof PS.assets.SpriteSheet.detect === "function"
         ? PS.assets.SpriteSheet.detect(image, meta)
         : null;
@@ -426,6 +442,8 @@ PS.assets.AssetLoader.prototype.loadSpriteSheetManifest = function (manifest) {
         meta: meta,
         sheet: spriteSheet,
         path: sheet.path,
+        pixelData: pixelData,
+        pixelDataPath: pixelData ? pixelDataUrl : "",
         animations: sheet.animations || {},
         sprites: sheet.sprites || []
       };

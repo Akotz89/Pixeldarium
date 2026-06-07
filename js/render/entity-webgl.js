@@ -30,6 +30,11 @@ PS.render.entityWebgl.state = {
   eventMarkerDrawCount: 0,
   intentDrawCount: 0,
   readinessDrawCount: 0,
+  equivalenceSelectionCount: 0,
+  equivalenceRenderCount: 0,
+  equivalenceMissingCount: 0,
+  equivalenceSelectedUses: {},
+  equivalenceSelectedSheets: {},
   pageDrawCount: 0,
   textureUploadCount: 0,
   traitSpriteCount: 0,
@@ -63,9 +68,18 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.eventMarkerDrawCount = 0;
   state.intentDrawCount = 0;
   state.readinessDrawCount = 0;
+  state.equivalenceSelectionCount = 0;
+  state.equivalenceRenderCount = 0;
+  state.equivalenceMissingCount = 0;
+  state.equivalenceSelectedUses = {};
+  state.equivalenceSelectedSheets = {};
   state.pageDrawCount = 0;
   state.culledCount = 0;
   state.cappedCount = 0;
+
+  if (PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.resetFrameStats === "function") {
+    PS.assets.equivalence.resetFrameStats();
+  }
 };
 
 PS.render.entityWebgl.ensureCanvas = function (width, height) {
@@ -154,18 +168,29 @@ PS.render.entityWebgl.parseColor = function (hexColor, alpha) {
   ];
 };
 
+PS.render.entityWebgl.getRequestedEquivalenceUse = function (args, index) {
+  return args.length > index ? args[index] : "";
+};
+
 PS.render.entityWebgl.getOrganismCell = function (organism) {
   var traits = organism && organism.traits ? organism.traits : {};
   var bodyType = Math.max(0, Math.min(3, Math.floor((Number(traits.bodySize) || 1) * 1.5)));
   var variant = PS.ranmap
     ? PS.ranmap.variant(Math.round(organism.x || 0), Math.round(organism.y || 0), 4)
     : 0;
+  var equivalenceUse = PS.render.entityWebgl.getRequestedEquivalenceUse(arguments, 1);
 
   if (PS.atlas && typeof PS.atlas.getTraitOrganismCell === "function") {
-    return PS.atlas.getTraitOrganismCell(organism, variant);
+    return PS.render.entityWebgl.selectEquivalenceCell(
+      equivalenceUse,
+      PS.atlas.getTraitOrganismCell(organism, variant)
+    );
   }
 
-  return PS.atlas.getOrganismCell(bodyType, variant);
+  return PS.render.entityWebgl.selectEquivalenceCell(
+    equivalenceUse,
+    PS.atlas.getOrganismCell(bodyType, variant)
+  );
 };
 
 PS.render.entityWebgl.getAnimatedOrganismCell = function (organism, dt, frameOverride) {
@@ -177,41 +202,51 @@ PS.render.entityWebgl.getAnimatedOrganismCell = function (organism, dt, frameOve
   var frameVariant = 0;
   var cell = frame && PS.atlas ? PS.atlas.getCell(frame) : null;
   var bodyFrame;
+  var equivalenceUse = PS.render.entityWebgl.getRequestedEquivalenceUse(arguments, 3);
 
   if (frame) {
     frameVariant = Math.max(0, Math.min(3, Math.round(Number(String(frame).split(".").pop()) || 0)));
   }
 
   if (PS.atlas && typeof PS.atlas.getTraitOrganismCell === "function") {
-    return PS.atlas.getTraitOrganismCell(organism, frameVariant);
+    return PS.render.entityWebgl.selectEquivalenceCell(
+      equivalenceUse,
+      PS.atlas.getTraitOrganismCell(organism, frameVariant)
+    );
   }
 
   if (cell) {
-    return cell;
+    return PS.render.entityWebgl.selectEquivalenceCell(equivalenceUse, cell);
   }
 
   if (frame && frame.indexOf("entity.organism_") === 0) {
     bodyFrame = frame.replace(/entity\.organism_\d+\./, "entity.organism_" + bodyType + ".");
     cell = PS.atlas.getCell(bodyFrame);
     if (cell) {
-      return cell;
+      return PS.render.entityWebgl.selectEquivalenceCell(equivalenceUse, cell);
     }
   }
 
-  return PS.render.entityWebgl.getOrganismCell(organism);
+  return PS.render.entityWebgl.getOrganismCell(organism, equivalenceUse);
 };
 
 PS.render.entityWebgl.getFoodCell = function (food) {
   var variant = PS.ranmap
     ? PS.ranmap.variant(Math.round(food.x || 0), Math.round(food.y || 0), 4)
     : 0;
+  var equivalenceUse = PS.render.entityWebgl.getRequestedEquivalenceUse(arguments, 1);
 
-  return PS.atlas.getFoodCell(variant, food);
+  return PS.render.entityWebgl.selectEquivalenceCell(
+    equivalenceUse,
+    PS.atlas.getFoodCell(variant, food)
+  );
 };
 
 PS.render.entityWebgl.getSettlementCell = function (settlement) {
+  var equivalenceUse = PS.render.entityWebgl.getRequestedEquivalenceUse(arguments, 1);
+
   if (PS.atlas && typeof PS.atlas.getSettlementCell === "function") {
-    return PS.atlas.getSettlementCell(settlement);
+    return PS.render.entityWebgl.selectEquivalenceCell(equivalenceUse, PS.atlas.getSettlementCell(settlement));
   }
 
   return null;
@@ -235,7 +270,7 @@ PS.render.entityWebgl.getSettlementInfluenceCell = function (settlement) {
 
 PS.render.entityWebgl.getSettlementWorldUiCell = function (settlement, metricType) {
   if (PS.atlas && typeof PS.atlas.getSettlementWorldUiCell === "function") {
-    return PS.atlas.getSettlementWorldUiCell(settlement, metricType);
+    return PS.render.entityWebgl.selectEquivalenceCell("worldUi", PS.atlas.getSettlementWorldUiCell(settlement, metricType));
   }
 
   return null;
@@ -249,6 +284,16 @@ PS.render.entityWebgl.getRepresentativeIntentCell = function (representative) {
   return null;
 };
 
+PS.render.entityWebgl.selectEquivalenceCell = function (use, fallbackCell) {
+  var selected;
+
+  if (use && PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.select === "function") {
+    selected = PS.assets.equivalence.select(use, fallbackCell && fallbackCell.name ? fallbackCell.name : "");
+  }
+
+  return selected && selected.renderCell ? selected.renderCell : fallbackCell;
+};
+
 PS.render.entityWebgl.getRepresentativeIntentMarkerCap = function () {
   return Math.max(0, Math.floor(Number(CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS) || 128));
 };
@@ -260,6 +305,24 @@ PS.render.entityWebgl.getTexture = function (pageIndex) {
 
   if (!page || !PS.render.webglEngine) {
     return null;
+  }
+
+  if (page.externalImage && page.image && PS.render.webglEngine.getCanvasTexture) {
+    var imageTexture = PS.render.webglEngine.getCanvasTexture(
+      "entity-atlas",
+      gl,
+      "equivalence:" + (page.equivalenceSheetId || pageIndex) + ":" + (page.version || 0),
+      page.image,
+      24
+    );
+    state.textures = imageTexture.cache.textures;
+    state.textureOrder = imageTexture.cache.order;
+
+    if (imageTexture.uploaded) {
+      state.textureUploadCount++;
+    }
+
+    return imageTexture.texture;
   }
 
   if (!page.data || !PS.render.webglEngine.getRgbaTexture) {
@@ -553,7 +616,7 @@ PS.render.entityWebgl.buildSettlementBatches = function () {
 
     PS.render.entityWebgl.submit(
       batches,
-      PS.render.entityWebgl.getSettlementCell(settlement),
+      PS.render.entityWebgl.getSettlementCell(settlement, "settlement"),
       point,
       size,
       tint,
@@ -662,7 +725,7 @@ PS.render.entityWebgl.buildSettlementVegetationBatches = function () {
 
       PS.render.entityWebgl.submit(
         batches,
-        PS.render.entityWebgl.getFoodCell(foodFacade),
+        PS.render.entityWebgl.getFoodCell(foodFacade, "vegetation"),
         point,
         baseSize * (marker % 3 === 0 ? 1.15 : 0.92),
         PS.render.entityWebgl.parseColor(marker % 3 === 0 ? "#d8f06a" : "#8fe06e", 0.92),
@@ -770,7 +833,7 @@ PS.render.entityWebgl.buildSettlementCitizenBatches = function () {
 
       PS.render.entityWebgl.submit(
         batches,
-        PS.render.entityWebgl.getOrganismCell(citizenFacade),
+        PS.render.entityWebgl.getOrganismCell(citizenFacade, "citizen"),
         point,
         baseSize,
         PS.render.entityWebgl.parseColor(lineageColor, 0.94),
@@ -1139,6 +1202,14 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.eventMarkerDrawCount += batches.eventMarkers || 0;
     state.intentDrawCount += batches.intents;
     state.readinessDrawCount += batches.readiness || 0;
+    if (PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.getStats === "function") {
+      var equivalenceStats = PS.assets.equivalence.getStats();
+      state.equivalenceSelectionCount = equivalenceStats.selected;
+      state.equivalenceRenderCount = equivalenceStats.rendered;
+      state.equivalenceMissingCount = equivalenceStats.missing;
+      state.equivalenceSelectedUses = equivalenceStats.byUse;
+      state.equivalenceSelectedSheets = equivalenceStats.bySheet;
+    }
     state.pageDrawCount = pageDraws;
     state.culledCount = batches.culled;
     state.cappedCount = batches.capped;
