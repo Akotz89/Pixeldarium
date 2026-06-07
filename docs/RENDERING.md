@@ -153,8 +153,14 @@ name, pageIndex, x, y, w, h, u0, v0, u1, v1
 Organism trait cells are allocated as 32x16 records: the left half is diffuse
 color and the right half stores normal/height placeholder data. The atlas can
 allocate additional 256x256 RGBA pages when authored terrain/entity cells exceed
-the current page capacity; renderers already batch by page index. Terrain
-material cells are selected from tile and biome data, cached on ready chunk
+the current page capacity; renderers already batch by page index.
+Organism atlas identity is generated from bounded watcher-facing trait buckets:
+lineage `0..15`, body size `1..6`, body shape `0..7`, limb count `0..12`,
+appendage type `0..7`, camouflage `0..4`, thermal tolerance `0..4`, water
+dependency `0..4`, and animation/RANMAP variant `0..3`. These keys cache
+procedural pixel sprites before WebGL2 consumes the atlas page, so traits change
+visible morphology without per-frame sprite generation.
+Terrain material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
 Registered terrain material families include bounded IDs for shallow rivers,
 tidal mud, lava flows, lichen tundra, and reed mats. These families are
