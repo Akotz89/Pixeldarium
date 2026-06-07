@@ -173,6 +173,7 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   this.stats.routeEntityDraws = entityState ? entityState.routeDrawCount : 0;
   this.stats.influenceEntityDraws = entityState ? entityState.influenceDrawCount : 0;
   this.stats.shadowEntityDraws = entityState ? entityState.shadowDrawCount : 0;
+  this.stats.vegetationEntityDraws = entityState ? entityState.vegetationDrawCount : 0;
   this.stats.citizenEntityDraws = entityState ? entityState.citizenDrawCount : 0;
   this.stats.intentEntityDraws = entityState ? entityState.intentDrawCount : 0;
   this.stats.settlementReadinessEntityDraws = entityState ? entityState.readinessDrawCount : 0;
