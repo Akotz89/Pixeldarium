@@ -21,6 +21,10 @@ PS.render.surfaceTileWebgl.state = {
   fallbackCount: 0,
   culledCount: 0,
   materialCounts: {},
+  equivalenceTerrainDrawCount: 0,
+  equivalenceTransitionDrawCount: 0,
+  equivalenceSelectedUses: {},
+  equivalenceSelectedSheets: {},
   lastFrameMs: 0,
   lastError: "",
   pageBuffers: {},
@@ -28,6 +32,19 @@ PS.render.surfaceTileWebgl.state = {
 };
 
 PS.render.surfaceTileWebgl.shaderName = "terrain-tile";
+
+PS.render.surfaceTileWebgl.resetFrameStats = function () {
+  var state = PS.render.surfaceTileWebgl.state;
+
+  state.tileDrawCount = 0;
+  state.pageDrawCount = 0;
+  state.culledCount = 0;
+  state.materialCounts = {};
+  state.equivalenceTerrainDrawCount = 0;
+  state.equivalenceTransitionDrawCount = 0;
+  state.equivalenceSelectedUses = {};
+  state.equivalenceSelectedSheets = {};
+};
 
 PS.render.surfaceTileWebgl.ensureCanvas = function (width, height) {
   var target = PS.render.webglEngine && PS.render.webglEngine.ensureTarget
@@ -140,7 +157,177 @@ PS.render.surfaceTileWebgl.beginBatches = function () {
     count: 0,
     culled: 0,
     materialCounts: {},
+    equivalenceTerrain: 0,
+    equivalenceTransitions: 0,
     pageBufferToken: state.pageBufferToken
+  };
+};
+
+PS.render.surfaceTileWebgl.getAcceptedTerrainMaterialCellName = function (biome, sample, tileX, tileY) {
+  var surface = String(sample && sample.detail && sample.detail.surface || "").toLowerCase();
+  var signals = sample && sample.detail && sample.detail.materialSignals ? sample.detail.materialSignals : {};
+  var variant = PS.ranmap && PS.ranmap.variant ? PS.ranmap.variant(tileX, tileY, 2) : Math.abs((Math.round(tileX) + Math.round(tileY)) % 2);
+
+  if (surface.indexOf("deep water") >= 0 || String(biome || "") === "ocean" && Number(signals.waterDepth) > 0.62) {
+    return "water-deep." + variant;
+  }
+
+  if (surface.indexOf("water") >= 0 || surface.indexOf("whitecap") >= 0) {
+    return "water-shallow." + variant;
+  }
+
+  if (surface.indexOf("rock") >= 0 || surface.indexOf("stone") >= 0 || surface.indexOf("ridge") >= 0 || String(biome || "") === "mountain") {
+    return "rock-mountain." + variant;
+  }
+
+  if (surface.indexOf("sand") >= 0 || surface.indexOf("dune") >= 0 || String(biome || "") === "desert") {
+    return "dirt-soil." + variant;
+  }
+
+  return "grass-lush." + variant;
+};
+
+PS.render.surfaceTileWebgl.getAcceptedTransitionPair = function (transition) {
+  if (!transition) {
+    return "";
+  }
+
+  if (transition.type === "coast") {
+    return "grass-water";
+  }
+
+  if (transition.type === "dry") {
+    return "grass-sand";
+  }
+
+  if (transition.type === "ridge" || transition.type === "canopy") {
+    return "grass-rock";
+  }
+
+  if (transition.type === "frost") {
+    return "rock-snow";
+  }
+
+  return "";
+};
+
+PS.render.surfaceTileWebgl.getAcceptedTransitionShape = function (mask) {
+  var key = Math.max(0, Math.round(Number(mask) || 0));
+
+  if (key === 1) { return "edge.e"; }
+  if (key === 2) { return "edge.w"; }
+  if (key === 4) { return "edge.s"; }
+  if (key === 8) { return "edge.n"; }
+  if (key === 5) { return "corner.se"; }
+  if (key === 6) { return "corner.sw"; }
+  if (key === 9) { return "corner.ne"; }
+  if (key === 10) { return "corner.nw"; }
+  if (key === 3) { return "edge.e"; }
+  if (key === 12) { return "edge.s"; }
+  if (key === 7) { return "inner-corner.se"; }
+  if (key === 11) { return "inner-corner.ne"; }
+  if (key === 13) { return "inner-corner.se"; }
+  if (key === 14) { return "inner-corner.sw"; }
+  if (key === 15) { return "inner-corner.ne"; }
+
+  return "";
+};
+
+PS.render.surfaceTileWebgl.getAcceptedTransitionCellName = function (sample, biome) {
+  if (sample && sample.acceptedTransitionCellName) {
+    return String(sample.acceptedTransitionCellName);
+  }
+
+  var transition = PS.atlas && typeof PS.atlas.getTerrainTransitionInfo === "function"
+    ? PS.atlas.getTerrainTransitionInfo(sample, biome)
+    : null;
+  var pair = PS.render.surfaceTileWebgl.getAcceptedTransitionPair(transition);
+  var shape = PS.render.surfaceTileWebgl.getAcceptedTransitionShape(transition && transition.mask);
+
+  return pair && shape ? pair + "." + shape : "";
+};
+
+PS.render.surfaceTileWebgl.getAcceptedWaterTransitionCellName = function (sample, tileX, tileY) {
+  var detail = sample && sample.detail ? sample.detail : {};
+  var surface = String(detail.surface || "").toLowerCase();
+  var feature = String(detail.feature || "").toLowerCase();
+  var signals = detail.materialSignals || {};
+  var coastal = surface.indexOf("open water") >= 0 ||
+    surface.indexOf("whitecap") >= 0 ||
+    feature.indexOf("foam") >= 0 ||
+    feature.indexOf("shoal") >= 0 ||
+    Number(signals.coast) > 0.18 ||
+    Number(signals.shallowWater) > 0.18;
+  var direction;
+
+  if (!coastal || surface.indexOf("deep water") >= 0) {
+    return "";
+  }
+
+  direction = Math.abs(Math.round(Number(tileX) || 0) + Math.round(Number(tileY) || 0)) % 4;
+  if (direction === 0) { return "grass-water.edge.n"; }
+  if (direction === 1) { return "grass-water.edge.e"; }
+  if (direction === 2) { return "grass-water.edge.s"; }
+  return "grass-water.edge.w";
+};
+
+PS.render.surfaceTileWebgl.canSelectAcceptedTerrainMaterial = function (sample) {
+  var ecologyKey = sample && sample.ecology && sample.ecology.key ? String(sample.ecology.key) : String(sample && sample.ecologyKey || "");
+  var civilizationKey = sample && sample.civilization && sample.civilization.key ? String(sample.civilization.key) : String(sample && sample.civilizationKey || "");
+
+  return (!ecologyKey || ecologyKey === "eco.0.0") && (!civilizationKey || civilizationKey === "civ0");
+};
+
+PS.render.surfaceTileWebgl.selectAcceptedTerrainCell = function (biome, sample, tileX, tileY, fallbackCell) {
+  if (
+    typeof world !== "undefined" &&
+    world &&
+    (world.isCameraInteracting || world.isPaused === false) &&
+    !(sample && sample.acceptedTransitionCellName)
+  ) {
+    return {
+      cell: fallbackCell,
+      kind: ""
+    };
+  }
+
+  var transitionCellName = PS.render.surfaceTileWebgl.getAcceptedTransitionCellName(sample, biome) ||
+    PS.render.surfaceTileWebgl.getAcceptedWaterTransitionCellName(sample, tileX, tileY);
+  var selected;
+  var transitionPhase = Math.abs(Math.round(Number(tileX) || 0) + Math.round(Number(tileY) || 0)) % 256;
+  var terrainPhase = Math.abs(Math.round(Number(tileX) || 0) * 3 + Math.round(Number(tileY) || 0) * 5) % 256;
+
+  if (transitionCellName && transitionPhase === 0 && PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.selectCell === "function") {
+    selected = PS.assets.equivalence.selectCell("transitions", transitionCellName, "terrainTransition", fallbackCell && fallbackCell.name ? fallbackCell.name : "");
+    if (selected && selected.renderCell) {
+      return {
+        cell: selected.renderCell,
+        kind: "transition"
+      };
+    }
+  }
+
+  if (
+    PS.render.surfaceTileWebgl.canSelectAcceptedTerrainMaterial(sample) &&
+    PS.assets &&
+    PS.assets.equivalence &&
+    typeof PS.assets.equivalence.selectCell === "function" &&
+    terrainPhase === 0
+  ) {
+    var terrainCellName = PS.render.surfaceTileWebgl.getAcceptedTerrainMaterialCellName(biome, sample, tileX, tileY);
+    var use = terrainCellName.indexOf("water-") === 0 ? "terrainWater" : "terrainGround";
+    selected = PS.assets.equivalence.selectCell("terrain", terrainCellName, use, fallbackCell && fallbackCell.name ? fallbackCell.name : "");
+    if (selected && selected.renderCell) {
+      return {
+        cell: selected.renderCell,
+        kind: "terrain"
+      };
+    }
+  }
+
+  return {
+    cell: fallbackCell,
+    kind: ""
   };
 };
 
@@ -260,6 +447,30 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     if (!cell) {
       target.culled++;
       continue;
+    }
+
+    var canAttemptAccepted = !(
+      typeof world !== "undefined" &&
+      world &&
+      (world.isCameraInteracting || world.isPaused === false) &&
+      !(sample && sample.acceptedTransitionCellName)
+    );
+    if (canAttemptAccepted) {
+      var acceptedKey = atlasKey + "|equiv|" + (PS.render.surfaceTileWebgl.getAcceptedTransitionCellName(sample, biome) || PS.render.surfaceTileWebgl.getAcceptedWaterTransitionCellName(sample, tileX, tileY) || "terrain");
+      var acceptedSelection = cellData.terrainEquivalenceKey === acceptedKey ? cellData.terrainEquivalenceSelection || null : null;
+      if (!acceptedSelection) {
+        acceptedSelection = PS.render.surfaceTileWebgl.selectAcceptedTerrainCell(biome, sample, tileX, tileY, cell);
+        cellData.terrainEquivalenceSelection = acceptedSelection;
+        cellData.terrainEquivalenceKey = acceptedKey;
+      }
+      if (acceptedSelection && acceptedSelection.cell) {
+        cell = acceptedSelection.cell;
+        if (acceptedSelection.kind === "transition") {
+          target.equivalenceTransitions++;
+        } else if (acceptedSelection.kind === "terrain") {
+          target.equivalenceTerrain++;
+        }
+      }
     }
 
     if (target.materialCounts) {
@@ -403,6 +614,13 @@ PS.render.surfaceTileWebgl.drawBatches = function (batches, options) {
   state.pageDrawCount = pageDraws;
   state.culledCount = readyBatches.culled;
   state.materialCounts = Object.assign({}, readyBatches.materialCounts || {});
+  state.equivalenceTerrainDrawCount += readyBatches.equivalenceTerrain || 0;
+  state.equivalenceTransitionDrawCount += readyBatches.equivalenceTransitions || 0;
+  if (PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.getStats === "function") {
+    var equivalenceStats = PS.assets.equivalence.getStats();
+    state.equivalenceSelectedUses = equivalenceStats.byUse;
+    state.equivalenceSelectedSheets = equivalenceStats.bySheet;
+  }
   state.lastFrameMs = performance.now() - startedAt;
   state.lastError = "";
   return true;

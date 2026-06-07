@@ -48,6 +48,8 @@ PS.render.Renderer = function (name) {
     observationOverlayCompositor: "",
     foodEntityDraws: 0,
     organismEntityDraws: 0,
+    equivalenceTerrainDraws: 0,
+    equivalenceTransitionDraws: 0,
     lastError: ""
   };
 };

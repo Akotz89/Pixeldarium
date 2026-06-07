@@ -48,7 +48,16 @@ const context = {
         }
       },
       surfaceTileWebgl: {
-        state: { pageDrawCount: 2, tileDrawCount: 12, lastFrameMs: 4 },
+        state: {
+          pageDrawCount: 2,
+          tileDrawCount: 12,
+          equivalenceTerrainDrawCount: 18,
+          equivalenceTransitionDrawCount: 19,
+          lastFrameMs: 4
+        },
+        resetFrameStats() {
+          return true;
+        },
         drawTerrainAtlasBatch() {
           return true;
         },
@@ -173,6 +182,8 @@ assert.strictEqual(stats.observationOverlayCompositor, "webgl2", "renderer stats
 assert.strictEqual(stats.foodEntityDraws, 5, "renderer stats should include food entity draws");
 assert.strictEqual(stats.organismEntityDraws, 6, "renderer stats should include organism entity draws");
 assert.strictEqual(stats.terrainDraws, 12, "renderer stats should include terrain WebGL draws");
+assert.strictEqual(stats.equivalenceTerrainDraws, 18, "renderer stats should include accepted terrain material draws");
+assert.strictEqual(stats.equivalenceTransitionDraws, 19, "renderer stats should include accepted terrain transition draws");
 assert.strictEqual(stats.gpuFrameMs, 5, "renderer stats should report the slowest GPU pass time");
 assert.strictEqual(stats.webglPresenterActive, true, "renderer stats should report active WebGL presenter state");
 assert.strictEqual(stats.singleVisibleCanvas, true, "renderer stats should report single visible WebGL canvas state");

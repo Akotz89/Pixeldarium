@@ -230,26 +230,39 @@ PS.assets.equivalence.makeRenderableCell = function (loadedSheet, cell) {
 PS.assets.equivalence.select = function (use, fallbackCellId) {
   var key = String(use || "");
   var mapping = PS.assets.equivalence.defaultCellByUse[key];
-  var loadedSheet;
-  var cell;
-  var renderableCell;
 
   if (!mapping) {
     PS.assets.equivalence.recordMissing("use:" + key);
     return null;
   }
 
-  loadedSheet = PS.assets.equivalence.getLoadedSheet(mapping[0]);
+  return PS.assets.equivalence.selectCell(mapping[0], mapping[1], key, fallbackCellId);
+};
 
-  if (!loadedSheet || !loadedSheet.sheet || typeof loadedSheet.sheet.getCell !== "function") {
-    PS.assets.equivalence.recordMissing("sheet:" + mapping[0]);
+PS.assets.equivalence.selectCell = function (family, cellName, use, fallbackCellId) {
+  var key = String(use || family || "");
+  var familyKey = String(family || "");
+  var cellKey = String(cellName || "");
+  var loadedSheet;
+  var cell;
+  var renderableCell;
+
+  if (!familyKey || !cellKey) {
+    PS.assets.equivalence.recordMissing("cell:" + familyKey + ":" + cellKey);
     return null;
   }
 
-  cell = loadedSheet.sheet.getCell(mapping[1]);
+  loadedSheet = PS.assets.equivalence.getLoadedSheet(familyKey);
+
+  if (!loadedSheet || !loadedSheet.sheet || typeof loadedSheet.sheet.getCell !== "function") {
+    PS.assets.equivalence.recordMissing("sheet:" + familyKey);
+    return null;
+  }
+
+  cell = loadedSheet.sheet.getCell(cellKey);
 
   if (!cell) {
-    PS.assets.equivalence.recordMissing("cell:" + mapping[1]);
+    PS.assets.equivalence.recordMissing("cell:" + cellKey);
     return null;
   }
 
@@ -258,9 +271,9 @@ PS.assets.equivalence.select = function (use, fallbackCellId) {
 
   return {
     use: key,
-    family: mapping[0],
+    family: familyKey,
     sheetId: loadedSheet.id,
-    cellId: mapping[1],
+    cellId: cellKey,
     cell: cell,
     renderCell: renderableCell,
     fallbackCellId: fallbackCellId || ""

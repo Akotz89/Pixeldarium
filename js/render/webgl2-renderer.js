@@ -45,6 +45,9 @@ PS.render.WebGL2Renderer.prototype.beginFrame = function (camera) {
   if (PS.render.entityWebgl && typeof PS.render.entityWebgl.resetFrameStats === "function") {
     PS.render.entityWebgl.resetFrameStats();
   }
+  if (PS.render.surfaceTileWebgl && typeof PS.render.surfaceTileWebgl.resetFrameStats === "function") {
+    PS.render.surfaceTileWebgl.resetFrameStats();
+  }
   if (PS.render.webglPresenter && typeof PS.render.webglPresenter.beginFrame === "function" && typeof canvas !== "undefined") {
     PS.render.webglPresenter.beginFrame(canvas.width, canvas.height);
   }
@@ -159,6 +162,23 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   var entityMs = entityState ? Number(entityState.lastFrameMs) || 0 : 0;
   var rendererGpuFrameMs = Math.max(terrainMs, entityMs);
   var gpuFrameMs = rendererGpuFrameMs;
+  var equivalenceStats = PS.assets && PS.assets.equivalence && typeof PS.assets.equivalence.getStats === "function"
+    ? PS.assets.equivalence.getStats()
+    : null;
+  var equivalenceUses = {};
+  var equivalenceSheets = {};
+  var mergeCounts = function (target, source) {
+    Object.keys(source || {}).forEach(function (key) {
+      target[key] = (Number(target[key]) || 0) + (Number(source[key]) || 0);
+    });
+  };
+
+  mergeCounts(equivalenceUses, surfaceState ? surfaceState.equivalenceSelectedUses : null);
+  mergeCounts(equivalenceUses, entityState ? entityState.equivalenceSelectedUses : null);
+  mergeCounts(equivalenceUses, equivalenceStats ? equivalenceStats.byUse : null);
+  mergeCounts(equivalenceSheets, surfaceState ? surfaceState.equivalenceSelectedSheets : null);
+  mergeCounts(equivalenceSheets, entityState ? entityState.equivalenceSelectedSheets : null);
+  mergeCounts(equivalenceSheets, equivalenceStats ? equivalenceStats.bySheet : null);
 
   this.stats.frameCount++;
   this.stats.batchFlushes++;
@@ -183,11 +203,11 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   this.stats.orbitEventMarkerDraws = entityState ? entityState.eventMarkerDrawCount : 0;
   this.stats.intentEntityDraws = entityState ? entityState.intentDrawCount : 0;
   this.stats.settlementReadinessEntityDraws = entityState ? entityState.readinessDrawCount : 0;
-  this.stats.equivalenceAssetSelections = entityState ? entityState.equivalenceSelectionCount : 0;
-  this.stats.equivalenceAssetRendered = entityState ? entityState.equivalenceRenderCount : 0;
-  this.stats.equivalenceAssetMissing = entityState ? entityState.equivalenceMissingCount : 0;
-  this.stats.equivalenceAssetUses = entityState ? entityState.equivalenceSelectedUses : {};
-  this.stats.equivalenceAssetSheets = entityState ? entityState.equivalenceSelectedSheets : {};
+  this.stats.equivalenceAssetSelections = equivalenceStats ? equivalenceStats.selected : (entityState ? entityState.equivalenceSelectionCount : 0);
+  this.stats.equivalenceAssetRendered = equivalenceStats ? equivalenceStats.rendered : (entityState ? entityState.equivalenceRenderCount : 0);
+  this.stats.equivalenceAssetMissing = equivalenceStats ? equivalenceStats.missing : (entityState ? entityState.equivalenceMissingCount : 0);
+  this.stats.equivalenceAssetUses = equivalenceUses;
+  this.stats.equivalenceAssetSheets = equivalenceSheets;
   this.stats.observationOverlayActive = globeState ? globeState.lastUsedObservationOverlay : "none";
   this.stats.observationOverlayUploads = globeState ? globeState.overlayUploadCount : 0;
   this.stats.observationOverlaySamples = world && world.overlayPerformance ? Math.max(0, Number(world.overlayPerformance.lastSampleCount) || 0) : 0;
@@ -197,6 +217,8 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   this.stats.organismEntityDraws = entityState ? entityState.organismDrawCount : 0;
   this.stats.terrainDraws = surfaceState ? surfaceState.tileDrawCount : 0;
   this.stats.terrainPageDraws = surfaceState ? surfaceState.pageDrawCount : 0;
+  this.stats.equivalenceTerrainDraws = surfaceState ? surfaceState.equivalenceTerrainDrawCount : 0;
+  this.stats.equivalenceTransitionDraws = surfaceState ? surfaceState.equivalenceTransitionDrawCount : 0;
   this.stats.terrainLastFrameMs = surfaceState ? surfaceState.lastFrameMs : 0;
   this.stats.entityLastFrameMs = entityState ? entityState.lastFrameMs : 0;
   this.stats.webglContextCount = engineStats ? engineStats.contextCount : 0;
