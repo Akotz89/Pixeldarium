@@ -77,6 +77,13 @@ const context = {
           return true;
         }
       },
+      webglGlobe: {
+        state: {
+          lastUsedObservationOverlay: "observation.population",
+          overlayUploadCount: 3,
+          lastOverlayUploadMs: 1.25
+        }
+      },
       webglPresenter: {
         beginFrame() {
           return true;
@@ -104,6 +111,12 @@ const context = {
     }
   },
   CONFIG: {},
+  world: {
+    overlayPerformance: {
+      lastSampleCount: 40000,
+      compositor: "webgl2"
+    }
+  },
   canvas: { width: 1600, height: 850 },
   performance: { now() { return 10; } },
   Object,
@@ -146,6 +159,11 @@ assert.strictEqual(stats.worldUiEntityDraws, 13, "renderer stats should include 
 assert.strictEqual(stats.orbitEventMarkerDraws, 14, "renderer stats should include orbit event marker draws");
 assert.strictEqual(stats.intentEntityDraws, 8, "renderer stats should include representative intent entity draws");
 assert.strictEqual(stats.settlementReadinessEntityDraws, 9, "renderer stats should include settlement readiness facade draws");
+assert.strictEqual(stats.observationOverlayActive, "observation.population", "renderer stats should include active observation overlay id");
+assert.strictEqual(stats.observationOverlayUploads, 3, "renderer stats should include observation overlay upload count");
+assert.strictEqual(stats.observationOverlaySamples, 40000, "renderer stats should include observation overlay sample count");
+assert.strictEqual(stats.observationOverlayFrameMs, 1.25, "renderer stats should include observation overlay upload time");
+assert.strictEqual(stats.observationOverlayCompositor, "webgl2", "renderer stats should include observation overlay compositor evidence");
 assert.strictEqual(stats.foodEntityDraws, 5, "renderer stats should include food entity draws");
 assert.strictEqual(stats.organismEntityDraws, 6, "renderer stats should include organism entity draws");
 assert.strictEqual(stats.terrainDraws, 12, "renderer stats should include terrain WebGL draws");

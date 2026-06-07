@@ -149,6 +149,7 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   var now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   var entityState = PS.render.entityWebgl ? PS.render.entityWebgl.state : null;
   var surfaceState = PS.render.surfaceTileWebgl ? PS.render.surfaceTileWebgl.state : null;
+  var globeState = PS.render.webglGlobe ? PS.render.webglGlobe.state : null;
   var engineStats = PS.render.webglEngine && PS.render.webglEngine.getStats
     ? PS.render.webglEngine.getStats()
     : null;
@@ -179,6 +180,11 @@ PS.render.WebGL2Renderer.prototype.endFrame = function () {
   this.stats.orbitEventMarkerDraws = entityState ? entityState.eventMarkerDrawCount : 0;
   this.stats.intentEntityDraws = entityState ? entityState.intentDrawCount : 0;
   this.stats.settlementReadinessEntityDraws = entityState ? entityState.readinessDrawCount : 0;
+  this.stats.observationOverlayActive = globeState ? globeState.lastUsedObservationOverlay : "none";
+  this.stats.observationOverlayUploads = globeState ? globeState.overlayUploadCount : 0;
+  this.stats.observationOverlaySamples = world && world.overlayPerformance ? Math.max(0, Number(world.overlayPerformance.lastSampleCount) || 0) : 0;
+  this.stats.observationOverlayFrameMs = globeState ? Number(globeState.lastOverlayUploadMs) || 0 : 0;
+  this.stats.observationOverlayCompositor = world && world.overlayPerformance ? String(world.overlayPerformance.compositor || "") : "";
   this.stats.foodEntityDraws = entityState ? entityState.foodDrawCount : 0;
   this.stats.organismEntityDraws = entityState ? entityState.organismDrawCount : 0;
   this.stats.terrainDraws = surfaceState ? surfaceState.tileDrawCount : 0;

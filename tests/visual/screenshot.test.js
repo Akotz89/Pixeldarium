@@ -14,6 +14,7 @@ const viewport = { width: 960, height: 540 };
 const cases = [
   { name: "orbit-view", zoom: 0, orbitEvents: true, expectedBand: "orbit" },
   { name: "continent-view", zoom: 2, biome: "forest", expectedBand: "continent", maxDarkPixels: 0.16 },
+  { name: "overlay-visible", zoom: 0, overlay: "observation.population", expectedBand: "orbit" },
   { name: "region-view", zoom: 4, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
   { name: "local-view", zoom: 6, biome: "forest", expectedBand: "local", maxDarkPixels: 0.16 },
   { name: "surface-temperate", zoom: 5, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
@@ -206,6 +207,47 @@ async function prepareCase(page, testCase) {
           location: { latitude: -8, longitude: 18 }
         }
       ];
+    }
+
+    if (config.overlay) {
+      const centerTile = world.planetTiles[Math.floor(world.planetTiles.length / 2)] || { x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 };
+      const centerX = Math.max(4, Math.min(WORLD_WIDTH - 5, Math.round(Number(centerTile.x) || WORLD_WIDTH / 2)));
+      const centerY = Math.max(4, Math.min(WORLD_HEIGHT - 5, Math.round(Number(centerTile.y) || WORLD_HEIGHT / 2)));
+      const focusTile = world.planetTiles[getTileIndex(centerX, centerY)] || centerTile;
+      world.organisms = [];
+      for (let marker = 0; marker < 18; marker++) {
+        const tileX = centerX + (marker % 6) - 3;
+        const tileY = centerY + Math.floor(marker / 6) - 1;
+        const tile = world.planetTiles[getTileIndex(tileX, tileY)] || focusTile;
+        world.organisms.push({
+          x: tile.x,
+          y: tile.y,
+          latitude: tile.latitude,
+          longitude: tile.longitude,
+          prevX: tile.x,
+          prevY: tile.y,
+          prevLatitude: tile.latitude,
+          prevLongitude: tile.longitude,
+          energy: 180,
+          lineageId: 1,
+          speciesId: 1,
+          populationId: 1,
+          representativeId: 1000 + marker
+        });
+      }
+      if (PS.sim && PS.sim.organisms && typeof PS.sim.organisms.rebuildIndexes === "function") {
+        PS.sim.organisms.rebuildIndexes();
+      }
+      view.latitude = Number(focusTile.latitude) || 0;
+      view.longitude = Number(focusTile.longitude) || 0;
+      view.panEastMeters = 0;
+      view.panNorthMeters = 0;
+      world.overlayPerformance = {};
+      if (PS.render && PS.render.observationOverlays) {
+        PS.render.observationOverlays.setActive(config.overlay);
+      } else {
+        world.activeObservationOverlay = config.overlay;
+      }
     }
 
     if (config.biome || config.entities || config.settlement) {
@@ -555,6 +597,12 @@ async function run() {
     assert.strictEqual(caseStats.debugText.trim(), "", testCase.name + " should not write debug errors");
     if (testCase.orbitEvents) {
       assert.ok(caseStats.rendererStats.orbitEventMarkerDraws > 0, testCase.name + " should draw orbit event markers through WebGL");
+    }
+    if (testCase.overlay) {
+      assert.strictEqual(caseStats.rendererStats.observationOverlayActive, testCase.overlay, testCase.name + " should keep the requested observation overlay active");
+      assert.strictEqual(caseStats.rendererStats.observationOverlayCompositor, "webgl2", testCase.name + " should render observation overlays through WebGL2");
+      assert.ok(caseStats.rendererStats.observationOverlayUploads > 0, testCase.name + " should upload an observation overlay texture");
+      assert.ok(caseStats.rendererStats.observationOverlaySamples > 0, testCase.name + " should sample the planet grid for observation overlay data");
     }
     if (testCase.entities) {
       assert.ok(caseStats.rendererStats.organismEntityDraws > 0, testCase.name + " should draw organism facades through WebGL");
