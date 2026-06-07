@@ -367,6 +367,109 @@ async function runInteractionSmoke(page) {
   };
 }
 
+async function runContinuousZoomSweep(page) {
+  const sweep = await page.evaluate(async () => {
+    const cursorX = canvas.width * 0.62;
+    const cursorY = canvas.height * 0.48;
+    const frames = [];
+    const bands = {};
+    const preloadTargets = {};
+    const previousView = {
+      zoomLevel: world.planetView.zoomLevel,
+      latitude: world.planetView.latitude,
+      longitude: world.planetView.longitude,
+      panEastMeters: world.planetView.panEastMeters,
+      panNorthMeters: world.planetView.panNorthMeters
+    };
+    let maxAnchorErrorDeg = 0;
+    let maxTransitionAlpha = 0;
+    let blendedFrames = 0;
+
+    world.planetView.zoomLevel = 1;
+    world.planetView.latitude = 18.5;
+    world.planetView.longitude = -42.25;
+    world.planetView.panEastMeters = 0;
+    world.planetView.panNorthMeters = 0;
+
+    for (let i = 0; i < 24; i++) {
+      const before = getPlanetLatLonFromCanvasPoint(cursorX, cursorY);
+      const startedAt = performance.now();
+
+      adjustPlanetZoomAtCanvasPoint(0.25, cursorX, cursorY);
+      if (typeof drawWorld === "function") {
+        drawWorld();
+      }
+
+      const cameraStats = PS.camera.getZoomTransitionStats();
+      const pipelineStats = PS.render.pipeline.getStats();
+      const after = getPlanetLatLonFromCanvasPoint(cursorX, cursorY);
+      const lonDelta = ((after.longitude - before.longitude + 540) % 360) - 180;
+      const measuredError = Math.abs(after.latitude - before.latitude) + Math.abs(lonDelta);
+
+      frames.push(performance.now() - startedAt);
+      bands[pipelineStats.zoomBand] = true;
+      preloadTargets[String(pipelineStats.preloadSurfaceLodIndex)] = true;
+      maxAnchorErrorDeg = Math.max(maxAnchorErrorDeg, measuredError, Number(cameraStats.lastZoomAnchorErrorDeg) || 0);
+      maxTransitionAlpha = Math.max(maxTransitionAlpha, Number(pipelineStats.transitionAlpha) || 0);
+      if ((Number(pipelineStats.blendedLayers) || 0) > 0) {
+        blendedFrames++;
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+
+    const sum = frames.reduce((total, value) => total + value, 0);
+    const finalZoom = Number(world.planetView.zoomLevel.toFixed(3));
+    world.planetView.zoomLevel = previousView.zoomLevel;
+    world.planetView.latitude = previousView.latitude;
+    world.planetView.longitude = previousView.longitude;
+    world.planetView.panEastMeters = previousView.panEastMeters;
+    world.planetView.panNorthMeters = previousView.panNorthMeters;
+    world.isCameraInteracting = false;
+    if (typeof drawWorld === "function") {
+      drawWorld();
+    }
+
+    return {
+      startZoom: 1,
+      endZoom: finalZoom,
+      bands: Object.keys(bands).sort(),
+      preloadTargets: Object.keys(preloadTargets).sort(),
+      maxAnchorErrorDeg,
+      maxTransitionAlpha,
+      blendedFrames,
+      averageFrameMs: sum / frames.length,
+      peakFrameMs: Math.max.apply(Math, frames),
+      debugText: (document.getElementById("debug-output") || {}).textContent || ""
+    };
+  });
+
+  assert.strictEqual(sweep.debugText.trim(), "", "continuous zoom sweep should not write debug errors");
+  assert.ok(sweep.endZoom > sweep.startZoom, "continuous zoom sweep should advance zoom");
+  assert.ok(sweep.bands.includes("continent"), "continuous zoom sweep should cross continent band");
+  assert.ok(sweep.bands.includes("region"), "continuous zoom sweep should cross region band");
+  assert.ok(sweep.bands.includes("local"), "continuous zoom sweep should cross local band");
+  assert.ok(sweep.bands.includes("settlement"), "continuous zoom sweep should cross settlement band");
+  assert.ok(sweep.preloadTargets.length > 1, "continuous zoom sweep should update preload LOD targets");
+  assert.ok(sweep.maxTransitionAlpha > 0, "continuous zoom sweep should exercise LOD transition alpha");
+  assert.ok(sweep.blendedFrames > 0, "continuous zoom sweep should draw blended LOD frames");
+  assert.ok(sweep.maxAnchorErrorDeg <= 1e-7, "continuous zoom sweep should preserve cursor anchor");
+  assert.ok(sweep.averageFrameMs < 20, "continuous zoom average frame time " + sweep.averageFrameMs.toFixed(3) + "ms should stay under 20ms");
+  assert.ok(sweep.peakFrameMs < 50, "continuous zoom peak frame time " + sweep.peakFrameMs.toFixed(3) + "ms should stay under 50ms");
+
+  return {
+    startZoom: sweep.startZoom,
+    endZoom: sweep.endZoom,
+    bands: sweep.bands,
+    preloadTargets: sweep.preloadTargets,
+    maxAnchorErrorDeg: Number(sweep.maxAnchorErrorDeg.toExponential(3)),
+    maxTransitionAlpha: Number(sweep.maxTransitionAlpha.toFixed(3)),
+    blendedFrames: sweep.blendedFrames,
+    averageFrameMs: Number(sweep.averageFrameMs.toFixed(3)),
+    peakFrameMs: Number(sweep.peakFrameMs.toFixed(3))
+  };
+}
+
 async function run() {
   ensureDir(goldenDir);
 
@@ -431,6 +534,7 @@ async function run() {
   }
 
   const interaction = await runInteractionSmoke(page);
+  const zoomSweep = await runContinuousZoomSweep(page);
 
   const perf = await page.evaluate(async () => {
     const frames = [];
@@ -460,12 +564,13 @@ async function run() {
   assert.deepStrictEqual(errors, [], "visual smoke should not emit page errors");
   assert.deepStrictEqual(failures, [], "visual smoke should not have failed requests");
   assert.strictEqual(perf.debugText.trim(), "", "visual smoke should not write debug errors");
-  assert.ok(perf.averageFrameMs < 20, "average visual frame time should stay under 20ms");
-  assert.ok(perf.peakFrameMs < 50, "peak visual frame time should stay under 50ms");
+  assert.ok(perf.averageFrameMs < 20, "average visual frame time " + perf.averageFrameMs.toFixed(3) + "ms should stay under 20ms");
+  assert.ok(perf.peakFrameMs < 50, "peak visual frame time " + perf.peakFrameMs.toFixed(3) + "ms should stay under 50ms");
 
   console.log("visual screenshot checks passed", JSON.stringify({
     results,
     interaction,
+    zoomSweep,
     averageFrameMs: Number(perf.averageFrameMs.toFixed(3)),
     peakFrameMs: Number(perf.peakFrameMs.toFixed(3))
   }));

@@ -1,4 +1,13 @@
 PS.camera = PS.camera || {};
+PS.camera.stats = PS.camera.stats || {
+  lastZoomFrom: 0,
+  lastZoomTo: 0,
+  lastZoomDirection: 0,
+  lastZoomAnchorErrorDeg: 0,
+  lastZoomAnchorCanvasX: 0,
+  lastZoomAnchorCanvasY: 0,
+  lastZoomPreloadSurfaceLodIndex: 0
+};
 
 PS.camera.getZoomLevels = function () {
   return Array.isArray(CONFIG.PLANET_ZOOM_LEVELS) && CONFIG.PLANET_ZOOM_LEVELS.length > 0
@@ -316,6 +325,13 @@ PS.camera.setZoom = function (zoomLevel) {
   view.lastZoomLevel = previousZoom;
   view.zoomDirection = nextZoom > previousZoom ? 1 : -1;
   view.zoomLevel = nextZoom;
+  PS.camera.stats.lastZoomFrom = previousZoom;
+  PS.camera.stats.lastZoomTo = nextZoom;
+  PS.camera.stats.lastZoomDirection = view.zoomDirection;
+  PS.camera.stats.lastZoomAnchorErrorDeg = 0;
+  PS.camera.stats.lastZoomPreloadSurfaceLodIndex = PS.render && PS.render.lod && typeof PS.render.lod.getPreloadSurfaceLodIndex === "function"
+    ? PS.render.lod.getPreloadSurfaceLodIndex()
+    : PS.camera.getSurfaceLodZoomIndex(nextZoom);
   if (typeof markCameraInteracting === "function") {
     markCameraInteracting();
   }
@@ -342,6 +358,8 @@ PS.camera.setZoomAtCanvasPoint = function (zoomLevel, canvasX, canvasY) {
   var anchoredLatLon = typeof getPlanetLatLonFromCanvasPoint === "function"
     ? getPlanetLatLonFromCanvasPoint(canvasX, canvasY)
     : null;
+  var afterLatLon;
+  var longitudeDelta;
 
   if (!PS.camera.setZoom(zoomLevel)) {
     return false;
@@ -356,7 +374,26 @@ PS.camera.setZoomAtCanvasPoint = function (zoomLevel, canvasX, canvasY) {
     );
   }
 
+  afterLatLon = anchoredLatLon && typeof getPlanetLatLonFromCanvasPoint === "function"
+    ? getPlanetLatLonFromCanvasPoint(canvasX, canvasY)
+    : null;
+  longitudeDelta = anchoredLatLon && afterLatLon
+    ? ((Number(afterLatLon.longitude) - Number(anchoredLatLon.longitude) + 540) % 360) - 180
+    : 0;
+  PS.camera.stats.lastZoomAnchorErrorDeg = anchoredLatLon && afterLatLon
+    ? Math.abs(Number(afterLatLon.latitude) - Number(anchoredLatLon.latitude)) + Math.abs(longitudeDelta)
+    : 0;
+  PS.camera.stats.lastZoomAnchorCanvasX = Number(canvasX) || 0;
+  PS.camera.stats.lastZoomAnchorCanvasY = Number(canvasY) || 0;
+  PS.camera.stats.lastZoomPreloadSurfaceLodIndex = PS.render && PS.render.lod && typeof PS.render.lod.getPreloadSurfaceLodIndex === "function"
+    ? PS.render.lod.getPreloadSurfaceLodIndex()
+    : PS.camera.getSurfaceLodZoomIndex(PS.camera.getView().zoomLevel);
+
   return true;
+};
+
+PS.camera.getZoomTransitionStats = function () {
+  return Object.assign({}, PS.camera.stats);
 };
 
 PS.camera.adjustZoom = function (delta) {
