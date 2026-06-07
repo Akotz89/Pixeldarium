@@ -97,6 +97,9 @@ const context = {
         ]),
         equivalence_work_status_overlays_v0: makeLoadedSheet([
           "work-hammer"
+        ]),
+        equivalence_material_effect_overlays_v0: makeLoadedSheet([
+          "fire-effect"
         ])
       }
     },
@@ -150,12 +153,13 @@ context.PS.render.entityWebgl.getFoodCell({ x: 1, y: 1 }, "vegetation");
 context.PS.render.entityWebgl.getSettlementCell({ id: 1 }, "settlement");
 context.PS.render.entityWebgl.getSettlementWorldUiCell({ id: 1 }, "population");
 context.PS.assets.equivalence.select("workStatus", "entity.intent.work");
+context.PS.assets.equivalence.select("effect", "entity.effect.fallback");
 
 const selectedCitizen = context.PS.assets.equivalence.select("citizen", "entity.fallback");
 const stats = context.PS.assets.equivalence.getStats();
 
-assert.strictEqual(stats.selected, 7, "accepted equivalence selector should record each render category selection");
-assert.strictEqual(stats.rendered, 7, "accepted equivalence selector should create renderable atlas cells");
+assert.strictEqual(stats.selected, 8, "accepted equivalence selector should record each render category selection");
+assert.strictEqual(stats.rendered, 8, "accepted equivalence selector should create renderable atlas cells");
 assert.strictEqual(stats.missing, 0, "all test equivalence sheets/cells should resolve");
 assert.strictEqual(stats.byUse.citizen, 2, "citizen render category should select accepted creature sheet cells");
 assert.strictEqual(stats.byUse.stockpile, 1, "stockpile render category should select accepted resource sheet cells");
@@ -163,9 +167,11 @@ assert.strictEqual(stats.byUse.vegetation, 1, "vegetation render category should
 assert.strictEqual(stats.byUse.settlement, 1, "settlement render category should select accepted structure sheet cells");
 assert.strictEqual(stats.byUse.worldUi, 1, "world UI render category should select accepted UI sheet cells");
 assert.strictEqual(stats.byUse.workStatus, 1, "intent/status render category should select accepted overlay sheet cells");
+assert.strictEqual(stats.byUse.effect, 1, "material/effect render category should select accepted effect sheet cells");
 assert.strictEqual(stats.bySheet.equivalence_creature_npc_refined_v1, 2, "creature/citizen usage should name the accepted creature sheet");
 assert.strictEqual(stats.bySheet.equivalence_settlement_structures_v0, 1, "settlement usage should name the accepted structure sheet");
 assert.strictEqual(stats.bySheet.equivalence_resource_stockpiles_v0, 1, "stockpile usage should name the accepted resource sheet");
+assert.strictEqual(stats.bySheet.equivalence_material_effect_overlays_v0, 1, "effect usage should name the accepted material/effect sheet");
 assert.ok(selectedCitizen.renderCell, "accepted equivalence selection should expose an atlas-compatible render cell");
 assert.strictEqual(selectedCitizen.renderCell.equivalenceSheetId, "equivalence_creature_npc_refined_v1", "render cell should retain accepted sheet identity");
 assert.ok(selectedCitizen.renderCell.pageIndex >= 0, "render cell should target an external accepted sheet page");

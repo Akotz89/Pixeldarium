@@ -231,6 +231,30 @@ PS.render.entities.drawSettlementWorldUi = function () {
   return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementWorldUi());
 };
 
+PS.render.entities.drawSettlementStockpiles = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementStockpiles());
+};
+
+PS.render.entities.drawSettlementWorkStatus = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementWorkStatus());
+};
+
+PS.render.entities.drawSettlementEffects = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementEffects());
+};
+
 PS.render.entities.drawOrganisms = function () {
   if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;

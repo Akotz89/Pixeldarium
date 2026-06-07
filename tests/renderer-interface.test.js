@@ -66,6 +66,9 @@ const context = {
           vegetationDrawCount: 12,
           citizenDrawCount: 11,
           worldUiDrawCount: 13,
+          stockpileDrawCount: 15,
+          workStatusDrawCount: 16,
+          effectDrawCount: 17,
           eventMarkerDrawCount: 14,
           intentDrawCount: 8,
           readinessDrawCount: 9,
@@ -156,6 +159,9 @@ assert.strictEqual(stats.shadowEntityDraws, 10, "renderer stats should include s
 assert.strictEqual(stats.vegetationEntityDraws, 12, "renderer stats should include settlement vegetation entity draws");
 assert.strictEqual(stats.citizenEntityDraws, 11, "renderer stats should include settlement citizen entity draws");
 assert.strictEqual(stats.worldUiEntityDraws, 13, "renderer stats should include settlement world UI entity draws");
+assert.strictEqual(stats.stockpileEntityDraws, 15, "renderer stats should include settlement stockpile entity draws");
+assert.strictEqual(stats.workStatusEntityDraws, 16, "renderer stats should include settlement work status entity draws");
+assert.strictEqual(stats.effectEntityDraws, 17, "renderer stats should include settlement effect entity draws");
 assert.strictEqual(stats.orbitEventMarkerDraws, 14, "renderer stats should include orbit event marker draws");
 assert.strictEqual(stats.intentEntityDraws, 8, "renderer stats should include representative intent entity draws");
 assert.strictEqual(stats.settlementReadinessEntityDraws, 9, "renderer stats should include settlement readiness facade draws");

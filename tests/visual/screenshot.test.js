@@ -616,6 +616,9 @@ async function run() {
       assert.ok(caseStats.rendererStats.vegetationEntityDraws > 0, testCase.name + " should draw settlement vegetation facades through WebGL");
       assert.ok(caseStats.rendererStats.citizenEntityDraws > 0, testCase.name + " should draw settlement citizen facades through WebGL");
       assert.ok(caseStats.rendererStats.worldUiEntityDraws > 0, testCase.name + " should draw settlement world UI facades through WebGL");
+      assert.ok(caseStats.rendererStats.stockpileEntityDraws > 0, testCase.name + " should draw accepted settlement stockpile facades through WebGL");
+      assert.ok(caseStats.rendererStats.workStatusEntityDraws > 0, testCase.name + " should draw accepted work/status overlays through WebGL");
+      assert.ok(caseStats.rendererStats.effectEntityDraws > 0, testCase.name + " should draw accepted material/effect overlays through WebGL");
       assert.ok(caseStats.rendererStats.settlementEntityDraws > 0, testCase.name + " should draw settlement structures through WebGL");
       assert.ok(caseStats.rendererStats.routeEntityDraws > 0, testCase.name + " should draw settlement routes through WebGL");
       assert.ok(caseStats.rendererStats.equivalenceAssetSelections > 0, testCase.name + " should select accepted equivalence assets during runtime rendering");
@@ -625,6 +628,9 @@ async function run() {
       assert.ok(caseStats.rendererStats.equivalenceAssetUses.vegetation > 0, testCase.name + " should select accepted vegetation cells");
       assert.ok(caseStats.rendererStats.equivalenceAssetUses.citizen > 0, testCase.name + " should select accepted creature/citizen cells");
       assert.ok(caseStats.rendererStats.equivalenceAssetUses.worldUi > 0, testCase.name + " should select accepted UI/status cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.stockpile > 0, testCase.name + " should select accepted stockpile cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.workStatus > 0, testCase.name + " should select accepted work/status overlay cells");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.effect > 0, testCase.name + " should select accepted material/effect cells");
       assert.ok(caseStats.particleStats.ready === true, testCase.name + " should have ready particle definitions");
       assert.ok(caseStats.particleStats.visible > 0, testCase.name + " should draw settlement activity particles through WebGL");
       assert.ok(caseStats.particleStats.drawCalls > 0, testCase.name + " should submit a WebGL particle draw");

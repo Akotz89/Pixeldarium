@@ -438,6 +438,18 @@ PS.render.pipeline.registerLayer("settlement.structures", {
   draw: function () { PS.render.entities.drawSettlements(); }
 });
 
+PS.render.pipeline.registerLayer("settlement.stockpiles", {
+  order: 82,
+  drawLayer: PS.render.DrawLayer.ENTITY_GROUND,
+  family: "settlement",
+  semantic: "accepted top-down stockpile facades around active settlements",
+  minBand: "settlement",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementStockpiles(); }
+});
+
 PS.render.pipeline.registerLayer("settlement.vegetation", {
   order: 84,
   drawLayer: PS.render.DrawLayer.ENTITY_GROUND,
@@ -460,6 +472,18 @@ PS.render.pipeline.registerLayer("settlement.citizens", {
   minTier: "local",
   maxTier: "local",
   draw: function () { PS.render.entities.drawSettlementCitizens(); }
+});
+
+PS.render.pipeline.registerLayer("settlement.effects", {
+  order: 88,
+  drawLayer: PS.render.DrawLayer.PARTICLE_BELOW,
+  family: "settlement",
+  semantic: "accepted material and activity effect overlays for settlement proof scenes",
+  minBand: "settlement",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementEffects(); }
 });
 
 PS.render.pipeline.registerLayer("entities.organisms", {
@@ -529,6 +553,18 @@ PS.render.pipeline.registerLayer("status.selection", {
   minTier: "galaxy",
   maxTier: "local",
   draw: function () {}
+});
+
+PS.render.pipeline.registerLayer("settlement.workStatus", {
+  order: 122,
+  drawLayer: PS.render.DrawLayer.SELECTION_OVERLAY,
+  family: "settlement",
+  semantic: "accepted top-down work and room status overlays for settlement proof scenes",
+  minBand: "settlement",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementWorkStatus(); }
 });
 
 PS.render.pipeline.registerLayer("settlement.worldUi", {

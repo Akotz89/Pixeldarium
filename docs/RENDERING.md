@@ -193,13 +193,13 @@ runtime uses deterministic coordinate-derived family selection so ordinary food
 nodes do not collapse to one visual language.
 
 Accepted equivalence sheets from `assets/pixeldarium-equivalence/` can override
-bounded settlement, vegetation, citizen, resource, and world-UI facade cells.
-The runtime still loads the reviewed PNG and sprite metadata, but WebGL uses
-the matching `.rgba.json` sidecar as a file-safe texture source because
-`file://` image elements are not origin-clean for `gl.texImage2D`. The decoded
-RGBA sidecar becomes an atlas page only after the sheet image, metadata, and
-pixel data are loaded. If a declared sidecar is corrupt or incomplete, the
-accepted sheet is not promoted for rendering.
+bounded settlement, vegetation, citizen, stockpile, work-status, material/effect,
+and world-UI facade cells. The runtime still loads the reviewed PNG and sprite
+metadata, but WebGL uses the matching `.rgba.json` sidecar as a file-safe texture
+source because `file://` image elements are not origin-clean for `gl.texImage2D`.
+The decoded RGBA sidecar becomes an atlas page only after the sheet image,
+metadata, and pixel data are loaded. If a declared sidecar is corrupt or
+incomplete, the accepted sheet is not promoted for rendering.
 
 `PS.render.surfaceTileWebgl` groups terrain instances by atlas page. Ready
 chunk cells are appended into pooled growable `Float32Array` page buffers, then
@@ -314,6 +314,7 @@ include `drawCalls`, `tilemapDraws`, `tilemapWebglDraws`, `tilemapFallbacks`,
 `terrainDraws`, `terrainPageDraws`, `entityDraws`, `orbitEventMarkerDraws`,
 `intentEntityDraws`, `equivalenceAssetSelections`,
 `equivalenceAssetRendered`, `equivalenceAssetMissing`,
+`stockpileEntityDraws`, `workStatusEntityDraws`, `effectEntityDraws`,
 `observationOverlayActive`, `observationOverlayUploads`,
 `observationOverlaySamples`, `rendererGpuFrameMs`, `overBudget`,
 `singleVisibleCanvas`, and
