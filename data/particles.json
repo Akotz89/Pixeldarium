@@ -39,6 +39,17 @@
       "size": [2, 4],
       "fadeOut": 0.4
     },
+    "settlement_activity": {
+      "type": "point",
+      "rate": 0,
+      "lifetime": 1.4,
+      "velocity": { "x": [-42, 42], "y": [-58, -12] },
+      "gravity": 18,
+      "color": ["#ffd36e", "#ff7fb8", "#7fffd4"],
+      "size": [4, 7],
+      "fadeIn": 0.08,
+      "fadeOut": 0.7
+    },
     "birth_sparkle": {
       "type": "point",
       "rate": 0,

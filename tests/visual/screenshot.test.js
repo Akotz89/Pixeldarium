@@ -267,6 +267,31 @@ async function prepareCase(page, testCase) {
         view.panEastMeters = 0;
         view.panNorthMeters = 0;
       }
+
+      if (config.settlement && PS.render && PS.render.particles) {
+        if (typeof PS.render.particles.reset === "function") {
+          PS.render.particles.reset(world.rngState || 0x9E3779B9);
+        }
+        if (typeof PS.render.particles.loadDefinitions === "function") {
+          PS.render.particles.loadDefinitions(PS.assets ? PS.assets.particlesData : null);
+        }
+        const settlementPoint = PS.render.entities && typeof PS.render.entities.getSettlementRenderPosition === "function"
+          ? PS.render.entities.getSettlementRenderPosition(world.settlements[0])
+          : null;
+        const activityEmitter = typeof PS.render.particles.createEmitter === "function"
+          ? PS.render.particles.createEmitter("settlement_activity", {
+            id: "visual.settlement_activity",
+            active: false,
+            position: {
+              x: settlementPoint ? settlementPoint.x : canvas.width * 0.5,
+              y: settlementPoint ? settlementPoint.y : canvas.height * 0.5
+            }
+          })
+          : null;
+        if (activityEmitter && typeof activityEmitter.burst === "function") {
+          activityEmitter.burst(24);
+        }
+      }
     }
 
     world.isPaused = true;
@@ -285,10 +310,14 @@ async function prepareCase(page, testCase) {
     const stats = PS.render.renderer && typeof PS.render.renderer.getStats === "function"
       ? PS.render.renderer.getStats()
       : {};
+    const particleStats = PS.render.particles && typeof PS.render.particles.getStats === "function"
+      ? PS.render.particles.getStats()
+      : {};
     return {
       zoomBand: PS.render.pipeline.getZoomBand(world.planetView.zoomLevel),
       zoomLevel: world.planetView.zoomLevel,
       rendererStats: stats,
+      particleStats,
       debugText: (document.getElementById("debug-output") || {}).textContent || ""
     };
   });
@@ -370,6 +399,9 @@ async function run() {
     if (testCase.settlement) {
       assert.ok(caseStats.rendererStats.settlementEntityDraws > 0, testCase.name + " should draw settlement structures through WebGL");
       assert.ok(caseStats.rendererStats.routeEntityDraws > 0, testCase.name + " should draw settlement routes through WebGL");
+      assert.ok(caseStats.particleStats.ready === true, testCase.name + " should have ready particle definitions");
+      assert.ok(caseStats.particleStats.visible > 0, testCase.name + " should draw settlement activity particles through WebGL");
+      assert.ok(caseStats.particleStats.drawCalls > 0, testCase.name + " should submit a WebGL particle draw");
     }
     const screenshot = await page.screenshot({ fullPage: false });
     const goldenPath = path.join(goldenDir, testCase.name + ".png");

@@ -20,6 +20,7 @@ assert.ok(particleData.effects.rain, "particle data should define rain");
 assert.strictEqual(particleData.effects.rain.rate, 200, "rain should emit 200 particles per second");
 assert.ok(particleData.effects.snow, "particle data should define snow");
 assert.ok(particleData.effects.birth_sparkle, "particle data should define birth sparkle burst");
+assert.ok(particleData.effects.settlement_activity, "particle data should define settlement activity burst");
 assert.ok(namespaceSource.indexOf("js/render/particles.js") >= 0, "runtime manifest should load particles");
 assert.ok(pipelineSource.indexOf("PS.render.particles.update") >= 0, "render pipeline should update particles");
 assert.ok(pipelineSource.indexOf("PS.render.particles.render") >= 0, "render pipeline should render particles");
@@ -91,6 +92,13 @@ const burst = system.createEmitter("birth_sparkle", {
 });
 assert.strictEqual(burst.burst(12), 12, "birth sparkle should support burst emission");
 assert.strictEqual(system.getActiveCount(), 352, "burst should add particles without starting an emitter");
+
+const settlementActivity = system.createEmitter("settlement_activity", {
+  active: false,
+  position: { x: 180, y: 220 }
+});
+assert.strictEqual(settlementActivity.burst(24), 24, "settlement activity should support bounded burst emission");
+assert.strictEqual(system.getActiveCount(), 376, "settlement activity should add visual particles without starting an emitter");
 
 context.PS.render.projection = {
   getInterpolatedProjection() {
