@@ -278,6 +278,11 @@ Relevant current limits:
 - Terrain instances per upload segment: `CONFIG.PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES = 8192`.
 - Terrain RANMAP variation stays inside the existing 10-float instance encoding:
   integer `0|1` for horizontal flip plus a fractional shade bucket in `0..0.24`.
+- Ready surface chunk edge feathering stays inside the existing terrain
+  instance alpha float. It is bounded by
+  `PLANET_SURFACE_READY_EDGE_FEATHER_INNER_RATIO`,
+  `PLANET_SURFACE_READY_EDGE_FEATHER_OUTER_RATIO`, and
+  `PLANET_SURFACE_READY_EDGE_FEATHER_MIN_ALPHA`.
 - Authored material families added for AZR-365 are finite registered tile IDs:
   `river_shallow`, `tidal_mud`, `lava_flow`, `lichen_tundra`, and `reed_mat`.
   They still use the existing 16x16 terrain atlas cell, feature key, and

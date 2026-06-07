@@ -592,6 +592,9 @@ PS.render.terrain.drawLocalSurface = function (alpha) {
       renderScreenY: item.screenY,
       renderSamplePixelSize: item.width / Math.max(1, item.address.chunkSamples)
     });
+    if (PS.render.surfaceReadyFeather && typeof PS.render.surfaceReadyFeather.applyAddress === "function") {
+      PS.render.surfaceReadyFeather.applyAddress(drawAddress, canvas);
+    }
 
     readyChunks.push({
       address: drawAddress,

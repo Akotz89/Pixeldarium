@@ -145,12 +145,7 @@ PS.render.surfaceTileWebgl.beginBatches = function () {
 };
 
 PS.render.surfaceTileWebgl.makeBatches = function (address, cellCache, alpha) {
-  return PS.render.surfaceTileWebgl.appendBatches(
-    PS.render.surfaceTileWebgl.beginBatches(),
-    address,
-    cellCache,
-    alpha
-  );
+  return PS.render.surfaceTileWebgl.appendBatches(PS.render.surfaceTileWebgl.beginBatches(), address, cellCache, alpha);
 };
 
 PS.render.surfaceTileWebgl.getPageBuffer = function (batches, pageIndex) {
@@ -274,18 +269,21 @@ PS.render.surfaceTileWebgl.appendBatches = function (batches, address, cellCache
     var shadeBucket = PS.ranmap && PS.ranmap.data && PS.ranmap.normalizedBits ? PS.ranmap.normalizedBits(tileX, tileY, 20, 2) * 0.24 : 0;
     var flipH = (PS.ranmap && PS.ranmap.data && PS.ranmap.flipH(tileX, tileY) ? 1 : 0) + shadeBucket;
     var page = PS.render.surfaceTileWebgl.getPageBuffer(target, cell.pageIndex);
+    var screenX = screenOffsetX + cellData.screenX * (samplePixelSize / CONFIG.TILE_SIZE);
+    var screenY = screenOffsetY + cellData.screenY * (samplePixelSize / CONFIG.TILE_SIZE);
+    var featherAlpha = PS.render.surfaceReadyFeather && typeof PS.render.surfaceReadyFeather.getAlpha === "function" ? PS.render.surfaceReadyFeather.getAlpha(address, screenX, screenY, samplePixelSize) : 1;
 
     PS.render.surfaceTileWebgl.appendInstance(
       page,
-      screenOffsetX + cellData.screenX * (samplePixelSize / CONFIG.TILE_SIZE),
-      screenOffsetY + cellData.screenY * (samplePixelSize / CONFIG.TILE_SIZE),
+      screenX,
+      screenY,
       samplePixelSize,
       samplePixelSize,
       cell.u0,
       cell.v0,
       cell.u1,
       cell.v1,
-      tileAlpha,
+      tileAlpha * featherAlpha,
       flipH
     );
     target.count++;

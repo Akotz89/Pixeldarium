@@ -14,10 +14,12 @@ const configSource = read("config.js");
 const pipelineSource = read("js/render/pipeline.js");
 const engineSource = read("js/render/webgl-engine.js");
 const surfaceCacheSource = read("js/render/surface-cache.js");
+const featherSource = read("js/render/surface-ready-feather.js");
 const tileWebglSource = read("js/render/surface-tile-webgl.js");
 
 assert.ok(namespaceSource.indexOf("js/render/surface-tile-webgl.js") >= 0, "surface tile WebGL compositor should load in the runtime");
 assert.ok(namespaceSource.indexOf("js/render/surface-ecology.js") < namespaceSource.indexOf("js/render/surface-tile-webgl.js"), "surface ecology facade should load before terrain tile consumption");
+assert.ok(namespaceSource.indexOf("js/render/surface-ready-feather.js") < namespaceSource.indexOf("js/render/surface-tile-webgl.js"), "surface ready feather helper should load before terrain tile consumption");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_ATLAS:\s*true/.test(configSource), "surface tile WebGL atlas batching should be enabled by default");
 assert.ok(/PLANET_SURFACE_TILE_WEBGL_MAX_INSTANCES:\s*8192/.test(configSource), "surface tile WebGL batching should have a capped batch size");
 assert.ok(/PLANET_SURFACE_CLOSE_VISIBLE_CHUNK_LIMIT:\s*192/.test(configSource), "close zoom terrain should use a bounded ready chunk working set");
@@ -47,6 +49,8 @@ assert.ok(tileWebglSource.indexOf(".subarray(pageOffset, pageOffset + uploadFloa
 assert.strictEqual(tileWebglSource.indexOf("page.push"), -1, "surface tile compositor should not build upload pages as boxed JS arrays");
 assert.strictEqual(tileWebglSource.indexOf("for (var copyIndex = 0; copyIndex < uploadFloats; copyIndex++)"), -1, "surface tile compositor should not scalar-copy typed upload pages");
 assert.ok(tileWebglSource.indexOf("terrainAtlasCell") >= 0, "surface tile compositor should cache atlas material selection on ready chunk cells");
+assert.ok(featherSource.indexOf("PS.render.surfaceReadyFeather.getAlpha") >= 0, "surface ready feather helper should expose alpha encoding");
+assert.ok(tileWebglSource.indexOf("surfaceReadyFeather.getAlpha") >= 0, "surface tile compositor should consume ready chunk edge feathering");
 assert.strictEqual(tileWebglSource.indexOf("drawTargetTo2d"), -1, "surface tile compositor should not copy back to Canvas2D");
 assert.ok(tileWebglSource.indexOf("drawArraysInstanced") >= 0, "surface tile compositor should submit instanced draws");
 assert.ok(tileWebglSource.indexOf("vertexAttribDivisor") >= 0, "surface tile compositor should configure per-instance attributes");
@@ -126,6 +130,7 @@ const context = {
 };
 
 vm.createContext(context);
+vm.runInContext(featherSource, context, { filename: "js/render/surface-ready-feather.js" });
 vm.runInContext(tileWebglSource, context, { filename: "js/render/surface-tile-webgl.js" });
 
 const batches = context.PS.render.surfaceTileWebgl.makeBatches(
@@ -148,6 +153,7 @@ const page = context.PS.render.surfaceTileWebgl.finalizeBatchPages(batches).page
 
 assert.strictEqual(page[0], 10, "terrain atlas x should stay grid-aligned and ignore positional jitter");
 assert.strictEqual(page[1], 32, "terrain atlas y should stay grid-aligned and ignore positional jitter");
+assert.strictEqual(page[8], 1, "terrain atlas alpha should stay full when no edge feather is requested");
 assert.ok(Math.abs(page[9] - 0.18) < 0.0001, "terrain atlas instances should encode bounded RANMAP shade variation");
 assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
 assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
@@ -187,6 +193,30 @@ assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecofor
 ecologyCell.sample.civilizationKey = "civ.route.2";
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
 assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1.civ.route.2", "terrain cell cache should invalidate when civilization terrain pressure changes");
+
+const featheredBatches = context.PS.render.surfaceTileWebgl.makeBatches(
+  {
+    sampleEast: 0,
+    sampleNorth: 0,
+    renderScreenX: 0,
+    renderScreenY: 0,
+    renderSamplePixelSize: 12,
+    chunkSamples: 2,
+    featherCenterX: 6,
+    featherCenterY: 6,
+    featherInnerRadius: 4,
+    featherOuterRadius: 20,
+    featherMinAlpha: 0.25
+  },
+  [
+    { sample: { biome: "grassland" }, screenX: 0, screenY: 0 },
+    { sample: { biome: "grassland" }, screenX: 16, screenY: 16 }
+  ],
+  1
+);
+const featheredPage = context.PS.render.surfaceTileWebgl.finalizeBatchPages(featheredBatches).pages[0];
+assert.strictEqual(featheredPage[8], 1, "center ready cell should remain fully opaque");
+assert.ok(featheredPage[18] >= 0.25 && featheredPage[18] < 1, "edge ready cell should fade toward the underlay");
 
 const finalized = context.PS.render.surfaceTileWebgl.finalizeBatchPages({
   pages: {
