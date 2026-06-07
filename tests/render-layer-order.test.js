@@ -226,10 +226,12 @@ assert.strictEqual(layer("settlement.readiness").drawLayer, context.PS.render.Dr
 assert.strictEqual(layer("entities.organisms").drawLayer, context.PS.render.DrawLayer.ENTITY_SORTED, "organisms should draw in Y-sorted entity layer");
 assert.strictEqual(layer("settlement.structures").drawLayer, context.PS.render.DrawLayer.BUILDING_WALL, "settlements should draw before roof/canopy overlays");
 assert.strictEqual(layer("weather.particles").drawLayer, context.PS.render.DrawLayer.WEATHER, "weather should draw above world entities");
+assert.strictEqual(layer("settlement.worldUi").drawLayer, context.PS.render.DrawLayer.UI_WORLD, "settlement world UI should draw in the world UI layer");
 assert.strictEqual(layer("ui.minimap").drawLayer, context.PS.render.DrawLayer.UI_SCREEN, "minimap should draw as screen UI");
 assert.ok(layer("resources.food").drawLayer < layer("entities.organisms").drawLayer, "food should draw before sorted entities");
 assert.ok(layer("entities.organisms").drawLayer < context.PS.render.DrawLayer.BUILDING_ROOF, "sorted entities should remain below future roofs");
 assert.ok(layer("weather.particles").drawLayer > context.PS.render.DrawLayer.BUILDING_ROOF, "weather should remain above roofs");
+assert.ok(layer("settlement.worldUi").drawLayer > layer("weather.particles").drawLayer, "settlement world UI should draw above particles");
 assert.ok(layer("ui.minimap").drawLayer > layer("status.selection").drawLayer, "screen UI should draw above selection overlays");
 assert.ok(manifest.every((entry) => entry.minTier && entry.maxTier), "every default layer should declare a LOD tier range");
 
