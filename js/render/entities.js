@@ -216,7 +216,24 @@ PS.render.entities.drawOrganisms = function () {
 PS.render.entities.getSettlementDrawSize = function (settlement) {
   var level = Math.max(1, Math.round(Number(settlement.level) || 1));
   var growthScale = 2.1 + Math.min(level - 1, 5) * 0.35;
-  return CONFIG.ORGANISM_DRAW_SIZE * growthScale;
+  return CONFIG.ORGANISM_DRAW_SIZE * growthScale * PS.render.entities.getSettlementGroundDetailScale();
+};
+
+PS.render.entities.getSettlementGroundDetailScale = function () {
+  var view = world && world.planetView ? world.planetView : null;
+  var band = PS.render.pipeline && typeof PS.render.pipeline.getZoomBand === "function"
+    ? PS.render.pipeline.getZoomBand(view ? view.zoomLevel : 0)
+    : "";
+
+  if (band === "settlement") {
+    return 1.85;
+  }
+
+  if (band === "local") {
+    return 1.2;
+  }
+
+  return 1;
 };
 
 PS.render.entities.getSettlementById = function (settlementId) {

@@ -720,7 +720,10 @@ PS.render.entityWebgl.buildSettlementRouteBatches = function () {
     var step = Math.max(8, Math.min(22, 12 + distance * 0.015));
     var markerCount = Math.max(1, Math.min(18, Math.floor(distance / step)));
     var scale = Math.max(0.65, Math.min(1.8, ((parentPoint.scale || 1) + (childPoint.scale || 1)) * 0.5));
-    var size = Math.max(2, 4.5 * scale);
+    var detailScale = PS.render.entities.getSettlementGroundDetailScale
+      ? PS.render.entities.getSettlementGroundDetailScale()
+      : 1;
+    var size = Math.max(2, 4.5 * scale * detailScale);
 
     for (var marker = 1; marker <= markerCount; marker++) {
       var amount = marker / (markerCount + 1);

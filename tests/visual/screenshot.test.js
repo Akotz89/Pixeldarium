@@ -19,6 +19,7 @@ const cases = [
   { name: "surface-temperate", zoom: 5, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
   { name: "surface-desert", zoom: 5, biome: "desert", expectedBand: "region", maxDarkPixels: 0.16 },
   { name: "entities-visible", zoom: 6, entities: true, expectedBand: "local", maxDarkPixels: 0.16 },
+  { name: "settlement-ground", zoom: 7, settlement: true, expectedBand: "settlement", maxDarkPixels: 0.16 },
   { name: "hud-visible", zoom: 2, hud: true, expectedBand: "continent", maxDarkPixels: 0.16 }
 ];
 
@@ -177,7 +178,7 @@ async function prepareCase(page, testCase) {
     const view = PS.camera.getView();
     view.zoomLevel = config.zoom;
 
-    if (config.biome || config.entities) {
+    if (config.biome || config.entities || config.settlement) {
       const targetBiome = config.biome || null;
       let targetTile = null;
 
@@ -202,9 +203,69 @@ async function prepareCase(page, testCase) {
         }
       }
 
+      if (config.settlement) {
+        if (!targetTile) {
+          targetTile = world.planetTiles[Math.floor(world.planetTiles.length / 2)];
+        }
+
+        const centerX = Math.max(8, Math.min(WORLD_WIDTH - 9, Math.round(Number(targetTile.x) || WORLD_WIDTH / 2)));
+        const centerY = Math.max(8, Math.min(WORLD_HEIGHT - 9, Math.round(Number(targetTile.y) || WORLD_HEIGHT / 2)));
+        const parentTile = world.planetTiles[getTileIndex(centerX, centerY)] || targetTile;
+        const childTile = world.planetTiles[getTileIndex(centerX + 1, centerY + 1)] || parentTile;
+        const makeVisualSettlement = (id, tile, isOutpost) => ({
+          id,
+          lineageId: 3,
+          x: tile.x,
+          y: tile.y,
+          prevX: tile.x,
+          prevY: tile.y,
+          latitude: tile.latitude,
+          longitude: tile.longitude,
+          prevLatitude: tile.latitude,
+          prevLongitude: tile.longitude,
+          foundedTick: world.tick,
+          radius: isOutpost ? 3 : 6,
+          population: isOutpost ? 44 : 180,
+          foodStock: isOutpost ? 48 : 160,
+          storedFood: isOutpost ? 52 : 190,
+          development: isOutpost ? 0.38 : 0.82,
+          level: isOutpost ? 2 : 5,
+          influenceRadius: isOutpost ? 4 : 8,
+          claimedTiles: isOutpost ? 72 : 260,
+          claimedFood: isOutpost ? 16 : 58,
+          parentSettlementId: isOutpost ? 9101 : 0,
+          isOutpost: Boolean(isOutpost),
+          isColony: !isOutpost,
+          isActive: true,
+          lastActiveTick: world.tick
+        });
+
+        world.settlements = [
+          makeVisualSettlement(9101, parentTile, false),
+          makeVisualSettlement(9102, childTile, true)
+        ];
+        world.settlementRoutes = [{
+          id: 8101,
+          parentSettlementId: 9101,
+          childSettlementId: 9102,
+          lineageId: 3,
+          isActive: true,
+          foodTransferred: 140,
+          lastTransferTick: world.tick
+        }];
+        world.nextSettlementId = 9103;
+        world.nextSettlementRouteId = 8102;
+        if (PS.sim && PS.sim.settlements && typeof PS.sim.settlements.rebuildIndexes === "function") {
+          PS.sim.settlements.rebuildIndexes();
+        }
+        targetTile = parentTile;
+      }
+
       if (targetTile) {
         view.latitude = Number(targetTile.latitude);
         view.longitude = Number(targetTile.longitude);
+        view.panEastMeters = 0;
+        view.panNorthMeters = 0;
       }
     }
 
@@ -306,6 +367,10 @@ async function run() {
       );
     }
     assert.strictEqual(caseStats.debugText.trim(), "", testCase.name + " should not write debug errors");
+    if (testCase.settlement) {
+      assert.ok(caseStats.rendererStats.settlementEntityDraws > 0, testCase.name + " should draw settlement structures through WebGL");
+      assert.ok(caseStats.rendererStats.routeEntityDraws > 0, testCase.name + " should draw settlement routes through WebGL");
+    }
     const screenshot = await page.screenshot({ fullPage: false });
     const goldenPath = path.join(goldenDir, testCase.name + ".png");
     const currentImage = parsePng(screenshot);
