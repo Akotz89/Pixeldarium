@@ -45,6 +45,9 @@ assert.ok(entityWebglSource.indexOf("getSettlementCell") >= 0, "entity composito
 assert.ok(entityWebglSource.indexOf("buildSettlementBatches") >= 0, "entity compositor should batch settlement markers");
 assert.ok(entityWebglSource.indexOf("drawSettlements") >= 0, "entity compositor should expose settlement rendering");
 assert.ok(entityWebglSource.indexOf("settlementDrawCount") >= 0, "entity compositor should report settlement draw counts");
+assert.ok(entityWebglSource.indexOf("buildSettlementShadowBatches") >= 0, "entity compositor should batch settlement shadows");
+assert.ok(entityWebglSource.indexOf("drawSettlementShadows") >= 0, "entity compositor should expose settlement shadow rendering");
+assert.ok(entityWebglSource.indexOf("shadowDrawCount") >= 0, "entity compositor should report settlement shadow draw counts");
 assert.ok(entityWebglSource.indexOf("getRouteCell") >= 0, "entity compositor should request route atlas cells");
 assert.ok(entityWebglSource.indexOf("buildSettlementRouteBatches") >= 0, "entity compositor should batch settlement route markers");
 assert.ok(entityWebglSource.indexOf("drawSettlementRoutes") >= 0, "entity compositor should expose route rendering");
@@ -69,6 +72,7 @@ assert.ok(entityWebglSource.indexOf("frameInstanceDrawCount") >= 0, "entity comp
 
 assert.ok(entitiesSource.indexOf("entityWebgl.drawOrganisms(interpolation)") >= 0, "organism rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawFood()") >= 0, "food rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementShadows()") >= 0, "settlement shadow rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlements()") >= 0, "settlement rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "settlement route rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");

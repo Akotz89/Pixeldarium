@@ -23,6 +23,7 @@ PS.render.entityWebgl.state = {
   settlementDrawCount: 0,
   routeDrawCount: 0,
   influenceDrawCount: 0,
+  shadowDrawCount: 0,
   intentDrawCount: 0,
   readinessDrawCount: 0,
   pageDrawCount: 0,
@@ -51,6 +52,7 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.settlementDrawCount = 0;
   state.routeDrawCount = 0;
   state.influenceDrawCount = 0;
+  state.shadowDrawCount = 0;
   state.intentDrawCount = 0;
   state.readinessDrawCount = 0;
   state.pageDrawCount = 0;
@@ -276,6 +278,7 @@ PS.render.entityWebgl.createBatches = function () {
     settlements: 0,
     routes: 0,
     influences: 0,
+    shadows: 0,
     intents: 0,
     readiness: 0,
     capped: 0,
@@ -339,6 +342,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.routes++;
   } else if (kind === "influence") {
     batches.influences++;
+  } else if (kind === "shadow") {
+    batches.shadows++;
   } else if (kind === "intent") {
     batches.intents++;
   } else if (kind === "readiness") {
@@ -526,6 +531,39 @@ PS.render.entityWebgl.buildSettlementBatches = function () {
       tint,
       flipH,
       "settlement"
+    );
+  }
+
+  return batches;
+};
+
+PS.render.entityWebgl.buildSettlementShadowBatches = function () {
+  var batches = PS.render.entityWebgl.createBatches();
+
+  if (!Array.isArray(world.settlements)) {
+    return batches;
+  }
+
+  for (var i = 0; i < world.settlements.length; i++) {
+    var settlement = world.settlements[i];
+    var point = PS.render.entities.getSettlementRenderPosition(settlement);
+    var size = Math.max(1, PS.render.entities.getSettlementDrawSize(settlement) * ((point && point.scale) || 1));
+    var shadowPoint = point ? {
+      x: point.x + Math.max(2, size * 0.18),
+      y: point.y + Math.max(2, size * 0.24),
+      scale: point.scale || 1,
+      visibility: (point.visibility || 1) * 0.38,
+      visible: point.visible
+    } : null;
+
+    PS.render.entityWebgl.submit(
+      batches,
+      PS.render.entityWebgl.getSettlementCell(settlement),
+      shadowPoint,
+      size * 1.12,
+      [0.02, 0.025, 0.035, 0.48],
+      false,
+      "shadow"
     );
   }
 
@@ -881,6 +919,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.settlementDrawCount += batches.settlements;
     state.routeDrawCount += batches.routes;
     state.influenceDrawCount += batches.influences;
+    state.shadowDrawCount += batches.shadows;
     state.intentDrawCount += batches.intents;
     state.readinessDrawCount += batches.readiness || 0;
     state.pageDrawCount = pageDraws;
@@ -947,6 +986,19 @@ PS.render.entityWebgl.drawSettlements = function () {
   }
 
   return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementBatches());
+};
+
+PS.render.entityWebgl.drawSettlementShadows = function () {
+  if (CONFIG.PLANET_ENTITY_WEBGL_INSTANCING === false || !PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  if (!PS.render.entityWebgl.initialize(canvas.width, canvas.height)) {
+    PS.render.entityWebgl.state.fallbackCount++;
+    return false;
+  }
+
+  return PS.render.entityWebgl.drawBatches(PS.render.entityWebgl.buildSettlementShadowBatches());
 };
 
 PS.render.entityWebgl.drawSettlementRoutes = function () {

@@ -362,6 +362,18 @@ PS.render.pipeline.registerLayer("overlays.reference", {
   draw: function () {}
 });
 
+PS.render.pipeline.registerLayer("settlement.shadows", {
+  order: 48,
+  drawLayer: PS.render.DrawLayer.SHADOW,
+  family: "settlement",
+  semantic: "grounded shadows under settlement facades",
+  minBand: "local",
+  maxBand: "settlement",
+  minTier: "local",
+  maxTier: "local",
+  draw: function () { PS.render.entities.drawSettlementShadows(); }
+});
+
 PS.render.pipeline.registerLayer("settlement.influence", {
   order: 50,
   drawLayer: PS.render.DrawLayer.ROUTE_OVERLAY,
