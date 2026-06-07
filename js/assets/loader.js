@@ -413,6 +413,7 @@ PS.assets.AssetLoader.prototype.loadSpriteSheetManifest = function (manifest) {
 
   return Promise.allSettled(sheetIds.map(function (sheetId) {
     var sheet = manifest.sheets[sheetId];
+    var loadedSheetId = sheet && sheet.id ? String(sheet.id) : String(sheetId);
 
     if (!sheet || !sheet.path) {
       return Promise.resolve(null);
@@ -436,8 +437,8 @@ PS.assets.AssetLoader.prototype.loadSpriteSheetManifest = function (manifest) {
         ? PS.assets.SpriteSheet.detect(image, meta)
         : null;
 
-      loaded[sheetId] = {
-        id: sheetId,
+      loaded[loadedSheetId] = {
+        id: loadedSheetId,
         image: image,
         meta: meta,
         sheet: spriteSheet,
@@ -448,7 +449,7 @@ PS.assets.AssetLoader.prototype.loadSpriteSheetManifest = function (manifest) {
         sprites: sheet.sprites || []
       };
 
-      return loaded[sheetId];
+      return loaded[loadedSheetId];
     });
   })).then(function () {
     return manifest;

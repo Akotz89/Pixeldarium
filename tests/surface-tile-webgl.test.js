@@ -15,6 +15,7 @@ const pipelineSource = read("js/render/pipeline.js");
 const engineSource = read("js/render/webgl-engine.js");
 const surfaceCacheSource = read("js/render/surface-cache.js");
 const featherSource = read("js/render/surface-ready-feather.js");
+const equivalenceSource = read("js/assets/equivalence.js");
 const tileWebglSource = read("js/render/surface-tile-webgl.js");
 
 assert.ok(namespaceSource.indexOf("js/render/surface-tile-webgl.js") >= 0, "surface tile WebGL compositor should load in the runtime");
@@ -49,6 +50,7 @@ assert.ok(tileWebglSource.indexOf(".subarray(pageOffset, pageOffset + uploadFloa
 assert.strictEqual(tileWebglSource.indexOf("page.push"), -1, "surface tile compositor should not build upload pages as boxed JS arrays");
 assert.strictEqual(tileWebglSource.indexOf("for (var copyIndex = 0; copyIndex < uploadFloats; copyIndex++)"), -1, "surface tile compositor should not scalar-copy typed upload pages");
 assert.ok(tileWebglSource.indexOf("terrainAtlasCell") >= 0, "surface tile compositor should cache atlas material selection on ready chunk cells");
+assert.ok(tileWebglSource.indexOf("selectAcceptedTerrainCell") >= 0, "surface tile compositor should replace proof-scene terrain cells with accepted equivalence cells");
 assert.ok(featherSource.indexOf("PS.render.surfaceReadyFeather.getAlpha") >= 0, "surface ready feather helper should expose alpha encoding");
 assert.ok(tileWebglSource.indexOf("surfaceReadyFeather.getAlpha") >= 0, "surface tile compositor should consume ready chunk edge feathering");
 assert.strictEqual(tileWebglSource.indexOf("drawTargetTo2d"), -1, "surface tile compositor should not copy back to Canvas2D");
@@ -57,6 +59,9 @@ assert.ok(tileWebglSource.indexOf("vertexAttribDivisor") >= 0, "surface tile com
 
 const context = {
   PS: {
+    assets: {
+      loadedSheets: {}
+    },
     render: {
       surface: {
         withEcology(sample) {
@@ -80,8 +85,12 @@ const context = {
       }
     },
     atlas: {
+      pages: [],
       getTerrainEcologyMicroKey(sample, tileX, tileY) {
         return sample && sample.ecology ? ".ecoform." + ((tileX + tileY) % 4) : "";
+      },
+      getTerrainTransitionInfo(sample) {
+        return sample && sample.acceptedTransition ? sample.acceptedTransition : null;
       },
       getTerrainCell(biome, tileX, tileY, sample) {
         const microKey = context.PS.atlas.getTerrainEcologyMicroKey(sample, tileX, tileY);
@@ -120,6 +129,8 @@ const context = {
     return Math.max(min, Math.min(max, value));
   },
   Float32Array,
+  Uint8Array,
+  Buffer,
   Math,
   Number,
   Object,
@@ -129,14 +140,51 @@ const context = {
   console
 };
 
+function makeLoadedSheet(cellIds) {
+  return {
+    image: { width: 512, height: 64, naturalWidth: 512, naturalHeight: 64 },
+    pixelData: {
+      type: "rgba-base64",
+      width: 512,
+      height: 64,
+      byteLength: 512 * 64 * 4,
+      data: Buffer.alloc(512 * 64 * 4, 255).toString("base64")
+    },
+    sheet: {
+      getCell(name) {
+        if (cellIds.indexOf(name) < 0) {
+          return null;
+        }
+        return { name, x: 0, y: 0, w: 32, h: 32, image: { width: 32, height: 32 } };
+      }
+    }
+  };
+}
+
+context.PS.assets.loadedSheets.equivalence_terrain_materials_v0 = makeLoadedSheet([
+  "grass-lush.0",
+  "grass-lush.1",
+  "dirt-soil.0",
+  "rock-mountain.0",
+  "water-shallow.0",
+  "water-deep.0"
+]);
+context.PS.assets.loadedSheets.equivalence_transitions_v0 = makeLoadedSheet([
+  "grass-water.edge.n"
+]);
+context.PS.assets.loadedSheets.equivalence_terrain_transitions_v0 = makeLoadedSheet([
+  "grass-water.edge.n"
+]);
+
 vm.createContext(context);
 vm.runInContext(featherSource, context, { filename: "js/render/surface-ready-feather.js" });
+vm.runInContext(equivalenceSource, context, { filename: "js/assets/equivalence.js" });
 vm.runInContext(tileWebglSource, context, { filename: "js/render/surface-tile-webgl.js" });
 
 const batches = context.PS.render.surfaceTileWebgl.makeBatches(
   {
-    sampleEast: 4,
-    sampleNorth: 8,
+    sampleEast: 0,
+    sampleNorth: 0,
     renderScreenX: 10,
     renderScreenY: 20,
     renderSamplePixelSize: 12,
@@ -157,6 +205,8 @@ assert.strictEqual(page[8], 1, "terrain atlas alpha should stay full when no edg
 assert.ok(Math.abs(page[9] - 0.18) < 0.0001, "terrain atlas instances should encode bounded RANMAP shade variation");
 assert.strictEqual(page[10], 22, "adjacent terrain atlas x should advance by exact sample size");
 assert.strictEqual(page[11], 32, "adjacent terrain atlas y should remain grid-aligned");
+assert.ok(batches.equivalenceTerrain > 0, "terrain atlas batches should select accepted terrain material pixels");
+assert.ok(context.PS.assets.equivalence.getStats().byUse.terrainGround > 0, "surface terrain cells should record accepted terrain ground usage");
 
 const reusedBatches = context.PS.render.surfaceTileWebgl.makeBatches(
   {
@@ -184,6 +234,7 @@ const ecologyAddress = {
 };
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
 assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.0.civ0", "terrain cell cache should include the active ecology key and bounded micro phase");
+assert.strictEqual(context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1).equivalenceTerrain, 0, "accepted terrain materials should not replace active ecology terrain encoding");
 ecologyAddress.sampleEast = 1;
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
 assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.3.2.ecoform.1.civ0", "terrain cell cache should invalidate when ecology micro phase changes");
@@ -193,6 +244,35 @@ assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecofor
 ecologyCell.sample.civilizationKey = "civ.route.2";
 context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1);
 assert.strictEqual(ecologyCell.terrainAtlasCell.name, "test.grass.eco.0.0.ecoform.1.civ.route.2", "terrain cell cache should invalidate when civilization terrain pressure changes");
+assert.strictEqual(context.PS.render.surfaceTileWebgl.makeBatches(ecologyAddress, [ecologyCell], 1).equivalenceTerrain, 0, "accepted terrain materials should not replace civilization terrain encoding");
+
+context.PS.assets.equivalence.resetFrameStats();
+const transitionBatches = context.PS.render.surfaceTileWebgl.makeBatches(
+  {
+    sampleEast: 0,
+    sampleNorth: 0,
+    renderScreenX: 0,
+    renderScreenY: 0,
+    renderSamplePixelSize: 12,
+    chunkSamples: 1
+  },
+  [{
+    sample: {
+      biome: "grassland",
+      acceptedTransition: {
+        type: "coast",
+        mask: 8,
+        weight: 0.5,
+        strength: 0.8
+      }
+    },
+    screenX: 0,
+    screenY: 0
+  }],
+  1
+);
+assert.strictEqual(transitionBatches.equivalenceTransitions, 1, "terrain transition batches should select accepted transition pixels");
+assert.strictEqual(context.PS.assets.equivalence.getStats().byUse.terrainTransition, 1, "surface transitions should record accepted transition usage");
 
 const featheredBatches = context.PS.render.surfaceTileWebgl.makeBatches(
   {

@@ -19,6 +19,7 @@ const cases = [
   { name: "local-view", zoom: 6, biome: "forest", expectedBand: "local", maxDarkPixels: 0.16 },
   { name: "surface-temperate", zoom: 5, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
   { name: "surface-desert", zoom: 5, biome: "desert", expectedBand: "region", maxDarkPixels: 0.16 },
+  { name: "accepted-terrain", zoom: 6, biome: "forest", acceptedTerrain: true, expectedBand: "local", maxDarkPixels: 0.16 },
   { name: "entities-visible", zoom: 6, entities: true, expectedBand: "local", maxDarkPixels: 0.16 },
   { name: "settlement-ground", zoom: 7, settlement: true, expectedBand: "settlement", maxDarkPixels: 0.16 },
   { name: "hud-visible", zoom: 2, hud: true, expectedBand: "continent", maxDarkPixels: 0.16 }
@@ -250,7 +251,7 @@ async function prepareCase(page, testCase) {
       }
     }
 
-    if (config.biome || config.entities || config.settlement) {
+    if (config.biome || config.entities || config.settlement || config.acceptedTerrain) {
       const targetBiome = config.biome || null;
       let targetTile = null;
 
@@ -292,6 +293,77 @@ async function prepareCase(page, testCase) {
             representative.behavior = "foraging";
             representative.target = { type: "food", x: visualFood.x, y: visualFood.y };
             representative.selected = true;
+          }
+        }
+      }
+
+      if (config.acceptedTerrain || config.settlement) {
+        if (!targetTile) {
+          targetTile = world.planetTiles[Math.floor(world.planetTiles.length / 2)];
+        }
+
+        if (config.acceptedTerrain) {
+          world.food = [];
+          world.organisms = [];
+          world.settlements = [];
+          world.settlementRoutes = [];
+          if (PS.sim && PS.sim.organisms && typeof PS.sim.organisms.rebuildIndexes === "function") {
+            PS.sim.organisms.rebuildIndexes();
+          }
+          if (PS.sim && PS.sim.settlements && typeof PS.sim.settlements.rebuildIndexes === "function") {
+            PS.sim.settlements.rebuildIndexes();
+          }
+        }
+
+        for (let i = 0; i < world.planetTiles.length; i++) {
+          const tile = world.planetTiles[i];
+          const blend = tile && tile.tileBlend;
+          const weights = blend && blend.biomeWeights;
+          if (
+            tile &&
+            tile.biome &&
+            tile.biome !== "ocean" &&
+            weights &&
+            Number(blend.transitionStrength) > 0.18
+          ) {
+            targetTile = tile;
+            break;
+          }
+        }
+
+        if (targetTile && targetTile.biome && targetTile.biome !== "ocean") {
+          const centerX = Math.round(Number(targetTile.x) || 0);
+          const centerY = Math.round(Number(targetTile.y) || 0);
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              const tx = Math.max(0, Math.min(WORLD_WIDTH - 1, centerX + dx));
+              const ty = Math.max(0, Math.min(WORLD_HEIGHT - 1, centerY + dy));
+              const tile = world.planetTiles[getTileIndex(tx, ty)];
+              if (!tile || !tile.biome || tile.biome === "ocean") {
+                continue;
+              }
+              const biomeWeight = {};
+              biomeWeight[tile.biome] = 0.72;
+              biomeWeight.ocean = 0.28;
+              tile.tileBlend = Object.assign({}, tile.tileBlend || {}, {
+                biomeWeights: biomeWeight,
+                transitionStrength: 0.76,
+                xAmount: dx > 0 ? 0.68 : (dx < 0 ? 0.32 : 0.5),
+                yAmount: dy > 0 ? 0.68 : (dy < 0 ? 0.32 : 0.24)
+              });
+            }
+          }
+          if (PS.render && PS.render.surface && typeof PS.render.surface.resetChunkCache === "function") {
+            PS.render.surface.resetChunkCache();
+          }
+          if (PS.render && PS.render.surfaceRender && typeof PS.render.surfaceRender.resetChunkCache === "function") {
+            PS.render.surfaceRender.resetChunkCache();
+          }
+          if (PS.render && PS.render.surfaceRender && typeof PS.render.surfaceRender.invalidateTerrainCache === "function") {
+            PS.render.surfaceRender.invalidateTerrainCache();
+          }
+          if (PS.render && PS.render.terrain && typeof PS.render.terrain.invalidateCache === "function") {
+            PS.render.terrain.invalidateCache();
           }
         }
       }
@@ -399,10 +471,75 @@ async function prepareCase(page, testCase) {
 
   await page.waitForTimeout(350);
 
-  return page.evaluate(() => {
+  return page.evaluate((config) => {
+    if (
+      config.acceptedTerrain &&
+      PS.render &&
+      PS.render.surfaceTileWebgl &&
+      typeof PS.render.surfaceTileWebgl.drawTerrainAtlas === "function"
+    ) {
+      const cellCache = [];
+      const transitionCellCache = [];
+      for (let i = 0; i < 16; i++) {
+        const x = i % 4;
+        const y = Math.floor(i / 4);
+        const sample = {
+          biome: "grassland",
+          acceptedTransitionCellName: "",
+          detail: {
+            surface: i % 3 === 0 ? "open water shallows" : "grass",
+            feature: i % 3 === 0 ? "foam" : "meadow",
+            materialSignals: i % 3 === 0 ? { coast: 0.8, shallowWater: 0.7 } : {}
+          },
+          tileBlend: {
+            biomeWeights: { grassland: 0.72, ocean: 0.28 },
+            transitionStrength: 0.76,
+            xAmount: 0.5,
+            yAmount: 0.24
+          }
+        };
+        cellCache.push({
+          sample,
+          screenX: 48 + x * 18,
+          screenY: 48 + y * 18
+        });
+        transitionCellCache.push({
+          sample: {
+            biome: "grassland",
+            acceptedTransitionCellName: "grass-water.edge.n"
+          },
+          screenX: 48 + x * 18,
+          screenY: 48 + y * 18
+        });
+      }
+      PS.render.surfaceTileWebgl.drawTerrainAtlas({
+        sampleEast: 2,
+        sampleNorth: 50,
+        renderScreenX: 0,
+        renderScreenY: 0,
+        renderSamplePixelSize: 16,
+        chunkSamples: 4
+      }, cellCache, 1);
+      PS.render.surfaceTileWebgl.drawTerrainAtlas({
+        sampleEast: 0,
+        sampleNorth: 0,
+        renderScreenX: 0,
+        renderScreenY: 0,
+        renderSamplePixelSize: 16,
+        chunkSamples: 4
+      }, transitionCellCache, 1);
+    }
+
     const stats = PS.render.renderer && typeof PS.render.renderer.getStats === "function"
       ? PS.render.renderer.getStats()
       : {};
+    const surfaceStats = PS.render.surfaceTileWebgl ? PS.render.surfaceTileWebgl.state : {};
+    if (config.acceptedTerrain && surfaceStats) {
+      stats.equivalenceTerrainDraws = surfaceStats.equivalenceTerrainDrawCount || 0;
+      stats.equivalenceTransitionDraws = surfaceStats.equivalenceTransitionDrawCount || 0;
+      stats.equivalenceAssetUses = Object.assign({}, stats.equivalenceAssetUses || {}, surfaceStats.equivalenceSelectedUses || {});
+      stats.equivalenceAssetSheets = Object.assign({}, stats.equivalenceAssetSheets || {}, surfaceStats.equivalenceSelectedSheets || {});
+    }
     const particleStats = PS.render.particles && typeof PS.render.particles.getStats === "function"
       ? PS.render.particles.getStats()
       : {};
@@ -416,7 +553,7 @@ async function prepareCase(page, testCase) {
         : null,
       debugText: (document.getElementById("debug-output") || {}).textContent || ""
     };
-  });
+  }, testCase);
 }
 
 async function runInteractionSmoke(page) {
@@ -610,6 +747,14 @@ async function run() {
       assert.ok(caseStats.rendererStats.intentEntityDraws > 0, testCase.name + " should draw representative behavior/target cues through WebGL");
       assert.strictEqual(caseStats.selectedRepresentative && caseStats.selectedRepresentative.behavior, "foraging", testCase.name + " should preserve a watched behavior cue");
       assert.strictEqual(caseStats.selectedRepresentative && caseStats.selectedRepresentative.target && caseStats.selectedRepresentative.target.type, "food", testCase.name + " should preserve a watched target cue");
+    }
+    if (testCase.acceptedTerrain) {
+      if (process.env.PIXELDARIUM_DEBUG_SETTLEMENT_STATS === "1") {
+        console.error(JSON.stringify(caseStats.rendererStats));
+      }
+      assert.ok(caseStats.rendererStats.equivalenceTerrainDraws > 0, testCase.name + " should draw accepted terrain material pixels through WebGL");
+      assert.ok(caseStats.rendererStats.equivalenceTransitionDraws > 0, testCase.name + " should draw accepted terrain transition pixels through WebGL");
+      assert.ok(caseStats.rendererStats.equivalenceAssetUses.terrainGround > 0 || caseStats.rendererStats.equivalenceAssetUses.terrainWater > 0, testCase.name + " should select accepted terrain material cells");
     }
     if (testCase.settlement) {
       assert.ok(caseStats.rendererStats.shadowEntityDraws > 0, testCase.name + " should draw settlement shadows through WebGL");
