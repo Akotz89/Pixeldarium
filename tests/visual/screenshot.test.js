@@ -197,9 +197,30 @@ async function prepareCase(page, testCase) {
         const organism = world.organisms[0];
         targetTile = { x: organism.x, y: organism.y, latitude: organism.latitude, longitude: organism.longitude };
         organism.energy = 240;
+        organism.directionX = 1;
+        organism.directionY = 0;
         organism.selected = true;
+        const foodX = Math.max(0, Math.min(WORLD_WIDTH - 1, Math.round(Number(organism.x) || 0) + 1));
+        const foodY = Math.max(0, Math.min(WORLD_HEIGHT - 1, Math.round(Number(organism.y) || 0)));
+        const foodTile = world.planetTiles[getTileIndex(foodX, foodY)] || targetTile;
+        const visualFood = typeof addFoodAt === "function"
+          ? addFoodAt(foodTile.x, foodTile.y)
+          : { x: foodTile.x, y: foodTile.y };
+        visualFood.latitude = Number(organism.latitude);
+        visualFood.longitude = Number(organism.longitude);
+        visualFood.prevX = visualFood.x;
+        visualFood.prevY = visualFood.y;
+        visualFood.prevLatitude = visualFood.latitude;
+        visualFood.prevLongitude = visualFood.longitude;
+        visualFood.energy = CONFIG.FOOD_ENERGY_VALUE;
         if (PS.sim && PS.sim.representatives) {
           PS.sim.representatives.select(organism);
+          const representative = PS.sim.representatives.getRepresentative(organism.representativeId);
+          if (representative) {
+            representative.behavior = "foraging";
+            representative.target = { type: "food", x: visualFood.x, y: visualFood.y };
+            representative.selected = true;
+          }
         }
       }
 
@@ -318,6 +339,9 @@ async function prepareCase(page, testCase) {
       zoomLevel: world.planetView.zoomLevel,
       rendererStats: stats,
       particleStats,
+      selectedRepresentative: PS.sim && PS.sim.representatives && world.organisms[0]
+        ? PS.sim.representatives.getRepresentative(world.organisms[0].representativeId)
+        : null,
       debugText: (document.getElementById("debug-output") || {}).textContent || ""
     };
   });
@@ -499,6 +523,13 @@ async function run() {
       );
     }
     assert.strictEqual(caseStats.debugText.trim(), "", testCase.name + " should not write debug errors");
+    if (testCase.entities) {
+      assert.ok(caseStats.rendererStats.organismEntityDraws > 0, testCase.name + " should draw organism facades through WebGL");
+      assert.ok(caseStats.rendererStats.foodEntityDraws > 0, testCase.name + " should draw food facades through WebGL");
+      assert.ok(caseStats.rendererStats.intentEntityDraws > 0, testCase.name + " should draw representative behavior/target cues through WebGL");
+      assert.strictEqual(caseStats.selectedRepresentative && caseStats.selectedRepresentative.behavior, "foraging", testCase.name + " should preserve a watched behavior cue");
+      assert.strictEqual(caseStats.selectedRepresentative && caseStats.selectedRepresentative.target && caseStats.selectedRepresentative.target.type, "food", testCase.name + " should preserve a watched target cue");
+    }
     if (testCase.settlement) {
       assert.ok(caseStats.rendererStats.shadowEntityDraws > 0, testCase.name + " should draw settlement shadows through WebGL");
       assert.ok(caseStats.rendererStats.vegetationEntityDraws > 0, testCase.name + " should draw settlement vegetation facades through WebGL");
