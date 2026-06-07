@@ -1,30 +1,36 @@
 PS.render = PS.render || {};
 PS.render.terrain = PS.render.terrain || {};
 
+PS.render.terrain.defaultBiomeColors = {
+  forest: "#123f23",
+  grassland: "#23552d",
+  desert: "#56451f",
+  wetland: "#1d4f43",
+  mountain: "#62675f",
+  mountains: "#62675f",
+  barren: "#3f3d32",
+  tundra: "#29383a",
+  ice: "#a8d4e8",
+  ocean: "#06172b"
+};
+PS.render.terrain.defaultBiomeColor = "#07080f";
+PS.render.terrain._biomePaletteVersion = -1;
+
+PS.render.terrain.getPaletteBiomeKey = function (biome) {
+  return String(biome || "") === "mountains" ? "mountain" : String(biome || "");
+};
+
+PS.render.terrain.getPaletteBiomeColor = function (biome) {
+  var key = PS.render.terrain.getPaletteBiomeKey(biome);
+  var fallback = PS.render.terrain.defaultBiomeColors[key] || PS.render.terrain.defaultBiomeColor;
+
+  return PS.assets && typeof PS.assets.getPaletteColor === "function"
+    ? PS.assets.getPaletteColor("terrain", key, fallback)
+    : fallback;
+};
+
 PS.render.terrain.getBaseBiomeColor = function (biome) {
-  switch (biome) {
-    case "forest":
-      return "#123f23";
-    case "grassland":
-      return "#23552d";
-    case "desert":
-      return "#56451f";
-    case "wetland":
-      return "#1d4f43";
-    case "mountain":
-    case "mountains":
-      return "#62675f";
-    case "barren":
-      return "#3f3d32";
-    case "tundra":
-      return "#29383a";
-    case "ice":
-      return "#a8d4e8";
-    case "ocean":
-      return "#06172b";
-    default:
-      return "#07080f";
-  }
+  return PS.render.terrain.getPaletteBiomeColor(biome);
 };
 
 PS.render.terrain.applyDeepTimeHexTint = function (hexColor) {
@@ -226,16 +232,33 @@ PS.render.terrain.packedToHex = function (c) {
              + HEX[(c >> 4) & 0xF] + HEX[c & 0xF];
 };
 
-// Precomputed biome color LUT — avoids switch+string per cell
-PS.render.terrain._biomePackedLUT = {
-  forest: 0x123f23, grassland: 0x23552d, desert: 0x56451f,
-  wetland: 0x1d4f43, mountain: 0x62675f, mountains: 0x62675f,
-  barren: 0x3f3d32, tundra: 0x29383a, ice: 0xa8d4e8,
-  ocean: 0x06172b
+PS.render.terrain.refreshBiomePaletteCache = function () {
+  var version = PS.assets && typeof PS.assets.getPaletteVersion === "function"
+    ? PS.assets.getPaletteVersion("terrain")
+    : 0;
+  var colors = PS.render.terrain.defaultBiomeColors;
+  var key;
+
+  if (PS.render.terrain._biomePaletteVersion === version && PS.render.terrain._biomePackedLUT) {
+    return;
+  }
+
+  PS.render.terrain._biomePackedLUT = {};
+
+  for (key in colors) {
+    if (Object.prototype.hasOwnProperty.call(colors, key)) {
+      PS.render.terrain._biomePackedLUT[key] = PS.render.terrain.hexToPacked(
+        PS.render.terrain.getPaletteBiomeColor(key)
+      );
+    }
+  }
+
+  PS.render.terrain._biomePackedDefault = PS.render.terrain.hexToPacked(PS.render.terrain.defaultBiomeColor);
+  PS.render.terrain._biomePaletteVersion = version;
 };
-PS.render.terrain._biomePackedDefault = 0x07080f;
 
 PS.render.terrain.getBiomePackedColor = function (biome) {
+  PS.render.terrain.refreshBiomePaletteCache();
   return PS.render.terrain._biomePackedLUT[biome] || PS.render.terrain._biomePackedDefault;
 };
 

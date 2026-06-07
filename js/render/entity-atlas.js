@@ -128,6 +128,18 @@ PS.atlas.hexToRgb = function (hexColor) {
   ];
 };
 
+PS.atlas.getPaletteRgb = function (paletteId, key, fallbackRgb) {
+  var fallback = fallbackRgb || [255, 255, 255];
+  var fallbackHex = PS.render && PS.render.terrain && typeof PS.render.terrain.getHexFromRgb === "function"
+    ? PS.render.terrain.getHexFromRgb(fallback[0], fallback[1], fallback[2])
+    : "#ffffff";
+  var color = PS.assets && typeof PS.assets.getPaletteColor === "function"
+    ? PS.assets.getPaletteColor(paletteId, key, fallbackHex)
+    : fallbackHex;
+
+  return PS.atlas.hexToRgb(color);
+};
+
 PS.atlas.writePixel = function (cell, localX, localY, rgba) {
   var page = PS.atlas.pages[cell.pageIndex];
   var x = cell.x + localX;
@@ -582,8 +594,15 @@ PS.atlas.terrainPalettes = {
 
 PS.atlas.getTerrainPalette = function (biome) {
   var key = String(biome || "unknown").toLowerCase();
+  var template = PS.atlas.terrainPalettes[key] || PS.atlas.terrainPalettes.unknown;
+  var paletteKey = key === "unknown" ? "grassland" : key;
 
-  return PS.atlas.terrainPalettes[key] || PS.atlas.terrainPalettes.unknown;
+  return {
+    base: PS.atlas.getPaletteRgb("terrain", paletteKey, template.base),
+    accent: template.accent,
+    dark: template.dark,
+    pattern: template.pattern
+  };
 };
 
 PS.atlas.getTerrainTilePalette = function (biome, tileDefinition) {
