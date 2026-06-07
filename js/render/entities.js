@@ -211,6 +211,14 @@ PS.render.entities.drawSettlementCitizens = function () {
   return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementCitizens());
 };
 
+PS.render.entities.drawSettlementVegetation = function () {
+  if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
+    return false;
+  }
+
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementVegetation());
+};
+
 PS.render.entities.drawOrganisms = function () {
   if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return;
