@@ -13,6 +13,7 @@ PS.assets.families = PS.assets.families || {
 };
 PS.assets.atlases = PS.assets.atlases || {};
 PS.assets.palettes = PS.assets.palettes || {};
+PS.assets.paletteVersions = PS.assets.paletteVersions || {};
 
 PS.assets.registerFamily = function (id, family) {
   var familyId = String(id || "").trim();
@@ -48,11 +49,24 @@ PS.assets.registerPalette = function (id, palette) {
   }
 
   PS.assets.palettes[paletteId] = palette || {};
+  PS.assets.paletteVersions[paletteId] = (Number(PS.assets.paletteVersions[paletteId]) || 0) + 1;
   return PS.assets.palettes[paletteId];
 };
 
 PS.assets.getPalette = function (id) {
   return PS.assets.palettes[String(id || "")] || null;
+};
+
+PS.assets.getPaletteVersion = function (id) {
+  return Number(PS.assets.paletteVersions[String(id || "")]) || 0;
+};
+
+PS.assets.getPaletteColor = function (paletteId, key, fallback) {
+  var palette = PS.assets.getPalette(paletteId);
+  var colorKey = String(key || "");
+  var color = palette && palette[colorKey];
+
+  return typeof color === "string" && color.charAt(0) === "#" ? color : fallback;
 };
 
 PS.assets.getManifest = function () {

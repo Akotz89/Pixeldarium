@@ -184,7 +184,7 @@ PS.render.surfaceColor.getMaterialStrataTint = function (sample) {
 PS.render.surfaceColor.getSurfaceColor = function (sample) {
   var biome = sample && sample.biome ? sample.biome : "unknown";
   var detail = sample && sample.detail ? sample.detail : null;
-  var baseColor = getPlanetBiomeColor(biome);
+  var baseColor = PS.render.terrain.getBiomeColor(biome);
 
   if (!detail) {
     return baseColor;
@@ -219,15 +219,15 @@ PS.render.surfaceColor.getSurfaceColor = function (sample) {
   } else if (detail.surface === "deep water") {
     color = "#020b1f";
   } else if (detail.surface === "clearing" || detail.surface === "meadow") {
-    color = blendHexColors("#2e6835", "#7c8f3e", clamp(Number(detail.roughness) || 0, 0, 1) * 0.22);
+    color = blendHexColors(PS.render.terrain.getBaseBiomeColor("forest"), "#7c8f3e", clamp(Number(detail.roughness) || 0, 0, 1) * 0.22);
   } else if (detail.surface === "dense canopy") {
-    color = "#082716";
+    color = blendHexColors(PS.render.terrain.getBaseBiomeColor("forest"), "#000000", 0.38);
   } else if (detail.surface === "woodland") {
-    color = "#123f23";
+    color = PS.render.terrain.getBaseBiomeColor("forest");
   } else if (detail.surface === "brush") {
     color = "#346337";
   } else if (detail.surface === "grass") {
-    color = "#2f6531";
+    color = PS.render.terrain.getBaseBiomeColor("grassland");
   } else if (detail.surface === "rock" || detail.surface === "stone") {
     color = blendHexColors("#454640", "#7c7b6f", slope * 0.55);
   } else if (detail.surface === "dune" || detail.surface === "sand") {
@@ -289,8 +289,30 @@ PS.render.surfaceColor._pc = {
   coastYellow:   0xaaa05e,
   shallowTeal:   0x7fb7a7
 };
+PS.render.surfaceColor._surfacePaletteVersion = -1;
+
+PS.render.surfaceColor.refreshSurfacePaletteCache = function () {
+  var version = PS.assets && typeof PS.assets.getPaletteVersion === "function"
+    ? PS.assets.getPaletteVersion("terrain")
+    : 0;
+  var pc = PS.render.surfaceColor._pc;
+  var terrain = PS.render.terrain;
+
+  if (PS.render.surfaceColor._surfacePaletteVersion === version) {
+    return;
+  }
+
+  pc.woodland = terrain.getBiomePackedColor("forest");
+  pc.denseCanopy = terrain.blendPacked(pc.woodland, 0x000000, 0.38);
+  pc.clearingDark = pc.woodland;
+  pc.grass = terrain.getBiomePackedColor("grassland");
+  pc.deepOcean = terrain.getBiomePackedColor("ocean");
+  PS.render.surfaceColor._surfacePaletteVersion = version;
+};
 
 PS.render.surfaceColor.getSurfaceColorPacked = function (sample) {
+  PS.render.surfaceColor.refreshSurfacePaletteCache();
+
   var pc = PS.render.surfaceColor._pc;
   var blend = PS.render.terrain.blendPacked;
   var shade = PS.render.terrain.shadePacked;

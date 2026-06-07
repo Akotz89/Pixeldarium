@@ -160,6 +160,10 @@ appendage type `0..7`, camouflage `0..4`, thermal tolerance `0..4`, water
 dependency `0..4`, and animation/RANMAP variant `0..3`. These keys cache
 procedural pixel sprites before WebGL2 consumes the atlas page, so traits change
 visible morphology without per-frame sprite generation.
+Terrain, surface-color, and atlas terrain base colors consume the `terrain`
+palette from `PS.assets` before generating packed color LUTs or atlas pixels.
+Palette registration increments a version counter so the cached packed biome and
+surface-color tables refresh when a reviewed art pass changes palette values.
 Terrain material cells are selected from tile and biome data, cached on ready chunk
 cells as `terrainAtlasCell`, and reused until the chunk or registry changes.
 Registered terrain material families include bounded IDs for shallow rivers,
