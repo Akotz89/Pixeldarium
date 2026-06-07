@@ -51,6 +51,7 @@ PS.core.manifest = [
   "js/render/tile-iterator.js",
   "js/render/particles.js",
   "js/render/entity-atlas.js",
+  "js/render/entity-atlas-organisms.js",
   "js/render/entity-atlas-intents.js",
   "js/render/entity-atlas-civilization.js",
   "js/render/terrain-atlas-civilization.js",
