@@ -559,6 +559,10 @@ PS.render.terrain.drawLocalSurface = function (alpha) {
   var placeholderChunks = 0;
   var readyChunks = [];
 
+  if (PS.render.surfaceUnderlayWebgl && typeof PS.render.surfaceUnderlayWebgl.draw === "function") {
+    PS.render.surfaceUnderlayWebgl.draw(alpha);
+  }
+
   localSurfaceRenderChunkCache.stats.lastVisibleChunks = queue.visibleCount || 0;
   localSurfaceRenderChunkCache.stats.lastVisibleQueueChunks = queue.visibleCount || 0;
   localSurfaceRenderChunkCache.stats.lastPrefetchQueueChunks = queue.prefetchCount || 0;

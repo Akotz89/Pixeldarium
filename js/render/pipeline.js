@@ -330,6 +330,7 @@ PS.render.getSubsystems = function () {
     PS.render.webglCompositor,
     PS.render.webglGbuffer,
     PS.render.webglGlobe,
+    PS.render.surfaceUnderlayWebgl,
     PS.render.surfaceTileWebgl,
     PS.render.entityWebgl,
     PS.render.renderer,

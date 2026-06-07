@@ -13,9 +13,9 @@ const viewport = { width: 960, height: 540 };
 
 const cases = [
   { name: "orbit-view", zoom: 0, mode: "orbit" },
-  { name: "surface-temperate", zoom: 5, biome: "forest" },
-  { name: "surface-desert", zoom: 5, biome: "desert" },
-  { name: "entities-visible", zoom: 6, entities: true },
+  { name: "surface-temperate", zoom: 5, biome: "forest", maxDarkPixels: 0.16 },
+  { name: "surface-desert", zoom: 5, biome: "desert", maxDarkPixels: 0.16 },
+  { name: "entities-visible", zoom: 6, entities: true, maxDarkPixels: 0.16 },
   { name: "hud-visible", zoom: 2, hud: true }
 ];
 
@@ -138,6 +138,26 @@ function diffPng(current, golden) {
   return changed / total;
 }
 
+function getDarkPixelRatio(image) {
+  const total = image.width * image.height;
+  let dark = 0;
+
+  for (let i = 0; i < total; i++) {
+    const offset = i * 4;
+    const alpha = image.pixels[offset + 3];
+    const luminance =
+      image.pixels[offset] * 0.2126 +
+      image.pixels[offset + 1] * 0.7152 +
+      image.pixels[offset + 2] * 0.0722;
+
+    if (alpha > 0 && luminance < 14) {
+      dark++;
+    }
+  }
+
+  return dark / total;
+}
+
 function fileUrl(filePath) {
   return pathToFileURL(filePath).href;
 }
@@ -221,16 +241,25 @@ async function run() {
     await prepareCase(page, testCase);
     const screenshot = await page.screenshot({ fullPage: false });
     const goldenPath = path.join(goldenDir, testCase.name + ".png");
+    const currentImage = parsePng(screenshot);
+    const darkPixelRatio = getDarkPixelRatio(currentImage);
+
+    if (typeof testCase.maxDarkPixels === "number") {
+      assert.ok(
+        darkPixelRatio <= testCase.maxDarkPixels,
+        testCase.name + " dark-pixel coverage " + (darkPixelRatio * 100).toFixed(2) + "% exceeds viewport underlay budget"
+      );
+    }
 
     if (updateGolden || !fs.existsSync(goldenPath)) {
       fs.writeFileSync(goldenPath, screenshot);
-      results.push({ name: testCase.name, updated: true, diff: 0 });
+      results.push({ name: testCase.name, updated: true, diff: 0, darkPixels: Number(darkPixelRatio.toFixed(4)) });
       continue;
     }
 
-    const diff = diffPng(parsePng(screenshot), parsePng(fs.readFileSync(goldenPath)));
+    const diff = diffPng(currentImage, parsePng(fs.readFileSync(goldenPath)));
     assert.ok(diff <= threshold, testCase.name + " visual diff " + (diff * 100).toFixed(2) + "% exceeds 5%");
-    results.push({ name: testCase.name, updated: false, diff: Number(diff.toFixed(4)) });
+    results.push({ name: testCase.name, updated: false, diff: Number(diff.toFixed(4)), darkPixels: Number(darkPixelRatio.toFixed(4)) });
   }
 
   const perf = await page.evaluate(async () => {
