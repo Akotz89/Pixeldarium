@@ -296,12 +296,14 @@ Relevant current limits:
   family and uses only the existing food/organism pressure buckets plus a
   bounded `ecoform.0..3` sub-tile phase.
 - Entity instances: `CONFIG.PLANET_ENTITY_WEBGL_MAX_INSTANCES = 8192`.
+- Orbit event markers: `CONFIG.PLANET_ORBIT_EVENT_MARKER_MAX_MARKERS = 24`.
 - Watched representative intent markers: `CONFIG.PLANET_REPRESENTATIVE_INTENT_MAX_MARKERS = 128`.
 - Active particle cap: `CONFIG.PARTICLE_MAX_ACTIVE = 10000`.
 
 Renderer stats are available through `PS.render.renderer.getStats()`. Key fields
 include `drawCalls`, `tilemapDraws`, `tilemapWebglDraws`, `tilemapFallbacks`,
-`terrainDraws`, `terrainPageDraws`, `entityDraws`, `intentEntityDraws`,
+`terrainDraws`, `terrainPageDraws`, `entityDraws`, `orbitEventMarkerDraws`,
+`intentEntityDraws`,
 `rendererGpuFrameMs`, `overBudget`, `singleVisibleCanvas`, and
 `directPresentsThisFrame`.
 Frame budget stats are available through

@@ -16,13 +16,17 @@ const entitiesSource = read("js/render/entities.js");
 const engineSource = read("js/render/webgl-engine.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
 const readinessSource = read("js/render/entity-webgl-readiness.js");
+const eventMarkerSource = read("js/render/entity-webgl-events.js");
 
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "entity atlas should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/entity-webgl-readiness.js") > namespaceSource.indexOf("js/render/entity-webgl.js"), "settlement readiness sidecar should load after entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/entity-webgl-readiness.js") < namespaceSource.indexOf("js/render/entities.js"), "settlement readiness sidecar should load before entity facade calls it");
+assert.ok(namespaceSource.indexOf("js/render/entity-webgl-events.js") > namespaceSource.indexOf("js/render/entity-webgl.js"), "orbit event marker sidecar should load after entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-webgl-events.js") < namespaceSource.indexOf("js/render/entities.js"), "orbit event marker sidecar should load before entity facade calls it");
 assert.ok(namespaceSource.indexOf("js/render/entity-webgl.js") >= 0, "entity WebGL compositor should load in the runtime");
 assert.ok(/PLANET_ENTITY_WEBGL_INSTANCING:\s*true/.test(configSource), "entity WebGL instancing should be enabled by default");
 assert.ok(/PLANET_ENTITY_WEBGL_MAX_INSTANCES:\s*8192/.test(configSource), "entity WebGL instancing should have a capped batch size");
+assert.ok(/PLANET_ORBIT_EVENT_MARKER_MAX_MARKERS:\s*24/.test(configSource), "orbit event marker facades should have a capped batch size");
 assert.ok(/PLANET_SETTLEMENT_READINESS_MAX_MARKERS:\s*6/.test(configSource), "settlement readiness facades should have a capped batch size");
 assert.ok(pipelineSource.indexOf("PS.render.entityWebgl") >= 0, "render rebuilds should include the entity WebGL subsystem");
 
@@ -71,6 +75,10 @@ assert.ok(entityWebglSource.indexOf("getRepresentativeIntentCell") >= 0, "entity
 assert.ok(entityWebglSource.indexOf("buildRepresentativeIntentBatches") >= 0, "entity compositor should batch watched representative intent markers");
 assert.ok(entityWebglSource.indexOf("drawRepresentativeIntents") >= 0, "entity compositor should expose representative intent rendering");
 assert.ok(entityWebglSource.indexOf("intentDrawCount") >= 0, "entity compositor should report representative intent draw counts");
+assert.ok(eventMarkerSource.indexOf("getOrbitEventMarkerCell") >= 0, "orbit event sidecar should request event marker atlas cells");
+assert.ok(eventMarkerSource.indexOf("buildOrbitEventMarkerBatches") >= 0, "orbit event sidecar should batch timeline event markers");
+assert.ok(eventMarkerSource.indexOf("drawOrbitEventMarkers") >= 0, "orbit event sidecar should expose orbit event marker rendering");
+assert.ok(entityWebglSource.indexOf("eventMarkerDrawCount") >= 0, "entity compositor should report orbit event marker draw counts");
 assert.ok(entityWebglSource.indexOf("readinessDrawCount") >= 0, "entity compositor should report settlement readiness draw counts");
 assert.ok(readinessSource.indexOf("getSettlementReadinessCandidates") >= 0, "settlement readiness sidecar should derive bounded lineage candidates");
 assert.ok(readinessSource.indexOf("world.lineages") >= 0, "settlement readiness sidecar should consume aggregate lineage state");
@@ -90,6 +98,7 @@ assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementRoutes()") >= 0, "se
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementInfluence()") >= 0, "settlement influence rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawRepresentativeIntents(world.interpolation)") >= 0, "representative intent rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("entityWebgl.drawSettlementReadiness()") >= 0, "settlement readiness rendering should use the instanced path");
+assert.ok(entitiesSource.indexOf("entityWebgl.drawOrbitEventMarkers()") >= 0, "orbit event marker rendering should use the instanced path");
 assert.ok(entitiesSource.indexOf("String(world.settlements[i].id) === String(settlementId)") >= 0, "settlement route facades should fall back to current aggregate settlement arrays");
 assert.strictEqual(entitiesSource.indexOf("ctx"), -1, "entity facade should not reference Canvas2D context");
 
@@ -228,6 +237,61 @@ intentContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
 const intentBatches = intentContext.PS.render.entityWebgl.buildRepresentativeIntentBatches(1);
 assert.strictEqual(intentBatches.intents, 1, "representative intent batch should draw watched representatives through WebGL");
 assert.strictEqual(intentBatches.capped, 1, "representative intent batch should enforce its marker cap");
+
+const eventContext = {
+  CONFIG: {
+    PLANET_ENTITY_WEBGL_MAX_INSTANCES: 8192,
+    PLANET_ORBIT_EVENT_MARKER_MAX_MARKERS: 1
+  },
+  PS: {
+    render: {
+      pipeline: {
+        getZoomBand() {
+          return "orbit";
+        }
+      },
+      entities: {
+        getRenderPosition(entity) {
+          return { x: 48 + entity.longitude, y: 50 - entity.latitude, scale: 1, visibility: 1, visible: true };
+        }
+      },
+      webglEngine: {},
+      shaderManager: {}
+    },
+    atlas: {
+      getOrbitEventMarkerCell() {
+        return { pageIndex: 0, u0: 0, v0: 0, u1: 0.0625, v1: 0.0625 };
+      },
+      getOrbitEventSeverityBucket(event) {
+        return event.severity === "critical" ? 2 : 0;
+      }
+    }
+  },
+  world: {
+    tick: 120,
+    planetView: { zoomLevel: 0 },
+    planetTiles: [],
+    timelineEvents: [
+      { tick: 10, category: "biology", severity: "info", location: { latitude: 4, longitude: -8 } },
+      { tick: 20, category: "geology", severity: "critical", location: { latitude: 8, longitude: 12 } }
+    ]
+  },
+  canvas: { width: 100, height: 100 },
+  performance: { now() { return 0; } },
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+};
+
+eventContext.PS.render.entityWebgl = {};
+vm.createContext(eventContext);
+vm.runInContext(entityWebglSource, eventContext, { filename: "js/render/entity-webgl.js" });
+vm.runInContext(eventMarkerSource, eventContext, { filename: "js/render/entity-webgl-events.js" });
+eventContext.PS.render.entityWebgl.state.target = { width: 100, height: 100 };
+
+const eventBatches = eventContext.PS.render.entityWebgl.buildOrbitEventMarkerBatches();
+assert.strictEqual(eventBatches.eventMarkers, 1, "orbit event marker batch should draw located timeline events through WebGL");
+assert.strictEqual(eventBatches.capped, 0, "orbit event marker candidate selection should enforce its marker cap before submission");
 
 const readinessContext = {
   CONFIG: {

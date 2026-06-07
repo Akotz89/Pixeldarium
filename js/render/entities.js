@@ -195,6 +195,10 @@ PS.render.entities.drawSettlementReadiness = function () {
   return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawSettlementReadiness());
 };
 
+PS.render.entities.drawOrbitEventMarkers = function () {
+  return Boolean(PS.render.entityWebgl && PS.render.entityWebgl.drawOrbitEventMarkers());
+};
+
 PS.render.entities.drawSettlementShadows = function () {
   if (!PS.render.entities.shouldDrawGlobeScaleEntities()) {
     return false;

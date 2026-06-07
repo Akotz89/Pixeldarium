@@ -27,6 +27,7 @@ PS.render.entityWebgl.state = {
   vegetationDrawCount: 0,
   citizenDrawCount: 0,
   worldUiDrawCount: 0,
+  eventMarkerDrawCount: 0,
   intentDrawCount: 0,
   readinessDrawCount: 0,
   pageDrawCount: 0,
@@ -59,6 +60,7 @@ PS.render.entityWebgl.resetFrameStats = function () {
   state.vegetationDrawCount = 0;
   state.citizenDrawCount = 0;
   state.worldUiDrawCount = 0;
+  state.eventMarkerDrawCount = 0;
   state.intentDrawCount = 0;
   state.readinessDrawCount = 0;
   state.pageDrawCount = 0;
@@ -296,6 +298,7 @@ PS.render.entityWebgl.createBatches = function () {
     vegetation: 0,
     citizens: 0,
     worldUi: 0,
+    eventMarkers: 0,
     intents: 0,
     readiness: 0,
     capped: 0,
@@ -367,6 +370,8 @@ PS.render.entityWebgl.submit = function (batches, cell, point, size, tint, flipH
     batches.citizens++;
   } else if (kind === "worldUi") {
     batches.worldUi++;
+  } else if (kind === "eventMarker") {
+    batches.eventMarkers++;
   } else if (kind === "intent") {
     batches.intents++;
   } else if (kind === "readiness") {
@@ -1131,6 +1136,7 @@ PS.render.entityWebgl.drawBatches = function (batches) {
     state.vegetationDrawCount += batches.vegetation;
     state.citizenDrawCount += batches.citizens;
     state.worldUiDrawCount += batches.worldUi;
+    state.eventMarkerDrawCount += batches.eventMarkers || 0;
     state.intentDrawCount += batches.intents;
     state.readinessDrawCount += batches.readiness || 0;
     state.pageDrawCount = pageDraws;

@@ -14,6 +14,7 @@ const tileRegistrySource = read("js/core/tile-registry.js");
 const atlasSource = read("js/render/entity-atlas.js");
 const atlasIntentSource = read("js/render/entity-atlas-intents.js");
 const atlasCivilizationSource = read("js/render/entity-atlas-civilization.js");
+const atlasEventsSource = read("js/render/entity-atlas-events.js");
 const terrainAtlasCivilizationSource = read("js/render/terrain-atlas-civilization.js");
 const terrainAtlasDetailSource = read("js/render/terrain-atlas-detail.js");
 const entityWebglSource = read("js/render/entity-webgl.js");
@@ -24,6 +25,8 @@ assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") > namespa
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-intents.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "intent atlas sidecar should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") > namespaceSource.indexOf("js/render/entity-atlas-intents.js"), "civilization atlas sidecar should load after intent atlas helpers");
 assert.ok(namespaceSource.indexOf("js/render/entity-atlas-civilization.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "civilization atlas sidecar should load before entity WebGL");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-events.js") > namespaceSource.indexOf("js/render/entity-atlas-civilization.js"), "event atlas sidecar should load after entity civilization helpers");
+assert.ok(namespaceSource.indexOf("js/render/entity-atlas-events.js") < namespaceSource.indexOf("js/render/entity-webgl.js"), "event atlas sidecar should load before entity WebGL");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-civilization.js") > namespaceSource.indexOf("js/render/entity-atlas-civilization.js"), "terrain civilization atlas sidecar should load after entity civilization helpers");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-civilization.js") < namespaceSource.indexOf("js/render/terrain-atlas-detail.js"), "terrain civilization atlas sidecar should load before terrain detail overlays");
 assert.ok(namespaceSource.indexOf("js/render/terrain-atlas-detail.js") > namespaceSource.indexOf("js/render/entity-atlas.js"), "terrain atlas detail should load after atlas core");
@@ -65,6 +68,7 @@ vm.runInContext(tileRegistrySource, context, { filename: "js/core/tile-registry.
 vm.runInContext(atlasSource, context, { filename: "js/render/entity-atlas.js" });
 vm.runInContext(atlasIntentSource, context, { filename: "js/render/entity-atlas-intents.js" });
 vm.runInContext(atlasCivilizationSource, context, { filename: "js/render/entity-atlas-civilization.js" });
+vm.runInContext(atlasEventsSource, context, { filename: "js/render/entity-atlas-events.js" });
 vm.runInContext(terrainAtlasCivilizationSource, context, { filename: "js/render/terrain-atlas-civilization.js" });
 vm.runInContext(terrainAtlasDetailSource, context, { filename: "js/render/terrain-atlas-detail.js" });
 
@@ -370,6 +374,14 @@ const readyReadinessCell = context.PS.atlas.getSettlementReadinessCell({
   lineageId: 2,
   progressBucket: 3
 });
+const biologyEventCell = context.PS.atlas.getOrbitEventMarkerCell({
+  category: "biology",
+  severity: "info"
+});
+const criticalGeologyEventCell = context.PS.atlas.getOrbitEventMarkerCell({
+  category: "geology",
+  severity: "critical"
+});
 const stats = context.PS.atlas.getStats();
 const page = context.PS.atlas.pages[0];
 
@@ -488,12 +500,17 @@ assert.ok(earlyReadinessCell.name.indexOf("entity.settlement_readiness.1.1") ===
 assert.ok(readyReadinessCell.name.indexOf("entity.settlement_readiness.2.3") === 0, "ready settlement pressure should use the highest bounded progress bucket");
 assert.notDeepStrictEqual(pixelAt(earlyReadinessCell, 7, 2), pixelAt(readyReadinessCell, 7, 2), "settlement readiness progress should change visible marker pixels");
 assert.ok(uniqueColorCount(readyReadinessCell) >= uniqueColorCount(earlyReadinessCell), "ready settlement pressure should preserve authored marker detail");
+assert.ok(biologyEventCell.name.indexOf("entity.event.0.0") === 0, "biology orbit events should encode bounded category and severity buckets");
+assert.ok(criticalGeologyEventCell.name.indexOf("entity.event.1.2") === 0, "critical geology orbit events should use the critical severity bucket");
+assert.notDeepStrictEqual(pixelAt(biologyEventCell, 8, 8), pixelAt(criticalGeologyEventCell, 8, 8), "event category and severity should change visible marker pixels");
+assert.ok(uniqueColorCount(criticalGeologyEventCell) >= 5, "orbit event cells should include readable authored marker detail");
 assert.ok(stats.traitCells >= 2, "atlas stats should count generated trait sprites");
 assert.ok(stats.terrainCells >= 4, "atlas stats should count generated biome terrain cells");
 assert.ok(stats.foodCells >= 2, "atlas stats should count generated food resource cells");
 assert.ok(stats.settlementCells >= 5, "atlas stats should count generated settlement and readiness cells");
 assert.ok(stats.routeCells >= 3, "atlas stats should count generated route traffic cells");
 assert.ok(stats.influenceCells >= 2, "atlas stats should count generated influence border cells");
+assert.ok(stats.eventMarkerCells >= 2, "atlas stats should count generated orbit event marker cells");
 assert.ok(stats.intentCells >= 2, "atlas stats should count generated representative intent cells");
 assert.ok(stats.pageBytes > 0, "atlas stats should expose packed atlas bytes");
 

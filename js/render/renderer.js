@@ -35,6 +35,7 @@ PS.render.Renderer = function (name) {
     vegetationEntityDraws: 0,
     citizenEntityDraws: 0,
     worldUiEntityDraws: 0,
+    orbitEventMarkerDraws: 0,
     intentEntityDraws: 0,
     settlementReadinessEntityDraws: 0,
     foodEntityDraws: 0,

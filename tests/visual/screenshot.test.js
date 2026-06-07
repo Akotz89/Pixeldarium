@@ -12,7 +12,7 @@ const threshold = 0.05;
 const viewport = { width: 960, height: 540 };
 
 const cases = [
-  { name: "orbit-view", zoom: 0, expectedBand: "orbit" },
+  { name: "orbit-view", zoom: 0, orbitEvents: true, expectedBand: "orbit" },
   { name: "continent-view", zoom: 2, biome: "forest", expectedBand: "continent", maxDarkPixels: 0.16 },
   { name: "region-view", zoom: 4, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
   { name: "local-view", zoom: 6, biome: "forest", expectedBand: "local", maxDarkPixels: 0.16 },
@@ -177,6 +177,36 @@ async function prepareCase(page, testCase) {
 
     const view = PS.camera.getView();
     view.zoomLevel = config.zoom;
+
+    if (config.orbitEvents) {
+      view.latitude = 4;
+      view.longitude = -12;
+      view.panEastMeters = 0;
+      view.panNorthMeters = 0;
+      world.tick = Math.max(world.tick || 0, 240);
+      world.timelineEvents = [
+        {
+          tick: world.tick - 40,
+          type: "biology.first-life",
+          label: "First life",
+          detail: "microbial bloom",
+          category: "biology",
+          severity: "info",
+          source: "biology",
+          location: { latitude: 4, longitude: -12 }
+        },
+        {
+          tick: world.tick - 20,
+          type: "geology.rift",
+          label: "Rift surge",
+          detail: "tectonic pressure",
+          category: "geology",
+          severity: "critical",
+          source: "geology",
+          location: { latitude: -8, longitude: 18 }
+        }
+      ];
+    }
 
     if (config.biome || config.entities || config.settlement) {
       const targetBiome = config.biome || null;
@@ -523,6 +553,9 @@ async function run() {
       );
     }
     assert.strictEqual(caseStats.debugText.trim(), "", testCase.name + " should not write debug errors");
+    if (testCase.orbitEvents) {
+      assert.ok(caseStats.rendererStats.orbitEventMarkerDraws > 0, testCase.name + " should draw orbit event markers through WebGL");
+    }
     if (testCase.entities) {
       assert.ok(caseStats.rendererStats.organismEntityDraws > 0, testCase.name + " should draw organism facades through WebGL");
       assert.ok(caseStats.rendererStats.foodEntityDraws > 0, testCase.name + " should draw food facades through WebGL");
