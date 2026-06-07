@@ -367,6 +367,7 @@ PS.render.shaderManifest = [
   { name: "gbuffer-compose", vertex: "shaders/gbuffer-compose.vert", fragment: "shaders/gbuffer-compose.frag" },
   { name: "gbuffer-terrain", vertex: "shaders/gbuffer-terrain.vert", fragment: "shaders/gbuffer-terrain.frag" },
   { name: "globe-sphere", vertex: "shaders/globe-sphere.vert", fragment: "shaders/globe-sphere.frag" },
+  { name: "surface-underlay", vertex: "shaders/surface-underlay.vert", fragment: "shaders/surface-underlay.frag" },
   { name: "surface-chunk", vertex: "shaders/surface-chunk.vert", fragment: "shaders/surface-chunk.frag" },
   { name: "entity-atlas", vertex: "shaders/entity-atlas.vert", fragment: "shaders/entity-atlas.frag" },
   { name: "shadow", vertex: "shaders/shadow.vert", fragment: "shaders/shadow.frag" },
