@@ -195,6 +195,35 @@ PS.render.surface.getCivilizationBucket = function (pressure) {
   return 0;
 };
 
+PS.render.surface.getSettlementCivilizationFamily = function (settlement) {
+  if (!settlement) {
+    return "yard";
+  }
+  if (Number(settlement.productionPressure) > 0.42 || Number(settlement.development) >= 90) {
+    return "production";
+  }
+  if (Number(settlement.farmPressure) > 0.42 || Number(settlement.storedFood) > Number(settlement.development)) {
+    return "farm";
+  }
+  if (settlement.isColony || Number(settlement.level) >= 4) {
+    return "block";
+  }
+  return "yard";
+};
+
+PS.render.surface.getRouteCivilizationFamily = function (route) {
+  if (!route) {
+    return "track";
+  }
+  if (Number(route.waterPressure) > 0.45) {
+    return "canal";
+  }
+  if (Number(route.dockPressure) > 0.45) {
+    return "dock";
+  }
+  return Number(route.foodTransferred) >= 24 || route.isActive !== false ? "road" : "track";
+};
+
 PS.render.surface.getRouteDistanceToSample = function (route, tileX, tileY) {
   var parent = typeof getSettlementById === "function" ? getSettlementById(route.parentSettlementId) : null;
   var child = typeof getSettlementById === "function" ? getSettlementById(route.childSettlementId) : null;
@@ -250,6 +279,7 @@ PS.render.surface.getSampleCivilization = function (sample) {
   var borderPressure = settlement ? clamp(1 - Math.abs(settlementDistance - influenceRadius) / Math.max(2, routeRadius + 1), 0, 1) : 0;
   var routePressure = 0;
   var routeLineageId = 1;
+  var routeFamily = "track";
   var routeCount = Array.isArray(world && world.settlementRoutes) ? world.settlementRoutes.length : 0;
   var route;
   var distance;
@@ -281,6 +311,7 @@ PS.render.surface.getSampleCivilization = function (sample) {
     if (candidatePressure > routePressure) {
       routePressure = candidatePressure;
       routeLineageId = Math.max(1, Math.round(Number(route.lineageId) || 1));
+      routeFamily = PS.render.surface.getRouteCivilizationFamily(route);
     }
   }
 
@@ -299,10 +330,17 @@ PS.render.surface.getSampleCivilization = function (sample) {
     return null;
   }
 
+  var family = type === "route"
+    ? routeFamily
+    : type === "border"
+      ? "border"
+      : PS.render.surface.getSettlementCivilizationFamily(settlement);
+
   cached = {
-    key: "civ." + type + "." + bucket,
+    key: "civ." + type + "." + bucket + "." + family,
     type: type,
     bucket: bucket,
+    family: family,
     pressure: pressure,
     settlementPressure: settlementPressure,
     routePressure: routePressure,

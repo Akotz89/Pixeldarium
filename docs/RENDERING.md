@@ -177,10 +177,13 @@ cover foam, canopy, ridge, dry scrub, frost, ember, reed, and field marks;
 buckets are `1..3`. These marks add close-band terrain identity inside the same
 16x16 atlas cell and do not add a draw-call family.
 Settlement and route aggregate pressure can also become terrain cell identity:
-`civ0` or `civ.<settlement|route|border>.<bucket>`, with buckets `1..3`.
-The civilization key is derived from the ready surface sample plus current
-settlement/route aggregate state, then cached with the terrain atlas cell so
-WebGL terrain batches can show footprints, roadbeds, and borders without adding
+`civ0` or `civ.<settlement|route|border>.<bucket>.<family>`, with buckets
+`1..3`. Bounded families are `farm`, `yard`, `block`, `dock`, and
+`production` for settlements; `track`, `road`, `canal`, and `dock` for routes;
+and `border` for border influence. The civilization key is derived from the
+ready surface sample plus current settlement/route aggregate state, then cached
+with the terrain atlas cell so WebGL terrain batches can show footprints,
+fields, roadbeds, canals, docks, production blocks, and borders without adding
 an entity draw path.
 Food/resource entity cells use bounded atlas identities:
 `entity.food.<variant>.<richness>.<family>`. Richness is bucketed `0..3`;

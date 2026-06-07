@@ -1,5 +1,40 @@
 PS.atlas = PS.atlas || {};
 
+PS.atlas.getTerrainCivilizationFamily = function (type, civilization, pressure) {
+  var family = String(civilization && civilization.family || "").toLowerCase();
+
+  if (type === "route") {
+    if (family === "road" || family === "canal" || family === "dock" || family === "track") {
+      return family;
+    }
+    if (Number(civilization && civilization.waterPressure) > 0.45) {
+      return "canal";
+    }
+    if (Number(civilization && civilization.dockPressure) > 0.45) {
+      return "dock";
+    }
+    return pressure >= 0.52 ? "road" : "track";
+  }
+
+  if (type === "border") {
+    return "border";
+  }
+
+  if (family === "farm" || family === "yard" || family === "block" || family === "dock" || family === "production") {
+    return family;
+  }
+  if (Number(civilization && civilization.productionPressure) > 0.42) {
+    return "production";
+  }
+  if (Number(civilization && civilization.farmPressure) > 0.42) {
+    return "farm";
+  }
+  if (civilization && (civilization.isColony || Number(civilization.level) >= 4 || pressure >= 0.78)) {
+    return "block";
+  }
+  return "yard";
+};
+
 PS.atlas.getTerrainCivilizationInfo = function (sample) {
   var detail = sample && sample.detail ? sample.detail : {};
   var signals = detail.materialSignals || {};
@@ -49,6 +84,7 @@ PS.atlas.getTerrainCivilizationInfo = function (sample) {
     type: type,
     bucket: clamp(Math.floor(clamp(pressure, 0, 1) * 4), 1, 3),
     pressure: clamp(pressure, 0, 1),
+    family: PS.atlas.getTerrainCivilizationFamily(type, civilization, pressure),
     lineageId: Math.max(1, Math.round(Number(civilization.lineageId) || 1))
   };
 };
@@ -60,7 +96,7 @@ PS.atlas.getTerrainCivilizationKey = function (sample) {
     return "civ0";
   }
 
-  return "civ." + civilization.type + "." + civilization.bucket;
+  return "civ." + civilization.type + "." + civilization.bucket + "." + civilization.family;
 };
 
 PS.atlas.applyTerrainCivilizationPalette = function (palette, civilization) {
@@ -88,6 +124,19 @@ PS.atlas.applyTerrainCivilizationPalette = function (palette, civilization) {
   };
 };
 
+PS.atlas.writeTerrainRect = function (cell, x, y, width, height, fill, edge) {
+  var right = x + Math.max(1, Math.round(Number(width) || 1)) - 1;
+  var bottom = y + Math.max(1, Math.round(Number(height) || 1)) - 1;
+  var px;
+  var py;
+
+  for (py = y; py <= bottom; py++) {
+    for (px = x; px <= right; px++) {
+      PS.atlas.writePixel(cell, px, py, edge && (px === x || py === y || px === right || py === bottom) ? edge : fill);
+    }
+  }
+};
+
 PS.atlas.drawTerrainCivilizationMarks = function (cell, palette, variant, sample) {
   var civilization = PS.atlas.getTerrainCivilizationInfo(sample);
   var light = civilization ? PS.atlas.getTerrainDetailColor(palette, "light") : null;
@@ -103,21 +152,47 @@ PS.atlas.drawTerrainCivilizationMarks = function (cell, palette, variant, sample
   }
 
   if (civilization.type === "settlement") {
-    for (i = 0; i < civilization.bucket + 1; i++) {
-      x = 5 + ((phase + i * 3) % 6);
-      y = 5 + ((phase * 2 + i * 2) % 6);
-      PS.atlas.writeDot(cell, x, y, civilization.bucket >= 3 ? 1 : 0, warm);
-      PS.atlas.writePixel(cell, x, Math.max(0, y - 1), light);
-      PS.atlas.writePixel(cell, Math.min(15, x + 1), Math.min(15, y + 1), shadow);
+    if (civilization.family === "farm") {
+      for (i = 0; i < 4; i++) {
+        PS.atlas.writeTerrainDash(cell, 2, 3 + i * 2, 11, true, i % 2 ? warm : shadow);
+      }
+      PS.atlas.writeTerrainRect(cell, 10, 9, 3, 3, warm, shadow);
+    } else if (civilization.family === "production") {
+      PS.atlas.writeTerrainRect(cell, 3, 4, 5, 4, warm, shadow);
+      PS.atlas.writeTerrainRect(cell, 9, 7, 4, 3, warm, shadow);
+      PS.atlas.writeTerrainDash(cell, 4, 11, 8, true, shadow);
+      PS.atlas.writePixel(cell, 11, 4, light);
+      PS.atlas.writePixel(cell, 11, 5, light);
+      PS.atlas.writePixel(cell, 12, 4, shadow);
+    } else if (civilization.family === "dock") {
+      PS.atlas.writeTerrainDash(cell, 2, 10, 12, true, shadow);
+      PS.atlas.writeTerrainDash(cell, 5, 6, 7, false, warm);
+      PS.atlas.writeTerrainRect(cell, 9, 4, 4, 3, warm, shadow);
+    } else {
+      PS.atlas.writeTerrainRect(cell, 3, 4, 4, 4, warm, shadow);
+      PS.atlas.writeTerrainRect(cell, 9, 5, 3, 3, warm, shadow);
+      if (civilization.family === "block" || civilization.bucket >= 3) {
+        PS.atlas.writeTerrainRect(cell, 5, 10, 6, 3, warm, shadow);
+        PS.atlas.writeTerrainDash(cell, 8, 2, 12, false, shadow);
+      }
+      PS.atlas.writeTerrainDash(cell, 2, 9, 12, true, shadow);
     }
-    PS.atlas.writeTerrainDash(cell, 4, 11, 8, true, shadow);
     return;
   }
 
   if (civilization.type === "route") {
     y = 6 + (phase % 4);
-    PS.atlas.writeTerrainDash(cell, 1, y, 14, true, shadow);
-    PS.atlas.writeTerrainDash(cell, 2, y + 1, 11, true, warm);
+    if (civilization.family === "canal") {
+      PS.atlas.writeTerrainDash(cell, 1, y, 14, true, light);
+      PS.atlas.writeTerrainDash(cell, 2, y + 1, 11, true, shadow);
+    } else if (civilization.family === "dock") {
+      PS.atlas.writeTerrainDash(cell, 1, y, 13, true, shadow);
+      PS.atlas.writeTerrainDash(cell, 4, Math.max(0, y - 2), 5, false, warm);
+      PS.atlas.writeTerrainDash(cell, 9, y + 1, 4, false, warm);
+    } else {
+      PS.atlas.writeTerrainDash(cell, 1, y, 14, true, shadow);
+      PS.atlas.writeTerrainDash(cell, 2, y + 1, 11, true, warm);
+    }
     if (civilization.bucket >= 2) {
       PS.atlas.writePixel(cell, 5, Math.max(0, y - 1), light);
       PS.atlas.writePixel(cell, 10, Math.min(15, y + 2), light);
