@@ -12,11 +12,14 @@ const threshold = 0.05;
 const viewport = { width: 960, height: 540 };
 
 const cases = [
-  { name: "orbit-view", zoom: 0, mode: "orbit" },
-  { name: "surface-temperate", zoom: 5, biome: "forest", maxDarkPixels: 0.16 },
-  { name: "surface-desert", zoom: 5, biome: "desert", maxDarkPixels: 0.16 },
-  { name: "entities-visible", zoom: 6, entities: true, maxDarkPixels: 0.16 },
-  { name: "hud-visible", zoom: 2, hud: true }
+  { name: "orbit-view", zoom: 0, expectedBand: "orbit" },
+  { name: "continent-view", zoom: 2, biome: "forest", expectedBand: "continent", maxDarkPixels: 0.16 },
+  { name: "region-view", zoom: 4, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
+  { name: "local-view", zoom: 6, biome: "forest", expectedBand: "local", maxDarkPixels: 0.16 },
+  { name: "surface-temperate", zoom: 5, biome: "forest", expectedBand: "region", maxDarkPixels: 0.16 },
+  { name: "surface-desert", zoom: 5, biome: "desert", expectedBand: "region", maxDarkPixels: 0.16 },
+  { name: "entities-visible", zoom: 6, entities: true, expectedBand: "local", maxDarkPixels: 0.16 },
+  { name: "hud-visible", zoom: 2, hud: true, expectedBand: "continent", maxDarkPixels: 0.16 }
 ];
 
 function ensureDir(dir) {
@@ -216,6 +219,62 @@ async function prepareCase(page, testCase) {
   }, testCase);
 
   await page.waitForTimeout(350);
+
+  return page.evaluate(() => {
+    const stats = PS.render.renderer && typeof PS.render.renderer.getStats === "function"
+      ? PS.render.renderer.getStats()
+      : {};
+    return {
+      zoomBand: PS.render.pipeline.getZoomBand(world.planetView.zoomLevel),
+      zoomLevel: world.planetView.zoomLevel,
+      rendererStats: stats,
+      debugText: (document.getElementById("debug-output") || {}).textContent || ""
+    };
+  });
+}
+
+async function runInteractionSmoke(page) {
+  const before = await page.evaluate(() => ({
+    zoomLevel: world.planetView.zoomLevel,
+    latitude: world.planetView.latitude,
+    longitude: world.planetView.longitude,
+    panEastMeters: world.planetView.panEastMeters,
+    panNorthMeters: world.planetView.panNorthMeters
+  }));
+
+  await page.mouse.move(viewport.width / 2, viewport.height / 2);
+  await page.mouse.wheel(0, -420);
+  await page.waitForTimeout(140);
+  await page.mouse.move(viewport.width / 2, viewport.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(viewport.width / 2 + 120, viewport.height / 2 + 44, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(140);
+
+  const after = await page.evaluate(() => ({
+    zoomLevel: world.planetView.zoomLevel,
+    latitude: world.planetView.latitude,
+    longitude: world.planetView.longitude,
+    panEastMeters: world.planetView.panEastMeters,
+    panNorthMeters: world.planetView.panNorthMeters,
+    debugText: (document.getElementById("debug-output") || {}).textContent || ""
+  }));
+
+  assert.ok(after.zoomLevel > before.zoomLevel, "direct file wheel input should zoom in");
+  assert.ok(
+    after.latitude !== before.latitude ||
+      after.longitude !== before.longitude ||
+      after.panEastMeters !== before.panEastMeters ||
+      after.panNorthMeters !== before.panNorthMeters,
+    "direct file drag input should move the planet view"
+  );
+  assert.strictEqual(after.debugText.trim(), "", "direct file interaction smoke should not write debug errors");
+
+  return {
+    zoomBefore: Number(before.zoomLevel.toFixed(3)),
+    zoomAfter: Number(after.zoomLevel.toFixed(3)),
+    moved: true
+  };
 }
 
 async function run() {
@@ -238,7 +297,15 @@ async function run() {
   const results = [];
 
   for (const testCase of cases) {
-    await prepareCase(page, testCase);
+    const caseStats = await prepareCase(page, testCase);
+    if (testCase.expectedBand) {
+      assert.strictEqual(
+        caseStats.zoomBand,
+        testCase.expectedBand,
+        testCase.name + " should exercise the " + testCase.expectedBand + " zoom band"
+      );
+    }
+    assert.strictEqual(caseStats.debugText.trim(), "", testCase.name + " should not write debug errors");
     const screenshot = await page.screenshot({ fullPage: false });
     const goldenPath = path.join(goldenDir, testCase.name + ".png");
     const currentImage = parsePng(screenshot);
@@ -253,14 +320,16 @@ async function run() {
 
     if (updateGolden || !fs.existsSync(goldenPath)) {
       fs.writeFileSync(goldenPath, screenshot);
-      results.push({ name: testCase.name, updated: true, diff: 0, darkPixels: Number(darkPixelRatio.toFixed(4)) });
+      results.push({ name: testCase.name, updated: true, diff: 0, darkPixels: Number(darkPixelRatio.toFixed(4)), band: caseStats.zoomBand });
       continue;
     }
 
     const diff = diffPng(currentImage, parsePng(fs.readFileSync(goldenPath)));
     assert.ok(diff <= threshold, testCase.name + " visual diff " + (diff * 100).toFixed(2) + "% exceeds 5%");
-    results.push({ name: testCase.name, updated: false, diff: Number(diff.toFixed(4)), darkPixels: Number(darkPixelRatio.toFixed(4)) });
+    results.push({ name: testCase.name, updated: false, diff: Number(diff.toFixed(4)), darkPixels: Number(darkPixelRatio.toFixed(4)), band: caseStats.zoomBand });
   }
+
+  const interaction = await runInteractionSmoke(page);
 
   const perf = await page.evaluate(async () => {
     const frames = [];
@@ -295,6 +364,7 @@ async function run() {
 
   console.log("visual screenshot checks passed", JSON.stringify({
     results,
+    interaction,
     averageFrameMs: Number(perf.averageFrameMs.toFixed(3)),
     peakFrameMs: Number(perf.peakFrameMs.toFixed(3))
   }));

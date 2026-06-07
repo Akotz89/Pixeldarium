@@ -243,6 +243,7 @@ files under `file://`.
 | `gbuffer-compose` | `gbuffer-compose.vert`, `gbuffer-compose.frag` | Full-screen source texture compose pass. |
 | `gbuffer-terrain` | `gbuffer-terrain.vert`, `gbuffer-terrain.frag` | Writes material albedo and normal/height data into local G-buffer attachments. |
 | `globe-sphere` | `globe-sphere.vert`, `globe-sphere.frag` | Samples terrain and overlay textures onto an interactive globe projection. |
+| `surface-underlay` | `surface-underlay.vert`, `surface-underlay.frag` | Full-screen aggregate terrain underlay for filled local/region zoom while detailed chunks stream. |
 | `surface-chunk` | `surface-chunk.vert`, `surface-chunk.frag` | Surface chunk shader slot for chunk rendering experiments. |
 | `entity-atlas` | `entity-atlas.vert`, `entity-atlas.frag` | Entity atlas rendering path for organisms and other facades. |
 | `shadow` | `shadow.vert`, `shadow.frag` | Shadow rendering slot. |
