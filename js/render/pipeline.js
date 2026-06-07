@@ -499,6 +499,18 @@ PS.render.pipeline.registerLayer("world.space", {
   draw: function () {}
 });
 
+PS.render.pipeline.registerLayer("world.events", {
+  order: 104,
+  drawLayer: PS.render.DrawLayer.UI_WORLD,
+  family: "world",
+  semantic: "orbit-scale milestone and watcher event markers",
+  minBand: "orbit",
+  maxBand: "planet",
+  minTier: "galaxy",
+  maxTier: "planet",
+  draw: function () { PS.render.entities.drawOrbitEventMarkers(); }
+});
+
 PS.render.pipeline.registerLayer("lighting.ambient", {
   order: 110,
   drawLayer: PS.render.DrawLayer.PARTICLE_BELOW,

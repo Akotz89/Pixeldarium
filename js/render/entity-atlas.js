@@ -19,6 +19,7 @@ PS.atlas = PS.atlas || {
     routeCells: 0,
     influenceCells: 0,
     worldUiCells: 0,
+    eventMarkerCells: 0,
     intentCells: 0,
     pageBytes: 0,
     lastGenerationMs: 0
@@ -40,6 +41,7 @@ PS.atlas.reset = function () {
   PS.atlas.stats.routeCells = 0;
   PS.atlas.stats.influenceCells = 0;
   PS.atlas.stats.worldUiCells = 0;
+  PS.atlas.stats.eventMarkerCells = 0;
   PS.atlas.stats.intentCells = 0;
   PS.atlas.stats.pageBytes = 0;
   PS.atlas.stats.lastGenerationMs = 0;
@@ -1297,6 +1299,9 @@ PS.atlas.init = function () {
   PS.atlas.getRouteCell({ lineageId: 1, isActive: true, foodTransferred: 0 }, "horizontal");
   PS.atlas.getSettlementInfluenceCell({ lineageId: 1, level: 1, claimedTiles: 0 });
   PS.atlas.getSettlementWorldUiCell({ lineageId: 1, population: 1, foodStock: 1, development: 0.25 }, "population");
+  if (typeof PS.atlas.getOrbitEventMarkerCell === "function") {
+    PS.atlas.getOrbitEventMarkerCell({ category: "biology", severity: "info" });
+  }
   PS.atlas.getRepresentativeIntentCell({ lineageId: 1, behavior: "watching", target: null, selected: true });
   PS.atlas.initialized = true;
   PS.atlas.stats.lastGenerationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - startedAt;
@@ -1314,6 +1319,7 @@ PS.atlas.getStats = function () {
     settlementCells: PS.atlas.stats.settlementCells,
     routeCells: PS.atlas.stats.routeCells,
     influenceCells: PS.atlas.stats.influenceCells,
+    eventMarkerCells: PS.atlas.stats.eventMarkerCells,
     intentCells: PS.atlas.stats.intentCells,
     generatedCells: PS.atlas.stats.generatedCells,
     pageBytes: PS.atlas.stats.pageBytes,
